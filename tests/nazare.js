@@ -9,7 +9,7 @@ describe("nazare-cashiers-check", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.Provider.env());
 
-  const program = anchor.workspace.CashiersCheck;
+  const program = anchor.workspace.Nazare;
 
   let mint = null;
   let god = null;
