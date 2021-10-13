@@ -1,12 +1,12 @@
 [package]
-name = "nazare"
+name = "castle-lending-aggregator"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "nazare"
+name = "castle_lending_aggregator"
 
 [features]
 no-entrypoint = []
@@ -15,5 +15,4 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.16.2"
-anchor-spl = "0.16.2"
+anchor-lang = "0.17.0"
