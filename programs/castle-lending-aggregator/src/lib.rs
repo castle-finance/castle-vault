@@ -4,8 +4,8 @@
 //! the check can cancel the check at any time to get back the funds.
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, TokenAccount, Transfer};
-use std::convert::Into;
+use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
+use std::convert::{Into, TryFrom};
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -14,95 +14,35 @@ pub mod castle_lending_aggregator {
     use super::*;
 
     pub fn initialize_pool(ctx: Context<InitializePool>) -> ProgramResult {
-        
-        Ok(())
-    }
-
-    pub fn deposit(
-        ctx: Context<Deposit>,
-        amount: u64,
-    ) -> Result<()> {
-        // Transfer funds to the check.
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.from.to_account_info().clone(),
-            to: ctx.accounts.vault.to_account_info().clone(),
-            authority: ctx.accounts.owner.clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, amount)?;
-
-        Ok(())
-    }
-
-    #[access_control(CreateCheck::accounts(&ctx, nonce))]
-    pub fn create_check(
-        ctx: Context<CreateCheck>,
-        amount: u64,
-        memo: Option<String>,
-        nonce: u8,
-    ) -> Result<()> {
-        // Transfer funds to the check.
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.from.to_account_info().clone(),
-            to: ctx.accounts.vault.to_account_info().clone(),
-            authority: ctx.accounts.owner.clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, amount)?;
-
-        // Print the check.
-        let check = &mut ctx.accounts.check;
-        check.amount = amount;
-        check.from = *ctx.accounts.from.to_account_info().key;
-        check.to = *ctx.accounts.to.to_account_info().key;
-        check.vault = *ctx.accounts.vault.to_account_info().key;
-        check.nonce = nonce;
-        check.memo = memo;
-
-        Ok(())
-    }
-
-    #[access_control(not_burned(&ctx.accounts.check))]
-    pub fn cash_check(ctx: Context<CashCheck>) -> Result<()> {
+        // 
+        let (____pool_authority, bump_seed) = Pubkey::find_program_address(
+            &[&ctx.accounts.reserve_pool.to_account_info().key.to_bytes()],
+            ctx.program_id,
+        );   
         let seeds = &[
-            ctx.accounts.check.to_account_info().key.as_ref(),
-            &[ctx.accounts.check.nonce],
+            &ctx.accounts.reserve_pool.to_account_info().key.to_bytes(),
+            &[bump_seed][..],
         ];
-        let signer = &[&seeds[..]];
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.vault.to_account_info().clone(),
-            to: ctx.accounts.to.to_account_info().clone(),
-            authority: ctx.accounts.check_signer.clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-        token::transfer(cpi_ctx, ctx.accounts.check.amount)?;
-        // Burn the check for one time use.
-        ctx.accounts.check.burned = true;
+
+        // TODO safety checks
+
+        // Mint initial LP tokens
+        let initial_amount = 1000000;
+        token::mint_to(
+            ctx.accounts.into_mint_to_context().with_signer(&[&seeds[..]]),
+            u64::try_from(initial_amount).unwrap()
+        )?;
+
+        // Initialize reserve pool
+        let reserve_pool = &mut ctx.accounts.reserve_pool;
+        reserve_pool.bump_seed = bump_seed;
+        reserve_pool.token_program_id = *ctx.accounts.token_program.key;
+        reserve_pool.token_account = *ctx.accounts.token.to_account_info().key;
+        reserve_pool.pool_mint = *ctx.accounts.pool_mint.to_account_info().key;
+        reserve_pool.token_mint = ctx.accounts.token.mint;
+
         Ok(())
     }
-
-    #[access_control(not_burned(&ctx.accounts.check))]
-    pub fn cancel_check(ctx: Context<CancelCheck>) -> Result<()> {
-        let seeds = &[
-            ctx.accounts.check.to_account_info().key.as_ref(),
-            &[ctx.accounts.check.nonce],
-        ];
-        let signer = &[&seeds[..]];
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.vault.to_account_info().clone(),
-            to: ctx.accounts.from.to_account_info().clone(),
-            authority: ctx.accounts.check_signer.clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.clone();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-        token::transfer(cpi_ctx, ctx.accounts.check.amount)?;
-        ctx.accounts.check.burned = true;
-        Ok(())
-    }
-
 }
 
 #[derive(Accounts)]
@@ -112,101 +52,32 @@ pub struct InitializePool<'info> {
     #[account(signer, zero)]
     pub reserve_pool: ProgramAccount<'info, ReservePool>,
 
+    // Mint address of pool LP token
     #[account(mut)]
     pub pool_mint: Account<'info, Mint>,
 
+    // Account where tokens in pool are stored
     #[account(mut)]
     pub token: Account<'info, TokenAccount>,
 
+    // Account where pool LP tokens are minted to 
     #[account(mut)]
     pub destination: Account<'info, TokenAccount>,
 
+    // SPL token program
     pub token_program: AccountInfo<'info>,    
 }
 
-#[derive(Accounts)]
-pub struct Deposit<'info> {
-    // Check's token vault.
-    #[account(mut)]
-    vault: Account<'info, TokenAccount>,
-    // Token account the check is made from.
-    #[account(mut, has_one = owner)]
-    from: Account<'info, TokenAccount>,
-    // Token account the check is made to.
-    // Owner of the `from` token account.
-    owner: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-pub struct CreateCheck<'info> {
-    // Check being created.
-    #[account(zero)]
-    check: Account<'info, Check>,
-    // Check's token vault.
-    #[account(mut, constraint = &vault.owner == check_signer.key)]
-    vault: Account<'info, TokenAccount>,
-    // Program derived address for the check.
-    check_signer: AccountInfo<'info>,
-    // Token account the check is made from.
-    #[account(mut, has_one = owner)]
-    from: Account<'info, TokenAccount>,
-    // Token account the check is made to.
-    #[account(constraint = from.mint == to.mint)]
-    to: Account<'info, TokenAccount>,
-    // Owner of the `from` token account.
-    owner: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
-}
-
-impl<'info> CreateCheck<'info> {
-    pub fn accounts(ctx: &Context<CreateCheck>, nonce: u8) -> Result<()> {
-        let signer = Pubkey::create_program_address(
-            &[ctx.accounts.check.to_account_info().key.as_ref(), &[nonce]],
-            ctx.program_id,
-        )
-        .map_err(|_| ErrorCode::InvalidCheckNonce)?;
-        if &signer != ctx.accounts.check_signer.to_account_info().key {
-            return Err(ErrorCode::InvalidCheckSigner.into());
-        }
-        Ok(())
+// Context for calling token mintTo
+impl<'info> InitializePool<'info> {
+    fn into_mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+        let cpi_accounts = MintTo {
+            mint: self.pool_mint.to_account_info().clone(),
+            to: self.destination.to_account_info().clone(),
+            authority: self.authority.clone(),
+        };
+        CpiContext::new(self.token_program.clone(), cpi_accounts)
     }
-}
-
-#[derive(Accounts)]
-pub struct CashCheck<'info> {
-    #[account(mut, has_one = vault, has_one = to)]
-    check: Account<'info, Check>,
-    #[account(mut)]
-    vault: AccountInfo<'info>,
-    #[account(
-        seeds = [check.to_account_info().key.as_ref()],
-        bump = check.nonce,
-    )]
-    check_signer: AccountInfo<'info>,
-    #[account(mut, has_one = owner)]
-    to: Account<'info, TokenAccount>,
-    #[account(signer)]
-    owner: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
-}
-
-#[derive(Accounts)]
-pub struct CancelCheck<'info> {
-    #[account(mut, has_one = vault, has_one = from)]
-    check: Account<'info, Check>,
-    #[account(mut)]
-    vault: AccountInfo<'info>,
-    #[account(
-        seeds = [check.to_account_info().key.as_ref()],
-        bump = check.nonce,
-    )]
-    check_signer: AccountInfo<'info>,
-    #[account(mut, has_one = owner)]
-    from: Account<'info, TokenAccount>,
-    #[account(signer)]
-    owner: AccountInfo<'info>,
-    token_program: AccountInfo<'info>,
 }
 
 #[account]
@@ -219,24 +90,17 @@ pub struct ReservePool {
     // Bump seed used to generate PDA
     pub bump_seed: u8,
 
+    // SPL token program
     pub token_program_id: Pubkey,
 
+    // Account where tokens are stored
     pub token_account: Pubkey,
 
+    // Mint address of pool LP tokens
     pub pool_mint: Pubkey,
 
+    // Mint address of the tokens that are stored in pool
     pub token_mint: Pubkey,
-}
-
-#[account]
-pub struct Check {
-    from: Pubkey,
-    to: Pubkey,
-    amount: u64,
-    memo: Option<String>,
-    vault: Pubkey,
-    nonce: u8,
-    burned: bool,
 }
 
 #[error]
@@ -247,11 +111,4 @@ pub enum ErrorCode {
     InvalidCheckSigner,
     #[msg("The given check has already been burned.")]
     AlreadyBurned,
-}
-
-fn not_burned(check: &Check) -> Result<()> {
-    if check.burned {
-        return Err(ErrorCode::AlreadyBurned.into());
-    }
-    Ok(())
 }
