@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
+use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use std::convert::{Into, TryFrom};
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
@@ -38,6 +38,34 @@ pub mod castle_lending_aggregator {
 
         Ok(())
     }
+
+    pub fn deposit(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult {
+        let reserve_pool = &mut ctx.accounts.reserve_pool;
+
+        let pool_token_supply = u128::try_from(ctx.accounts.pool_mint.supply).unwrap();
+        let tokens_in_pool = u128::try_from(ctx.accounts.token.amount).unwrap();
+        let source_token_amount_converted = u128::try_from(source_token_amount).unwrap();
+        let pool_tokens_to_mint = u64::try_from(
+            pool_token_supply * (source_token_amount_converted / tokens_in_pool)
+        ).unwrap();
+
+        let seeds = &[
+            &reserve_pool.to_account_info().key.to_bytes(), 
+            &[reserve_pool.bump_seed][..],
+        ];
+
+        token::transfer(
+            ctx.accounts.into_transfer_context(),
+            source_token_amount,
+        )?;
+
+        token::mint_to(
+            ctx.accounts.into_mint_to_context().with_signer(&[&seeds[..]]),
+            pool_tokens_to_mint,
+        )?;
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -70,6 +98,55 @@ impl<'info> InitializePool<'info> {
             mint: self.pool_mint.to_account_info().clone(),
             to: self.destination.to_account_info().clone(),
             authority: self.authority.clone(),
+        };
+        CpiContext::new(self.token_program.clone(), cpi_accounts)
+    }
+}
+
+#[derive(Accounts)]
+pub struct Deposit<'info> {
+    pub reserve_pool: ProgramAccount<'info, ReservePool>,
+
+    pub authority: AccountInfo<'info>,
+
+    #[account(signer)]
+    pub user_authority: AccountInfo<'info>,
+
+    // Account from which tokens are transferred
+    #[account(mut)]
+    pub source: Account<'info, TokenAccount>,
+
+    // Account where tokens in pool are stored
+    #[account(mut)]
+    pub token: Account<'info, TokenAccount>,
+
+    // Account where pool LP tokens are minted to 
+    #[account(mut)]
+    pub destination: Account<'info, TokenAccount>,
+
+    // Mint address of pool LP token
+    #[account(mut)]
+    pub pool_mint: Account<'info, Mint>,
+
+    // SPL token program
+    pub token_program: AccountInfo<'info>,
+}
+
+impl<'info> Deposit<'info> {
+    fn into_mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+        let cpi_accounts = MintTo {
+            mint: self.pool_mint.to_account_info().clone(),
+            to: self.destination.to_account_info().clone(),
+            authority: self.authority.clone(),
+        };
+        CpiContext::new(self.token_program.clone(), cpi_accounts)
+    }
+
+    fn into_transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+        let cpi_accounts = Transfer {
+            from: self.source.to_account_info().clone(),
+            to: self.token.to_account_info().clone(),
+            authority: self.user_authority.clone(),
         };
         CpiContext::new(self.token_program.clone(), cpi_accounts)
     }

@@ -77,7 +77,51 @@ describe("reserve-pool", () => {
   });
 
   it("Deposits to reserve pool", async () => {
+    const depositAmount = 1000;
 
+    // Create depositor token account
+    const userAuthority = anchor.web3.Keypair.generate();
+    const userTokenAccount = await tokenMint.createAccount(owner.publicKey);
+    await tokenMint.mintTo(userTokenAccount, owner, [], depositAmount);
+    await tokenMint.approve(
+      userTokenAccount,
+      userAuthority.publicKey,
+      owner,
+      [],
+      depositAmount,
+    );
+
+    // Create depositor pool LP token account
+    const userPoolTokenAccount = await poolTokenMint.createAccount(owner.publicKey);
+
+    await program.rpc.deposit(
+      new anchor.BN(depositAmount),
+      {
+        accounts: {
+          reservePool: poolAccount.publicKey,
+          authority: authority,
+          userAuthority: userAuthority.publicKey,
+          source: userTokenAccount,
+          destination: userPoolTokenAccount,
+          token: tokenAccount,
+          poolMint: poolTokenMint.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+        signers: [userAuthority],
+      }
+    );
+
+    const userTokenAccountInfo = await tokenMint.getAccountInfo(userTokenAccount);
+    assert(userTokenAccountInfo.amount.toNumber() == 0);
+
+    const tokenAccountInfo = await tokenMint.getAccountInfo(tokenAccount);
+    assert(tokenAccountInfo.amount.toNumber() == 2000);
+
+    const userPoolTokenAccountInfo = await poolTokenMint.getAccountInfo(userPoolTokenAccount);
+    assert(userPoolTokenAccountInfo.amount.toNumber() == 1000000);
+
+    const poolTokenAccountInfo = await poolTokenMint.getAccountInfo(poolTokenAccount);
+    assert(poolTokenAccountInfo.amount.toNumber() == 1000000);
   });
 
   it("Withdraws from reserve pool", async () => {
