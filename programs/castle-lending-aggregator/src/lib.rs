@@ -1,8 +1,3 @@
-//! A cashiers check example. The funds are immediately withdrawn from a user's
-//! account and sent to a program controlled `Check` account, where the funds
-//! reside until they are "cashed" by the intended recipient. The creator of
-//! the check can cancel the check at any time to get back the funds.
-
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
 use std::convert::{Into, TryFrom};
@@ -101,14 +96,4 @@ pub struct ReservePool {
 
     // Mint address of the tokens that are stored in pool
     pub token_mint: Pubkey,
-}
-
-#[error]
-pub enum ErrorCode {
-    #[msg("The given nonce does not create a valid program derived address.")]
-    InvalidCheckNonce,
-    #[msg("The derived check signer does not match that which was given.")]
-    InvalidCheckSigner,
-    #[msg("The given check has already been burned.")]
-    AlreadyBurned,
 }
