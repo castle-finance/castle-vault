@@ -4,7 +4,7 @@ const { TOKEN_PROGRAM_ID , Token} = require("@solana/spl-token");
 const { PublicKey } = require("@solana/web3.js");
 
 
-describe("reserve-pool", () => {
+describe("castle-lending-forwarder", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
@@ -126,6 +126,8 @@ describe("reserve-pool", () => {
   });
 
   it("Withdraws from reserve pool", async () => {
+    // TODO change this test to be independent of deposit
+
     // Pool tokens to withdraw from
     const withdrawAmount = 1000000;
 

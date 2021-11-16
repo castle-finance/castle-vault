@@ -22,4 +22,8 @@ pub mod castle_lending_aggregator {
     pub fn withdraw(ctx: Context<Withdraw>, pool_token_amount: u64) -> ProgramResult {
         instructions::withdraw::handler(ctx, pool_token_amount)
     }
+
+    pub fn rebalance(ctx: Context<Rebalance>) -> ProgramResult {
+        instructions::rebalance::handler(ctx)
+    }
 }

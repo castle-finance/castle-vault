@@ -6,6 +6,8 @@ use std::convert::{Into, TryFrom};
 
 use crate::state::*;
 
+/// TODO modify to withdraw from solend
+
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     pub reserve_pool: ProgramAccount<'info, ReservePool>,

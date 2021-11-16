@@ -2,11 +2,6 @@ use anchor_lang::prelude::*;
 
 #[account]
 pub struct ReservePool {
-    pub initializer_key: Pubkey,
-    pub initializer_deposit_token_amount: Pubkey,
-    pub initializer_receive_token_amount: Pubkey,
-    pub initializer_amount: u64,
-
     // Bump seed used to generate PDA
     pub bump_seed: u8,
 
