@@ -15,8 +15,7 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.17.0"
-anchor-spl = "0.17.0"
+anchor-lang = "0.18.2"
+anchor-spl = "0.18.2"
 spl-math = {version = "0.1", features = ["no-entrypoint"]}
-anchor-lending = { git="https://github.com/RohanKapurDEV/anchor-lending", version="0.2.1" }
-spl-token-lending = { git="https://github.com/solendprotocol/solana-program-library", version="0.1.0" }
+anchor-lending = { git="https://github.com/charlieyou/anchor-lending", version="0.2.3" }
