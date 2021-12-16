@@ -8,7 +8,7 @@ use crate::state::*;
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
-    pub reserve_pool: ProgramAccount<'info, ReservePool>,
+    pub reserve_pool: Box<Account<'info, ReservePool>>,
 
     pub authority: AccountInfo<'info>,
 

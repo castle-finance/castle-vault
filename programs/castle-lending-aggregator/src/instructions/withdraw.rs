@@ -10,7 +10,7 @@ use crate::state::*;
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
-    pub reserve_pool: ProgramAccount<'info, ReservePool>,
+    pub reserve_pool: Box<Account<'info, ReservePool>>,
 
     pub authority: AccountInfo<'info>,
 

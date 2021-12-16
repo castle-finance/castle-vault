@@ -10,7 +10,7 @@ pub struct InitializePool<'info> {
     pub authority: AccountInfo<'info>,
 
     #[account(signer, zero)]
-    pub reserve_pool: ProgramAccount<'info, ReservePool>,
+    pub reserve_pool: Box<Account<'info, ReservePool>>,
 
     // Mint address of pool LP token
     #[account(mut)]
