@@ -2,10 +2,11 @@ use anchor_lang::prelude::*;
 
 pub mod instructions;
 pub mod state;
+pub mod cpi;
 
 use instructions::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 
 #[program]
 pub mod castle_lending_aggregator {

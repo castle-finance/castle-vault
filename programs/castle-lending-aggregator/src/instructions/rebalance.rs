@@ -1,16 +1,15 @@
 use anchor_lang::prelude::*;
 
-use anchor_lending::cpi::{deposit_reserve_liquidity, DepositReserveLiquidity};
 use anchor_spl::token::TokenAccount;
 
-use crate::state::*;
+use crate::cpi::spl::{deposit_reserve_liquidity, DepositReserveLiquidity};
+use crate::state::ReservePool;
 
 #[derive(Accounts)]
 #[instruction(nonce: u8, _bump: u8)]
 pub struct Rebalance<'info> {
     pub reserve_pool: Box<Account<'info, ReservePool>>,
 
-    #[account(signer)]
     pub authority: AccountInfo<'info>,
 
     pub lending_program: AccountInfo<'info>,
@@ -33,9 +32,6 @@ pub struct Rebalance<'info> {
     pub lending_market: AccountInfo<'info>,
 
     pub lending_market_authority: AccountInfo<'info>,
-
-    #[account(seeds = [&reserve_pool.to_account_info().key.to_bytes(), &[reserve_pool.bump_seed][..]], bump=_bump)]
-    pub transfer_authority: AccountInfo<'info>,
 
     // Clock
     pub clock: Sysvar<'info, Clock>,
