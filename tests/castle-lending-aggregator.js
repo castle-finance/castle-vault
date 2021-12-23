@@ -1,9 +1,10 @@
 const anchor = require("@project-serum/anchor");
 const assert = require("assert");
 const { TOKEN_PROGRAM_ID , Token} = require("@solana/spl-token");
-const { PublicKey } = require("@solana/web3.js");
+const { PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY} = require("@solana/web3.js");
 
 
+/// TODO use SDK instead of raw code
 describe("castle-lending-forwarder", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
@@ -126,10 +127,8 @@ describe("castle-lending-forwarder", () => {
   });
 
   it("Withdraws from reserve pool", async () => {
-    // TODO change this test to be independent of deposit
-
     // Pool tokens to withdraw from
-    const withdrawAmount = 1000000;
+    const withdrawAmount = 500000;
 
     // Create token account to withdraw into
     const userTokenAccount = await tokenMint.createAccount(owner.publicKey);
@@ -162,13 +161,13 @@ describe("castle-lending-forwarder", () => {
     );
 
     const userTokenAccountInfo = await tokenMint.getAccountInfo(userTokenAccount);
-    assert(userTokenAccountInfo.amount.toNumber() == 1000);
+    assert(userTokenAccountInfo.amount.toNumber() == 500);
 
     const tokenAccountInfo = await tokenMint.getAccountInfo(tokenAccount);
-    assert(tokenAccountInfo.amount.toNumber() == 1000);
+    assert(tokenAccountInfo.amount.toNumber() == 1500);
 
     const userPoolTokenAccountInfo = await poolTokenMint.getAccountInfo(userPoolTokenAccount);
-    assert(userPoolTokenAccountInfo.amount.toNumber() == 0);
+    assert(userPoolTokenAccountInfo.amount.toNumber() == 500000);
 
     const poolTokenAccountInfo = await poolTokenMint.getAccountInfo(poolTokenAccount);
     assert(poolTokenAccountInfo.amount.toNumber() == 1000000);
