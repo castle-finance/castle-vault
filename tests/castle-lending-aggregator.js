@@ -1,11 +1,13 @@
 const anchor = require("@project-serum/anchor");
 const assert = require("assert");
+const tokenLending = require("@solana/spl-token-lending");
+const { Buffer } = require("buffer")
 const { TOKEN_PROGRAM_ID , Token} = require("@solana/spl-token");
 const { PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY} = require("@solana/web3.js");
 
-
+/// TODO convert to ts
 /// TODO use SDK instead of raw code
-describe("castle-lending-forwarder", () => {
+describe("castle-vault", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
@@ -24,10 +26,61 @@ describe("castle-lending-forwarder", () => {
   const poolAccount = anchor.web3.Keypair.generate();
   const payer = anchor.web3.Keypair.generate();
 
-  it("Creates reserve pool", async () => {
+  // TODO possible to get dynamically?
+  const lendingProgram = new PublicKey("BwTGCAdzPncEFqP5JBAeCLRWKE8MDVvbGDVMD7XX2fvu");
+
+  const quoteCurrency = (s) => {
+    const buf = Buffer.alloc(32);
+    const strBuf = Buffer.from(s);
+    strBuf.copy(buf, 0);
+    return buf;
+  };
+
+  const lendingMarket = anchor.web3.Keypair.generate();
+  //const lendingMarketLpMintAccount;
+  //const lendingMarketLpToken = Token(
+  //  provider.connection, 
+  //  lendingMarketLpMintAccount, 
+  //  TOKEN_PROGRAM_ID,
+  //  payer,
+  //);
+  //const splLpTokenAccount = await lendingMarketLpToken.createAccount(authority);
+  //const lendingMarketReserveStateAccount;
+  //const lendingMarketDepositTokenAccount;
+  //const lendingMarketAuthority;
+
+  before(async () => {
     const sig  = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
     await provider.connection.confirmTransaction(sig, "singleGossip");
 
+    const balanceNeeded = await provider.connection.getMinimumBalanceForRentExemption(258);
+    const initTx = new anchor.web3.Transaction().add(
+      SystemProgram.createAccount({
+        fromPubkey: payer.publicKey,
+        newAccountPubkey: lendingMarket.publicKey,
+        lamports: balanceNeeded,
+        space: 258,
+        programId: lendingProgram,
+      })
+    ).add(
+      tokenLending.initLendingMarketInstruction(
+        owner.publicKey,
+        quoteCurrency("USD"),
+        lendingMarket.publicKey,
+        lendingProgram
+      )
+    );
+    await provider.send(
+      initTx,
+      [payer, lendingMarket],
+      "max"
+    );
+
+    // TODO Create lending reserve
+
+  });
+
+  it("Creates reserve pool", async () => {
     [authority, bumpSeed] = await PublicKey.findProgramAddress(
       [poolAccount.publicKey.toBuffer()],
       program.programId,
@@ -124,6 +177,33 @@ describe("castle-lending-forwarder", () => {
 
     const poolTokenAccountInfo = await poolTokenMint.getAccountInfo(poolTokenAccount);
     assert(poolTokenAccountInfo.amount.toNumber() == 1000000);
+  });
+
+  it("Forwards deposits to lending program", async () => {
+    await program.rpc.rebalance(
+      {
+        accounts: {
+          reservePool: poolAccount.publicKey,
+          authority: authority,
+          lendingProgram: lendingProgram,
+          poolDepositTokenAccount: tokenAccount,
+          poolLpTokenAccount: splLpTokenAccount,
+          lendingMarketReserveStateAccount: lendingMarketReserveStateAccount,
+          lendingMarketLpMintAccount: lendingMarketLpMintAccount,
+          lendingMarketDepositTokenAccount: lendingMarketDepositTokenAccount,
+          lendingMarket: lendingMarket.publicKey,
+          lendingMarketAuthority: lendingMarketAuthority,
+          clock: SYSVAR_CLOCK_PUBKEY,
+          tokenprogram: TOKEN_PROGRAM_ID,
+        },
+        signers: [poolAccount],
+      }
+    );
+
+    assert(true);
+  });
+
+  it("Rebalances", async () => {
   });
 
   it("Withdraws from reserve pool", async () => {
