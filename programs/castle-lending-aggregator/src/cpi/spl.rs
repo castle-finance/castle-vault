@@ -24,7 +24,7 @@ pub fn deposit_reserve_liquidity<'info>(
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
-        &ctx.signer_seeds,
+        ctx.signer_seeds,
     )?;
 
     Ok(())
@@ -49,7 +49,7 @@ pub fn redeem_reserve_collateral<'info>(
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
-        &ctx.signer_seeds,
+        ctx.signer_seeds,
     )?;
 
     Ok(())
@@ -68,7 +68,7 @@ pub fn refresh_reserve<'info>(
     solana_program::program::invoke_signed(
         &ix,
         &ToAccountInfos::to_account_infos(&ctx),
-        &ctx.signer_seeds,
+        ctx.signer_seeds,
     )?;
 
     Ok(())

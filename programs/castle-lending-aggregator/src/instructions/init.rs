@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
 
-use std::convert::{Into, TryFrom};
+use std::convert::Into;
 
 use crate::state::*;
 
@@ -30,7 +30,7 @@ pub struct InitializePool<'info> {
 
 // Context for calling token mintTo
 impl<'info> InitializePool<'info> {
-    fn into_mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+    fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         let cpi_accounts = MintTo {
             mint: self.pool_mint.to_account_info().clone(),
             to: self.destination.to_account_info().clone(),
@@ -41,7 +41,6 @@ impl<'info> InitializePool<'info> {
 }
 
 pub fn handler(ctx: Context<InitializePool>) -> ProgramResult {
-    // 
     let (____pool_authority, bump_seed) = Pubkey::find_program_address(
         &[&ctx.accounts.reserve_pool.to_account_info().key.to_bytes()],
         ctx.program_id,
@@ -54,10 +53,11 @@ pub fn handler(ctx: Context<InitializePool>) -> ProgramResult {
     // TODO safety checks
 
     // Mint initial LP tokens
-    let initial_amount = 1000000;
+    // TODO make smaller as to not int overflow with more $ in pool
+    let initial_amount:u64 = 1000000;
     token::mint_to(
-        ctx.accounts.into_mint_to_context().with_signer(&[&seeds[..]]),
-        u64::try_from(initial_amount).unwrap()
+        ctx.accounts.mint_to_context().with_signer(&[&seeds[..]]),
+        initial_amount,
     )?;
 
     // Initialize reserve pool

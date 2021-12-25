@@ -41,7 +41,7 @@ pub struct Rebalance<'info> {
 }
 
 impl<'info> Rebalance<'info> {
-    pub fn into_deposit_reserve_liquidity_context(
+    pub fn deposit_reserve_liquidity_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, DepositReserveLiquidity<'info>> {
         let cpi_accounts = DepositReserveLiquidity {
@@ -78,7 +78,7 @@ pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
     ];
 
     deposit_reserve_liquidity(
-        ctx.accounts.into_deposit_reserve_liquidity_context().with_signer(&[&seeds[..]]),
+        ctx.accounts.deposit_reserve_liquidity_context().with_signer(&[&seeds[..]]),
         tokens_in_pool,
     )?;
 

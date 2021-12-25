@@ -38,7 +38,7 @@ pub struct Withdraw<'info> {
 }
 
 impl<'info> Withdraw<'info> {
-    fn into_burn_context(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
+    fn burn_context(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
             mint: self.pool_mint.to_account_info().clone(),
             to: self.source.to_account_info().clone(),
@@ -47,7 +47,7 @@ impl<'info> Withdraw<'info> {
         CpiContext::new(self.token_program.clone(), cpi_accounts)
     }
 
-    fn into_transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+    fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
         let cpi_accounts = Transfer {
             from: self.token.to_account_info().clone(),
             to: self.destination.to_account_info().clone(),
@@ -73,12 +73,12 @@ pub fn handler(ctx: Context<Withdraw>, pool_token_amount: u64) -> ProgramResult 
     ];
 
     token::transfer(
-        ctx.accounts.into_transfer_context().with_signer(&[&seeds[..]]),
+        ctx.accounts.transfer_context().with_signer(&[&seeds[..]]),
         u64::try_from(tokens_to_transfer).unwrap(),
     )?;
 
     token::burn(
-        ctx.accounts.into_burn_context(),
+        ctx.accounts.burn_context(),
         pool_token_amount,
     )?;
 

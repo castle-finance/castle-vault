@@ -126,6 +126,9 @@ describe("castle-vault", () => {
     assert(actualPoolAccount.tokenAccount.equals(vaultReserveTokenAccount));
     assert(actualPoolAccount.tokenMint.equals(reserveTokenMint.publicKey));
     assert(actualPoolAccount.poolMint.equals(lpTokenMint.publicKey));
+
+    const lpTokenMintInfo = await lpTokenMint.getMintInfo();
+    assert.equal(lpTokenMintInfo.supply.toNumber(), 1000000);
   });
 
   let userLpTokenAccount;

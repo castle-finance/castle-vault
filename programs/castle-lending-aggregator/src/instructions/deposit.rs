@@ -36,7 +36,7 @@ pub struct Deposit<'info> {
 }
 
 impl<'info> Deposit<'info> {
-    fn into_mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+    fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         let cpi_accounts = MintTo {
             mint: self.pool_mint.to_account_info().clone(),
             to: self.destination.to_account_info().clone(),
@@ -45,7 +45,7 @@ impl<'info> Deposit<'info> {
         CpiContext::new(self.token_program.clone(), cpi_accounts)
     }
 
-    fn into_transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+    fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
         let cpi_accounts = Transfer {
             from: self.source.to_account_info().clone(),
             to: self.token.to_account_info().clone(),
@@ -56,6 +56,7 @@ impl<'info> Deposit<'info> {
 }
 
 pub fn handler(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult {
+    // TODO handle case where there is no pool token supply
     let reserve_pool = &mut ctx.accounts.reserve_pool;
 
     let pool_token_supply = PreciseNumber::new(ctx.accounts.pool_mint.supply as u128).unwrap();
@@ -71,12 +72,12 @@ pub fn handler(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult
     ];
 
     token::transfer(
-        ctx.accounts.into_transfer_context(),
+        ctx.accounts.transfer_context(),
         source_token_amount,
     )?;
 
     token::mint_to(
-        ctx.accounts.into_mint_to_context().with_signer(&[&seeds[..]]),
+        ctx.accounts.mint_to_context().with_signer(&[&seeds[..]]),
         u64::try_from(pool_tokens_to_mint).unwrap(),
     )?;
 
