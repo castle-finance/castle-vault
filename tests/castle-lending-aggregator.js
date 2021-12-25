@@ -17,12 +17,11 @@ describe("castle-vault", () => {
   let vaultAuthority;
   let vaultSeed;
   let lpTokenMint;
-  let userLpTokenAccount;
-  let userLpTokenAccount;
   let reserveTokenMint;
   let vaultReserveTokenAccount;
 
   const owner = anchor.web3.Keypair.generate();
+  // Can this be a PDA?
   const vaultStateAccount = anchor.web3.Keypair.generate();
   const payer = anchor.web3.Keypair.generate();
 
@@ -85,7 +84,6 @@ describe("castle-vault", () => {
       [vaultStateAccount.publicKey.toBuffer()],
       program.programId,
     )
-    // Create pool mint
     lpTokenMint = await Token.createMint(
       provider.connection,
       payer,
@@ -94,8 +92,7 @@ describe("castle-vault", () => {
       2,
       TOKEN_PROGRAM_ID
     );
-    // Create pool account
-    userLpTokenAccount = await lpTokenMint.createAccount(owner.publicKey);
+    const ownerLpTokenAccount = await lpTokenMint.createAccount(owner.publicKey);
     
     reserveTokenMint = await Token.createMint(
       provider.connection,
@@ -116,7 +113,7 @@ describe("castle-vault", () => {
           reservePool: vaultStateAccount.publicKey,
           poolMint: lpTokenMint.publicKey,
           token: vaultReserveTokenAccount,
-          destination: userLpTokenAccount,
+          destination: ownerLpTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
         signers: [vaultStateAccount],
@@ -130,6 +127,8 @@ describe("castle-vault", () => {
     assert(actualPoolAccount.tokenMint.equals(reserveTokenMint.publicKey));
     assert(actualPoolAccount.poolMint.equals(lpTokenMint.publicKey));
   });
+
+  let userLpTokenAccount;
 
   it("Deposits to reserve pool", async () => {
     const depositAmount = 1000;
@@ -167,16 +166,16 @@ describe("castle-vault", () => {
     );
 
     const userTokenAccountInfo = await reserveTokenMint.getAccountInfo(userReserveTokenAccount);
-    assert(userTokenAccountInfo.amount.toNumber() == 0);
+    assert.equal(userTokenAccountInfo.amount.toNumber(), 0);
 
     const tokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
-    assert(tokenAccountInfo.amount.toNumber() == 2000);
+    assert.equal(tokenAccountInfo.amount.toNumber(), 2000);
 
     const userPoolTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
-    assert(userPoolTokenAccountInfo.amount.toNumber() == 1000000);
+    assert.equal(userPoolTokenAccountInfo.amount.toNumber(), 1000000);
 
-    const poolTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
-    assert(poolTokenAccountInfo.amount.toNumber() == 1000000);
+    const lpTokenMintInfo = await lpTokenMint.getMintInfo();
+    assert.equal(lpTokenMintInfo.supply.toNumber(), 2000000);
   });
 
   it("Forwards deposits to lending program", async () => {
@@ -240,16 +239,16 @@ describe("castle-vault", () => {
       }
     );
 
-    const userTokenAccountInfo = await reserveTokenMint.getAccountInfo(userReserveTokenAccount);
-    assert(userTokenAccountInfo.amount.toNumber() == 500);
+    const userReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(userReserveTokenAccount);
+    assert.equal(userReserveTokenAccountInfo.amount.toNumber(), 500);
 
-    const tokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
-    assert(tokenAccountInfo.amount.toNumber() == 1500);
+    const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
+    assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 1500);
 
-    const userPoolTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
-    assert(userPoolTokenAccountInfo.amount.toNumber() == 500000);
+    const userLpTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
+    assert.equal(userLpTokenAccountInfo.amount.toNumber(), withdrawAmount);
 
-    const poolTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
-    assert(poolTokenAccountInfo.amount.toNumber() == 1000000);
+    const lpTokenMintInfo = await lpTokenMint.getMintInfo();
+    assert.equal(lpTokenMintInfo.supply.toNumber(), 1500000);
   });
 });
