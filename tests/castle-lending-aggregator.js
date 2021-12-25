@@ -14,16 +14,16 @@ describe("castle-vault", () => {
 
   const program = anchor.workspace.CastleLendingAggregator;
 
-  let authority;
-  let bumpSeed;
-  let poolTokenMint;
-  let poolTokenAccount;
-  let userPoolTokenAccount;
-  let tokenMint;
-  let tokenAccount;
+  let vaultAuthority;
+  let vaultSeed;
+  let lpTokenMint;
+  let userLpTokenAccount;
+  let userLpTokenAccount;
+  let reserveTokenMint;
+  let vaultReserveTokenAccount;
 
   const owner = anchor.web3.Keypair.generate();
-  const poolAccount = anchor.web3.Keypair.generate();
+  const vaultStateAccount = anchor.web3.Keypair.generate();
   const payer = anchor.web3.Keypair.generate();
 
   // TODO possible to get dynamically?
@@ -81,23 +81,23 @@ describe("castle-vault", () => {
   });
 
   it("Creates reserve pool", async () => {
-    [authority, bumpSeed] = await PublicKey.findProgramAddress(
-      [poolAccount.publicKey.toBuffer()],
+    [vaultAuthority, vaultSeed] = await PublicKey.findProgramAddress(
+      [vaultStateAccount.publicKey.toBuffer()],
       program.programId,
     )
     // Create pool mint
-    poolTokenMint = await Token.createMint(
+    lpTokenMint = await Token.createMint(
       provider.connection,
       payer,
-      authority,
+      vaultAuthority,
       null,
       2,
       TOKEN_PROGRAM_ID
     );
     // Create pool account
-    poolTokenAccount = await poolTokenMint.createAccount(owner.publicKey);
+    userLpTokenAccount = await lpTokenMint.createAccount(owner.publicKey);
     
-    tokenMint = await Token.createMint(
+    reserveTokenMint = await Token.createMint(
       provider.connection,
       payer,
       owner.publicKey,
@@ -105,30 +105,30 @@ describe("castle-vault", () => {
       2,
       TOKEN_PROGRAM_ID
     );
-    tokenAccount = await tokenMint.createAccount(authority);
+    vaultReserveTokenAccount = await reserveTokenMint.createAccount(vaultAuthority);
 
-    await tokenMint.mintTo(tokenAccount, owner, [], 1000);
+    await reserveTokenMint.mintTo(vaultReserveTokenAccount, owner, [], 1000);
 
     await program.rpc.initializePool(
       {
         accounts: {
-          authority: authority,
-          reservePool: poolAccount.publicKey,
-          poolMint: poolTokenMint.publicKey,
-          token: tokenAccount,
-          destination: poolTokenAccount,
+          authority: vaultAuthority,
+          reservePool: vaultStateAccount.publicKey,
+          poolMint: lpTokenMint.publicKey,
+          token: vaultReserveTokenAccount,
+          destination: userLpTokenAccount,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
-        signers: [poolAccount],
-        instructions: [await program.account.reservePool.createInstruction(poolAccount)]
+        signers: [vaultStateAccount],
+        instructions: [await program.account.reservePool.createInstruction(vaultStateAccount)]
       }
     );
 
-    const actualPoolAccount = await program.account.reservePool.fetch(poolAccount.publicKey);
+    const actualPoolAccount = await program.account.reservePool.fetch(vaultStateAccount.publicKey);
     assert(actualPoolAccount.tokenProgramId.equals(TOKEN_PROGRAM_ID));
-    assert(actualPoolAccount.tokenAccount.equals(tokenAccount));
-    assert(actualPoolAccount.tokenMint.equals(tokenMint.publicKey));
-    assert(actualPoolAccount.poolMint.equals(poolTokenMint.publicKey));
+    assert(actualPoolAccount.tokenAccount.equals(vaultReserveTokenAccount));
+    assert(actualPoolAccount.tokenMint.equals(reserveTokenMint.publicKey));
+    assert(actualPoolAccount.poolMint.equals(lpTokenMint.publicKey));
   });
 
   it("Deposits to reserve pool", async () => {
@@ -136,10 +136,10 @@ describe("castle-vault", () => {
 
     // Create depositor token account
     const userAuthority = anchor.web3.Keypair.generate();
-    const userTokenAccount = await tokenMint.createAccount(owner.publicKey);
-    await tokenMint.mintTo(userTokenAccount, owner, [], depositAmount);
-    await tokenMint.approve(
-      userTokenAccount,
+    const userReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
+    await reserveTokenMint.mintTo(userReserveTokenAccount, owner, [], depositAmount);
+    await reserveTokenMint.approve(
+      userReserveTokenAccount,
       userAuthority.publicKey,
       owner,
       [],
@@ -147,35 +147,35 @@ describe("castle-vault", () => {
     );
 
     // Create depositor pool LP token account
-    userPoolTokenAccount = await poolTokenMint.createAccount(owner.publicKey);
+    userLpTokenAccount = await lpTokenMint.createAccount(owner.publicKey);
 
     await program.rpc.deposit(
       new anchor.BN(depositAmount),
       {
         accounts: {
-          reservePool: poolAccount.publicKey,
-          authority: authority,
+          reservePool: vaultStateAccount.publicKey,
+          authority: vaultAuthority,
           userAuthority: userAuthority.publicKey,
-          source: userTokenAccount,
-          destination: userPoolTokenAccount,
-          token: tokenAccount,
-          poolMint: poolTokenMint.publicKey,
+          source: userReserveTokenAccount,
+          destination: userLpTokenAccount,
+          token: vaultReserveTokenAccount,
+          poolMint: lpTokenMint.publicKey,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
         signers: [userAuthority],
       }
     );
 
-    const userTokenAccountInfo = await tokenMint.getAccountInfo(userTokenAccount);
+    const userTokenAccountInfo = await reserveTokenMint.getAccountInfo(userReserveTokenAccount);
     assert(userTokenAccountInfo.amount.toNumber() == 0);
 
-    const tokenAccountInfo = await tokenMint.getAccountInfo(tokenAccount);
+    const tokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
     assert(tokenAccountInfo.amount.toNumber() == 2000);
 
-    const userPoolTokenAccountInfo = await poolTokenMint.getAccountInfo(userPoolTokenAccount);
+    const userPoolTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
     assert(userPoolTokenAccountInfo.amount.toNumber() == 1000000);
 
-    const poolTokenAccountInfo = await poolTokenMint.getAccountInfo(poolTokenAccount);
+    const poolTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
     assert(poolTokenAccountInfo.amount.toNumber() == 1000000);
   });
 
@@ -183,10 +183,10 @@ describe("castle-vault", () => {
     await program.rpc.rebalance(
       {
         accounts: {
-          reservePool: poolAccount.publicKey,
-          authority: authority,
+          reservePool: vaultStateAccount.publicKey,
+          authority: vaultAuthority,
           lendingProgram: lendingProgram,
-          poolDepositTokenAccount: tokenAccount,
+          poolDepositTokenAccount: vaultReserveTokenAccount,
           poolLpTokenAccount: splLpTokenAccount,
           lendingMarketReserveStateAccount: lendingMarketReserveStateAccount,
           lendingMarketLpMintAccount: lendingMarketLpMintAccount,
@@ -196,7 +196,7 @@ describe("castle-vault", () => {
           clock: SYSVAR_CLOCK_PUBKEY,
           tokenprogram: TOKEN_PROGRAM_ID,
         },
-        signers: [poolAccount],
+        signers: [vaultStateAccount],
       }
     );
 
@@ -211,12 +211,12 @@ describe("castle-vault", () => {
     const withdrawAmount = 500000;
 
     // Create token account to withdraw into
-    const userTokenAccount = await tokenMint.createAccount(owner.publicKey);
+    const userReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
 
     // Delegate authority to transfer pool tokens
     const userAuthority = anchor.web3.Keypair.generate();
-    await poolTokenMint.approve(
-      userPoolTokenAccount,
+    await lpTokenMint.approve(
+      userLpTokenAccount,
       userAuthority.publicKey,
       owner,
       [],
@@ -227,29 +227,29 @@ describe("castle-vault", () => {
       new anchor.BN(withdrawAmount),
       {
         accounts: {
-          reservePool: poolAccount.publicKey,
-          authority: authority,
+          reservePool: vaultStateAccount.publicKey,
+          authority: vaultAuthority,
           userAuthority: userAuthority.publicKey,
-          source: userPoolTokenAccount,
-          token: tokenAccount,
-          destination: userTokenAccount,
-          poolMint: poolTokenMint.publicKey,
+          source: userLpTokenAccount,
+          token: vaultReserveTokenAccount,
+          destination: userReserveTokenAccount,
+          poolMint: lpTokenMint.publicKey,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
         signers: [userAuthority],
       }
     );
 
-    const userTokenAccountInfo = await tokenMint.getAccountInfo(userTokenAccount);
+    const userTokenAccountInfo = await reserveTokenMint.getAccountInfo(userReserveTokenAccount);
     assert(userTokenAccountInfo.amount.toNumber() == 500);
 
-    const tokenAccountInfo = await tokenMint.getAccountInfo(tokenAccount);
+    const tokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
     assert(tokenAccountInfo.amount.toNumber() == 1500);
 
-    const userPoolTokenAccountInfo = await poolTokenMint.getAccountInfo(userPoolTokenAccount);
+    const userPoolTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
     assert(userPoolTokenAccountInfo.amount.toNumber() == 500000);
 
-    const poolTokenAccountInfo = await poolTokenMint.getAccountInfo(poolTokenAccount);
+    const poolTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
     assert(poolTokenAccountInfo.amount.toNumber() == 1000000);
   });
 });
