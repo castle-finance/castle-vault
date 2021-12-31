@@ -1,3 +1,3 @@
-pub mod spl;
+pub mod solend;
 
-pub use spl::*;
+pub use solend::*;

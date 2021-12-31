@@ -1,6 +1,6 @@
 const anchor = require("@project-serum/anchor");
 const assert = require("assert");
-const tokenLending = require("@solana/spl-token-lending");
+const tokenLending = require("@dbricks/dbricks-solend");
 const { Buffer } = require("buffer")
 const { AccountLayout, MintLayout, TOKEN_PROGRAM_ID , Token} = require("@solana/spl-token");
 const { PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY} = require("@solana/web3.js");
@@ -36,23 +36,23 @@ describe("castle-vault", () => {
   };
 
   const lendingMarket = anchor.web3.Keypair.generate();
-  //const lendingMarketLpMintAccount;
-  //const lendingMarketLpToken = Token(
-  //  provider.connection, 
-  //  lendingMarketLpMintAccount, 
-  //  TOKEN_PROGRAM_ID,
-  //  payer,
-  //);
-  //const splLpTokenAccount = await lendingMarketLpToken.createAccount(authority);
-  //const lendingMarketReserveStateAccount;
-  //const lendingMarketDepositTokenAccount;
-  //const lendingMarketAuthority;
+  const collateralMint = anchor.web3.Keypair.generate();
+  const reserve = anchor.web3.Keypair.generate();
+  const liquiditySupply = anchor.web3.Keypair.generate();
+
+  const pythProduct = new PublicKey("3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E");
+  const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
+  const switchboardFeed = new PublicKey("GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR");
+
+  let lendingMarketAuthority;
+  let _lmaBumpSeed;
 
   before(async () => {
     const sig  = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
     await provider.connection.confirmTransaction(sig, "singleGossip");
 
-    // TODO move this into spl token lending js client
+    const pythProgramId = new PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s");
+    const switchboardProgramId = new PublicKey("2TfB33aLaneQb5TNVwyDz3jSZXS6jdW2ARw1Dgf84XCG");
     const balanceNeeded = await provider.connection.getMinimumBalanceForRentExemption(tokenLending.LENDING_MARKET_SIZE);
     const initTx = new anchor.web3.Transaction().add(
       SystemProgram.createAccount({
@@ -67,6 +67,8 @@ describe("castle-vault", () => {
         owner.publicKey,
         quoteCurrency("USD"),
         lendingMarket.publicKey,
+        pythProgramId,
+        switchboardProgramId,
         lendingProgram
       )
     );
@@ -84,10 +86,7 @@ describe("castle-vault", () => {
     const liquidityAmount = 10;
     await reserveTokenMint.mintTo(ownerReserveTokenAccount, owner, [], liquidityAmount);
 
-    const reserve = anchor.web3.Keypair.generate();
-    const collateralMint = anchor.web3.Keypair.generate();
     const collateralSupply = anchor.web3.Keypair.generate();
-    const liquiditySupply = anchor.web3.Keypair.generate();
     const liquidityFeeReceiver = anchor.web3.Keypair.generate();
     const userCollateral = anchor.web3.Keypair.generate();
     const userTransferAuthority = anchor.web3.Keypair.generate();
@@ -161,14 +160,15 @@ describe("castle-vault", () => {
       maxBorrowRate: 30,
       fees: {
           /// 0.00001% (Aave borrow fee)
-          borrowFeeWad: new anchor.BN(100_000_000_000),
+          borrowFeeWad: 100_000_000_000n,
           /// 0.3% (Aave flash loan fee)
-          flashLoanFeeWad: new anchor.BN(3_000_000_000_000_000n),
+          flashLoanFeeWad: 3_000_000_000_000_000n,
           hostFeePercentage: 20,
       },
+      depositLimit: 100_000_000n,
+      borrowLimit: 100_000_000n,
+      feeReceiver: liquidityFeeReceiver.publicKey,
     };
-    const pythProduct = new PublicKey("3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E");
-    const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
     const tx3 = new anchor.web3.Transaction().add(
       Token.createApproveInstruction(
         TOKEN_PROGRAM_ID,
@@ -196,6 +196,7 @@ describe("castle-vault", () => {
         lendingMarketAuthority,
         owner.publicKey,
         userTransferAuthority.publicKey,
+        switchboardFeed,
         lendingProgram,
       )
     );
@@ -221,6 +222,7 @@ describe("castle-vault", () => {
     );
     const ownerLpTokenAccount = await lpTokenMint.createAccount(owner.publicKey);
     
+    // TODO change to require initial deposit
     vaultReserveTokenAccount = await reserveTokenMint.createAccount(vaultAuthority);
     await reserveTokenMint.mintTo(vaultReserveTokenAccount, owner, [], 1000);
 
@@ -250,10 +252,8 @@ describe("castle-vault", () => {
   });
 
   let userLpTokenAccount;
-
+  const depositAmount = 1000;
   it("Deposits to vault reserves", async () => {
-    const depositAmount = 1000;
-
     // Create depositor token account
     const userAuthority = anchor.web3.Keypair.generate();
     const userReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
@@ -300,33 +300,43 @@ describe("castle-vault", () => {
   });
 
   it("Forwards deposits to lending program", async () => {
-    //await program.rpc.rebalance(
-    //  {
-    //    accounts: {
-    //      reservePool: vaultStateAccount.publicKey,
-    //      authority: vaultAuthority,
-    //      lendingProgram: lendingProgram,
-    //      poolDepositTokenAccount: vaultReserveTokenAccount,
-    //      poolLpTokenAccount: splLpTokenAccount,
-    //      lendingMarketReserveStateAccount: lendingMarketReserveStateAccount,
-    //      lendingMarketLpMintAccount: lendingMarketLpMintAccount,
-    //      lendingMarketDepositTokenAccount: lendingMarketDepositTokenAccount,
-    //      lendingMarket: lendingMarket.publicKey,
-    //      lendingMarketAuthority: lendingMarketAuthority,
-    //      clock: SYSVAR_CLOCK_PUBKEY,
-    //      tokenprogram: TOKEN_PROGRAM_ID,
-    //    },
-    //    signers: [vaultStateAccount],
-    //  }
-    //);
+    const collateralMintToken = new Token(provider.connection, collateralMint.publicKey, TOKEN_PROGRAM_ID, payer);
+    const vaultLpTokenAccount = await collateralMintToken.createAccount(vaultAuthority);
 
-    assert(true);
+    await program.rpc.rebalance(
+      {
+        accounts: {
+          vaultState: vaultStateAccount.publicKey,
+          vaultAuthority: vaultAuthority,
+          vaultReserveToken: vaultReserveTokenAccount,
+          vaultLpToken: vaultLpTokenAccount,
+          solendProgram: lendingProgram,
+          solendMarketAuthority: lendingMarketAuthority,
+          solendMarket: lendingMarket.publicKey,
+          solendReserveStateAccount: reserve.publicKey,
+          solendLpMintAccount: collateralMint.publicKey,
+          solendDepositTokenAccount: liquiditySupply.publicKey,
+          solendPyth: pythPrice,
+          solendSwitchboard: switchboardFeed,
+          clock: SYSVAR_CLOCK_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      }
+    );
+    const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
+    assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 0);
+
+    const vaultLpTokenAccountInfo = await collateralMintToken.getAccountInfo(vaultLpTokenAccount);
+    assert.notEqual(vaultLpTokenAccountInfo.amount.toNumber(), 0);
+
+    const liquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(liquiditySupply.publicKey);
+    assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), 2010);
   });
 
   it("Rebalances", async () => {
   });
 
-  it("Withdraws from reserve pool", async () => {
+  it("Withdraws from vault", async () => {
     // Pool tokens to withdraw from
     const withdrawAmount = 500000;
 

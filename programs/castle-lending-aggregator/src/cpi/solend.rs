@@ -18,7 +18,7 @@ pub fn deposit_reserve_liquidity<'info>(
         *ctx.accounts.reserve_liquidity_supply.key,
         *ctx.accounts.reserve_collateral_mint.key,
         *ctx.accounts.lending_market_account.key,
-        *ctx.accounts.lending_market_authority.key,
+        *ctx.accounts.transfer_authority.key,
     );
 
     solana_program::program::invoke_signed(
@@ -43,7 +43,7 @@ pub fn redeem_reserve_collateral<'info>(
         *ctx.accounts.reserve_collateral_mint.key,
         *ctx.accounts.reserve_liquidity.key,
         *ctx.accounts.lending_market.key,
-        *ctx.accounts.lending_market_authority.key,
+        *ctx.accounts.user_transfer_authority.key,
     );
 
     solana_program::program::invoke_signed(

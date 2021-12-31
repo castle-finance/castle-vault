@@ -57,7 +57,7 @@ impl<'info> Deposit<'info> {
 
 pub fn handler(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult {
     // TODO handle case where there is no pool token supply
-    let reserve_pool = &mut ctx.accounts.reserve_pool;
+    let reserve_pool = &ctx.accounts.reserve_pool;
 
     let pool_token_supply = PreciseNumber::new(ctx.accounts.pool_mint.supply as u128).unwrap();
     let tokens_in_pool = PreciseNumber::new(ctx.accounts.token.amount as u128).unwrap();

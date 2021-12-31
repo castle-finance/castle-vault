@@ -453,6 +453,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "port-anchor-adaptor",
  "spl-math",
  "spl-token-lending",
 ]
@@ -818,6 +819,54 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
+name = "port-anchor-adaptor"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "baadce3b140feb650369939552db8ee73ef4bd689368e3a6262b8b2a0c1cd82d"
+dependencies = [
+ "anchor-lang",
+ "num-derive",
+ "num-traits",
+ "port-staking-instructions",
+ "port-variable-rate-lending-instructions",
+ "solana-maths",
+ "thiserror",
+]
+
+[[package]]
+name = "port-staking-instructions"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "770d783226f0dd5e1ac09c2524cbcfccd7a1ec76ee60aa8f5146ec9904689bc0"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "spl-token 3.2.0",
+ "thiserror",
+ "uint 0.8.5",
+]
+
+[[package]]
+name = "port-variable-rate-lending-instructions"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53c9abfa3842f2b9147d2f2930b819eac0850671521904d1fd8ac0e5bedf5b46"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "num-derive",
+ "num-traits",
+ "port-staking-instructions",
+ "solana-program",
+ "spl-token 3.2.0",
+ "thiserror",
+ "uint 0.8.5",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1109,6 +1158,20 @@ dependencies = [
  "env_logger",
  "lazy_static",
  "log",
+]
+
+[[package]]
+name = "solana-maths"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a838196ed0bd1167442a6364b917aa3f49c39c69e36bb504e186d493d98ee715"
+dependencies = [
+ "arrayref",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "thiserror",
+ "uint 0.9.1",
 ]
 
 [[package]]
