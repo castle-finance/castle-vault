@@ -40,6 +40,7 @@ export class Solend {
     }
 
     async addReserve(
+        liquidityAmount: number,
         owner: Keypair, 
         payer: Keypair, 
         reserveTokenMint: Token, 
@@ -53,7 +54,6 @@ export class Solend {
         lendingMarketAuthority: PublicKey,
     ) {
         const ownerReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
-        const liquidityAmount = 10;
         await reserveTokenMint.mintTo(ownerReserveTokenAccount, owner, [], liquidityAmount);
 
         const collateralSupply = anchor.web3.Keypair.generate();

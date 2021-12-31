@@ -67,6 +67,7 @@ describe("castle-vault", () => {
         );
 
         await solendProgram.addReserve(
+            10,
             owner,
             payer,
             reserveTokenMint,
@@ -79,7 +80,6 @@ describe("castle-vault", () => {
             solendMarket.publicKey,
             solendMarketAuthority,
         );
-
     });
 
     it("Creates vault", async () => {
