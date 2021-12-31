@@ -1,34 +1,34 @@
-const anchor = require("@project-serum/anchor");
-const assert = require("assert");
-const tokenLending = require("@dbricks/dbricks-solend");
-const { Buffer } = require("buffer")
-const { AccountLayout, MintLayout, TOKEN_PROGRAM_ID , Token} = require("@solana/spl-token");
-const { PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY} = require("@solana/web3.js");
+import { Program } from '@project-serum/anchor';
+import assert from "assert";
+import * as solend from "@dbricks/dbricks-solend";
+import { Buffer } from "buffer";
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import { PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY } from "@solana/web3.js";
+import { CastleLendingAggregator } from "../target/types/castle_lending_aggregator";
 
-/// TODO convert to ts
+const anchor = require("@project-serum/anchor");
+
 /// TODO use SDK instead of raw code
 describe("castle-vault", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
 
-  const program = anchor.workspace.CastleLendingAggregator;
+  const program = anchor.workspace.CastleLendingAggregator as Program<CastleLendingAggregator>;
 
-  let vaultAuthority;
-  let vaultSeed;
-  let lpTokenMint;
-  let reserveTokenMint;
-  let vaultReserveTokenAccount;
+  let vaultAuthority: PublicKey;
+  let lpTokenMint: Token;
+  let reserveTokenMint: Token;
+  let vaultReserveTokenAccount: PublicKey;
 
   const owner = anchor.web3.Keypair.generate();
-  // Can this be a PDA?
   const vaultStateAccount = anchor.web3.Keypair.generate();
   const payer = anchor.web3.Keypair.generate();
 
   // TODO add private key to fixtures
   const lendingProgram = new PublicKey("BwTGCAdzPncEFqP5JBAeCLRWKE8MDVvbGDVMD7XX2fvu");
 
-  const quoteCurrency = (s) => {
+  const quoteCurrency = (s: string) => {
     const buf = Buffer.alloc(32);
     const strBuf = Buffer.from(s);
     strBuf.copy(buf, 0);
@@ -44,8 +44,7 @@ describe("castle-vault", () => {
   const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
   const switchboardFeed = new PublicKey("GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR");
 
-  let lendingMarketAuthority;
-  let _lmaBumpSeed;
+  let lendingMarketAuthority: PublicKey;
 
   before(async () => {
     const sig  = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
@@ -53,17 +52,17 @@ describe("castle-vault", () => {
 
     const pythProgramId = new PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s");
     const switchboardProgramId = new PublicKey("2TfB33aLaneQb5TNVwyDz3jSZXS6jdW2ARw1Dgf84XCG");
-    const balanceNeeded = await provider.connection.getMinimumBalanceForRentExemption(tokenLending.LENDING_MARKET_SIZE);
+    const balanceNeeded = await provider.connection.getMinimumBalanceForRentExemption(solend.LENDING_MARKET_SIZE);
     const initTx = new anchor.web3.Transaction().add(
       SystemProgram.createAccount({
         fromPubkey: payer.publicKey,
         newAccountPubkey: lendingMarket.publicKey,
         lamports: balanceNeeded,
-        space: tokenLending.LENDING_MARKET_SIZE,
+        space: solend.LENDING_MARKET_SIZE,
         programId: lendingProgram,
       })
     ).add(
-      tokenLending.initLendingMarketInstruction(
+      solend.initLendingMarketInstruction(
         owner.publicKey,
         quoteCurrency("USD"),
         lendingMarket.publicKey,
@@ -91,7 +90,7 @@ describe("castle-vault", () => {
     const userCollateral = anchor.web3.Keypair.generate();
     const userTransferAuthority = anchor.web3.Keypair.generate();
 
-    const reserveBalance = await provider.connection.getMinimumBalanceForRentExemption(tokenLending.RESERVE_SIZE);
+    const reserveBalance = await provider.connection.getMinimumBalanceForRentExemption(solend.RESERVE_SIZE);
     const mintBalance = await provider.connection.getMinimumBalanceForRentExemption(MintLayout.span);
     const accountBalance = await provider.connection.getMinimumBalanceForRentExemption(AccountLayout.span);
 
@@ -100,7 +99,7 @@ describe("castle-vault", () => {
         fromPubkey: payer.publicKey,
         newAccountPubkey: reserve.publicKey,
         lamports: reserveBalance,
-        space: tokenLending.RESERVE_SIZE,
+        space: solend.RESERVE_SIZE,
         programId: lendingProgram,
       })
     ).add(
@@ -146,7 +145,7 @@ describe("castle-vault", () => {
       })
     );
 
-    [lendingMarketAuthority, _lmaBumpSeed] = await PublicKey.findProgramAddress(
+    [lendingMarketAuthority, ] = await PublicKey.findProgramAddress(
       [lendingMarket.publicKey.toBuffer()],
       lendingProgram,
     );
@@ -179,7 +178,7 @@ describe("castle-vault", () => {
         liquidityAmount,
       )
     ).add(
-      tokenLending.initReserveInstruction(
+      solend.initReserveInstruction(
         liquidityAmount,
         reserveConfig,
         ownerReserveTokenAccount,
@@ -208,7 +207,7 @@ describe("castle-vault", () => {
   });
 
   it("Creates vault", async () => {
-    [vaultAuthority, vaultSeed] = await PublicKey.findProgramAddress(
+    [vaultAuthority, ] = await PublicKey.findProgramAddress(
       [vaultStateAccount.publicKey.toBuffer()],
       program.programId,
     )
