@@ -1,8 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
-use spl_math::precise_number::PreciseNumber;
 
-use std::convert::{Into, TryFrom};
+use std::convert::Into;
 
 use crate::errors::ErrorCode;
 use crate::math::calc_deposit_to_vault;
@@ -81,7 +80,7 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
 
     token::mint_to(
         ctx.accounts.mint_to_context().with_signer(&[&seeds[..]]),
-        u64::try_from(lp_tokens_to_mint).unwrap(),
+        lp_tokens_to_mint,
     )?;
 
     Ok(())
