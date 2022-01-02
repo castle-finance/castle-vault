@@ -1,12 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Burn, TokenAccount, Transfer};
-use spl_math::precise_number::PreciseNumber;
 
-use std::convert::{Into, TryFrom};
+use std::convert::Into; 
 
+use crate::errors::ErrorCode;
+use crate::math::calc_withdraw_from_vault;
 use crate::state::*;
 
-/// TODO modify to withdraw from solend
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
@@ -57,30 +57,38 @@ impl<'info> Withdraw<'info> {
     }
 }
 
-pub fn handler(ctx: Context<Withdraw>, pool_token_amount: u64) -> ProgramResult {
+pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     let reserve_pool = &mut ctx.accounts.reserve_pool;
 
-    let pool_token_supply = PreciseNumber::new(ctx.accounts.pool_mint.supply as u128).unwrap();
-    let tokens_in_pool = PreciseNumber::new(ctx.accounts.token.amount as u128).unwrap();
-    let pool_token_amount_converted = PreciseNumber::new(pool_token_amount as u128).unwrap();
-    let tokens_to_transfer = tokens_in_pool.checked_mul(
-        &pool_token_amount_converted.checked_div(&pool_token_supply).unwrap()
-    ).unwrap().to_imprecise().unwrap();
+    // TODO check accounts
+
+    // TODO calculate total vault value
+    let reserve_tokens_in_vault = ctx.accounts.token.amount;
+
+    let reserve_tokens_to_transfer = calc_withdraw_from_vault(
+        lp_token_amount, 
+        ctx.accounts.pool_mint.supply, 
+        reserve_tokens_in_vault,
+    ).ok_or(ErrorCode::MathError)?;
 
     let seeds = &[
         &reserve_pool.to_account_info().key.to_bytes(), 
         &[reserve_pool.bump_seed][..],
     ];
 
+    // TODO redeem collateral
+
+    // Transfer reserve tokens to user
     token::transfer(
         ctx.accounts.transfer_context().with_signer(&[&seeds[..]]),
-        u64::try_from(tokens_to_transfer).unwrap(),
+            reserve_tokens_to_transfer,
     )?;
 
+    // Burn LP tokens
     token::burn(
         ctx.accounts.burn_context(),
-        pool_token_amount,
+        lp_token_amount,
     )?;
-
+    
     Ok(())
 }

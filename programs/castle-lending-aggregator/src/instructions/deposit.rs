@@ -4,6 +4,8 @@ use spl_math::precise_number::PreciseNumber;
 
 use std::convert::{Into, TryFrom};
 
+use crate::errors::ErrorCode;
+use crate::math::calc_deposit_to_vault;
 use crate::state::*;
 
 #[derive(Accounts)]
@@ -55,16 +57,17 @@ impl<'info> Deposit<'info> {
     }
 }
 
-pub fn handler(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult {
+pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
     // TODO handle case where there is no pool token supply
     let reserve_pool = &ctx.accounts.reserve_pool;
+    // TODO calculate total vault value
+    let reserve_tokens_in_vault = ctx.accounts.token.amount;
 
-    let pool_token_supply = PreciseNumber::new(ctx.accounts.pool_mint.supply as u128).unwrap();
-    let tokens_in_pool = PreciseNumber::new(ctx.accounts.token.amount as u128).unwrap();
-    let source_token_amount_converted = PreciseNumber::new(source_token_amount as u128).unwrap();
-    let pool_tokens_to_mint = pool_token_supply.checked_mul(
-        &source_token_amount_converted.checked_div(&tokens_in_pool).unwrap()
-    ).unwrap().to_imprecise().unwrap();
+    let lp_tokens_to_mint = calc_deposit_to_vault(
+        reserve_token_amount, 
+        ctx.accounts.pool_mint.supply, 
+        reserve_tokens_in_vault,
+    ).ok_or(ErrorCode::MathError)?;
 
     let seeds = &[
         &reserve_pool.to_account_info().key.to_bytes(), 
@@ -73,12 +76,12 @@ pub fn handler(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult
 
     token::transfer(
         ctx.accounts.transfer_context(),
-        source_token_amount,
+        reserve_token_amount,
     )?;
 
     token::mint_to(
         ctx.accounts.mint_to_context().with_signer(&[&seeds[..]]),
-        u64::try_from(pool_tokens_to_mint).unwrap(),
+        u64::try_from(lp_tokens_to_mint).unwrap(),
     )?;
 
     Ok(())

@@ -52,6 +52,7 @@ pub fn handler(ctx: Context<InitializePool>) -> ProgramResult {
 
     // TODO safety checks
 
+    // TODO remove this logic and add an init check to deposit
     // Mint initial LP tokens
     // TODO make smaller as to not int overflow with more $ in pool
     let initial_amount:u64 = 1000000;
