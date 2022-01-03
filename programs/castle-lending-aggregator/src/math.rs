@@ -2,6 +2,14 @@ use spl_math::{precise_number::PreciseNumber};
 
 use std::convert::TryFrom;
 
+// Move into struct?
+pub fn get_vault_value(
+    reserve_token_amount: u64,
+) -> u64 {
+    return reserve_token_amount
+}
+
+// TODO move to state.rs as a Calculator?
 pub fn calc_deposit_to_vault(
     reserve_token_amount: u64, lp_token_supply: u64, reserve_tokens_in_vault: u64
 ) -> Option<u64> {

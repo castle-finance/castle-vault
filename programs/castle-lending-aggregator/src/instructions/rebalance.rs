@@ -3,11 +3,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
 
 use crate::cpi::solend;
-use crate::state::ReservePool;
+use crate::state::Vault;
 
 #[derive(Accounts)]
 pub struct Rebalance<'info> {
-    pub vault_state: Box<Account<'info, ReservePool>>,
+    pub vault_state: Box<Account<'info, Vault>>,
 
     pub vault_authority: AccountInfo<'info>,
 

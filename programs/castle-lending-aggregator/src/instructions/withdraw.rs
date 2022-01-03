@@ -4,34 +4,34 @@ use anchor_spl::token::{self, Mint, Burn, TokenAccount, Transfer};
 use std::convert::Into; 
 
 use crate::errors::ErrorCode;
-use crate::math::calc_withdraw_from_vault;
-use crate::state::*;
+use crate::math::{calc_withdraw_from_vault, get_vault_value};
+use crate::state::Vault;
 
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
-    pub reserve_pool: Box<Account<'info, ReservePool>>,
+    pub vault: Box<Account<'info, Vault>>,
 
-    pub authority: AccountInfo<'info>,
+    pub vault_authority: AccountInfo<'info>,
 
     #[account(signer)]
     pub user_authority: AccountInfo<'info>,
 
     // Account from which pool tokens are burned
     #[account(mut)]
-    pub source: Account<'info, TokenAccount>,
+    pub user_lp_token_account: Account<'info, TokenAccount>,
 
     // Account where tokens in pool are stored
     #[account(mut)]
-    pub token: Account<'info, TokenAccount>,
+    pub vault_reserve_token_account: Account<'info, TokenAccount>,
 
     // Account where tokens are transferred to
     #[account(mut)]
-    pub destination: Account<'info, TokenAccount>,
+    pub user_reserve_token_account: Account<'info, TokenAccount>,
 
     // Mint address of pool LP token
     #[account(mut)]
-    pub pool_mint: Account<'info, Mint>,
+    pub lp_token_mint: Account<'info, Mint>,
 
     // SPL token program
     pub token_program: AccountInfo<'info>,
@@ -40,8 +40,8 @@ pub struct Withdraw<'info> {
 impl<'info> Withdraw<'info> {
     fn burn_context(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
-            mint: self.pool_mint.to_account_info().clone(),
-            to: self.source.to_account_info().clone(),
+            mint: self.lp_token_mint.to_account_info().clone(),
+            to: self.user_lp_token_account.to_account_info().clone(),
             authority: self.user_authority.clone(),
         };
         CpiContext::new(self.token_program.clone(), cpi_accounts)
@@ -49,31 +49,30 @@ impl<'info> Withdraw<'info> {
 
     fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
         let cpi_accounts = Transfer {
-            from: self.token.to_account_info().clone(),
-            to: self.destination.to_account_info().clone(),
-            authority: self.authority.clone(),
+            from: self.vault_reserve_token_account.to_account_info().clone(),
+            to: self.user_reserve_token_account.to_account_info().clone(),
+            authority: self.vault_authority.clone(),
         };
         CpiContext::new(self.token_program.clone(), cpi_accounts)
     }
 }
 
 pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
-    let reserve_pool = &mut ctx.accounts.reserve_pool;
+    let vault = &ctx.accounts.vault;
 
     // TODO check accounts
 
-    // TODO calculate total vault value
-    let reserve_tokens_in_vault = ctx.accounts.token.amount;
+    let reserve_tokens_in_vault = get_vault_value(ctx.accounts.vault_reserve_token_account.amount);
 
     let reserve_tokens_to_transfer = calc_withdraw_from_vault(
         lp_token_amount, 
-        ctx.accounts.pool_mint.supply, 
+        ctx.accounts.lp_token_mint.supply, 
         reserve_tokens_in_vault,
     ).ok_or(ErrorCode::MathError)?;
 
     let seeds = &[
-        &reserve_pool.to_account_info().key.to_bytes(), 
-        &[reserve_pool.bump_seed][..],
+        &vault.to_account_info().key.to_bytes(), 
+        &[vault.bump_seed][..],
     ];
 
     // TODO redeem collateral

@@ -104,23 +104,23 @@ describe("castle-vault", () => {
         await program.rpc.initializePool(
             {
                 accounts: {
-                    authority: vaultAuthority,
-                    reservePool: vaultStateAccount.publicKey,
-                    poolMint: lpTokenMint.publicKey,
-                    token: vaultReserveTokenAccount,
-                    destination: ownerLpTokenAccount,
+                    vaultAuthority: vaultAuthority,
+                    vault: vaultStateAccount.publicKey,
+                    lpTokenMint: lpTokenMint.publicKey,
+                    vaultReserveTokenAccount: vaultReserveTokenAccount,
+                    ownerLpTokenAccount: ownerLpTokenAccount,
                     tokenProgram: TOKEN_PROGRAM_ID,
                 },
                 signers: [vaultStateAccount],
-                instructions: [await program.account.reservePool.createInstruction(vaultStateAccount)]
+                instructions: [await program.account.vault.createInstruction(vaultStateAccount)]
             }
         );
 
-        const actualPoolAccount = await program.account.reservePool.fetch(vaultStateAccount.publicKey);
-        assert(actualPoolAccount.tokenProgramId.equals(TOKEN_PROGRAM_ID));
-        assert(actualPoolAccount.tokenAccount.equals(vaultReserveTokenAccount));
-        assert(actualPoolAccount.tokenMint.equals(reserveTokenMint.publicKey));
-        assert(actualPoolAccount.poolMint.equals(lpTokenMint.publicKey));
+        const actualPoolAccount = await program.account.vault.fetch(vaultStateAccount.publicKey);
+        assert(actualPoolAccount.tokenProgram.equals(TOKEN_PROGRAM_ID));
+        assert(actualPoolAccount.reserveTokenAccount.equals(vaultReserveTokenAccount));
+        assert(actualPoolAccount.reserveTokenMint.equals(reserveTokenMint.publicKey));
+        assert(actualPoolAccount.lpTokenMint.equals(lpTokenMint.publicKey));
 
         const lpTokenMintInfo = await lpTokenMint.getMintInfo();
         assert.equal(lpTokenMintInfo.supply.toNumber(), 1000000);
@@ -148,13 +148,13 @@ describe("castle-vault", () => {
             new anchor.BN(depositAmount),
             {
                 accounts: {
-                    reservePool: vaultStateAccount.publicKey,
-                    authority: vaultAuthority,
+                    vault: vaultStateAccount.publicKey,
+                    vaultAuthority: vaultAuthority,
                     userAuthority: userAuthority.publicKey,
-                    source: userReserveTokenAccount,
-                    destination: userLpTokenAccount,
-                    token: vaultReserveTokenAccount,
-                    poolMint: lpTokenMint.publicKey,
+                    userReserveTokenAccount: userReserveTokenAccount,
+                    userLpTokenAccount: userLpTokenAccount,
+                    vaultReserveTokenAccount: vaultReserveTokenAccount,
+                    lpTokenMint: lpTokenMint.publicKey,
                     tokenProgram: TOKEN_PROGRAM_ID,
                 },
                 signers: [userAuthority],
@@ -232,13 +232,13 @@ describe("castle-vault", () => {
             new anchor.BN(withdrawAmount),
             {
                 accounts: {
-                    reservePool: vaultStateAccount.publicKey,
-                    authority: vaultAuthority,
+                    vault: vaultStateAccount.publicKey,
+                    vaultAuthority: vaultAuthority,
                     userAuthority: userAuthority.publicKey,
-                    source: userLpTokenAccount,
-                    token: vaultReserveTokenAccount,
-                    destination: userReserveTokenAccount,
-                    poolMint: lpTokenMint.publicKey,
+                    userLpTokenAccount: userLpTokenAccount,
+                    vaultReserveTokenAccount: vaultReserveTokenAccount,
+                    userReserveTokenAccount: userReserveTokenAccount,
+                    lpTokenMint: lpTokenMint.publicKey,
                     tokenProgram: TOKEN_PROGRAM_ID,
                 },
                 signers: [userAuthority],
