@@ -141,3 +141,57 @@ pub struct RefreshReserve<'info> {
     // Clock
     pub clock: AccountInfo<'info>,
 }
+
+pub mod solend_accessor {
+    use std::convert::TryFrom;
+
+    use anchor_lang::prelude::*;
+    use spl_token_lending::math::{Decimal, Rate, TryAdd, TryDiv, U128};
+    use spl_token_lending::state::{CollateralExchangeRate, INITIAL_COLLATERAL_RATE};
+
+    fn unpack_decimal(src: &[u8; 16]) -> Decimal {
+        Decimal::from_scaled_val(u128::from_le_bytes(*src))
+    }
+
+    pub fn reserve_available_liquidity(account: &AccountInfo) -> Result<u64, ProgramError> {
+        let bytes = account.try_borrow_data()?;
+        let mut amount_bytes = [0u8; 8];
+        amount_bytes.copy_from_slice(&bytes[171..179]);
+        Ok(u64::from_le_bytes(amount_bytes))
+    }
+
+    pub fn reserve_borrowed_amount(account: &AccountInfo) -> Result<Decimal, ProgramError> {
+        let bytes = account.try_borrow_data()?;
+        let mut amount_bytes = [0u8; 16];
+        amount_bytes.copy_from_slice(&bytes[179..195]);
+        Ok(unpack_decimal(&amount_bytes))
+    }
+
+    pub fn reserve_total_liquidity(account: &AccountInfo) -> Result<Decimal, ProgramError> {
+        let available_liquidity = reserve_available_liquidity(account)?;
+        let borrowed_amount = reserve_borrowed_amount(account)?;
+        borrowed_amount.try_add(Decimal::from(available_liquidity))
+    }
+
+    pub fn reserve_mint_total(account: &AccountInfo) -> Result<u64, ProgramError> {
+        let bytes = account.try_borrow_data()?;
+        let mut amount_bytes = [0u8; 8];
+        amount_bytes.copy_from_slice(&bytes[259..267]);
+        Ok(u64::from_le_bytes(amount_bytes))
+    }
+
+    pub fn exchange_rate(account: &AccountInfo) -> Result<CollateralExchangeRate, ProgramError> {
+        let mint_total_supply = reserve_mint_total(account)?;
+        msg!("Total supply: {}", mint_total_supply);
+        let total_liquidity = reserve_total_liquidity(account)?;
+        msg!("Total liquidity: {}", total_liquidity);
+        let rate = if mint_total_supply == 0 || total_liquidity == Decimal::zero() {
+            Rate::from_scaled_val(INITIAL_COLLATERAL_RATE)
+        } else {
+            let mint_total_supply = Decimal::from(mint_total_supply);
+            Rate::try_from(mint_total_supply.try_div(total_liquidity)?)?
+        };
+        let rate = Rate(U128::from(rate.to_scaled_val()));
+        Ok(CollateralExchangeRate(rate))
+    }
+}

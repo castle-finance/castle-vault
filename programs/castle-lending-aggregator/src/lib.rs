@@ -15,8 +15,8 @@ declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 pub mod castle_lending_aggregator {
     use super::*;
 
-    pub fn initialize_pool(ctx: Context<InitializePool>) -> ProgramResult {
-        instructions::init::handler(ctx)
+    pub fn initialize(ctx: Context<Initialize>, initial_reserves: u64) -> ProgramResult {
+        instructions::init::handler(ctx, initial_reserves)
     }
 
     pub fn deposit(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult {
@@ -29,5 +29,9 @@ pub mod castle_lending_aggregator {
 
     pub fn rebalance(ctx: Context<Rebalance>) -> ProgramResult {
         instructions::rebalance::handler(ctx)
+    }
+
+    pub fn refresh(ctx: Context<Refresh>) -> ProgramResult {
+        instructions::refresh::handler(ctx)
     }
 }

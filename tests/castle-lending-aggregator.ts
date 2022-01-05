@@ -1,14 +1,13 @@
 import assert from "assert";
 import { Program } from '@project-serum/anchor';
-import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
-import { Keypair, PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import { Keypair, PublicKey, SYSVAR_CLOCK_PUBKEY, TransactionInstruction } from "@solana/web3.js";
 
 import { Solend } from './helpers/solend';
 import { CastleLendingAggregator } from "../target/types/castle_lending_aggregator";
 
 // Change to import after https://github.com/project-serum/anchor/issues/1153 is resolved
 const anchor = require("@project-serum/anchor");
-
 
 /// TODO use SDK instead of raw code
 describe("castle-vault", () => {
@@ -41,6 +40,7 @@ describe("castle-vault", () => {
     const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
     const switchboardFeed = new PublicKey("GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR");
 
+    const solendInitialReserveAmount = 100;
     before(async () => {
         const sig  = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
         await provider.connection.confirmTransaction(sig, "singleGossip");
@@ -67,7 +67,7 @@ describe("castle-vault", () => {
         );
 
         await solendProgram.addReserve(
-            10,
+            solendInitialReserveAmount,
             owner,
             payer,
             reserveTokenMint,
@@ -82,6 +82,7 @@ describe("castle-vault", () => {
         );
     });
 
+    const initialReserveAmount = 1000;
     it("Creates vault", async () => {
         [vaultAuthority, ] = await PublicKey.findProgramAddress(
             [vaultStateAccount.publicKey.toBuffer()],
@@ -96,22 +97,26 @@ describe("castle-vault", () => {
             TOKEN_PROGRAM_ID
         );
         const ownerLpTokenAccount = await lpTokenMint.createAccount(owner.publicKey);
-        
-        // TODO change to require initial deposit
-        vaultReserveTokenAccount = await reserveTokenMint.createAccount(vaultAuthority);
-        await reserveTokenMint.mintTo(vaultReserveTokenAccount, owner, [], 1000);
+        const ownerReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
+        await reserveTokenMint.mintTo(ownerReserveTokenAccount, owner, [], initialReserveAmount);
 
-        await program.rpc.initializePool(
+        vaultReserveTokenAccount = await reserveTokenMint.createAccount(vaultAuthority);
+
+        await program.rpc.initialize(
+            new anchor.BN(initialReserveAmount),
             {
                 accounts: {
                     vaultAuthority: vaultAuthority,
+                    userAuthority: owner.publicKey,
                     vault: vaultStateAccount.publicKey,
                     lpTokenMint: lpTokenMint.publicKey,
-                    vaultReserveTokenAccount: vaultReserveTokenAccount,
-                    ownerLpTokenAccount: ownerLpTokenAccount,
+                    vaultReserveToken: vaultReserveTokenAccount,
+                    userReserveToken: ownerReserveTokenAccount,
+                    userLpToken: ownerLpTokenAccount,
                     tokenProgram: TOKEN_PROGRAM_ID,
+                    clock: SYSVAR_CLOCK_PUBKEY,
                 },
-                signers: [vaultStateAccount],
+                signers: [vaultStateAccount, owner],
                 instructions: [await program.account.vault.createInstruction(vaultStateAccount)]
             }
         );
@@ -123,11 +128,17 @@ describe("castle-vault", () => {
         assert(actualPoolAccount.lpTokenMint.equals(lpTokenMint.publicKey));
 
         const lpTokenMintInfo = await lpTokenMint.getMintInfo();
-        assert.equal(lpTokenMintInfo.supply.toNumber(), 1000000);
+        assert.equal(lpTokenMintInfo.supply.toNumber(), initialReserveAmount);
     });
 
     let userLpTokenAccount: PublicKey;
+    let vaultLpTokenAccount: PublicKey;
+    let refreshInstruction: TransactionInstruction;
+
+    const solendCollateralMintToken = new Token(provider.connection, solendCollateralMint.publicKey, TOKEN_PROGRAM_ID, payer);
+
     const depositAmount = 1000;
+    const initialCollateralRatio = 1.0;
     it("Deposits to vault reserves", async () => {
         // Create depositor token account
         const userAuthority = anchor.web3.Keypair.generate();
@@ -143,6 +154,20 @@ describe("castle-vault", () => {
 
         // Create depositor pool LP token account
         userLpTokenAccount = await lpTokenMint.createAccount(owner.publicKey);
+        vaultLpTokenAccount = await solendCollateralMintToken.createAccount(vaultAuthority);
+
+        refreshInstruction = program.instruction.refresh({
+            accounts: {
+                vault: vaultStateAccount.publicKey,
+                vaultReserveToken: vaultReserveTokenAccount,
+                vaultSolendLpToken: vaultLpTokenAccount,
+                solendProgram: solendProgramId,
+                solendReserveState: solendReserve.publicKey,
+                solendPyth: pythPrice,
+                solendSwitchboard: switchboardFeed,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            }
+        });
 
         await program.rpc.deposit(
             new anchor.BN(depositAmount),
@@ -151,13 +176,14 @@ describe("castle-vault", () => {
                     vault: vaultStateAccount.publicKey,
                     vaultAuthority: vaultAuthority,
                     userAuthority: userAuthority.publicKey,
-                    userReserveTokenAccount: userReserveTokenAccount,
-                    userLpTokenAccount: userLpTokenAccount,
-                    vaultReserveTokenAccount: vaultReserveTokenAccount,
+                    userReserveToken: userReserveTokenAccount,
+                    userLpToken: userLpTokenAccount,
+                    vaultReserveToken: vaultReserveTokenAccount,
                     lpTokenMint: lpTokenMint.publicKey,
                     tokenProgram: TOKEN_PROGRAM_ID,
                 },
                 signers: [userAuthority],
+                instructions: [refreshInstruction],
             }
         );
 
@@ -165,37 +191,33 @@ describe("castle-vault", () => {
         assert.equal(userTokenAccountInfo.amount.toNumber(), 0);
 
         const tokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
-        assert.equal(tokenAccountInfo.amount.toNumber(), 2000);
+        assert.equal(tokenAccountInfo.amount.toNumber(), initialReserveAmount + depositAmount);
 
         const userPoolTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
-        assert.equal(userPoolTokenAccountInfo.amount.toNumber(), 1000000);
+        assert.equal(userPoolTokenAccountInfo.amount.toNumber(), depositAmount * initialCollateralRatio);
 
         const lpTokenMintInfo = await lpTokenMint.getMintInfo();
-        assert.equal(lpTokenMintInfo.supply.toNumber(), 2000000);
+        assert.equal(lpTokenMintInfo.supply.toNumber(), (initialReserveAmount + depositAmount) * initialCollateralRatio);
     });
 
     it("Forwards deposits to lending program", async () => {
-        const solendCollateralMintToken = new Token(provider.connection, solendCollateralMint.publicKey, TOKEN_PROGRAM_ID, payer);
-        const vaultLpTokenAccount = await solendCollateralMintToken.createAccount(vaultAuthority);
-
         await program.rpc.rebalance(
             {
                 accounts: {
-                    vaultState: vaultStateAccount.publicKey,
+                    vault: vaultStateAccount.publicKey,
                     vaultAuthority: vaultAuthority,
                     vaultReserveToken: vaultReserveTokenAccount,
-                    vaultLpToken: vaultLpTokenAccount,
+                    vaultSolendLpToken: vaultLpTokenAccount,
                     solendProgram: solendProgramId,
                     solendMarketAuthority: solendMarketAuthority,
                     solendMarket: solendMarket.publicKey,
-                    solendReserveStateAccount: solendReserve.publicKey,
-                    solendLpMintAccount: solendCollateralMint.publicKey,
-                    solendDepositTokenAccount: solendLiquiditySupply.publicKey,
-                    solendPyth: pythPrice,
-                    solendSwitchboard: switchboardFeed,
+                    solendReserveState: solendReserve.publicKey,
+                    solendLpMint: solendCollateralMint.publicKey,
+                    solendReserveToken: solendLiquiditySupply.publicKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                     tokenProgram: TOKEN_PROGRAM_ID,
                 },
+                instructions: [refreshInstruction],
             }
         );
         const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
@@ -205,7 +227,7 @@ describe("castle-vault", () => {
         assert.notEqual(vaultLpTokenAccountInfo.amount.toNumber(), 0);
 
         const liquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(solendLiquiditySupply.publicKey);
-        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), 2010);
+        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), initialReserveAmount + depositAmount + solendInitialReserveAmount);
     });
 
     it("Rebalances", async () => {
@@ -213,7 +235,7 @@ describe("castle-vault", () => {
 
     it("Withdraws from vault", async () => {
         // Pool tokens to withdraw from
-        const withdrawAmount = 500000;
+        const withdrawAmount = 500;
 
         // Create token account to withdraw into
         const userReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
@@ -235,26 +257,32 @@ describe("castle-vault", () => {
                     vault: vaultStateAccount.publicKey,
                     vaultAuthority: vaultAuthority,
                     userAuthority: userAuthority.publicKey,
-                    userLpTokenAccount: userLpTokenAccount,
-                    vaultReserveTokenAccount: vaultReserveTokenAccount,
-                    userReserveTokenAccount: userReserveTokenAccount,
-                    lpTokenMint: lpTokenMint.publicKey,
+                    userLpToken: userLpTokenAccount,
+                    userReserveToken: userReserveTokenAccount,
+                    vaultReserveToken: vaultReserveTokenAccount,
+                    vaultLpMint: lpTokenMint.publicKey,
+                    vaultSolendLpToken: vaultLpTokenAccount,
+                    solendProgram: solendProgramId,
+                    solendMarketAuthority: solendMarketAuthority,
+                    solendMarket: solendMarket.publicKey,
+                    solendReserveState: solendReserve.publicKey,
+                    solendLpMint: solendCollateralMint.publicKey,
+                    solendReserveToken: solendLiquiditySupply.publicKey,
+                    clock: SYSVAR_CLOCK_PUBKEY,
                     tokenProgram: TOKEN_PROGRAM_ID,
                 },
                 signers: [userAuthority],
+                instructions: [refreshInstruction],
             }
         );
 
         const userReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(userReserveTokenAccount);
-        assert.equal(userReserveTokenAccountInfo.amount.toNumber(), 500);
-
-        const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
-        assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 1500);
+        assert.equal(userReserveTokenAccountInfo.amount.toNumber(), withdrawAmount);
 
         const userLpTokenAccountInfo = await lpTokenMint.getAccountInfo(userLpTokenAccount);
-        assert.equal(userLpTokenAccountInfo.amount.toNumber(), withdrawAmount);
-
-        const lpTokenMintInfo = await lpTokenMint.getMintInfo();
-        assert.equal(lpTokenMintInfo.supply.toNumber(), 1500000);
+        assert.equal(
+            userLpTokenAccountInfo.amount.toNumber(), 
+            (depositAmount * initialCollateralRatio) - withdrawAmount
+        );
     });
 });
