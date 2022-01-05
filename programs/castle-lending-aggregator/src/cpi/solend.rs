@@ -182,9 +182,7 @@ pub mod solend_accessor {
 
     pub fn exchange_rate(account: &AccountInfo) -> Result<CollateralExchangeRate, ProgramError> {
         let mint_total_supply = reserve_mint_total(account)?;
-        msg!("Total supply: {}", mint_total_supply);
         let total_liquidity = reserve_total_liquidity(account)?;
-        msg!("Total liquidity: {}", total_liquidity);
         let rate = if mint_total_supply == 0 || total_liquidity == Decimal::zero() {
             Rate::from_scaled_val(INITIAL_COLLATERAL_RATE)
         } else {

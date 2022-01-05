@@ -108,15 +108,11 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
 
     // TODO check last update slot
 
-    msg!("Withdrawal requested: {}", lp_token_amount);
-
     let reserve_tokens_to_transfer = calc_withdraw_from_vault(
         lp_token_amount, 
         ctx.accounts.vault_lp_mint.supply, 
         vault.total_value,
     ).ok_or(ErrorCode::MathError)?;
-
-    msg!("Calculated reserve tokens to transfer: {}", reserve_tokens_to_transfer);
 
     let seeds = &[
         &vault.to_account_info().key.to_bytes(), 
@@ -124,12 +120,9 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     ];
 
     let solend_exchange_rate = solend::solend_accessor::exchange_rate(&ctx.accounts.solend_reserve_state)?;
-    msg!("Solend exchange rate: {}", solend_exchange_rate.0);
-
     let solend_collateral_amount = solend_exchange_rate.liquidity_to_collateral(
         reserve_tokens_to_transfer - ctx.accounts.vault_reserve_token.amount
     )?;
-    msg!("Redeeming collateral: {}", solend_collateral_amount);
     solend::redeem_reserve_collateral(
         ctx.accounts.solend_redeem_reserve_collateral_context().with_signer(&[&seeds[..]]),
         solend_collateral_amount,
@@ -139,8 +132,6 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
         ctx.accounts.burn_context(),
         lp_token_amount,
     )?;
-
-    msg!("Reserve tokens in vault: {}", ctx.accounts.vault_reserve_token.amount);
 
     // Transfer reserve tokens to user
     token::transfer(
