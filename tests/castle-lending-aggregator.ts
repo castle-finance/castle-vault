@@ -17,27 +17,27 @@ describe("castle-vault", () => {
 
     const program = anchor.workspace.CastleLendingAggregator as Program<CastleLendingAggregator>;
 
-    let reserveTokenMint: Token;
-
     const owner = anchor.web3.Keypair.generate();
     const vaultStateAccount = anchor.web3.Keypair.generate();
     const payer = anchor.web3.Keypair.generate();
 
-    let solendMarket: Keypair;
-    let solendMarketAuthority: PublicKey;
-
-    const solendProgramId = new PublicKey("BwTGCAdzPncEFqP5JBAeCLRWKE8MDVvbGDVMD7XX2fvu") 
-    const solendProgram = new Solend(provider, solendProgramId);
-
     const solendCollateralMint = anchor.web3.Keypair.generate();
     const solendReserve = anchor.web3.Keypair.generate();
     const solendLiquiditySupply = anchor.web3.Keypair.generate();
+
+    const solendProgramId = new PublicKey("So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo") 
+    const solendProgram = new Solend(provider, solendProgramId);
 
     const pythProduct = new PublicKey("3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E");
     const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
     const switchboardFeed = new PublicKey("GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR");
 
     const solendInitialReserveAmount = 100;
+
+    let reserveTokenMint: Token;
+    let solendMarket: Keypair;
+    let solendMarketAuthority: PublicKey;
+
     before(async () => {
         const sig  = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
         await provider.connection.confirmTransaction(sig, "singleGossip");
@@ -81,11 +81,12 @@ describe("castle-vault", () => {
 
     let vaultAuthority: PublicKey;
     let authorityBump: number;
-    let lpTokenMint: PublicKey;
-    let lpTokenMintBump: number;
+    let vaultSolendLpTokenAccount: PublicKey;
+    let solendLpBump: number;
     let vaultReserveTokenAccount: PublicKey;
     let reserveBump: number;
-    let lpToken: Token;
+    let lpTokenMint: PublicKey;
+    let lpTokenMintBump: number;
 
     it("Creates vault", async () => {
         [vaultAuthority, authorityBump] = await PublicKey.findProgramAddress(
@@ -95,6 +96,11 @@ describe("castle-vault", () => {
 
         [vaultReserveTokenAccount, reserveBump] = await PublicKey.findProgramAddress(
             [vaultStateAccount.publicKey.toBuffer(), reserveTokenMint.publicKey.toBuffer()],
+            program.programId,
+        );
+
+        [vaultSolendLpTokenAccount, solendLpBump] = await PublicKey.findProgramAddress(
+            [vaultStateAccount.publicKey.toBuffer(), solendCollateralMint.publicKey.toBuffer()],
             program.programId,
         );
 
@@ -108,15 +114,18 @@ describe("castle-vault", () => {
                 authority: authorityBump,
                 reserve: reserveBump,
                 lpMint: lpTokenMintBump,
+                solendLp: solendLpBump,
             },
             {
                 accounts: {
-                    vaultAuthority: vaultAuthority,
-                    payer: payer.publicKey,
                     vault: vaultStateAccount.publicKey,
-                    reserveTokenMint: reserveTokenMint.publicKey,
+                    vaultAuthority: vaultAuthority,
                     lpTokenMint: lpTokenMint,
                     vaultReserveToken: vaultReserveTokenAccount,
+                    vaultSolendLpToken: vaultSolendLpTokenAccount,
+                    reserveTokenMint: reserveTokenMint.publicKey,
+                    solendLpTokenMint: solendCollateralMint.publicKey,
+                    payer: payer.publicKey,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID,
                     rent: SYSVAR_RENT_PUBKEY,
@@ -127,26 +136,22 @@ describe("castle-vault", () => {
             }
         );
 
-        const actualPoolAccount = await program.account.vault.fetch(vaultStateAccount.publicKey);
-        assert(actualPoolAccount.tokenProgram.equals(TOKEN_PROGRAM_ID));
-        assert(actualPoolAccount.reserveTokenAccount.equals(vaultReserveTokenAccount));
-        assert(actualPoolAccount.reserveTokenMint.equals(reserveTokenMint.publicKey));
-        assert(actualPoolAccount.lpTokenMint.equals(lpTokenMint));
+        const actualVaultAccount = await program.account.vault.fetch(vaultStateAccount.publicKey);
+        assert(actualVaultAccount.vaultAuthority.equals(vaultAuthority));
+        assert(actualVaultAccount.vaultReserveToken.equals(vaultReserveTokenAccount));
+        assert(actualVaultAccount.vaultSolendLpToken.equals(vaultSolendLpTokenAccount));
+        assert(actualVaultAccount.solendLpTokenMint.equals(solendCollateralMint.publicKey));
+        assert(actualVaultAccount.lpTokenMint.equals(lpTokenMint));
+        assert(actualVaultAccount.reserveTokenMint.equals(reserveTokenMint.publicKey));
     });
 
+    let lpToken: Token;
     let userLpTokenAccount: PublicKey;
-    let vaultLpTokenAccount: PublicKey;
     let refreshInstruction: TransactionInstruction;
-
-    const solendCollateralMintToken = new Token(
-        provider.connection, 
-        solendCollateralMint.publicKey, 
-        TOKEN_PROGRAM_ID, 
-        payer
-    );
 
     const depositAmount = 1000;
     const initialCollateralRatio = 1.0;
+
     it("Deposits to vault reserves", async () => {
         // Create depositor token account
         const userAuthority = anchor.web3.Keypair.generate();
@@ -160,15 +165,19 @@ describe("castle-vault", () => {
             depositAmount,
         );
 
-        // Create depositor pool LP token account
+        lpToken = new Token(
+            provider.connection,
+            lpTokenMint,
+            TOKEN_PROGRAM_ID,
+            payer,
+        );
         userLpTokenAccount = await lpToken.createAccount(owner.publicKey);
-        vaultLpTokenAccount = await solendCollateralMintToken.createAccount(vaultAuthority);
 
         refreshInstruction = program.instruction.refresh({
             accounts: {
                 vault: vaultStateAccount.publicKey,
                 vaultReserveToken: vaultReserveTokenAccount,
-                vaultSolendLpToken: vaultLpTokenAccount,
+                vaultSolendLpToken: vaultSolendLpTokenAccount,
                 solendProgram: solendProgramId,
                 solendReserveState: solendReserve.publicKey,
                 solendPyth: pythPrice,
@@ -183,11 +192,11 @@ describe("castle-vault", () => {
                 accounts: {
                     vault: vaultStateAccount.publicKey,
                     vaultAuthority: vaultAuthority,
-                    userAuthority: userAuthority.publicKey,
-                    userReserveToken: userReserveTokenAccount,
-                    userLpToken: userLpTokenAccount,
                     vaultReserveToken: vaultReserveTokenAccount,
                     lpTokenMint: lpTokenMint,
+                    userReserveToken: userReserveTokenAccount,
+                    userLpToken: userLpTokenAccount,
+                    userAuthority: userAuthority.publicKey,
                     tokenProgram: TOKEN_PROGRAM_ID,
                 },
                 signers: [userAuthority],
@@ -199,13 +208,13 @@ describe("castle-vault", () => {
         assert.equal(userTokenAccountInfo.amount.toNumber(), 0);
 
         const tokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
-        assert.equal(tokenAccountInfo.amount.toNumber(), initialReserveAmount + depositAmount);
+        assert.equal(tokenAccountInfo.amount.toNumber(), depositAmount);
 
         const userPoolTokenAccountInfo = await lpToken.getAccountInfo(userLpTokenAccount);
         assert.equal(userPoolTokenAccountInfo.amount.toNumber(), depositAmount * initialCollateralRatio);
 
         const lpTokenMintInfo = await lpToken.getMintInfo();
-        assert.equal(lpTokenMintInfo.supply.toNumber(), (initialReserveAmount + depositAmount) * initialCollateralRatio);
+        assert.equal(lpTokenMintInfo.supply.toNumber(), depositAmount * initialCollateralRatio);
     });
 
     it("Forwards deposits to lending program", async () => {
@@ -215,7 +224,7 @@ describe("castle-vault", () => {
                     vault: vaultStateAccount.publicKey,
                     vaultAuthority: vaultAuthority,
                     vaultReserveToken: vaultReserveTokenAccount,
-                    vaultSolendLpToken: vaultLpTokenAccount,
+                    vaultSolendLpToken: vaultSolendLpTokenAccount,
                     solendProgram: solendProgramId,
                     solendMarketAuthority: solendMarketAuthority,
                     solendMarket: solendMarket.publicKey,
@@ -231,11 +240,17 @@ describe("castle-vault", () => {
         const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
         assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 0);
 
-        const vaultLpTokenAccountInfo = await solendCollateralMintToken.getAccountInfo(vaultLpTokenAccount);
+        const solendCollateralToken = new Token(
+            provider.connection, 
+            solendCollateralMint.publicKey, 
+            TOKEN_PROGRAM_ID, 
+            payer,
+        );
+        const vaultLpTokenAccountInfo = await solendCollateralToken.getAccountInfo(vaultSolendLpTokenAccount);
         assert.notEqual(vaultLpTokenAccountInfo.amount.toNumber(), 0);
 
         const liquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(solendLiquiditySupply.publicKey);
-        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), initialReserveAmount + depositAmount + solendInitialReserveAmount);
+        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), depositAmount + solendInitialReserveAmount);
     });
 
     it("Rebalances", async () => {
@@ -269,7 +284,7 @@ describe("castle-vault", () => {
                     userReserveToken: userReserveTokenAccount,
                     vaultReserveToken: vaultReserveTokenAccount,
                     vaultLpMint: lpTokenMint,
-                    vaultSolendLpToken: vaultLpTokenAccount,
+                    vaultSolendLpToken: vaultSolendLpTokenAccount,
                     solendProgram: solendProgramId,
                     solendMarketAuthority: solendMarketAuthority,
                     solendMarket: solendMarket.publicKey,

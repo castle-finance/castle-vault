@@ -6,16 +6,26 @@ use crate::state::Vault;
 
 #[derive(Accounts)]
 pub struct Refresh<'info> {
-    #[account(mut)]
+    #[account(
+        mut,
+        has_one = vault_reserve_token,
+        has_one = vault_solend_lp_token,
+    )]
     pub vault: Box<Account<'info, Vault>>,
 
+    #[account(mut)]
     pub vault_reserve_token: Account<'info, TokenAccount>,
 
+    #[account(mut)]
     pub vault_solend_lp_token: Account<'info, TokenAccount>,
 
+    #[account(
+        executable,
+        address = spl_token_lending::ID,
+    )]
     pub solend_program: AccountInfo<'info>,
 
-    #[account(mut)]
+    #[account(mut, owner = solend_program.key())]
     pub solend_reserve_state: AccountInfo<'info>,
 
     pub solend_pyth: AccountInfo<'info>,
@@ -36,15 +46,13 @@ impl<'info> Refresh<'info> {
                 reserve: self.solend_reserve_state.clone(),
                 pyth_reserve_liquidity_oracle: self.solend_pyth.clone(),
                 switchboard_reserve_liquidity_oracle: self.solend_switchboard.clone(),
-                clock: self.clock.to_account_info().clone(),
+                clock: self.clock.to_account_info(),
             },
         )
     }
 }
 
 pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
-    // TODO check accounts
-
     // TODO redeem liquidity mining rewards
 
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
@@ -55,7 +63,6 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         ctx.accounts.vault_solend_lp_token.clone(),
         ctx.accounts.solend_reserve_state.clone(),
     )?;
-    msg!("Calculated vault total value: {}", vault.total_value);
     vault.last_update.update_slot(ctx.accounts.clock.slot);
 
     Ok(())

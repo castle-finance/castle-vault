@@ -10,29 +10,32 @@ use crate::state::Vault;
 #[derive(Accounts)]
 pub struct Deposit<'info> {
     #[account(
-        constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed
+        constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
+        has_one = lp_token_mint,
+        has_one = vault_authority,
+        has_one = vault_reserve_token,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
     pub vault_authority: AccountInfo<'info>,
 
-    pub user_authority: Signer<'info>,
+    // Account where tokens in vault are stored
+    #[account(mut)]
+    pub vault_reserve_token: Account<'info, TokenAccount>,
+
+    // Mint address of vault LP token
+    #[account(mut)]
+    pub lp_token_mint: Account<'info, Mint>,
 
     // Account from which tokens are transferred
     #[account(mut)]
     pub user_reserve_token: Account<'info, TokenAccount>,
 
-    // Account where tokens in pool are stored
-    #[account(mut)]
-    pub vault_reserve_token: Account<'info, TokenAccount>,
-
-    // Account where pool LP tokens are minted to 
+    // Account where vault LP tokens are minted to 
     #[account(mut)]
     pub user_lp_token: Account<'info, TokenAccount>,
 
-    // Mint address of pool LP token
-    #[account(mut)]
-    pub lp_token_mint: Account<'info, Mint>,
+    pub user_authority: Signer<'info>,
 
     // SPL token program
     #[account(address = token::ID)]
@@ -66,18 +69,11 @@ impl<'info> Deposit<'info> {
 pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
-    // TODO check accounts
-
     let lp_tokens_to_mint = calc_deposit_to_vault(
         reserve_token_amount, 
         ctx.accounts.lp_token_mint.supply, 
         vault.total_value,
     ).ok_or(ErrorCode::MathError)?;
-
-    let seeds = &[
-        &vault.to_account_info().key.to_bytes(), 
-        &[vault.bump_seed][..],
-    ];
 
     token::transfer(
         ctx.accounts.transfer_context(),
@@ -85,7 +81,9 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
     )?;
 
     token::mint_to(
-        ctx.accounts.mint_to_context().with_signer(&[&seeds[..]]),
+        ctx.accounts.mint_to_context().with_signer(
+            &[&vault.authority_seeds()]
+        ),
         lp_tokens_to_mint,
     )?;
 

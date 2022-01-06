@@ -1,29 +1,38 @@
 use anchor_lang::prelude::*;
-
-use anchor_spl::token::TokenAccount;
+use anchor_spl::token::{self, TokenAccount};
 
 use crate::cpi::solend;
 use crate::state::Vault;
 
 #[derive(Accounts)]
 pub struct Rebalance<'info> {
+    #[account(
+        has_one = vault_authority,
+        has_one = vault_reserve_token,
+        has_one = vault_solend_lp_token,
+    )]
     pub vault: Box<Account<'info, Vault>>,
 
     pub vault_authority: AccountInfo<'info>,
 
-    #[account(mut, constraint = vault_reserve_token.owner == *vault_authority.key)]
+    #[account(mut)]
     pub vault_reserve_token: Account<'info, TokenAccount>,
 
     #[account(mut)]
     pub vault_solend_lp_token: Account<'info, TokenAccount>,
 
+    #[account(
+        executable,
+        address = spl_token_lending::ID,
+    )]
     pub solend_program: AccountInfo<'info>,
 
     pub solend_market_authority: AccountInfo<'info>,
 
+    #[account(owner = solend_program.key())]
     pub solend_market: AccountInfo<'info>,
 
-    #[account(mut)]
+    #[account(mut, owner = solend_program.key())]
     pub solend_reserve_state: AccountInfo<'info>,
 
     #[account(mut)]
@@ -34,7 +43,7 @@ pub struct Rebalance<'info> {
 
     pub clock: Sysvar<'info, Clock>,
 
-    // SPL token program
+    #[account(address = token::ID)]
     pub token_program: AccountInfo<'info>,
 }
 
@@ -47,7 +56,7 @@ impl<'info> Rebalance<'info> {
             solend::DepositReserveLiquidity {
                 lending_program: self.solend_program.clone(),
                 source_liquidity: self.vault_reserve_token.to_account_info().clone(),
-                destination_collateral_account: self.vault_solend_lp_token.to_account_info().clone(),
+                destination_collateral_account: self.vault_solend_lp_token.to_account_info(),
                 reserve_account: self.solend_reserve_state.clone(),
                 reserve_collateral_mint: self.solend_lp_mint.clone(),
                 reserve_liquidity_supply: self.solend_reserve_token.clone(),
@@ -62,10 +71,6 @@ impl<'info> Rebalance<'info> {
 }
 
 pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
-    // TODO Check accounts
-
-    // TODO check last update slot
-
     // TODO Find highest APY across multiple pools and rebalanace accordingly
     // TODO Refreshes reserve
     
@@ -76,14 +81,12 @@ pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
     let tokens_in_pool = ctx.accounts.vault_reserve_token.amount;
 
     let vault = &ctx.accounts.vault;
-    let seeds = &[
-        &vault.to_account_info().key.to_bytes(), 
-        &[vault.bump_seed][..],
-    ];
 
     // TODO Deposits liquidity to lending markets
     solend::deposit_reserve_liquidity(
-        ctx.accounts.solend_deposit_reserve_liquidity_context().with_signer(&[&seeds[..]]),
+        ctx.accounts.solend_deposit_reserve_liquidity_context().with_signer(
+            &[&vault.authority_seeds()]
+        ),
         tokens_in_pool,
     )?;
 

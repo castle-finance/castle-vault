@@ -7,14 +7,19 @@ use crate::errors::ErrorCode;
 #[account]
 #[derive(Debug, Default)]
 pub struct Vault {
-    // Bump seed used to generate PDA
-    pub bump_seed: u8,
+    pub vault_authority: Pubkey,
 
-    // SPL token program
-    pub token_program: Pubkey,
+    pub authority_seed: Pubkey,
+
+    pub authority_bump: [u8; 1],
 
     // Account where reserve tokens are stored
-    pub reserve_token_account: Pubkey,
+    pub vault_reserve_token: Pubkey,
+
+    // Account where solend LP tokens are stored
+    pub vault_solend_lp_token: Pubkey,
+
+    pub solend_lp_token_mint: Pubkey,
 
     // Mint address of vault LP tokens
     pub lp_token_mint: Pubkey,
@@ -29,10 +34,16 @@ pub struct Vault {
     pub total_value: u64,
 }
 
+impl Vault {
+    pub fn authority_seeds(&self) -> [&[u8]; 3] {
+        [self.authority_seed.as_ref(), b"authority".as_ref(), &self.authority_bump]
+    }
+}
+
 /// Number of slots to consider stale after
 pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 1;
 
-#[derive(Clone, Copy, Debug, Default, AnchorDeserialize, AnchorSerialize)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct LastUpdate {
     pub slot: u64,
 
