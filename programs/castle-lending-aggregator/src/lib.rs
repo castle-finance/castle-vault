@@ -1,18 +1,22 @@
 use anchor_lang::prelude::*;
 
+pub mod cpi;
+pub mod errors;
 pub mod instructions;
+pub mod math;
+pub mod rebalance;
 pub mod state;
 
 use instructions::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 
 #[program]
 pub mod castle_lending_aggregator {
     use super::*;
 
-    pub fn initialize_pool(ctx: Context<InitializePool>) -> ProgramResult {
-        instructions::init::handler(ctx)
+    pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumpSeeds) -> ProgramResult {
+        instructions::init::handler(ctx, _bumps)
     }
 
     pub fn deposit(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult {
@@ -21,5 +25,13 @@ pub mod castle_lending_aggregator {
 
     pub fn withdraw(ctx: Context<Withdraw>, pool_token_amount: u64) -> ProgramResult {
         instructions::withdraw::handler(ctx, pool_token_amount)
+    }
+
+    pub fn rebalance(ctx: Context<Rebalance>) -> ProgramResult {
+        instructions::rebalance::handler(ctx)
+    }
+
+    pub fn refresh(ctx: Context<Refresh>) -> ProgramResult {
+        instructions::refresh::handler(ctx)
     }
 }

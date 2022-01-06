@@ -1,83 +1,90 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
-use spl_math::precise_number::PreciseNumber;
 
-use std::convert::{Into, TryFrom};
+use std::convert::Into;
 
-use crate::state::*;
+use crate::errors::ErrorCode;
+use crate::math::calc_deposit_to_vault;
+use crate::state::Vault;
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
-    pub reserve_pool: ProgramAccount<'info, ReservePool>,
+    #[account(
+        constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
+        has_one = lp_token_mint,
+        has_one = vault_authority,
+        has_one = vault_reserve_token,
+    )]
+    pub vault: Box<Account<'info, Vault>>,
 
-    pub authority: AccountInfo<'info>,
+    pub vault_authority: AccountInfo<'info>,
 
-    #[account(signer)]
-    pub user_authority: AccountInfo<'info>,
+    // Account where tokens in vault are stored
+    #[account(mut)]
+    pub vault_reserve_token: Account<'info, TokenAccount>,
+
+    // Mint address of vault LP token
+    #[account(mut)]
+    pub lp_token_mint: Account<'info, Mint>,
 
     // Account from which tokens are transferred
     #[account(mut)]
-    pub source: Account<'info, TokenAccount>,
+    pub user_reserve_token: Account<'info, TokenAccount>,
 
-    // Account where tokens in pool are stored
+    // Account where vault LP tokens are minted to 
     #[account(mut)]
-    pub token: Account<'info, TokenAccount>,
+    pub user_lp_token: Account<'info, TokenAccount>,
 
-    // Account where pool LP tokens are minted to 
-    #[account(mut)]
-    pub destination: Account<'info, TokenAccount>,
-
-    // Mint address of pool LP token
-    #[account(mut)]
-    pub pool_mint: Account<'info, Mint>,
+    pub user_authority: Signer<'info>,
 
     // SPL token program
+    #[account(address = token::ID)]
     pub token_program: AccountInfo<'info>,
 }
 
 impl<'info> Deposit<'info> {
-    fn into_mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
-        let cpi_accounts = MintTo {
-            mint: self.pool_mint.to_account_info().clone(),
-            to: self.destination.to_account_info().clone(),
-            authority: self.authority.clone(),
-        };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
+    fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+        CpiContext::new(
+            self.token_program.clone(),
+            MintTo {
+                mint: self.lp_token_mint.to_account_info(),
+                to: self.user_lp_token.to_account_info(),
+                authority: self.vault_authority.clone(),
+            },
+        )
     }
 
-    fn into_transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: self.source.to_account_info().clone(),
-            to: self.token.to_account_info().clone(),
-            authority: self.user_authority.clone(),
-        };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
+    fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+        CpiContext::new(
+            self.token_program.clone(),
+            Transfer {
+                from: self.user_reserve_token.to_account_info(),
+                to: self.vault_reserve_token.to_account_info(),
+                authority: self.user_authority.to_account_info(),
+            },
+        )
     }
 }
 
-pub fn handler(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult {
-    let reserve_pool = &mut ctx.accounts.reserve_pool;
+pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
+    let vault = &ctx.accounts.vault;
 
-    let pool_token_supply = PreciseNumber::new(ctx.accounts.pool_mint.supply as u128).unwrap();
-    let tokens_in_pool = PreciseNumber::new(ctx.accounts.token.amount as u128).unwrap();
-    let source_token_amount_converted = PreciseNumber::new(source_token_amount as u128).unwrap();
-    let pool_tokens_to_mint = pool_token_supply.checked_mul(
-        &source_token_amount_converted.checked_div(&tokens_in_pool).unwrap()
-    ).unwrap().to_imprecise().unwrap();
-
-    let seeds = &[
-        &reserve_pool.to_account_info().key.to_bytes(), 
-        &[reserve_pool.bump_seed][..],
-    ];
+    let lp_tokens_to_mint = calc_deposit_to_vault(
+        reserve_token_amount, 
+        ctx.accounts.lp_token_mint.supply, 
+        vault.total_value,
+    ).ok_or(ErrorCode::MathError)?;
 
     token::transfer(
-        ctx.accounts.into_transfer_context(),
-        source_token_amount,
+        ctx.accounts.transfer_context(),
+        reserve_token_amount,
     )?;
 
     token::mint_to(
-        ctx.accounts.into_mint_to_context().with_signer(&[&seeds[..]]),
-        u64::try_from(pool_tokens_to_mint).unwrap(),
+        ctx.accounts.mint_to_context().with_signer(
+            &[&vault.authority_seeds()]
+        ),
+        lp_tokens_to_mint,
     )?;
 
     Ok(())

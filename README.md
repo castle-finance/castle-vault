@@ -31,6 +31,8 @@ $ anchor deploy
 
 Finally, run the test:
 
+TODO add instructions on how to load fixtures into test validator
+
 ```
 $ anchor test
 ```

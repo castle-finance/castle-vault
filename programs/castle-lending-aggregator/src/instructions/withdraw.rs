@@ -1,83 +1,140 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Burn, TokenAccount, Transfer};
-use spl_math::precise_number::PreciseNumber;
 
-use std::convert::{Into, TryFrom};
+use std::convert::Into; 
 
-use crate::state::*;
+use crate::cpi::solend;
+use crate::errors::ErrorCode;
+use crate::math::calc_withdraw_from_vault;
+use crate::state::Vault;
+
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
-    pub reserve_pool: ProgramAccount<'info, ReservePool>,
+    #[account(
+        has_one = vault_authority,
+        has_one = vault_reserve_token,
+        has_one = vault_solend_lp_token,
+    )]
+    pub vault: Box<Account<'info, Vault>>,
 
-    pub authority: AccountInfo<'info>,
+    pub vault_authority: AccountInfo<'info>,
 
-    #[account(signer)]
-    pub user_authority: AccountInfo<'info>,
-
-    // Account from which pool tokens are burned
     #[account(mut)]
-    pub source: Account<'info, TokenAccount>,
+    pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
-    // Account where tokens in pool are stored
     #[account(mut)]
-    pub token: Account<'info, TokenAccount>,
+    pub vault_lp_mint: Box<Account<'info, Mint>>,
 
-    // Account where tokens are transferred to
     #[account(mut)]
-    pub destination: Account<'info, TokenAccount>,
+    pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
-    // Mint address of pool LP token
+    #[account(
+        executable,
+        address = spl_token_lending::ID,
+    )]
+    pub solend_program: AccountInfo<'info>,
+
+    pub solend_market_authority: AccountInfo<'info>,
+
+    #[account(owner = solend_program.key())]
+    pub solend_market: AccountInfo<'info>,
+
+    #[account(mut, owner = solend_program.key())]
+    pub solend_reserve_state: AccountInfo<'info>,
+
     #[account(mut)]
-    pub pool_mint: Account<'info, Mint>,
+    pub solend_lp_mint: AccountInfo<'info>,
 
-    // SPL token program
+    #[account(mut)]
+    pub solend_reserve_token: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub user_lp_token: Box<Account<'info, TokenAccount>>,
+
+    #[account(mut)]
+    pub user_reserve_token: Box<Account<'info, TokenAccount>>,
+
+    pub user_authority: Signer<'info>,
+
+    pub clock: Sysvar<'info, Clock>,
+
+    #[account(address = token::ID)]
     pub token_program: AccountInfo<'info>,
 }
 
 impl<'info> Withdraw<'info> {
-    fn into_burn_context(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
-        let cpi_accounts = Burn {
-            mint: self.pool_mint.to_account_info().clone(),
-            to: self.source.to_account_info().clone(),
-            authority: self.user_authority.clone(),
-        };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
+    fn burn_context(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
+        CpiContext::new(
+            self.token_program.clone(),
+            Burn {
+                mint: self.vault_lp_mint.to_account_info(),
+                to: self.user_lp_token.to_account_info(),
+                authority: self.user_authority.to_account_info(),
+            },
+        )
     }
 
-    fn into_transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
-        let cpi_accounts = Transfer {
-            from: self.token.to_account_info().clone(),
-            to: self.destination.to_account_info().clone(),
-            authority: self.authority.clone(),
-        };
-        CpiContext::new(self.token_program.clone(), cpi_accounts)
+    fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+        CpiContext::new(
+            self.token_program.clone(),
+            Transfer {
+                from: self.vault_reserve_token.to_account_info().clone(),
+                to: self.user_reserve_token.to_account_info().clone(),
+                authority: self.vault_authority.clone(),
+            },
+        )
+    }
+
+    fn solend_redeem_reserve_collateral_context(&self) -> CpiContext<'_, '_, '_, 'info, solend::RedeemReserveCollateral<'info>> {
+        CpiContext::new(
+            self.solend_program.clone(),
+            solend::RedeemReserveCollateral {
+                lending_program: self.solend_program.clone(),
+                source_collateral: self.vault_solend_lp_token.to_account_info(),
+                destination_liquidity: self.vault_reserve_token.to_account_info(),
+                refreshed_reserve_account: self.solend_reserve_state.clone(),
+                reserve_collateral_mint: self.solend_lp_mint.clone(),
+                reserve_liquidity: self.solend_reserve_token.clone(),
+                lending_market: self.solend_market.clone(),
+                lending_market_authority: self.solend_market_authority.clone(),
+                user_transfer_authority: self.vault_authority.clone(),
+                clock: self.clock.to_account_info().clone(),
+                token_program_id: self.token_program.clone(),
+            },
+        )
     }
 }
 
-pub fn handler(ctx: Context<Withdraw>, pool_token_amount: u64) -> ProgramResult {
-    let reserve_pool = &mut ctx.accounts.reserve_pool;
+pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
+    let vault = &ctx.accounts.vault;
 
-    let pool_token_supply = PreciseNumber::new(ctx.accounts.pool_mint.supply as u128).unwrap();
-    let tokens_in_pool = PreciseNumber::new(ctx.accounts.token.amount as u128).unwrap();
-    let pool_token_amount_converted = PreciseNumber::new(pool_token_amount as u128).unwrap();
-    let tokens_to_transfer = tokens_in_pool.checked_mul(
-        &pool_token_amount_converted.checked_div(&pool_token_supply).unwrap()
-    ).unwrap().to_imprecise().unwrap();
+    let reserve_tokens_to_transfer = calc_withdraw_from_vault(
+        lp_token_amount, 
+        ctx.accounts.vault_lp_mint.supply, 
+        vault.total_value,
+    ).ok_or(ErrorCode::MathError)?;
 
-    let seeds = &[
-        &reserve_pool.to_account_info().key.to_bytes(), 
-        &[reserve_pool.bump_seed][..],
-    ];
-
-    token::transfer(
-        ctx.accounts.into_transfer_context().with_signer(&[&seeds[..]]),
-        u64::try_from(tokens_to_transfer).unwrap(),
+    let solend_exchange_rate = solend::solend_accessor::exchange_rate(&ctx.accounts.solend_reserve_state)?;
+    let solend_collateral_amount = solend_exchange_rate.liquidity_to_collateral(
+        reserve_tokens_to_transfer - ctx.accounts.vault_reserve_token.amount
+    )?;
+    solend::redeem_reserve_collateral(
+        ctx.accounts.solend_redeem_reserve_collateral_context().with_signer(
+            &[&vault.authority_seeds()]
+        ),
+        solend_collateral_amount,
     )?;
 
     token::burn(
-        ctx.accounts.into_burn_context(),
-        pool_token_amount,
+        ctx.accounts.burn_context(),
+        lp_token_amount,
+    )?;
+
+    // Transfer reserve tokens to user
+    token::transfer(
+        ctx.accounts.transfer_context().with_signer(&[&vault.authority_seeds()]),
+        reserve_tokens_to_transfer,
     )?;
 
     Ok(())
