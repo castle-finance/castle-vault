@@ -9,12 +9,14 @@ use crate::state::Vault;
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
+    #[account(
+        constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed
+    )]
     pub vault: Box<Account<'info, Vault>>,
 
     pub vault_authority: AccountInfo<'info>,
 
-    #[account(signer)]
-    pub user_authority: AccountInfo<'info>,
+    pub user_authority: Signer<'info>,
 
     // Account from which tokens are transferred
     #[account(mut)]
@@ -33,6 +35,7 @@ pub struct Deposit<'info> {
     pub lp_token_mint: Account<'info, Mint>,
 
     // SPL token program
+    #[account(address = token::ID)]
     pub token_program: AccountInfo<'info>,
 }
 
@@ -41,8 +44,8 @@ impl<'info> Deposit<'info> {
         CpiContext::new(
             self.token_program.clone(),
             MintTo {
-                mint: self.lp_token_mint.to_account_info().clone(),
-                to: self.user_lp_token.to_account_info().clone(),
+                mint: self.lp_token_mint.to_account_info(),
+                to: self.user_lp_token.to_account_info(),
                 authority: self.vault_authority.clone(),
             },
         )
@@ -52,9 +55,9 @@ impl<'info> Deposit<'info> {
         CpiContext::new(
             self.token_program.clone(),
             Transfer {
-                from: self.user_reserve_token.to_account_info().clone(),
-                to: self.vault_reserve_token.to_account_info().clone(),
-                authority: self.user_authority.clone(),
+                from: self.user_reserve_token.to_account_info(),
+                to: self.vault_reserve_token.to_account_info(),
+                authority: self.user_authority.to_account_info(),
             },
         )
     }
@@ -64,8 +67,6 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
     let vault = &ctx.accounts.vault;
 
     // TODO check accounts
-
-    // TODO check last update slot
 
     let lp_tokens_to_mint = calc_deposit_to_vault(
         reserve_token_amount, 

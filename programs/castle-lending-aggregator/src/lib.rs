@@ -15,8 +15,8 @@ declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 pub mod castle_lending_aggregator {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, initial_reserves: u64) -> ProgramResult {
-        instructions::init::handler(ctx, initial_reserves)
+    pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumpSeeds) -> ProgramResult {
+        instructions::init::handler(ctx, _bumps)
     }
 
     pub fn deposit(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult {

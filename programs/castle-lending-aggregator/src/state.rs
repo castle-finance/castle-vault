@@ -5,6 +5,7 @@ use std::cmp::Ordering;
 use crate::errors::ErrorCode;
 
 #[account]
+#[derive(Debug, Default)]
 pub struct Vault {
     // Bump seed used to generate PDA
     pub bump_seed: u8,
@@ -15,10 +16,10 @@ pub struct Vault {
     // Account where reserve tokens are stored
     pub reserve_token_account: Pubkey,
 
-    // Mint address of pool LP tokens
+    // Mint address of vault LP tokens
     pub lp_token_mint: Pubkey,
 
-    // Mint address of the tokens that are stored in pool
+    // Mint address of the tokens that are stored in vault
     pub reserve_token_mint: Pubkey,
 
     // Last slot when vault was updated
@@ -31,7 +32,7 @@ pub struct Vault {
 /// Number of slots to consider stale after
 pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 1;
 
-#[derive(Clone, Copy, AnchorDeserialize, AnchorSerialize)]
+#[derive(Clone, Copy, Debug, Default, AnchorDeserialize, AnchorSerialize)]
 pub struct LastUpdate {
     pub slot: u64,
 
