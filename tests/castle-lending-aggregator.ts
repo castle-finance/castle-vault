@@ -10,7 +10,8 @@ import { CastleLendingAggregator } from "../target/types/castle_lending_aggregat
 // Change to import after https://github.com/project-serum/anchor/issues/1153 is resolved
 const anchor = require("@project-serum/anchor");
 
-/// TODO use SDK instead of raw code
+// TODO use SDK instead of raw code
+// TODO use provider.wallet instead of owner
 describe("castle-vault", () => {
     // Configure the client to use the local cluster.
     const provider = anchor.Provider.env();
@@ -242,6 +243,51 @@ describe("castle-vault", () => {
         assert.equal(lpTokenMintInfo.supply.toNumber(), depositAmount * initialCollateralRatio);
     });
 
+    it("Withdraws from vault reserves", async () => {
+        // Pool tokens to withdraw from
+        const withdrawAmount = 500;
+
+        // Create token account to withdraw into
+        const userReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
+
+        // Delegate authority to transfer pool tokens
+        const userAuthority = anchor.web3.Keypair.generate();
+        await lpToken.approve(
+            userLpTokenAccount,
+            userAuthority.publicKey,
+            owner,
+            [],
+            withdrawAmount,
+        );
+
+        await program.rpc.withdraw(
+            new anchor.BN(withdrawAmount),
+            {
+                accounts: {
+                    vault: vaultStateAccount.publicKey,
+                    vaultAuthority: vaultAuthority,
+                    userAuthority: userAuthority.publicKey,
+                    userLpToken: userLpTokenAccount,
+                    userReserveToken: userReserveTokenAccount,
+                    vaultReserveToken: vaultReserveTokenAccount,
+                    vaultLpMint: lpTokenMint,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                },
+                signers: [userAuthority],
+                instructions: [refreshInstruction],
+            }
+        );
+
+        const userReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(userReserveTokenAccount);
+        assert.equal(userReserveTokenAccountInfo.amount.toNumber(), withdrawAmount);
+
+        const userLpTokenAccountInfo = await lpToken.getAccountInfo(userLpTokenAccount);
+        assert.equal(
+            userLpTokenAccountInfo.amount.toNumber(), 
+            (depositAmount * initialCollateralRatio) - withdrawAmount
+        );
+    });
+
     it("Forwards deposits to lending program", async () => {
         await program.rpc.rebalance(
             {
@@ -279,58 +325,5 @@ describe("castle-vault", () => {
     });
 
     it("Rebalances", async () => {
-    });
-
-    it("Withdraws from vault", async () => {
-        // Pool tokens to withdraw from
-        const withdrawAmount = 500;
-
-        // Create token account to withdraw into
-        const userReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
-
-        // Delegate authority to transfer pool tokens
-        const userAuthority = anchor.web3.Keypair.generate();
-        await lpToken.approve(
-            userLpTokenAccount,
-            userAuthority.publicKey,
-            owner,
-            [],
-            withdrawAmount,
-        );
-
-        await program.rpc.withdraw(
-            new anchor.BN(withdrawAmount),
-            {
-                accounts: {
-                    vault: vaultStateAccount.publicKey,
-                    vaultAuthority: vaultAuthority,
-                    userAuthority: userAuthority.publicKey,
-                    userLpToken: userLpTokenAccount,
-                    userReserveToken: userReserveTokenAccount,
-                    vaultReserveToken: vaultReserveTokenAccount,
-                    vaultLpMint: lpTokenMint,
-                    vaultSolendLpToken: vaultSolendLpTokenAccount,
-                    solendProgram: solendProgramId,
-                    solendMarketAuthority: solendMarketAuthority,
-                    solendMarket: solendMarket.publicKey,
-                    solendReserveState: solendReserve.publicKey,
-                    solendLpMint: solendCollateralMint.publicKey,
-                    solendReserveToken: solendLiquiditySupply.publicKey,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                },
-                signers: [userAuthority],
-                instructions: [refreshInstruction],
-            }
-        );
-
-        const userReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(userReserveTokenAccount);
-        assert.equal(userReserveTokenAccountInfo.amount.toNumber(), withdrawAmount);
-
-        const userLpTokenAccountInfo = await lpToken.getAccountInfo(userLpTokenAccount);
-        assert.equal(
-            userLpTokenAccountInfo.amount.toNumber(), 
-            (depositAmount * initialCollateralRatio) - withdrawAmount
-        );
     });
 });

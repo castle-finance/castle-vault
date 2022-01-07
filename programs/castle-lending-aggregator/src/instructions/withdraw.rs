@@ -3,7 +3,6 @@ use anchor_spl::token::{self, Mint, Burn, TokenAccount, Transfer};
 
 use std::convert::Into; 
 
-use crate::cpi::solend;
 use crate::errors::ErrorCode;
 use crate::math::calc_withdraw_from_vault;
 use crate::state::Vault;
@@ -14,7 +13,6 @@ pub struct Withdraw<'info> {
     #[account(
         has_one = vault_authority,
         has_one = vault_reserve_token,
-        has_one = vault_solend_lp_token,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -27,37 +25,12 @@ pub struct Withdraw<'info> {
     pub vault_lp_mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
-    pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
-
-    #[account(
-        executable,
-        address = spl_token_lending::ID,
-    )]
-    pub solend_program: AccountInfo<'info>,
-
-    pub solend_market_authority: AccountInfo<'info>,
-
-    #[account(owner = solend_program.key())]
-    pub solend_market: AccountInfo<'info>,
-
-    #[account(mut, owner = solend_program.key())]
-    pub solend_reserve_state: AccountInfo<'info>,
-
-    #[account(mut)]
-    pub solend_lp_mint: AccountInfo<'info>,
-
-    #[account(mut)]
-    pub solend_reserve_token: AccountInfo<'info>,
-
-    #[account(mut)]
     pub user_lp_token: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
     pub user_reserve_token: Box<Account<'info, TokenAccount>>,
 
     pub user_authority: Signer<'info>,
-
-    pub clock: Sysvar<'info, Clock>,
 
     #[account(address = token::ID)]
     pub token_program: AccountInfo<'info>,
@@ -86,24 +59,6 @@ impl<'info> Withdraw<'info> {
         )
     }
 
-    fn solend_redeem_reserve_collateral_context(&self) -> CpiContext<'_, '_, '_, 'info, solend::RedeemReserveCollateral<'info>> {
-        CpiContext::new(
-            self.solend_program.clone(),
-            solend::RedeemReserveCollateral {
-                lending_program: self.solend_program.clone(),
-                source_collateral: self.vault_solend_lp_token.to_account_info(),
-                destination_liquidity: self.vault_reserve_token.to_account_info(),
-                refreshed_reserve_account: self.solend_reserve_state.clone(),
-                reserve_collateral_mint: self.solend_lp_mint.clone(),
-                reserve_liquidity: self.solend_reserve_token.clone(),
-                lending_market: self.solend_market.clone(),
-                lending_market_authority: self.solend_market_authority.clone(),
-                user_transfer_authority: self.vault_authority.clone(),
-                clock: self.clock.to_account_info().clone(),
-                token_program_id: self.token_program.clone(),
-            },
-        )
-    }
 }
 
 pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
@@ -114,17 +69,6 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
         ctx.accounts.vault_lp_mint.supply, 
         vault.total_value,
     ).ok_or(ErrorCode::MathError)?;
-
-    let solend_exchange_rate = solend::solend_accessor::exchange_rate(&ctx.accounts.solend_reserve_state)?;
-    let solend_collateral_amount = solend_exchange_rate.liquidity_to_collateral(
-        reserve_tokens_to_transfer - ctx.accounts.vault_reserve_token.amount
-    )?;
-    solend::redeem_reserve_collateral(
-        ctx.accounts.solend_redeem_reserve_collateral_context().with_signer(
-            &[&vault.authority_seeds()]
-        ),
-        solend_collateral_amount,
-    )?;
 
     token::burn(
         ctx.accounts.burn_context(),

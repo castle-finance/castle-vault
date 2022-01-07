@@ -13,10 +13,8 @@ pub struct Refresh<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    #[account(mut)]
     pub vault_reserve_token: Account<'info, TokenAccount>,
 
-    #[account(mut)]
     pub vault_solend_lp_token: Account<'info, TokenAccount>,
 
     #[account(
