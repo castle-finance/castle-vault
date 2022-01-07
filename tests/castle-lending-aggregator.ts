@@ -3,6 +3,7 @@ import { Program, utils} from '@project-serum/anchor';
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { Keypair, PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY, TransactionInstruction } from "@solana/web3.js";
 
+import * as port from './helpers/port';
 import { Solend } from './helpers/solend';
 import { CastleLendingAggregator } from "../target/types/castle_lending_aggregator";
 
@@ -32,22 +33,19 @@ describe("castle-vault", () => {
     const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
     const switchboardFeed = new PublicKey("GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR");
 
-    const solendInitialReserveAmount = 100;
+    const initialReserveAmount = 100;
+
+    let portReserveState: port.ReserveState;
 
     let reserveTokenMint: Token;
     let solendMarket: Keypair;
     let solendMarketAuthority: PublicKey;
+    let portMarket: Keypair;
+    let portMarketAuthority: PublicKey;
 
-    before(async () => {
+    before("Initialize lending markets", async () => {
         const sig  = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
         await provider.connection.confirmTransaction(sig, "singleGossip");
-
-        solendMarket = await solendProgram.initLendingMarket(
-            owner.publicKey,
-            payer,
-            new PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s"),
-            new PublicKey("2TfB33aLaneQb5TNVwyDz3jSZXS6jdW2ARw1Dgf84XCG"),
-        );
 
         reserveTokenMint = await Token.createMint(
             provider.connection,
@@ -58,13 +56,24 @@ describe("castle-vault", () => {
             TOKEN_PROGRAM_ID
         );
 
+        const ownerReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
+        await reserveTokenMint.mintTo(ownerReserveTokenAccount, owner, [], 3 * initialReserveAmount);
+
+        solendMarket = await solendProgram.initLendingMarket(
+            owner.publicKey,
+            payer,
+            new PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s"),
+            new PublicKey("2TfB33aLaneQb5TNVwyDz3jSZXS6jdW2ARw1Dgf84XCG"),
+        );
+
         [solendMarketAuthority, ] = await PublicKey.findProgramAddress(
             [solendMarket.publicKey.toBuffer()],
             solendProgramId,
         );
 
         await solendProgram.addReserve(
-            solendInitialReserveAmount,
+            initialReserveAmount,
+            ownerReserveTokenAccount,
             owner,
             payer,
             reserveTokenMint,
@@ -76,6 +85,22 @@ describe("castle-vault", () => {
             switchboardFeed,
             solendMarket.publicKey,
             solendMarketAuthority,
+        );
+
+        portMarket = await port.createLendingMarket(provider);
+
+        [portMarketAuthority, ] = await PublicKey.findProgramAddress(
+            [portMarket.publicKey.toBuffer()],
+            port.PORT_LENDING,
+        );
+
+        portReserveState = await port.createDefaultReserve(
+            provider,
+            initialReserveAmount,
+            ownerReserveTokenAccount,
+            portMarket.publicKey,
+            owner,
+            port.DEFAULT_RESERVE_CONFIG,
         );
     });
 
@@ -250,7 +275,7 @@ describe("castle-vault", () => {
         assert.notEqual(vaultLpTokenAccountInfo.amount.toNumber(), 0);
 
         const liquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(solendLiquiditySupply.publicKey);
-        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), depositAmount + solendInitialReserveAmount);
+        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), depositAmount + initialReserveAmount);
     });
 
     it("Rebalances", async () => {
