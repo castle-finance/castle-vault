@@ -1,25 +1,20 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, TokenAccount};
+use anchor_spl::token::TokenAccount;
 
 use crate::cpi::solend;
-use crate::state::Vault;
+use crate::errors::ErrorCode;
+use crate::state::*;
 
 #[derive(Accounts)]
 pub struct Rebalance<'info> {
     #[account(
-        has_one = vault_authority,
+        mut,
+        constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
         has_one = vault_reserve_token,
-        has_one = vault_solend_lp_token,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    pub vault_authority: AccountInfo<'info>,
-
-    #[account(mut)]
     pub vault_reserve_token: Account<'info, TokenAccount>,
-
-    #[account(mut)]
-    pub vault_solend_lp_token: Account<'info, TokenAccount>,
 
     #[account(
         executable,
@@ -27,37 +22,29 @@ pub struct Rebalance<'info> {
     )]
     pub solend_program: AccountInfo<'info>,
 
-    pub solend_market_authority: AccountInfo<'info>,
-
-    #[account(owner = solend_program.key())]
-    pub solend_market: AccountInfo<'info>,
-
     #[account(mut, owner = solend_program.key())]
     pub solend_reserve_state: AccountInfo<'info>,
-
-    #[account(mut)]
-    pub solend_lp_mint: AccountInfo<'info>,
-
-    #[account(mut)]
-    pub solend_reserve_token: AccountInfo<'info>,
-
-    pub clock: Sysvar<'info, Clock>,
-
-    #[account(address = token::ID)]
-    pub token_program: AccountInfo<'info>,
-}
-
-impl<'info> Rebalance<'info> {
 }
 
 pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResult {
-    // TODO Find highest APY across multiple pools and rebalanace accordingly
-    // TODO Refreshes reserve
+    if to_withdraw_option != 0 {
+        // TODO use introspection make sure that there is a withdraw instruction after
+    }
     
-    let tokens_in_pool = ctx.accounts.vault_reserve_token.amount;
+    // TODO Calculates ideal allocations and stores in vault
 
-    let vault = &ctx.accounts.vault;
-    // TODO Calculates ideal allocations 
+    let reserve_tokens_in_vault = ctx.accounts.vault_reserve_token.amount;
+    let reserve_tokens_net = reserve_tokens_in_vault.checked_sub(to_withdraw_option);
+
+    match reserve_tokens_net {
+        Some(reserve_tokens_to_deposit) => ctx.accounts.vault.to_reconcile[0].deposit = reserve_tokens_to_deposit,
+        None => {
+            let reserve_tokens_to_redeem = to_withdraw_option.checked_sub(reserve_tokens_in_vault).unwrap_or(0);
+            let solend_exchange_rate = solend::solend_accessor::exchange_rate(&ctx.accounts.solend_reserve_state)?;
+            let solend_collateral_amount = solend_exchange_rate.liquidity_to_collateral(reserve_tokens_to_redeem)?;
+            ctx.accounts.vault.to_reconcile[0].redeem = solend_collateral_amount;
+        }
+    }
 
     Ok(())
 }

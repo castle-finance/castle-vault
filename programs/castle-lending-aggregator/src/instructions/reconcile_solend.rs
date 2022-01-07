@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, TokenAccount};
+use anchor_spl::token::{self, TokenAccount};
 
 use crate::{state::Vault, cpi::solend};
 
@@ -7,6 +7,7 @@ use crate::{state::Vault, cpi::solend};
 #[derive(Accounts)]
 pub struct ReconcileSolend<'info> {
     #[account(
+        mut,
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
@@ -17,9 +18,6 @@ pub struct ReconcileSolend<'info> {
 
     #[account(mut)]
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
-
-    #[account(mut)]
-    pub vault_lp_mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
@@ -97,8 +95,8 @@ impl<'info> ReconcileSolend<'info> {
 pub fn handler(ctx: Context<ReconcileSolend>) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
-    let deposit_amount: u64 = 0;
-    let redeem_amount: u64 = 0;
+    let deposit_amount = vault.to_reconcile[0].deposit;
+    let redeem_amount = vault.to_reconcile[0].redeem;
 
     if deposit_amount > 0 {
         solend::deposit_reserve_liquidity(
@@ -108,8 +106,7 @@ pub fn handler(ctx: Context<ReconcileSolend>) -> ProgramResult {
             deposit_amount,
         )?;
     }
-
-    if redeem_amount> 0 {
+    if redeem_amount > 0 {
         solend::redeem_reserve_collateral(
             ctx.accounts.solend_redeem_reserve_collateral_context().with_signer(
                 &[&vault.authority_seeds()]
@@ -117,5 +114,8 @@ pub fn handler(ctx: Context<ReconcileSolend>) -> ProgramResult {
             redeem_amount,
         )?;
     }
+
+    ctx.accounts.vault.to_reconcile[0].reset();
+
     Ok(())
 }

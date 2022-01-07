@@ -11,6 +11,7 @@ use crate::state::Vault;
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     #[account(
+        constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
         has_one = vault_authority,
         has_one = vault_reserve_token,
     )]

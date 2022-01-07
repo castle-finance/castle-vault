@@ -56,6 +56,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
 
     let vault = &mut ctx.accounts.vault;
+
     vault.total_value = get_vault_value(
         ctx.accounts.vault_reserve_token.clone(),
         ctx.accounts.vault_solend_lp_token.clone(),
@@ -78,4 +79,11 @@ pub fn get_vault_value(
     )?;
 
     Ok(vault_reserve_token_amount + solend_value)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    // TODO add tests
 }

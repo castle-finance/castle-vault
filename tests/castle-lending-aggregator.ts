@@ -243,10 +243,8 @@ describe("castle-vault", () => {
         assert.equal(lpTokenMintInfo.supply.toNumber(), depositAmount * initialCollateralRatio);
     });
 
+    const withdrawAmount = 500;
     it("Withdraws from vault reserves", async () => {
-        // Pool tokens to withdraw from
-        const withdrawAmount = 500;
-
         // Create token account to withdraw into
         const userReserveTokenAccount = await reserveTokenMint.createAccount(owner.publicKey);
 
@@ -289,7 +287,18 @@ describe("castle-vault", () => {
     });
 
     it("Forwards deposits to lending program", async () => {
-        await program.rpc.rebalance(
+        const rebalanceInstruction = program.instruction.rebalance(
+            new anchor.BN(0), 
+            {
+                accounts: {
+                    vault: vaultStateAccount.publicKey,
+                    vaultReserveToken: vaultReserveTokenAccount,
+                    solendProgram: solendProgramId,
+                    solendReserveState: solendReserve.publicKey,
+                }
+            }
+        );
+        await program.rpc.reconcileSolend(
             {
                 accounts: {
                     vault: vaultStateAccount.publicKey,
@@ -305,7 +314,7 @@ describe("castle-vault", () => {
                     clock: SYSVAR_CLOCK_PUBKEY,
                     tokenProgram: TOKEN_PROGRAM_ID,
                 },
-                instructions: [refreshInstruction],
+                instructions: [refreshInstruction, rebalanceInstruction],
             }
         );
         const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
@@ -321,9 +330,12 @@ describe("castle-vault", () => {
         assert.notEqual(vaultLpTokenAccountInfo.amount.toNumber(), 0);
 
         const liquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(solendLiquiditySupply.publicKey);
-        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), depositAmount + initialReserveAmount);
+        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), depositAmount - withdrawAmount + initialReserveAmount);
     });
 
     it("Rebalances", async () => {
+    });
+
+    it("Withdraws from lending programs", async () => {
     });
 });
