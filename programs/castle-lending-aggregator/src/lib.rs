@@ -15,6 +15,8 @@ declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 pub mod castle_lending_aggregator {
     use super::*;
 
+    // TODO add docs
+
     pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumpSeeds) -> ProgramResult {
         instructions::init::handler(ctx, _bumps)
     }
@@ -27,11 +29,15 @@ pub mod castle_lending_aggregator {
         instructions::withdraw::handler(ctx, pool_token_amount)
     }
 
-    pub fn rebalance(ctx: Context<Rebalance>) -> ProgramResult {
-        instructions::rebalance::handler(ctx)
+    pub fn rebalance(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResult {
+        instructions::rebalance::handler(ctx, to_withdraw_option)
     }
 
     pub fn refresh(ctx: Context<Refresh>) -> ProgramResult {
         instructions::refresh::handler(ctx)
+    }
+
+    pub fn reconcile_solend(ctx: Context<ReconcileSolend>) -> ProgramResult {
+        instructions::reconcile_solend::handler(ctx)
     }
 }

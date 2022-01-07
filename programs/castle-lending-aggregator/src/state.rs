@@ -32,11 +32,30 @@ pub struct Vault {
 
     // Total value of vault denominated in the reserve token
     pub total_value: u64,
-}
 
+    /// Data structure for storing pending transactions into and out of lending markets
+    /// 
+    /// Solend: 0
+    /// Port: 1
+    /// Jet: 3
+    pub to_reconcile: [ReconciliationTx; 3],
+}
 impl Vault {
     pub fn authority_seeds(&self) -> [&[u8]; 3] {
         [self.authority_seed.as_ref(), b"authority".as_ref(), &self.authority_bump]
+    }
+}
+
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
+pub struct ReconciliationTx {
+    pub deposit: u64,
+    pub redeem: u64,
+}
+
+impl ReconciliationTx {
+    pub fn reset(mut self) {
+        self.deposit = 0;
+        self.redeem = 0;
     }
 }
 
