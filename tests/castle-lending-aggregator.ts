@@ -306,8 +306,8 @@ describe("castle-vault", () => {
                 accounts: {
                     vault: vaultStateAccount.publicKey,
                     vaultReserveToken: vaultReserveTokenAccount,
-                    solendProgram: solendProgramId,
                     solendReserveState: solendReserve.publicKey,
+                    portReserveState: portReserveState.address,
                 }
             }
         );

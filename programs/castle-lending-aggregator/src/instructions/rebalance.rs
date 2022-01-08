@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
+use port_anchor_adaptor::PortReserve;
+use solend::SolendReserve;
 
 use crate::cpi::solend;
 use crate::errors::ErrorCode;
@@ -14,16 +16,13 @@ pub struct Rebalance<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    pub vault_reserve_token: Account<'info, TokenAccount>,
+    pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
-    #[account(
-        executable,
-        address = spl_token_lending::ID,
-    )]
-    pub solend_program: AccountInfo<'info>,
+    #[account(mut, owner = spl_token_lending::ID)]
+    pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
 
-    #[account(mut, owner = solend_program.key())]
-    pub solend_reserve_state: AccountInfo<'info>,
+    #[account(mut, owner = port_variable_rate_lending_instructions::ID)]
+    pub port_reserve_state: Box<Account<'info, PortReserve>>,
 }
 
 pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResult {
@@ -32,7 +31,6 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
     }
 
     // TODO Calculates ideal allocations and stores in vault
-
     let reserve_tokens_in_vault = ctx.accounts.vault_reserve_token.amount;
     let reserve_tokens_net = reserve_tokens_in_vault.checked_sub(to_withdraw_option);
 
@@ -44,8 +42,10 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
             let reserve_tokens_to_redeem = to_withdraw_option
                 .checked_sub(reserve_tokens_in_vault)
                 .unwrap_or(0);
-            let solend_exchange_rate =
-                solend::solend_accessor::exchange_rate(&ctx.accounts.solend_reserve_state)?;
+            let solend_exchange_rate = ctx
+                .accounts
+                .solend_reserve_state
+                .collateral_exchange_rate()?;
             let solend_collateral_amount =
                 solend_exchange_rate.liquidity_to_collateral(reserve_tokens_to_redeem)?;
             ctx.accounts.vault.to_reconcile[0].redeem = solend_collateral_amount;
