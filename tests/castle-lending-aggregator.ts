@@ -299,7 +299,7 @@ describe("castle-vault", () => {
         );
     });
 
-    it("Forwards deposits to lending program", async () => {
+    it("Forwards deposits to solend", async () => {
         const rebalanceInstruction = program.instruction.rebalance(
             new anchor.BN(0),
             {

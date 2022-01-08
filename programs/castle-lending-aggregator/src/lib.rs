@@ -40,4 +40,8 @@ pub mod castle_lending_aggregator {
     pub fn reconcile_solend(ctx: Context<ReconcileSolend>) -> ProgramResult {
         instructions::reconcile_solend::handler(ctx)
     }
+
+    pub fn reconcile_port(ctx: Context<ReconcilePort>) -> ProgramResult {
+        instructions::reconcile_port::handler(ctx)
+    }
 }
