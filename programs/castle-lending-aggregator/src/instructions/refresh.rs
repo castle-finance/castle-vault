@@ -74,9 +74,8 @@ pub fn get_vault_value(
 ) -> Result<u64, ProgramError> {
     let vault_reserve_token_amount = vault_reserve_token_account.amount;
     let solend_exchange_rate = solend_accessor::exchange_rate(&solend_reserve_state_account)?;
-    let solend_value = solend_exchange_rate.collateral_to_liquidity(
-        vault_solend_lp_token_account.amount,
-    )?;
+    let solend_value =
+        solend_exchange_rate.collateral_to_liquidity(vault_solend_lp_token_account.amount)?;
 
     Ok(vault_reserve_token_amount + solend_value)
 }
@@ -84,6 +83,6 @@ pub fn get_vault_value(
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     // TODO add tests
 }

@@ -10,7 +10,7 @@ pub struct InitBumpSeeds {
     authority: u8,
     reserve: u8,
     solend_lp: u8,
-    lp_mint: u8
+    lp_mint: u8,
 }
 
 #[derive(Accounts)]
@@ -68,7 +68,7 @@ pub struct Initialize<'info> {
 
     // SPL token program
     #[account(address = token::ID)]
-    pub token_program: Program<'info, Token>,    
+    pub token_program: Program<'info, Token>,
 
     pub rent: Sysvar<'info, Rent>,
 

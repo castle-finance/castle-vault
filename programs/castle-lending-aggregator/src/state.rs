@@ -34,7 +34,7 @@ pub struct Vault {
     pub total_value: u64,
 
     /// Data structure for storing pending transactions into and out of lending markets
-    /// 
+    ///
     /// Solend: 0
     /// Port: 1
     /// Jet: 3
@@ -42,7 +42,11 @@ pub struct Vault {
 }
 impl Vault {
     pub fn authority_seeds(&self) -> [&[u8]; 3] {
-        [self.authority_seed.as_ref(), b"authority".as_ref(), &self.authority_bump]
+        [
+            self.authority_seed.as_ref(),
+            b"authority".as_ref(),
+            &self.authority_bump,
+        ]
     }
 }
 
@@ -77,9 +81,7 @@ impl LastUpdate {
 
     /// Return slots elapsed since given slot
     pub fn slots_elapsed(&self, slot: u64) -> Result<u64, ProgramError> {
-        let slots_elapsed = slot
-            .checked_sub(self.slot)
-            .ok_or(ErrorCode::MathError)?;
+        let slots_elapsed = slot.checked_sub(self.slot).ok_or(ErrorCode::MathError)?;
         Ok(slots_elapsed)
     }
 

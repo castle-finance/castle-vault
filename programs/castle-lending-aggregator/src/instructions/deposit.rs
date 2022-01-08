@@ -31,7 +31,7 @@ pub struct Deposit<'info> {
     #[account(mut)]
     pub user_reserve_token: Account<'info, TokenAccount>,
 
-    // Account where vault LP tokens are minted to 
+    // Account where vault LP tokens are minted to
     #[account(mut)]
     pub user_lp_token: Account<'info, TokenAccount>,
 
@@ -70,20 +70,18 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
     let vault = &ctx.accounts.vault;
 
     let lp_tokens_to_mint = calc_deposit_to_vault(
-        reserve_token_amount, 
-        ctx.accounts.lp_token_mint.supply, 
-        vault.total_value,
-    ).ok_or(ErrorCode::MathError)?;
-
-    token::transfer(
-        ctx.accounts.transfer_context(),
         reserve_token_amount,
-    )?;
+        ctx.accounts.lp_token_mint.supply,
+        vault.total_value,
+    )
+    .ok_or(ErrorCode::MathError)?;
+
+    token::transfer(ctx.accounts.transfer_context(), reserve_token_amount)?;
 
     token::mint_to(
-        ctx.accounts.mint_to_context().with_signer(
-            &[&vault.authority_seeds()]
-        ),
+        ctx.accounts
+            .mint_to_context()
+            .with_signer(&[&vault.authority_seeds()]),
         lp_tokens_to_mint,
     )?;
 

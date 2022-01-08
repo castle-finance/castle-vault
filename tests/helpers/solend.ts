@@ -42,10 +42,10 @@ export class Solend {
     async addReserve(
         liquidityAmount: number,
         ownerReserveTokenAccount: PublicKey,
-        owner: Keypair, 
-        payer: Keypair, 
-        reserveTokenMint: Token, 
-        reserve: Keypair, 
+        owner: Keypair,
+        payer: Keypair,
+        reserveTokenMint: Token,
+        reserve: Keypair,
         collateralMint: Keypair,
         liquiditySupply: Keypair,
         pythProduct: PublicKey,
@@ -166,9 +166,9 @@ export class Solend {
             )
         );
         await this.provider.sendAll([
-            {tx: tx1, signers: [payer, reserve, collateralMint, collateralSupply, userCollateral]},
-            {tx: tx2, signers: [payer, liquiditySupply, liquidityFeeReceiver]},
-            {tx: tx3, signers: [owner, userTransferAuthority]},
+            { tx: tx1, signers: [payer, reserve, collateralMint, collateralSupply, userCollateral] },
+            { tx: tx2, signers: [payer, liquiditySupply, liquidityFeeReceiver] },
+            { tx: tx3, signers: [owner, userTransferAuthority] },
         ]);
     }
 }

@@ -1,8 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, TokenAccount};
 
-use crate::{state::Vault, cpi::solend};
-
+use crate::{cpi::solend, state::Vault};
 
 #[derive(Accounts)]
 pub struct ReconcileSolend<'info> {
@@ -71,7 +70,7 @@ impl<'info> ReconcileSolend<'info> {
     }
 
     fn solend_redeem_reserve_collateral_context(
-        &self
+        &self,
     ) -> CpiContext<'_, '_, '_, 'info, solend::RedeemReserveCollateral<'info>> {
         CpiContext::new(
             self.solend_program.clone(),
@@ -100,17 +99,17 @@ pub fn handler(ctx: Context<ReconcileSolend>) -> ProgramResult {
 
     if deposit_amount > 0 {
         solend::deposit_reserve_liquidity(
-            ctx.accounts.solend_deposit_reserve_liquidity_context().with_signer(
-                &[&vault.authority_seeds()]
-            ),
+            ctx.accounts
+                .solend_deposit_reserve_liquidity_context()
+                .with_signer(&[&vault.authority_seeds()]),
             deposit_amount,
         )?;
     }
     if redeem_amount > 0 {
         solend::redeem_reserve_collateral(
-            ctx.accounts.solend_redeem_reserve_collateral_context().with_signer(
-                &[&vault.authority_seeds()]
-            ),
+            ctx.accounts
+                .solend_redeem_reserve_collateral_context()
+                .with_signer(&[&vault.authority_seeds()]),
             redeem_amount,
         )?;
     }

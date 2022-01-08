@@ -1,12 +1,11 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, Burn, TokenAccount, Transfer};
+use anchor_spl::token::{self, Burn, Mint, TokenAccount, Transfer};
 
-use std::convert::Into; 
+use std::convert::Into;
 
 use crate::errors::ErrorCode;
 use crate::math::calc_withdraw_from_vault;
 use crate::state::Vault;
-
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
@@ -59,26 +58,25 @@ impl<'info> Withdraw<'info> {
             },
         )
     }
-
 }
 
 pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
     let reserve_tokens_to_transfer = calc_withdraw_from_vault(
-        lp_token_amount, 
-        ctx.accounts.vault_lp_mint.supply, 
-        vault.total_value,
-    ).ok_or(ErrorCode::MathError)?;
-
-    token::burn(
-        ctx.accounts.burn_context(),
         lp_token_amount,
-    )?;
+        ctx.accounts.vault_lp_mint.supply,
+        vault.total_value,
+    )
+    .ok_or(ErrorCode::MathError)?;
+
+    token::burn(ctx.accounts.burn_context(), lp_token_amount)?;
 
     // Transfer reserve tokens to user
     token::transfer(
-        ctx.accounts.transfer_context().with_signer(&[&vault.authority_seeds()]),
+        ctx.accounts
+            .transfer_context()
+            .with_signer(&[&vault.authority_seeds()]),
         reserve_tokens_to_transfer,
     )?;
 

@@ -30,18 +30,24 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
     if to_withdraw_option != 0 {
         // TODO use introspection make sure that there is a withdraw instruction after
     }
-    
+
     // TODO Calculates ideal allocations and stores in vault
 
     let reserve_tokens_in_vault = ctx.accounts.vault_reserve_token.amount;
     let reserve_tokens_net = reserve_tokens_in_vault.checked_sub(to_withdraw_option);
 
     match reserve_tokens_net {
-        Some(reserve_tokens_to_deposit) => ctx.accounts.vault.to_reconcile[0].deposit = reserve_tokens_to_deposit,
+        Some(reserve_tokens_to_deposit) => {
+            ctx.accounts.vault.to_reconcile[0].deposit = reserve_tokens_to_deposit
+        }
         None => {
-            let reserve_tokens_to_redeem = to_withdraw_option.checked_sub(reserve_tokens_in_vault).unwrap_or(0);
-            let solend_exchange_rate = solend::solend_accessor::exchange_rate(&ctx.accounts.solend_reserve_state)?;
-            let solend_collateral_amount = solend_exchange_rate.liquidity_to_collateral(reserve_tokens_to_redeem)?;
+            let reserve_tokens_to_redeem = to_withdraw_option
+                .checked_sub(reserve_tokens_in_vault)
+                .unwrap_or(0);
+            let solend_exchange_rate =
+                solend::solend_accessor::exchange_rate(&ctx.accounts.solend_reserve_state)?;
+            let solend_collateral_amount =
+                solend_exchange_rate.liquidity_to_collateral(reserve_tokens_to_redeem)?;
             ctx.accounts.vault.to_reconcile[0].redeem = solend_collateral_amount;
         }
     }

@@ -1,5 +1,5 @@
 import assert from "assert";
-import { Program, utils} from '@project-serum/anchor';
+import { Program, utils } from '@project-serum/anchor';
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { Keypair, PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY, TransactionInstruction } from "@solana/web3.js";
 
@@ -27,7 +27,7 @@ describe("castle-vault", () => {
     const solendReserve = anchor.web3.Keypair.generate();
     const solendLiquiditySupply = anchor.web3.Keypair.generate();
 
-    const solendProgramId = new PublicKey("So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo") 
+    const solendProgramId = new PublicKey("So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo")
     const solendProgram = new Solend(provider, solendProgramId);
 
     const pythProduct = new PublicKey("3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E");
@@ -45,7 +45,7 @@ describe("castle-vault", () => {
     let portMarketAuthority: PublicKey;
 
     before("Initialize lending markets", async () => {
-        const sig  = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
+        const sig = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
         await provider.connection.confirmTransaction(sig, "singleGossip");
 
         reserveTokenMint = await Token.createMint(
@@ -67,7 +67,7 @@ describe("castle-vault", () => {
             new PublicKey("2TfB33aLaneQb5TNVwyDz3jSZXS6jdW2ARw1Dgf84XCG"),
         );
 
-        [solendMarketAuthority, ] = await PublicKey.findProgramAddress(
+        [solendMarketAuthority,] = await PublicKey.findProgramAddress(
             [solendMarket.publicKey.toBuffer()],
             solendProgramId,
         );
@@ -90,7 +90,7 @@ describe("castle-vault", () => {
 
         portMarket = await port.createLendingMarket(provider);
 
-        [portMarketAuthority, ] = await PublicKey.findProgramAddress(
+        [portMarketAuthority,] = await PublicKey.findProgramAddress(
             [portMarket.publicKey.toBuffer()],
             port.PORT_LENDING,
         );
@@ -281,14 +281,14 @@ describe("castle-vault", () => {
 
         const userLpTokenAccountInfo = await lpToken.getAccountInfo(userLpTokenAccount);
         assert.equal(
-            userLpTokenAccountInfo.amount.toNumber(), 
+            userLpTokenAccountInfo.amount.toNumber(),
             (depositAmount * initialCollateralRatio) - withdrawAmount
         );
     });
 
     it("Forwards deposits to lending program", async () => {
         const rebalanceInstruction = program.instruction.rebalance(
-            new anchor.BN(0), 
+            new anchor.BN(0),
             {
                 accounts: {
                     vault: vaultStateAccount.publicKey,
@@ -321,9 +321,9 @@ describe("castle-vault", () => {
         assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 0);
 
         const solendCollateralToken = new Token(
-            provider.connection, 
-            solendCollateralMint.publicKey, 
-            TOKEN_PROGRAM_ID, 
+            provider.connection,
+            solendCollateralMint.publicKey,
+            TOKEN_PROGRAM_ID,
             payer,
         );
         const vaultLpTokenAccountInfo = await solendCollateralToken.getAccountInfo(vaultSolendLpTokenAccount);
