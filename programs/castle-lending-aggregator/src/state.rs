@@ -19,7 +19,11 @@ pub struct Vault {
     // Account where solend LP tokens are stored
     pub vault_solend_lp_token: Pubkey,
 
+    pub vault_port_lp_token: Pubkey,
+
     pub solend_lp_token_mint: Pubkey,
+
+    pub port_lp_token_mint: Pubkey,
 
     // Mint address of vault LP tokens
     pub lp_token_mint: Pubkey,

@@ -466,6 +466,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "port-anchor-adaptor",
+ "port-variable-rate-lending-instructions",
  "spl-math",
  "spl-token-lending",
 ]

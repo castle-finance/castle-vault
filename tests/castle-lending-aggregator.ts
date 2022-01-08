@@ -109,6 +109,8 @@ describe("castle-vault", () => {
     let authorityBump: number;
     let vaultSolendLpTokenAccount: PublicKey;
     let solendLpBump: number;
+    let vaultPortLpTokenAccount: PublicKey;
+    let portLpBump: number;
     let vaultReserveTokenAccount: PublicKey;
     let reserveBump: number;
     let lpTokenMint: PublicKey;
@@ -130,6 +132,11 @@ describe("castle-vault", () => {
             program.programId,
         );
 
+        [vaultPortLpTokenAccount, portLpBump] = await PublicKey.findProgramAddress(
+            [vaultStateAccount.publicKey.toBuffer(), portReserveState.collateralMintAccount.toBuffer()],
+            program.programId,
+        );
+
         [lpTokenMint, lpTokenMintBump] = await PublicKey.findProgramAddress(
             [vaultStateAccount.publicKey.toBuffer(), utils.bytes.utf8.encode("lp_mint")],
             program.programId,
@@ -141,6 +148,7 @@ describe("castle-vault", () => {
                 reserve: reserveBump,
                 lpMint: lpTokenMintBump,
                 solendLp: solendLpBump,
+                portLp: portLpBump,
             },
             {
                 accounts: {
@@ -149,8 +157,10 @@ describe("castle-vault", () => {
                     lpTokenMint: lpTokenMint,
                     vaultReserveToken: vaultReserveTokenAccount,
                     vaultSolendLpToken: vaultSolendLpTokenAccount,
+                    vaultPortLpToken: vaultPortLpTokenAccount,
                     reserveTokenMint: reserveTokenMint.publicKey,
                     solendLpTokenMint: solendCollateralMint.publicKey,
+                    portLpTokenMint: portReserveState.collateralMintAccount,
                     payer: payer.publicKey,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID,
@@ -204,10 +214,13 @@ describe("castle-vault", () => {
                 vault: vaultStateAccount.publicKey,
                 vaultReserveToken: vaultReserveTokenAccount,
                 vaultSolendLpToken: vaultSolendLpTokenAccount,
+                vaultPortLpToken: vaultPortLpTokenAccount,
                 solendProgram: solendProgramId,
                 solendReserveState: solendReserve.publicKey,
                 solendPyth: pythPrice,
                 solendSwitchboard: switchboardFeed,
+                portProgram: port.PORT_LENDING,
+                portReserveState: portReserveState.address,
                 clock: SYSVAR_CLOCK_PUBKEY,
             }
         });

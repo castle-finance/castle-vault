@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
+use port_anchor_adaptor::{port_accessor, PortReserve};
 
 use crate::cpi::{solend, solend_accessor};
 use crate::state::Vault;
@@ -10,12 +11,15 @@ pub struct Refresh<'info> {
         mut,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
+        has_one = vault_port_lp_token,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
     pub vault_reserve_token: Account<'info, TokenAccount>,
 
     pub vault_solend_lp_token: Account<'info, TokenAccount>,
+
+    pub vault_port_lp_token: Account<'info, TokenAccount>,
 
     #[account(
         executable,
@@ -29,6 +33,15 @@ pub struct Refresh<'info> {
     pub solend_pyth: AccountInfo<'info>,
 
     pub solend_switchboard: AccountInfo<'info>,
+
+    #[account(
+        executable,
+        address = port_variable_rate_lending_instructions::ID,
+    )]
+    pub port_program: AccountInfo<'info>,
+
+    #[account(mut, owner = port_program.key())]
+    pub port_reserve_state: Box<Account<'info, PortReserve>>,
 
     pub clock: Sysvar<'info, Clock>,
 }
@@ -48,19 +61,34 @@ impl<'info> Refresh<'info> {
             },
         )
     }
+
+    pub fn port_refresh_reserve_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, port_anchor_adaptor::RefreshReserve<'info>> {
+        CpiContext::new(
+            self.port_program.clone(),
+            port_anchor_adaptor::RefreshReserve {
+                reserve: self.port_reserve_state.to_account_info(),
+                clock: self.clock.to_account_info(),
+            },
+        )
+    }
 }
 
 pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     // TODO redeem liquidity mining rewards
 
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
+    port_anchor_adaptor::refresh_port_reserve(ctx.accounts.port_refresh_reserve_context())?;
 
     let vault = &mut ctx.accounts.vault;
 
     vault.total_value = get_vault_value(
         ctx.accounts.vault_reserve_token.clone(),
         ctx.accounts.vault_solend_lp_token.clone(),
+        ctx.accounts.vault_port_lp_token.clone(),
         ctx.accounts.solend_reserve_state.clone(),
+        ctx.accounts.port_reserve_state.to_account_info(),
     )?;
     vault.last_update.update_slot(ctx.accounts.clock.slot);
 
@@ -70,14 +98,21 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
 pub fn get_vault_value(
     vault_reserve_token_account: Account<TokenAccount>,
     vault_solend_lp_token_account: Account<TokenAccount>,
+    vault_port_lp_token_account: Account<TokenAccount>,
     solend_reserve_state_account: AccountInfo,
+    port_reserve_state_account: AccountInfo,
 ) -> Result<u64, ProgramError> {
     let vault_reserve_token_amount = vault_reserve_token_account.amount;
+
     let solend_exchange_rate = solend_accessor::exchange_rate(&solend_reserve_state_account)?;
     let solend_value =
         solend_exchange_rate.collateral_to_liquidity(vault_solend_lp_token_account.amount)?;
 
-    Ok(vault_reserve_token_amount + solend_value)
+    let port_exchange_rate = port_accessor::exchange_rate(&port_reserve_state_account)?;
+    let port_value =
+        port_exchange_rate.collateral_to_liquidity(vault_port_lp_token_account.amount)?;
+
+    Ok(vault_reserve_token_amount + solend_value + port_value)
 }
 
 #[cfg(test)]
