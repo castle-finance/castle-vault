@@ -41,9 +41,10 @@ pub struct Vault {
     ///
     /// Solend: 0
     /// Port: 1
-    /// Jet: 3
+    /// Jet: 2
     pub to_reconcile: [ReconciliationTx; 3],
 }
+
 impl Vault {
     pub fn authority_seeds(&self) -> [&[u8]; 3] {
         [

@@ -62,7 +62,7 @@ impl<'info> ReconcilePort<'info> {
                 lending_market: self.port_market.clone(),
                 lending_market_authority: self.port_market_authority.clone(),
                 transfer_authority: self.vault_authority.clone(),
-                clock: self.clock.to_account_info().clone(),
+                clock: self.clock.to_account_info(),
                 token_program: self.token_program.clone(),
             },
         )
@@ -82,7 +82,7 @@ impl<'info> ReconcilePort<'info> {
                 lending_market: self.port_market.clone(),
                 lending_market_authority: self.port_market_authority.clone(),
                 transfer_authority: self.vault_authority.clone(),
-                clock: self.clock.to_account_info().clone(),
+                clock: self.clock.to_account_info(),
                 token_program: self.token_program.clone(),
             },
         )

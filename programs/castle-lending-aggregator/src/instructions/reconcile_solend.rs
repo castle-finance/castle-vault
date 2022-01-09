@@ -55,7 +55,7 @@ impl<'info> ReconcileSolend<'info> {
             self.solend_program.clone(),
             solend::DepositReserveLiquidity {
                 lending_program: self.solend_program.clone(),
-                source_liquidity: self.vault_reserve_token.to_account_info().clone(),
+                source_liquidity: self.vault_reserve_token.to_account_info(),
                 destination_collateral_account: self.vault_solend_lp_token.to_account_info(),
                 reserve_account: self.solend_reserve_state.clone(),
                 reserve_collateral_mint: self.solend_lp_mint.clone(),
@@ -84,7 +84,7 @@ impl<'info> ReconcileSolend<'info> {
                 lending_market: self.solend_market.clone(),
                 lending_market_authority: self.solend_market_authority.clone(),
                 user_transfer_authority: self.vault_authority.clone(),
-                clock: self.clock.to_account_info().clone(),
+                clock: self.clock.to_account_info(),
                 token_program_id: self.token_program.clone(),
             },
         )
