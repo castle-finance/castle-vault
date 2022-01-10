@@ -299,13 +299,15 @@ describe("castle-vault", () => {
         );
     });
 
-    it("Forwards deposits to solend", async () => {
+    it("Forwards deposits to lending markets", async () => {
         const rebalanceInstruction = program.instruction.rebalance(
             new anchor.BN(0),
             {
                 accounts: {
                     vault: vaultStateAccount.publicKey,
                     vaultReserveToken: vaultReserveTokenAccount,
+                    vaultSolendLpToken: vaultSolendLpTokenAccount,
+                    vaultPortLpToken: vaultPortLpTokenAccount,
                     solendReserveState: solendReserve.publicKey,
                     portReserveState: portReserveState.address,
                 }
@@ -331,7 +333,7 @@ describe("castle-vault", () => {
             }
         );
         const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
-        assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 0);
+        assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 250);
 
         const solendCollateralToken = new Token(
             provider.connection,
@@ -343,7 +345,8 @@ describe("castle-vault", () => {
         assert.notEqual(vaultLpTokenAccountInfo.amount.toNumber(), 0);
 
         const liquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(solendLiquiditySupply.publicKey);
-        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), depositAmount - withdrawAmount + initialReserveAmount);
+        //assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), depositAmount - withdrawAmount + initialReserveAmount);
+        assert.equal(liquiditySupplyAccountInfo.amount.toNumber(), 350);
     });
 
     it("Rebalances", async () => {
