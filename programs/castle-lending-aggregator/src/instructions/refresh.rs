@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::TokenAccount;
+use anchor_spl::token::{self, TokenAccount};
+use jet_proto_math::Number;
 use port_anchor_adaptor::PortReserve;
 
 use crate::cpi::solend::{self, SolendReserve};
@@ -12,14 +13,17 @@ pub struct Refresh<'info> {
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
+        has_one = vault_jet_lp_token,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    pub vault_reserve_token: Account<'info, TokenAccount>,
+    pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
-    pub vault_solend_lp_token: Account<'info, TokenAccount>,
+    pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
-    pub vault_port_lp_token: Account<'info, TokenAccount>,
+    pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
+
+    pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
     #[account(
         executable,
@@ -42,6 +46,31 @@ pub struct Refresh<'info> {
 
     #[account(mut, owner = port_program.key())]
     pub port_reserve_state: Box<Account<'info, PortReserve>>,
+
+    #[account(
+        executable,
+        address = jet::ID,
+    )]
+    pub jet_program: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub jet_market: AccountInfo<'info>,
+
+    pub jet_market_authority: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
+
+    #[account(mut)]
+    pub jet_fee_note_vault: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub jet_deposit_note_mint: AccountInfo<'info>,
+
+    pub jet_pyth: AccountInfo<'info>,
+
+    #[account(address = token::ID)]
+    pub token_program: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,
 }
@@ -73,13 +102,32 @@ impl<'info> Refresh<'info> {
             },
         )
     }
+
+    pub fn jet_refresh_reserve_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, jet::cpi::accounts::RefreshReserve<'info>> {
+        CpiContext::new(
+            self.jet_program.clone(),
+            jet::cpi::accounts::RefreshReserve {
+                market: self.jet_market.clone(),
+                market_authority: self.jet_market_authority.clone(),
+                reserve: self.jet_reserve_state.to_account_info(),
+                fee_note_vault: self.jet_fee_note_vault.clone(),
+                deposit_note_mint: self.jet_deposit_note_mint.clone(),
+                pyth_oracle_price: self.jet_pyth.clone(),
+                token_program: self.token_program.clone(),
+            },
+        )
+    }
 }
 
 pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
-    // TODO redeem liquidity mining rewards
-
+    // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
     port_anchor_adaptor::refresh_port_reserve(ctx.accounts.port_refresh_reserve_context())?;
+    jet::cpi::refresh_reserve(ctx.accounts.jet_refresh_reserve_context())?;
+
+    // TODO redeem liquidity mining rewards
 
     let vault = &mut ctx.accounts.vault;
 
@@ -96,7 +144,16 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     let port_value =
         port_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_port_lp_token.amount)?;
 
-    vault.total_value = vault_reserve_token_amount + solend_value + port_value;
+    let jet_reserve = ctx.accounts.jet_reserve_state.load()?;
+    let jet_exchange_rate = jet_reserve.deposit_note_exchange_rate(
+        ctx.accounts.clock.slot,
+        jet_reserve.total_deposits(),
+        jet_reserve.total_deposit_notes(),
+    );
+    let jet_value = jet_exchange_rate * Number::from(ctx.accounts.vault_jet_lp_token.amount);
+
+    vault.total_value =
+        vault_reserve_token_amount + solend_value + port_value + jet_value.as_u64(0);
     vault.last_update.update_slot(ctx.accounts.clock.slot);
 
     Ok(())

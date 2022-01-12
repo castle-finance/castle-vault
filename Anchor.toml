@@ -10,3 +10,25 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[test.validator]
+url = "d"
+
+[[test.clone]]
+address = "3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E"
+[[test.clone]]
+address = "J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix"
+[[test.clone]]
+address = "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR"
+[[test.clone]]
+address = "CjqQ9kx9STBLtSUdypHTjNJsLE4t6uQossjdSzq9jdmY"
+
+[[test.genesis]]
+address = "So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo"
+program = "../../solend/solana-program-library/target/deploy/spl_token_lending.so"
+[[test.genesis]]
+address = "Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR"
+program = "../../port-finance/variable-rate-lending/target/deploy/port_finance_variable_rate_lending.so"
+[[test.genesis]]
+address = "JPv1rCqrhagNNmJVM5J1he7msQ5ybtvE1nNuHpDHMNU"
+program = "../../jet-v1/target/deploy/jet.so"

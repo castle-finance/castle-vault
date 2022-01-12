@@ -18,6 +18,7 @@ pub struct Rebalance<'info> {
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
+        has_one = vault_jet_lp_token,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -27,11 +28,16 @@ pub struct Rebalance<'info> {
 
     pub vault_port_lp_token: Account<'info, TokenAccount>,
 
-    #[account(mut, owner = spl_token_lending::ID)]
+    pub vault_jet_lp_token: Account<'info, TokenAccount>,
+
+    #[account(owner = spl_token_lending::ID)]
     pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
 
-    #[account(mut, owner = port_variable_rate_lending_instructions::ID)]
+    #[account(owner = port_variable_rate_lending_instructions::ID)]
     pub port_reserve_state: Box<Account<'info, PortReserve>>,
+
+    #[account(owner = jet::ID)]
+    pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
 }
 
 pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResult {

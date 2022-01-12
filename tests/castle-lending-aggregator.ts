@@ -3,9 +3,11 @@ import { Program, utils } from '@project-serum/anchor';
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { Keypair, PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY, TransactionInstruction } from "@solana/web3.js";
 
+import * as jet from './helpers/jet';
 import * as port from './helpers/port';
 import { Solend } from './helpers/solend';
 import { CastleLendingAggregator } from "../target/types/castle_lending_aggregator";
+import { JetMarket } from "@jet-lab/jet-engine";
 
 // Change to import after https://github.com/project-serum/anchor/issues/1153 is resolved
 const anchor = require("@project-serum/anchor");
@@ -34,19 +36,35 @@ describe("castle-vault", () => {
     const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
     const switchboardFeed = new PublicKey("GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR");
 
+    const jetProgram = new PublicKey("JPv1rCqrhagNNmJVM5J1he7msQ5ybtvE1nNuHpDHMNU");
+
     const initialReserveAmount = 100;
 
     let portReserveState: port.ReserveState;
+    let jetReserveAccounts: jet.ReserveAccounts;
 
     let reserveTokenMint: Token;
+    let quoteTokenMint: Token;
+
     let solendMarket: Keypair;
     let solendMarketAuthority: PublicKey;
     let portMarket: Keypair;
     let portMarketAuthority: PublicKey;
+    let jetMarket: JetMarket;
 
     before("Initialize lending markets", async () => {
         const sig = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
         await provider.connection.confirmTransaction(sig, "singleGossip");
+
+        quoteTokenMint = await Token.createMint(
+            provider.connection,
+            payer,
+            owner.publicKey,
+            null,
+            2,
+            TOKEN_PROGRAM_ID
+        );
+
 
         reserveTokenMint = await Token.createMint(
             provider.connection,
@@ -103,6 +121,18 @@ describe("castle-vault", () => {
             owner,
             port.DEFAULT_RESERVE_CONFIG,
         );
+
+        jetMarket = await jet.createLendingMarket(provider, quoteTokenMint.publicKey);
+        jetReserveAccounts = await jet.initReserve(
+            provider,
+            jetMarket.address,
+            provider.wallet.publicKey,
+            quoteTokenMint.publicKey,
+            reserveTokenMint,
+            pythPrice, // dummy dex market addr
+            pythPrice,
+            pythProduct,
+        )
     });
 
     let vaultAuthority: PublicKey;
@@ -111,6 +141,8 @@ describe("castle-vault", () => {
     let solendLpBump: number;
     let vaultPortLpTokenAccount: PublicKey;
     let portLpBump: number;
+    let vaultJetLpTokenAccount: PublicKey;
+    let jetLpBump: number;
     let vaultReserveTokenAccount: PublicKey;
     let reserveBump: number;
     let lpTokenMint: PublicKey;
@@ -137,6 +169,11 @@ describe("castle-vault", () => {
             program.programId,
         );
 
+        [vaultJetLpTokenAccount, jetLpBump] = await PublicKey.findProgramAddress(
+            [vaultStateAccount.publicKey.toBuffer(), jetReserveAccounts.accounts.depositNoteMint.toBuffer()],
+            program.programId,
+        );
+
         [lpTokenMint, lpTokenMintBump] = await PublicKey.findProgramAddress(
             [vaultStateAccount.publicKey.toBuffer(), utils.bytes.utf8.encode("lp_mint")],
             program.programId,
@@ -149,6 +186,7 @@ describe("castle-vault", () => {
                 lpMint: lpTokenMintBump,
                 solendLp: solendLpBump,
                 portLp: portLpBump,
+                jetLp: jetLpBump,
             },
             {
                 accounts: {
@@ -158,9 +196,11 @@ describe("castle-vault", () => {
                     vaultReserveToken: vaultReserveTokenAccount,
                     vaultSolendLpToken: vaultSolendLpTokenAccount,
                     vaultPortLpToken: vaultPortLpTokenAccount,
+                    vaultJetLpToken: vaultJetLpTokenAccount,
                     reserveTokenMint: reserveTokenMint.publicKey,
                     solendLpTokenMint: solendCollateralMint.publicKey,
                     portLpTokenMint: portReserveState.collateralMintAccount,
+                    jetLpTokenMint: jetReserveAccounts.accounts.depositNoteMint,
                     payer: payer.publicKey,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID,
@@ -176,7 +216,6 @@ describe("castle-vault", () => {
         assert(actualVaultAccount.vaultAuthority.equals(vaultAuthority));
         assert(actualVaultAccount.vaultReserveToken.equals(vaultReserveTokenAccount));
         assert(actualVaultAccount.vaultSolendLpToken.equals(vaultSolendLpTokenAccount));
-        assert(actualVaultAccount.solendLpTokenMint.equals(solendCollateralMint.publicKey));
         assert(actualVaultAccount.lpTokenMint.equals(lpTokenMint));
         assert(actualVaultAccount.reserveTokenMint.equals(reserveTokenMint.publicKey));
     });
@@ -215,12 +254,21 @@ describe("castle-vault", () => {
                 vaultReserveToken: vaultReserveTokenAccount,
                 vaultSolendLpToken: vaultSolendLpTokenAccount,
                 vaultPortLpToken: vaultPortLpTokenAccount,
+                vaultJetLpToken: vaultJetLpTokenAccount,
                 solendProgram: solendProgramId,
                 solendReserveState: solendReserve.publicKey,
                 solendPyth: pythPrice,
                 solendSwitchboard: switchboardFeed,
                 portProgram: port.PORT_LENDING,
                 portReserveState: portReserveState.address,
+                jetProgram: jetProgram,
+                jetMarket: jetMarket.address,
+                jetMarketAuthority: jetMarket.marketAuthority,
+                jetReserveState: jetReserveAccounts.accounts.reserve.publicKey,
+                jetFeeNoteVault: jetReserveAccounts.accounts.feeNoteVault,
+                jetDepositNoteMint: jetReserveAccounts.accounts.depositNoteMint,
+                jetPyth: jetReserveAccounts.accounts.pythPrice,
+                tokenProgram: TOKEN_PROGRAM_ID,
                 clock: SYSVAR_CLOCK_PUBKEY,
             }
         });
@@ -308,8 +356,11 @@ describe("castle-vault", () => {
                     vaultReserveToken: vaultReserveTokenAccount,
                     vaultSolendLpToken: vaultSolendLpTokenAccount,
                     vaultPortLpToken: vaultPortLpTokenAccount,
+                    vaultJetLpToken: vaultJetLpTokenAccount,
                     solendReserveState: solendReserve.publicKey,
                     portReserveState: portReserveState.address,
+                    jetReserveState: jetReserveAccounts.accounts.reserve.publicKey,
+
                 }
             }
         );

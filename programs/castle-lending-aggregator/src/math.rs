@@ -11,7 +11,7 @@ pub fn calc_deposit_to_vault(
     reserve_tokens_in_vault: u64,
 ) -> Option<u64> {
     match reserve_tokens_in_vault {
-        0 => return Some(INITIAL_COLLATERAL_RATIO * reserve_token_amount),
+        0 => Some(INITIAL_COLLATERAL_RATIO * reserve_token_amount),
         _ => {
             let lp_token_amount = PreciseNumber::new(reserve_token_amount as u128)?;
             let lp_token_supply = PreciseNumber::new(lp_token_supply as u128)?;

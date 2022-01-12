@@ -21,9 +21,7 @@ pub struct Vault {
 
     pub vault_port_lp_token: Pubkey,
 
-    pub solend_lp_token_mint: Pubkey,
-
-    pub port_lp_token_mint: Pubkey,
+    pub vault_jet_lp_token: Pubkey,
 
     // Mint address of vault LP tokens
     pub lp_token_mint: Pubkey,

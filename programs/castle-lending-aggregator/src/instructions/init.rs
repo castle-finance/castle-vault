@@ -11,6 +11,7 @@ pub struct InitBumpSeeds {
     reserve: u8,
     solend_lp: u8,
     port_lp: u8,
+    jet_lp: u8,
     lp_mint: u8,
 }
 
@@ -68,11 +69,23 @@ pub struct Initialize<'info> {
     )]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    #[account(
+        init,
+        payer = payer,
+        seeds = [vault.key().as_ref(), jet_lp_token_mint.key().as_ref()],
+        bump = bumps.jet_lp,
+        token::authority = vault_authority,
+        token::mint = jet_lp_token_mint,
+    )]
+    pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
+
     pub reserve_token_mint: Box<Account<'info, Mint>>,
 
     pub solend_lp_token_mint: AccountInfo<'info>,
 
     pub port_lp_token_mint: AccountInfo<'info>,
+
+    pub jet_lp_token_mint: AccountInfo<'info>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -98,8 +111,7 @@ pub fn handler(ctx: Context<Initialize>, bumps: InitBumpSeeds) -> ProgramResult 
     vault.vault_reserve_token = *ctx.accounts.vault_reserve_token.to_account_info().key;
     vault.vault_solend_lp_token = *ctx.accounts.vault_solend_lp_token.to_account_info().key;
     vault.vault_port_lp_token = *ctx.accounts.vault_port_lp_token.to_account_info().key;
-    vault.solend_lp_token_mint = *ctx.accounts.solend_lp_token_mint.key;
-    vault.port_lp_token_mint = *ctx.accounts.port_lp_token_mint.key;
+    vault.vault_jet_lp_token = *ctx.accounts.vault_jet_lp_token.to_account_info().key;
     vault.lp_token_mint = *ctx.accounts.lp_token_mint.to_account_info().key;
     vault.reserve_token_mint = *ctx.accounts.reserve_token_mint.to_account_info().key;
     vault.last_update = LastUpdate::new(ctx.accounts.clock.slot);

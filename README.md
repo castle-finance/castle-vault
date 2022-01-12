@@ -31,7 +31,7 @@ $ anchor deploy
 
 Finally, run the test:
 
-TODO add instructions on how to load fixtures into test validator
+TODO add instructions on downloading and building integration test dependencies
 
 ```
 $ anchor test
