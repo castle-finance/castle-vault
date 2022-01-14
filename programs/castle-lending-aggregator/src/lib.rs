@@ -4,7 +4,6 @@ pub mod cpi;
 pub mod errors;
 pub mod instructions;
 pub mod math;
-pub mod rebalance;
 pub mod state;
 
 use instructions::*;
