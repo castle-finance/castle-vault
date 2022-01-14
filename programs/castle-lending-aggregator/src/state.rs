@@ -35,12 +35,7 @@ pub struct Vault {
     // Total value of vault denominated in the reserve token
     pub total_value: u64,
 
-    /// Data structure for storing pending transactions into and out of lending markets
-    ///
-    /// Solend: 0
-    /// Port: 1
-    /// Jet: 2
-    pub to_reconcile: [ReconciliationTx; 3],
+    pub allocations: Allocations,
 }
 
 impl Vault {
@@ -53,17 +48,12 @@ impl Vault {
     }
 }
 
+// TODO add flag indicating allocations have been set + add as constraint on reconcile ix
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
-pub struct ReconciliationTx {
-    pub deposit: u64,
-    pub redeem: u64,
-}
-
-impl ReconciliationTx {
-    pub fn reset(mut self) {
-        self.deposit = 0;
-        self.redeem = 0;
-    }
+pub struct Allocations {
+    pub solend: u64,
+    pub port: u64,
+    pub jet: u64,
 }
 
 /// Number of slots to consider stale after

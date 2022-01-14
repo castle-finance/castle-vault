@@ -21,12 +21,12 @@ pub mod castle_lending_aggregator {
         instructions::init::handler(ctx, _bumps)
     }
 
-    pub fn deposit(ctx: Context<Deposit>, source_token_amount: u64) -> ProgramResult {
-        instructions::deposit::handler(ctx, source_token_amount)
+    pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
+        instructions::deposit::handler(ctx, reserve_token_amount)
     }
 
-    pub fn withdraw(ctx: Context<Withdraw>, pool_token_amount: u64) -> ProgramResult {
-        instructions::withdraw::handler(ctx, pool_token_amount)
+    pub fn withdraw(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
+        instructions::withdraw::handler(ctx, lp_token_amount)
     }
 
     pub fn rebalance(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResult {

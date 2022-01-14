@@ -15,10 +15,10 @@ pub fn deposit_reserve_liquidity<'info>(
         liquidity_amount,
         *ctx.accounts.source_liquidity.key,
         *ctx.accounts.destination_collateral_account.key,
-        *ctx.accounts.reserve_account.key,
+        *ctx.accounts.reserve.key,
         *ctx.accounts.reserve_liquidity_supply.key,
         *ctx.accounts.reserve_collateral_mint.key,
-        *ctx.accounts.lending_market_account.key,
+        *ctx.accounts.lending_market.key,
         *ctx.accounts.transfer_authority.key,
     );
 
@@ -40,11 +40,11 @@ pub fn redeem_reserve_collateral<'info>(
         collateral_amount,
         *ctx.accounts.source_collateral.key,
         *ctx.accounts.destination_liquidity.key,
-        *ctx.accounts.refreshed_reserve_account.key,
+        *ctx.accounts.reserve.key,
         *ctx.accounts.reserve_collateral_mint.key,
-        *ctx.accounts.reserve_liquidity.key,
+        *ctx.accounts.reserve_liquidity_supply.key,
         *ctx.accounts.lending_market.key,
-        *ctx.accounts.user_transfer_authority.key,
+        *ctx.accounts.transfer_authority.key,
     );
 
     solana_program::program::invoke_signed(
@@ -84,13 +84,13 @@ pub struct DepositReserveLiquidity<'info> {
     // Token account for reserve collateral token
     pub destination_collateral_account: AccountInfo<'info>,
     // Reserve state account
-    pub reserve_account: AccountInfo<'info>,
+    pub reserve: AccountInfo<'info>,
     // Token mint for reserve collateral token
     pub reserve_collateral_mint: AccountInfo<'info>,
     // Reserve liquidity supply SPL token account
     pub reserve_liquidity_supply: AccountInfo<'info>,
     // Lending market account
-    pub lending_market_account: AccountInfo<'info>,
+    pub lending_market: AccountInfo<'info>,
     // Lending market authority (PDA)
     pub lending_market_authority: AccountInfo<'info>,
     // Transfer authority for accounts 1 and 2
@@ -110,17 +110,17 @@ pub struct RedeemReserveCollateral<'info> {
     // Destination liquidity token account
     pub destination_liquidity: AccountInfo<'info>,
     // Refreshed reserve account
-    pub refreshed_reserve_account: AccountInfo<'info>,
+    pub reserve: AccountInfo<'info>,
     // Reserve collateral mint account
     pub reserve_collateral_mint: AccountInfo<'info>,
     // Reserve liquidity supply SPL Token account.
-    pub reserve_liquidity: AccountInfo<'info>,
+    pub reserve_liquidity_supply: AccountInfo<'info>,
     // Lending market account
     pub lending_market: AccountInfo<'info>,
     // Lending market authority - PDA
     pub lending_market_authority: AccountInfo<'info>,
     // User transfer authority
-    pub user_transfer_authority: AccountInfo<'info>,
+    pub transfer_authority: AccountInfo<'info>,
     // Clock
     pub clock: AccountInfo<'info>,
     // Token program ID

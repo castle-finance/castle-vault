@@ -45,8 +45,6 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
         // TODO use introspection make sure that there is a withdraw instruction after
     }
 
-    // TODO make this not fucking disgusting
-
     let mut port_allocation: u64 = 0;
     let mut solend_allocation: u64 = 0;
 
@@ -80,59 +78,18 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
         .checked_sub(to_withdraw_option)
         .ok_or(ErrorCode::MathError)?;
 
-    let solend_exchange_rate = solend_reserve.collateral_exchange_rate()?;
-    let solend_collateral_amount = solend_exchange_rate.liquidity_to_collateral(
-        solend_allocation
-            .checked_mul(vault_value)
-            .ok_or(ErrorCode::MathError)?
-            .checked_div(100)
-            .ok_or(ErrorCode::MathError)?,
-    )?;
-    match ctx
-        .accounts
-        .vault_solend_lp_token
-        .amount
-        .checked_sub(solend_collateral_amount)
-    {
-        Some(collateral_to_redeem) => {
-            ctx.accounts.vault.to_reconcile[0].redeem = collateral_to_redeem
-        }
-        None => {
-            ctx.accounts.vault.to_reconcile[0].deposit = solend_exchange_rate
-                .collateral_to_liquidity(
-                    solend_collateral_amount
-                        .checked_sub(ctx.accounts.vault_solend_lp_token.amount)
-                        .ok_or(ErrorCode::MathError)?,
-                )?
-        }
-    }
+    let allocations = &mut ctx.accounts.vault.allocations;
+    allocations.solend = solend_allocation
+        .checked_mul(vault_value)
+        .ok_or(ErrorCode::MathError)?
+        .checked_div(100)
+        .ok_or(ErrorCode::MathError)?;
 
-    let port_exchange_rate = port_reserve.collateral_exchange_rate()?;
-    let port_collateral_amount = port_exchange_rate.liquidity_to_collateral(
-        port_allocation
-            .checked_mul(vault_value)
-            .ok_or(ErrorCode::MathError)?
-            .checked_div(100)
-            .ok_or(ErrorCode::MathError)?,
-    )?;
-    match ctx
-        .accounts
-        .vault_port_lp_token
-        .amount
-        .checked_sub(port_collateral_amount)
-    {
-        Some(collateral_to_redeem) => {
-            ctx.accounts.vault.to_reconcile[1].redeem = collateral_to_redeem
-        }
-        None => {
-            ctx.accounts.vault.to_reconcile[1].deposit = port_exchange_rate
-                .collateral_to_liquidity(
-                    port_collateral_amount
-                        .checked_sub(ctx.accounts.vault_port_lp_token.amount)
-                        .ok_or(ErrorCode::MathError)?,
-                )?
-        }
-    }
+    allocations.port = port_allocation
+        .checked_mul(vault_value)
+        .ok_or(ErrorCode::MathError)?
+        .checked_div(100)
+        .ok_or(ErrorCode::MathError)?;
 
     Ok(())
 }

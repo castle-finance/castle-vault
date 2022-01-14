@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, TokenAccount};
+use port_anchor_adaptor::PortReserve;
 
-use crate::state::Vault;
+use crate::{errors::ErrorCode, state::Vault};
 
 #[derive(Accounts)]
 pub struct ReconcilePort<'info> {
@@ -32,8 +33,8 @@ pub struct ReconcilePort<'info> {
     #[account(owner = port_program.key())]
     pub port_market: AccountInfo<'info>,
 
-    #[account(mut, owner = port_program.key())]
-    pub port_reserve_state: AccountInfo<'info>,
+    #[account(mut)]
+    pub port_reserve_state: Box<Account<'info, PortReserve>>,
 
     #[account(mut)]
     pub port_lp_mint: AccountInfo<'info>,
@@ -56,7 +57,7 @@ impl<'info> ReconcilePort<'info> {
             port_anchor_adaptor::Deposit {
                 source_liquidity: self.vault_reserve_token.to_account_info(),
                 destination_collateral: self.vault_port_lp_token.to_account_info(),
-                reserve: self.port_reserve_state.clone(),
+                reserve: self.port_reserve_state.to_account_info(),
                 reserve_collateral_mint: self.port_lp_mint.clone(),
                 reserve_liquidity_supply: self.port_reserve_token.clone(),
                 lending_market: self.port_market.clone(),
@@ -76,7 +77,7 @@ impl<'info> ReconcilePort<'info> {
             port_anchor_adaptor::Redeem {
                 source_collateral: self.vault_port_lp_token.to_account_info(),
                 destination_liquidity: self.vault_reserve_token.to_account_info(),
-                reserve: self.port_reserve_state.clone(),
+                reserve: self.port_reserve_state.to_account_info(),
                 reserve_collateral_mint: self.port_lp_mint.clone(),
                 reserve_liquidity_supply: self.port_reserve_token.clone(),
                 lending_market: self.port_market.clone(),
@@ -92,27 +93,38 @@ impl<'info> ReconcilePort<'info> {
 pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
-    let deposit_amount = vault.to_reconcile[1].deposit;
-    let redeem_amount = vault.to_reconcile[1].redeem;
+    let port_exchange_rate = ctx.accounts.port_reserve_state.collateral_exchange_rate()?;
+    let current_port_value =
+        port_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_port_lp_token.amount)?;
+    let allocation = ctx.accounts.vault.allocations.port;
 
-    if deposit_amount > 0 {
-        port_anchor_adaptor::deposit_reserve(
-            ctx.accounts
-                .port_deposit_reserve_liquidity_context()
-                .with_signer(&[&vault.authority_seeds()]),
-            deposit_amount,
-        )?;
-    }
-    if redeem_amount > 0 {
-        port_anchor_adaptor::redeem(
-            ctx.accounts
-                .port_redeem_reserve_collateral_context()
-                .with_signer(&[&vault.authority_seeds()]),
-            redeem_amount,
-        )?;
+    match allocation.checked_sub(current_port_value) {
+        Some(tokens_to_deposit) => {
+            port_anchor_adaptor::deposit_reserve(
+                ctx.accounts
+                    .port_deposit_reserve_liquidity_context()
+                    .with_signer(&[&vault.authority_seeds()]),
+                tokens_to_deposit,
+            )?;
+        }
+        None => {
+            let tokens_to_redeem = ctx
+                .accounts
+                .vault_port_lp_token
+                .amount
+                .checked_sub(port_exchange_rate.liquidity_to_collateral(allocation)?)
+                .ok_or(ErrorCode::MathError)?;
+
+            port_anchor_adaptor::redeem(
+                ctx.accounts
+                    .port_redeem_reserve_collateral_context()
+                    .with_signer(&[&vault.authority_seeds()]),
+                tokens_to_redeem,
+            )?;
+        }
     }
 
-    ctx.accounts.vault.to_reconcile[1].reset();
+    ctx.accounts.vault.allocations.port = 0 as u64;
 
     Ok(())
 }
