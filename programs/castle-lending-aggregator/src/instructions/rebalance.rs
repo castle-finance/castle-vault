@@ -45,30 +45,35 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
         // TODO use introspection make sure that there is a withdraw instruction after
     }
 
-    let mut port_allocation: u64 = 0;
-    let mut solend_allocation: u64 = 0;
+    let solend_allocation: u64 = 33;
+    let port_allocation: u64 = 33;
+    let jet_allocation: u64 = 34;
 
-    let solend_reserve = &ctx.accounts.solend_reserve_state;
-    let solend_deposit_rate = solend_reserve
-        .current_borrow_rate()?
-        .try_mul(solend_reserve.liquidity.utilization_rate()?)?;
+    //let mut solend_allocation: u64 = 0;
+    //let mut port_allocation: u64 = 0;
+    //let mut jet_allocation: u64 = 0;
 
-    let port_reserve = &ctx.accounts.port_reserve_state;
-    let port_deposit_rate = port_reserve
-        .current_borrow_rate()?
-        .try_mul(port_reserve.liquidity.utilization_rate()?)?;
+    //let solend_reserve = &ctx.accounts.solend_reserve_state;
+    //let solend_deposit_rate = solend_reserve
+    //    .current_borrow_rate()?
+    //    .try_mul(solend_reserve.liquidity.utilization_rate()?)?;
 
-    match port_deposit_rate
-        .to_scaled_val()
-        .cmp(&solend_deposit_rate.to_scaled_val())
-    {
-        Ordering::Greater => port_allocation = 100,
-        Ordering::Less => solend_allocation = 100,
-        Ordering::Equal => {
-            port_allocation = 50;
-            solend_allocation = 50;
-        }
-    }
+    //let port_reserve = &ctx.accounts.port_reserve_state;
+    //let port_deposit_rate = port_reserve
+    //    .current_borrow_rate()?
+    //    .try_mul(port_reserve.liquidity.utilization_rate()?)?;
+
+    //match port_deposit_rate
+    //    .to_scaled_val()
+    //    .cmp(&solend_deposit_rate.to_scaled_val())
+    //{
+    //    Ordering::Greater => port_allocation = 100,
+    //    Ordering::Less => solend_allocation = 100,
+    //    Ordering::Equal => {
+    //        port_allocation = 50;
+    //        solend_allocation = 50;
+    //    }
+    //}
 
     // Convert to right units
     let vault_value = ctx
@@ -78,6 +83,7 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
         .checked_sub(to_withdraw_option)
         .ok_or(ErrorCode::MathError)?;
 
+    // TODO get rid of this BS
     let allocations = &mut ctx.accounts.vault.allocations;
     allocations.solend = solend_allocation
         .checked_mul(vault_value)
@@ -86,6 +92,12 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
         .ok_or(ErrorCode::MathError)?;
 
     allocations.port = port_allocation
+        .checked_mul(vault_value)
+        .ok_or(ErrorCode::MathError)?
+        .checked_div(100)
+        .ok_or(ErrorCode::MathError)?;
+
+    allocations.jet = jet_allocation
         .checked_mul(vault_value)
         .ok_or(ErrorCode::MathError)?
         .checked_div(100)

@@ -1,7 +1,7 @@
 import assert from "assert";
 import * as anchor from '@project-serum/anchor';
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
-import { Keypair, PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram, SYSVAR_CLOCK_PUBKEY, SYSVAR_RENT_PUBKEY, TransactionInstruction } from "@solana/web3.js";
 
 import * as jet from './helpers/jet';
 import * as port from './helpers/port';
@@ -26,7 +26,8 @@ describe("castle-vault", () => {
     const solendReserve = anchor.web3.Keypair.generate();
     const solendLiquiditySupply = anchor.web3.Keypair.generate();
 
-    const solendProgramId = new PublicKey("So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo")
+    // TODO change to devnet version
+    const solendProgramId = new PublicKey("ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx")
     const solendProgram = new Solend(provider, solendProgramId);
 
     const pythProduct = new PublicKey("3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E");
@@ -346,6 +347,9 @@ describe("castle-vault", () => {
         );
     });
 
+    let reconcileSolendIx: TransactionInstruction;
+    let reconcilePortIx: TransactionInstruction;
+    let reconcileJetIx: TransactionInstruction;
     it("Forwards deposits to lending markets", async () => {
         const tx = new anchor.web3.Transaction();
         tx.add(refreshIx);
@@ -361,7 +365,7 @@ describe("castle-vault", () => {
                 jetReserveState: jetReserveAccounts.accounts.reserve.publicKey,
             }
         }));
-        tx.add(program.instruction.reconcileSolend({
+        reconcileSolendIx = program.instruction.reconcileSolend({
             accounts: {
                 vault: vaultStateAccount.publicKey,
                 vaultAuthority: vaultAuthority,
@@ -376,8 +380,10 @@ describe("castle-vault", () => {
                 clock: SYSVAR_CLOCK_PUBKEY,
                 tokenProgram: TOKEN_PROGRAM_ID,
             }
-        }));
-        tx.add(program.instruction.reconcilePort({
+        });
+        tx.add(reconcileSolendIx);
+
+        reconcilePortIx = program.instruction.reconcilePort({
             accounts: {
                 vault: vaultStateAccount.publicKey,
                 vaultAuthority: vaultAuthority,
@@ -392,8 +398,10 @@ describe("castle-vault", () => {
                 clock: SYSVAR_CLOCK_PUBKEY,
                 tokenProgram: TOKEN_PROGRAM_ID,
             }
-        }));
-        tx.add(program.instruction.reconcileJet({
+        });
+        tx.add(reconcilePortIx);
+
+        reconcileJetIx = program.instruction.reconcileJet({
             accounts: {
                 vault: vaultStateAccount.publicKey,
                 vaultAuthority: vaultAuthority,
@@ -407,12 +415,16 @@ describe("castle-vault", () => {
                 jetLpMint: jetReserveAccounts.accounts.depositNoteMint,
                 tokenProgram: TOKEN_PROGRAM_ID,
             }
-        }));
+        });
+        tx.add(reconcileJetIx);
+
         await provider.send(tx);
 
         const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
         assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 0);
 
+        const solendCollateralRatio = 1;
+        const solendAllocation = 0.33;
         const solendCollateralToken = new Token(
             provider.connection,
             solendCollateralMint.publicKey,
@@ -420,12 +432,53 @@ describe("castle-vault", () => {
             payer,
         );
         const vaultSolendLpTokenAccountInfo = await solendCollateralToken.getAccountInfo(vaultSolendLpTokenAccount);
-        assert.notEqual(vaultSolendLpTokenAccountInfo.amount.toNumber(), 0);
-
+        assert.equal(
+            vaultSolendLpTokenAccountInfo.amount.toNumber(),
+            ((depositAmount - withdrawAmount) * solendAllocation) * solendCollateralRatio
+        );
         const solendLiquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(solendLiquiditySupply.publicKey);
         assert.equal(
             solendLiquiditySupplyAccountInfo.amount.toNumber(),
-            ((depositAmount - withdrawAmount) * 0.5) + initialReserveAmount
+            ((depositAmount - withdrawAmount) * solendAllocation) + initialReserveAmount
+        );
+
+        const portCollateralRatio = 1;
+        const portAllocation = 0.33;
+        const portCollateralToken = new Token(
+            provider.connection,
+            portReserveState.collateralMintAccount,
+            TOKEN_PROGRAM_ID,
+            payer,
+        );
+        const vaultPortLpTokenAccountInfo = await portCollateralToken.getAccountInfo(vaultPortLpTokenAccount);
+        assert.equal(
+            vaultPortLpTokenAccountInfo.amount.toNumber(),
+            ((depositAmount - withdrawAmount) * portAllocation) * portCollateralRatio
+        );
+        const portLiquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(portReserveState.liquiditySupplyPubkey);
+        assert.equal(
+            portLiquiditySupplyAccountInfo.amount.toNumber(),
+            ((depositAmount - withdrawAmount) * portAllocation) + initialReserveAmount
+        );
+
+        const jetCollateralRatio = 1;
+        const jetAllocation = 0.34;
+        const jetCollateralToken = new Token(
+            provider.connection,
+            jetReserveAccounts.accounts.depositNoteMint,
+            TOKEN_PROGRAM_ID,
+            payer,
+        );
+        const vaultJetLpTokenAccountInfo = await jetCollateralToken.getAccountInfo(vaultJetLpTokenAccount);
+        assert.equal(
+            vaultJetLpTokenAccountInfo.amount.toNumber(),
+            ((depositAmount - withdrawAmount) * jetAllocation) * jetCollateralRatio
+        );
+
+        const jetLiquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(jetReserveAccounts.accounts.vault);
+        assert.equal(
+            jetLiquiditySupplyAccountInfo.amount.toNumber(),
+            ((depositAmount - withdrawAmount) * jetAllocation)
         );
     });
 
