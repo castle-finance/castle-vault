@@ -43,4 +43,8 @@ pub mod castle_lending_aggregator {
     pub fn reconcile_port(ctx: Context<ReconcilePort>) -> ProgramResult {
         instructions::reconcile_port::handler(ctx)
     }
+
+    pub fn reconcile_jet(ctx: Context<ReconcileJet>) -> ProgramResult {
+        instructions::reconcile_jet::handler(ctx)
+    }
 }

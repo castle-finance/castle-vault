@@ -92,13 +92,15 @@ impl<'info> ReconcileJet<'info> {
 pub fn handler(ctx: Context<ReconcileJet>) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
-    let market = ctx.accounts.jet_market.load()?;
-    let reserve = ctx.accounts.jet_reserve_state.load()?;
-    let clock = Clock::get()?;
-    let reserve_info = market.reserves().get_cached(reserve.index, clock.slot);
+    let reserve_info = {
+        let market = ctx.accounts.jet_market.load()?;
+        let reserve = ctx.accounts.jet_reserve_state.load()?;
+        let clock = Clock::get()?;
+        *market.reserves().get_cached(reserve.index, clock.slot)
+    };
 
     let current_jet_value = Amount::from_deposit_notes(ctx.accounts.vault_jet_lp_token.amount)
-        .as_tokens(reserve_info, Rounding::Down);
+        .as_tokens(&reserve_info, Rounding::Down);
     let allocation = ctx.accounts.vault.allocations.jet;
 
     match allocation.checked_sub(current_jet_value) {
@@ -116,7 +118,7 @@ pub fn handler(ctx: Context<ReconcileJet>) -> ProgramResult {
                     .checked_sub(allocation)
                     .ok_or(ErrorCode::MathError)?,
             )
-            .as_deposit_notes(reserve_info, Rounding::Down)?;
+            .as_deposit_notes(&reserve_info, Rounding::Down)?;
             jet::cpi::withdraw_tokens(
                 ctx.accounts
                     .jet_withdraw_context()

@@ -1,4 +1,4 @@
-import { DEX_ID, JetClient, JetMarket, ReserveConfig } from '@jet-lab/jet-engine'
+import { DEX_ID, JetClient, JetMarket, JET_ID, ReserveConfig } from '@jet-lab/jet-engine'
 import {
     Keypair,
     PublicKey,
@@ -8,6 +8,8 @@ import {
 } from "@solana/web3.js";
 import { BN, Provider } from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+
+export const PROGRAM_ID = JET_ID;
 
 export async function createLendingMarket(
     provider: Provider,
@@ -177,6 +179,11 @@ export async function initReserve(
     });
 
     return reserveAccounts;
+}
+
+export async function getMarketAuthority(market: PublicKey, programId: PublicKey = JET_ID): Promise<PublicKey> {
+    const [marketAuthority,] = await findProgramAddress(programId, [market]);
+    return marketAuthority;
 }
 
 /**
