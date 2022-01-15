@@ -31,7 +31,7 @@ pub struct Refresh<'info> {
     )]
     pub solend_program: AccountInfo<'info>,
 
-    #[account(mut, owner = solend_program.key())]
+    #[account(mut)]
     pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
 
     pub solend_pyth: AccountInfo<'info>,
@@ -44,7 +44,7 @@ pub struct Refresh<'info> {
     )]
     pub port_program: AccountInfo<'info>,
 
-    #[account(mut, owner = port_program.key())]
+    #[account(mut)]
     pub port_reserve_state: Box<Account<'info, PortReserve>>,
 
     #[account(

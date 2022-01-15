@@ -24,7 +24,7 @@ address = "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR"
 address = "CjqQ9kx9STBLtSUdypHTjNJsLE4t6uQossjdSzq9jdmY"
 
 [[test.genesis]]
-address = "So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo"
+address = "ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx"
 program = "../../solend/solana-program-library/target/deploy/spl_token_lending.so"
 [[test.genesis]]
 address = "Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR"

@@ -756,7 +756,7 @@ checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 [[package]]
 name = "jet"
 version = "0.2.0"
-source = "git+https://github.com/jet-lab/jet-v1/#67b84d436011f983b598546aa7be677ed356d695"
+source = "git+https://github.com/jet-lab/jet-v1/#f716659a373bc621120281700dc13f311b24be0f"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -1361,9 +1361,9 @@ dependencies = [
 
 [[package]]
 name = "smallvec"
-version = "1.7.0"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ecab6c735a6bb4139c0caafd0cc3635748bbb3acf4550e8138122099251f309"
+checksum = "f2dd574626839106c320a323308629dcb1acfc96e32a8cba364ddc61ac23ee83"
 
 [[package]]
 name = "solana-frozen-abi"
@@ -1506,7 +1506,7 @@ dependencies = [
 [[package]]
 name = "spl-token"
 version = "3.1.1"
-source = "git+https://github.com/castle-finance/solana-program-library#b37e84c3eedac5b737589773cfc8401cf22bd378"
+source = "git+https://github.com/castle-finance/solana-program-library#4962707654b05f43e03ed88c7744a9ea14af1cf2"
 dependencies = [
  "arrayref",
  "num-derive",
@@ -1533,7 +1533,7 @@ dependencies = [
 [[package]]
 name = "spl-token-lending"
 version = "0.1.0"
-source = "git+https://github.com/castle-finance/solana-program-library#b37e84c3eedac5b737589773cfc8401cf22bd378"
+source = "git+https://github.com/castle-finance/solana-program-library#4962707654b05f43e03ed88c7744a9ea14af1cf2"
 dependencies = [
  "arrayref",
  "bytemuck",
@@ -1857,6 +1857,6 @@ dependencies = [
 
 [[package]]
 name = "zeroize"
-version = "1.4.3"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d68d9dcec5f9b43a30d38c49f91dfedfaac384cb8f085faca366c26207dd1619"
+checksum = "cc222aec311c323c717f56060324f32b82da1ce1dd81d9a09aa6a9030bfe08db"
