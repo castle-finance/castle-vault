@@ -156,9 +156,9 @@
     buffer "~6.0.3"
 
 "@solana/spl-token-registry@^0.2.205":
-  version "0.2.1448"
-  resolved "https://registry.yarnpkg.com/@solana/spl-token-registry/-/spl-token-registry-0.2.1448.tgz#adde1f9a391cccfb1338d3d5ab45572ed81d5ef7"
-  integrity sha512-4PXXWKFzKNm9HepCDH/q80x+VSKBP0QXpPSaAAzc18k4lvC1iPr+vcMiZmk6tR2Rg/IICvSmB5qcAXjy5a4rbQ==
+  version "0.2.1496"
+  resolved "https://registry.yarnpkg.com/@solana/spl-token-registry/-/spl-token-registry-0.2.1496.tgz#da72464a8ba364ea7e849131041e4d91f09c62ce"
+  integrity sha512-1fyxx2eS3erkD1pNeuDXAM9s6sQxRgM27bS8iVNT23ARPqXgJR/MlQpuvABeiwYprfKhltRLVWha+Xhr5MNdtg==
   dependencies:
     cross-fetch "3.0.6"
 
@@ -206,15 +206,16 @@
     superstruct "^0.14.2"
     tweetnacl "^1.0.0"
 
-"@solendprotocol/solend-sdk@^0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@solendprotocol/solend-sdk/-/solend-sdk-0.4.2.tgz#274f51eccd1db4ebc940d38a1cc39ba54aba55f5"
-  integrity sha512-Na3+T16Naw+ejnhXFMmEiMsVzgzUmlHeZTgXB+sZpHhYS7i8HgR92v+6lvFqLLvAtitOWr4iNTF/AjLOxXiw7g==
+"@solendprotocol/solend-sdk@^0.4.4":
+  version "0.4.4"
+  resolved "https://registry.yarnpkg.com/@solendprotocol/solend-sdk/-/solend-sdk-0.4.4.tgz#38065381ec72616ca12b3a64ab525b78c94b5003"
+  integrity sha512-0m63yA6embTcrCYh6d9Z1aqtM/4LGe6DWe16V+93NlnfLtdIZ4gMUYndMNJ8twZYcGgvkpJFGfHcKe2y/0eN0w==
   dependencies:
     "@pythnetwork/client" "^2.5.1"
     "@solana/buffer-layout" "^3.0.0"
     "@solana/spl-token" "^0.1.8"
     "@solana/web3.js" "^1.31.0"
+    axios "^0.24.0"
     bignumber.js "^9.0.2"
     bn.js "^5.2.0"
     buffer-layout "^1.2.0"
@@ -352,6 +353,13 @@ available-typed-arrays@^1.0.5:
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/available-typed-arrays/-/available-typed-arrays-1.0.5.tgz#92f95616501069d07d10edb2fc37d3e1c65123b7"
   integrity sha512-DMD0KiN46eipeziST1LPP/STfDU0sufISXmjSgvVsoU2tqxctQeASejWcfNtxYKqETM1UxQ8sp2OrSBWpHY6sw==
+
+axios@^0.24.0:
+  version "0.24.0"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-0.24.0.tgz#804e6fa1e4b9c5288501dd9dff56a7a0940d20d6"
+  integrity sha512-Q6cWsys88HoPgAaFAVUb0WpPk0O8iTeisR9IMqy9G8AbO4NlpVknrnQS03zzF9PGAWgO3cgletO3VjV/P7VztA==
+  dependencies:
+    follow-redirects "^1.14.4"
 
 balanced-match@^1.0.0:
   version "1.0.2"
@@ -772,6 +780,11 @@ flat@^5.0.2:
   version "5.0.2"
   resolved "https://registry.yarnpkg.com/flat/-/flat-5.0.2.tgz#8ca6fe332069ffa9d324c327198c598259ceb241"
   integrity sha512-b6suED+5/3rTpUBdG1gupIl8MPFCAMA0QXwmljLhvCUKcUvdE4gWky9zpuGCcXHOsz4J9wPGNWq6OKpmIzz3hQ==
+
+follow-redirects@^1.14.4:
+  version "1.14.7"
+  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.14.7.tgz#2004c02eb9436eee9a21446a6477debf17e81685"
+  integrity sha512-+hbxoLbFMbRKDwohX8GkTataGqO6Jb7jGwpAlwgy2bIz25XtRm7KEzJM76R1WiNT5SwZkX4Y75SwBolkpmE7iQ==
 
 foreach@^2.0.5:
   version "2.0.5"
@@ -1213,9 +1226,9 @@ mkdirp@^1.0.4:
   integrity sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
 
 mocha@^9.0.3:
-  version "9.1.3"
-  resolved "https://registry.yarnpkg.com/mocha/-/mocha-9.1.3.tgz#8a623be6b323810493d8c8f6f7667440fa469fdb"
-  integrity sha512-Xcpl9FqXOAYqI3j79pEtHBBnQgVXIhpULjGQa7DVb0Po+VzmSIK9kanAiWLHoRR/dbZ2qpdPshuXr8l1VaHCzw==
+  version "9.1.4"
+  resolved "https://registry.yarnpkg.com/mocha/-/mocha-9.1.4.tgz#5a332d6ade6345b975fd97b5b39139854c8e1b32"
+  integrity sha512-+q2aV5VlJZuLgCWoBvGI5zEwPF9eEI0kr/sAA9Jm4xMND7RfIEyF8JE7C0JIg8WXRG+P1sdIAb5ccoHPlXLzcw==
   dependencies:
     "@ungap/promise-all-settled" "1.1.2"
     ansi-colors "4.1.1"

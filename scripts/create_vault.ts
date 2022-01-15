@@ -15,11 +15,10 @@ const main = async () => {
     const idl = await Program.fetchIdl(CASTLE_VAULT_ID, provider);
     const program = new Program<CastleLendingAggregator>(idl as CastleLendingAggregator, CASTLE_VAULT_ID, provider);
 
-    //const solendMarket = await SolendMarket.initialize(provider.connection, "devnet");
-    //await solendMarket.loadReserves();
-    //const solendReserve = solendMarket.reserves.find(res => res.config.symbol === 'SOL');
-    //const solendCollateralMint = new PublicKey(solendReserve.config.collateralMintAddress);
-    const solendCollateralMint = new PublicKey("FzwZWRMc3GCqjSrcpVX3ueJc6UpcV6iWWb7ZMsTXE3Gf");
+    const solendMarket = await SolendMarket.initialize(provider.connection, "devnet");
+    await solendMarket.loadReserves();
+    const solendReserve = solendMarket.reserves.find(res => res.config.symbol === 'SOL');
+    const solendCollateralMint = new PublicKey(solendReserve.config.collateralMintAddress);
 
     const port = new Port(connection, Profile.forMainNet(), new PublicKey("H27Quk3DSbu55T4dCr1NddTTSAezXwHU67FPCZVKLhSW"))
     const portReserve = await port.getReserve(new PublicKey("6FeVStQAGPWvfWijDHF7cTWRCi7He6vTT3ubfNhe9SPt"));
@@ -65,7 +64,7 @@ const main = async () => {
         program.programId,
     );
 
-    await program.rpc.initialize(
+    const txSig = await program.rpc.initialize(
         {
             authority: authorityBump,
             reserve: reserveBump,
@@ -97,6 +96,7 @@ const main = async () => {
             instructions: [await program.account.vault.createInstruction(vaultStateAccount)]
         }
     );
+    console.log(txSig);
 }
 
 main();
