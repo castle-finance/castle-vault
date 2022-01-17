@@ -471,6 +471,7 @@ dependencies = [
  "jet-proto-math",
  "port-anchor-adaptor",
  "port-variable-rate-lending-instructions",
+ "solana-maths",
  "spl-math",
  "spl-token-lending",
 ]

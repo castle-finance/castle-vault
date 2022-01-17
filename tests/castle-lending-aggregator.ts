@@ -421,10 +421,10 @@ describe("castle-vault", () => {
         await provider.send(tx);
 
         const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(vaultReserveTokenAccount);
-        assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 0);
+        assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 2);
 
         const solendCollateralRatio = 1;
-        const solendAllocation = 0.33;
+        const solendAllocation = 0.332;
         const solendCollateralToken = new Token(
             provider.connection,
             solendCollateralMint.publicKey,
@@ -443,7 +443,7 @@ describe("castle-vault", () => {
         );
 
         const portCollateralRatio = 1;
-        const portAllocation = 0.33;
+        const portAllocation = 0.332;
         const portCollateralToken = new Token(
             provider.connection,
             portReserveState.collateralMintAccount,
@@ -462,7 +462,7 @@ describe("castle-vault", () => {
         );
 
         const jetCollateralRatio = 1;
-        const jetAllocation = 0.34;
+        const jetAllocation = 0.332;
         const jetCollateralToken = new Token(
             provider.connection,
             jetReserveAccounts.accounts.depositNoteMint,
