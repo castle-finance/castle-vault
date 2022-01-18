@@ -4,7 +4,7 @@ import { CastleLendingAggregator } from "../target/types/castle_lending_aggregat
 import { JetClient, JetReserve } from "@jet-lab/jet-engine";
 import { SolendMarket } from "@solendprotocol/solend-sdk";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { Port, Profile } from "@port.finance/port-sdk";
+import { Port, Environment } from "@port.finance/port-sdk";
 import vaultIdl from "../target/idl/castle_lending_aggregator.json";
 
 const VAULT_PROGRAM_ID = new PublicKey("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb")
@@ -20,7 +20,7 @@ const main = async () => {
     const solendReserve = solendMarket.reserves.find(res => res.config.symbol === 'SOL');
     const solendCollateralMint = new PublicKey(solendReserve.config.collateralMintAddress);
 
-    const port = new Port(connection, Profile.forMainNet(), new PublicKey("H27Quk3DSbu55T4dCr1NddTTSAezXwHU67FPCZVKLhSW"))
+    const port = new Port(connection, Environment.forMainNet(), new PublicKey("H27Quk3DSbu55T4dCr1NddTTSAezXwHU67FPCZVKLhSW"))
     const portReserve = await port.getReserve(new PublicKey("6FeVStQAGPWvfWijDHF7cTWRCi7He6vTT3ubfNhe9SPt"));
 
     const jetClient = await JetClient.connect(provider, true);
@@ -50,7 +50,7 @@ const main = async () => {
     );
 
     const [vaultPortLpTokenAccount, portLpBump] = await PublicKey.findProgramAddress(
-        [vaultStateAccount.publicKey.toBuffer(), portReserve.getShareId().key.toBuffer()],
+        [vaultStateAccount.publicKey.toBuffer(), portReserve.getShareMintId().toBuffer()],
         program.programId,
     );
 
@@ -84,7 +84,7 @@ const main = async () => {
                 vaultJetLpToken: vaultJetLpTokenAccount,
                 reserveTokenMint: reserveTokenMint.publicKey,
                 solendLpTokenMint: solendCollateralMint,
-                portLpTokenMint: portReserve.getShareId().key,
+                portLpTokenMint: portReserve.getShareMintId(),
                 jetLpTokenMint: jetReserve.data.depositNoteMint,
                 payer: wallet.publicKey,
                 systemProgram: SystemProgram.programId,
