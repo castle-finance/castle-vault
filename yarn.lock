@@ -56,20 +56,20 @@
     "@solana/web3.js" "^1.29.3"
     eventemitter3 "^4.0.7"
 
-"@port.finance/port-sdk@^0.1.66":
-  version "0.1.69"
-  resolved "https://registry.yarnpkg.com/@port.finance/port-sdk/-/port-sdk-0.1.69.tgz#f06a99fba888301f0340abb1d35e072cf74b0b91"
-  integrity sha512-AyjxXxW9iv9Zuyb9cMvL+LTZJyGIY1lJ0Y74xh3V+VcdzeoP2WS+wrQvVtf3FBGaac8/7cVnnTggOLveDGxZzw==
+"@port.finance/port-sdk@^0.2.33":
+  version "0.2.33"
+  resolved "https://registry.yarnpkg.com/@port.finance/port-sdk/-/port-sdk-0.2.33.tgz#a0ed36128202ca0ed2544c91777dbfeb3706f1db"
+  integrity sha512-WLf7ubyVno2h1mYjlIIDQVn6DF87jjqLuPM7dS0sN0Z+4o+tRWUs+9cigUFJ9TpnVPAXp8ADP4PAXQ+N3Nmu3g==
   dependencies:
+    "@solana/buffer-layout" "^3.0.0"
     "@solana/spl-token" "^0.1.8"
-    "@solana/spl-token-registry" "^0.2.205"
+    "@solana/spl-token-registry" "^0.2.1107"
     big.js "^6.1.1"
     bignumber.js "^9.0.1"
     buffer-layout "1.2.2"
     prettier "^2.4.1"
     tiny-invariant "^1.2.0"
     typescript "^4.3.5"
-    user "^0.0.0"
 
 "@project-serum/anchor@0.18.2", "@project-serum/anchor@^0.18.0":
   version "0.18.2"
@@ -155,10 +155,10 @@
   dependencies:
     buffer "~6.0.3"
 
-"@solana/spl-token-registry@^0.2.205":
-  version "0.2.1496"
-  resolved "https://registry.yarnpkg.com/@solana/spl-token-registry/-/spl-token-registry-0.2.1496.tgz#da72464a8ba364ea7e849131041e4d91f09c62ce"
-  integrity sha512-1fyxx2eS3erkD1pNeuDXAM9s6sQxRgM27bS8iVNT23ARPqXgJR/MlQpuvABeiwYprfKhltRLVWha+Xhr5MNdtg==
+"@solana/spl-token-registry@^0.2.1107":
+  version "0.2.1588"
+  resolved "https://registry.yarnpkg.com/@solana/spl-token-registry/-/spl-token-registry-0.2.1588.tgz#fa12bffa92b3bb20f3c85fd90eea7f80cd313bb5"
+  integrity sha512-paKr6KLFAO8LdwXEUDPdW9NifrLiZ5P0qu6PvtPJc0Yq76naiIb56XIMzbkCnrdB5njHGblTPZzrNgE/hlOlsA==
   dependencies:
     cross-fetch "3.0.6"
 
@@ -1641,11 +1641,6 @@ unbox-primitive@^1.0.1:
     has-bigints "^1.0.1"
     has-symbols "^1.0.2"
     which-boxed-primitive "^1.0.2"
-
-user@^0.0.0:
-  version "0.0.0"
-  resolved "https://registry.yarnpkg.com/user/-/user-0.0.0.tgz#f27f1b23fc511f2a8efa40db55cfba123824e02a"
-  integrity sha1-8n8bI/xRHyqO+kDbVc+6Ejgk4Co=
 
 utf-8-validate@^5.0.2:
   version "5.0.8"

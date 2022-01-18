@@ -1,26 +1,21 @@
 import {
     initLendingMarketInstruction,
     initReserveInstruction,
+    ReserveConfigProto,
 } from '@port.finance/port-sdk';
-import { ReserveConfig } from '@port.finance/port-sdk/src/structs/ReserveData';
 import { BN, Provider } from '@project-serum/anchor';
 import { getTokenAccount } from '@project-serum/common';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { Keypair, PublicKey } from '@solana/web3.js';
-import { Transaction } from '@solana/web3.js';
-import { SystemProgram } from '@solana/web3.js';
+import { Keypair, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 
+export const PORT_LENDING = new PublicKey("pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4");
 export const TOKEN_ACCOUNT_LEN = 165;
 export const TOKEN_MINT_LEN = 82;
 export const RESERVE_LEN = 575;
 export const LENDING_MARKET_LEN = 258;
 export const STAKING_POOL_LEN = 298;
-// TODO change to mainnet
-export const PORT_LENDING = new PublicKey(
-    'pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4',
-);
 
-export const DEFAULT_RESERVE_CONFIG: ReserveConfig = {
+const DEFAULT_RESERVE_CONFIG: ReserveConfigProto = {
     optimalUtilizationRate: 80,
     loanToValueRatio: 80,
     liquidationBonus: 5,
@@ -77,6 +72,7 @@ export async function createLendingMarket(
                         'ascii',
                     ),
                     lendingMarket.publicKey,
+                    PORT_LENDING,
                 ),
             );
             return tx;
@@ -103,7 +99,6 @@ export async function createDefaultReserve(
     lendingMarket: PublicKey,
     oracle: PublicKey,
     owner: Keypair,
-    config: ReserveConfig,
 ): Promise<ReserveState> {
     const reserve = await createAccount(provider, RESERVE_LEN, PORT_LENDING);
 
@@ -159,9 +154,9 @@ export async function createDefaultReserve(
     tx.add(
         initReserveInstruction(
             initialLiquidity,
-            1,
-            new BN('100000000000000000000000'),
-            config,
+            0,
+            new BN(0),
+            DEFAULT_RESERVE_CONFIG,
             sourceTokenWallet,
             userCollateralTokenAccount.publicKey,
             reserve.publicKey,
@@ -175,6 +170,7 @@ export async function createDefaultReserve(
             lendingMarketAuthority,
             provider.wallet.publicKey,
             provider.wallet.publicKey,
+            PORT_LENDING,
         ),
     );
 

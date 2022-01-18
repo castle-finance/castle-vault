@@ -121,7 +121,6 @@ describe("castle-vault", () => {
             portMarket.publicKey,
             pythPrice,
             owner,
-            port.DEFAULT_RESERVE_CONFIG,
         );
 
         console.log("Initialized Port");
@@ -134,7 +133,7 @@ describe("castle-vault", () => {
             provider.wallet.publicKey,
             quoteTokenMint.publicKey,
             reserveTokenMint,
-            pythPrice, // dummy dex market addr
+            TOKEN_PROGRAM_ID, // dummy dex market addr
             pythPrice,
             pythProduct,
         )
