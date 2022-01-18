@@ -117,6 +117,7 @@ describe("castle-vault", () => {
             initialReserveAmount,
             ownerReserveTokenAccount,
             portMarket.publicKey,
+            pythPrice,
             owner,
             port.DEFAULT_RESERVE_CONFIG,
         );
@@ -261,6 +262,7 @@ describe("castle-vault", () => {
                 solendSwitchboard: switchboardFeed,
                 portProgram: port.PORT_LENDING,
                 portReserveState: portReserveState.address,
+                portOracle: portReserveState.oracle,
                 jetProgram: jetProgram,
                 jetMarket: jetMarket.address,
                 jetMarketAuthority: jetMarket.marketAuthority,

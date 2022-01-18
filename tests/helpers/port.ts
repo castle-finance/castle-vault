@@ -15,8 +15,9 @@ export const TOKEN_MINT_LEN = 82;
 export const RESERVE_LEN = 575;
 export const LENDING_MARKET_LEN = 258;
 export const STAKING_POOL_LEN = 298;
+// TODO change to mainnet
 export const PORT_LENDING = new PublicKey(
-    'Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR',
+    'pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4',
 );
 
 export const DEFAULT_RESERVE_CONFIG: ReserveConfig = {
@@ -92,6 +93,7 @@ export interface ReserveState {
     collateralSupplyTokenAccount: PublicKey;
     liquidityFeeReceiver: PublicKey;
     userCollateralAccount: PublicKey;
+    oracle: PublicKey;
 }
 
 export async function createDefaultReserve(
@@ -99,6 +101,7 @@ export async function createDefaultReserve(
     initialLiquidity: number | BN,
     sourceTokenWallet: PublicKey,
     lendingMarket: PublicKey,
+    oracle: PublicKey,
     owner: Keypair,
     config: ReserveConfig,
 ): Promise<ReserveState> {
@@ -165,7 +168,7 @@ export async function createDefaultReserve(
             tokenAccount.mint,
             liquiditySupplyTokenAccount.publicKey,
             liquidityFeeReceiver.publicKey,
-            Keypair.generate().publicKey,
+            oracle,
             collateralMintAccount.publicKey,
             collateralSupplyTokenAccount.publicKey,
             lendingMarket,
@@ -184,5 +187,6 @@ export async function createDefaultReserve(
         collateralSupplyTokenAccount: collateralSupplyTokenAccount.publicKey,
         liquidityFeeReceiver: liquidityFeeReceiver.publicKey,
         userCollateralAccount: userCollateralTokenAccount.publicKey,
+        oracle: oracle,
     };
 }

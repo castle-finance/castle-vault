@@ -30,10 +30,8 @@ pub struct Rebalance<'info> {
 
     pub vault_jet_lp_token: Account<'info, TokenAccount>,
 
-    #[account(owner = spl_token_lending::ID)]
     pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
 
-    #[account(owner = port_variable_rate_lending_instructions::ID)]
     pub port_reserve_state: Box<Account<'info, PortReserve>>,
 
     #[account(owner = jet::ID)]

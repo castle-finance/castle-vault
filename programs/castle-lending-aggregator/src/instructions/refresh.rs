@@ -40,12 +40,14 @@ pub struct Refresh<'info> {
 
     #[account(
         executable,
-        address = port_variable_rate_lending_instructions::ID,
+        //address = port_variable_rate_lending_instructions::ID,
     )]
     pub port_program: AccountInfo<'info>,
 
     #[account(mut)]
     pub port_reserve_state: Box<Account<'info, PortReserve>>,
+
+    pub port_oracle: AccountInfo<'info>,
 
     #[account(
         executable,
@@ -101,6 +103,7 @@ impl<'info> Refresh<'info> {
                 clock: self.clock.to_account_info(),
             },
         )
+        .with_remaining_accounts(vec![self.port_oracle.clone()])
     }
 
     pub fn jet_refresh_reserve_context(
@@ -124,7 +127,10 @@ impl<'info> Refresh<'info> {
 pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
-    port_anchor_adaptor::refresh_port_reserve(ctx.accounts.port_refresh_reserve_context())?;
+    port_anchor_adaptor::refresh_port_reserve(
+        ctx.accounts.port_refresh_reserve_context(),
+        port_anchor_adaptor::Cluster::Devnet,
+    )?;
     jet::cpi::refresh_reserve(ctx.accounts.jet_refresh_reserve_context())?;
 
     // TODO redeem liquidity mining rewards
