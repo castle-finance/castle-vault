@@ -5,15 +5,15 @@ import { JetClient, JetReserve } from "@jet-lab/jet-engine";
 import { SolendMarket } from "@solendprotocol/solend-sdk";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Port, Profile } from "@port.finance/port-sdk";
+import vaultIdl from "../target/idl/castle_lending_aggregator.json";
 
-const CASTLE_VAULT_ID = new PublicKey("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb")
+const VAULT_PROGRAM_ID = new PublicKey("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb")
 
 const main = async () => {
     const connection = new Connection(clusterApiUrl('devnet'));
     const wallet = Wallet.local();
     const provider = new Provider(connection, wallet, Provider.defaultOptions());
-    const idl = await Program.fetchIdl(CASTLE_VAULT_ID, provider);
-    const program = new Program<CastleLendingAggregator>(idl as CastleLendingAggregator, CASTLE_VAULT_ID, provider);
+    const program = new Program<CastleLendingAggregator>(vaultIdl as CastleLendingAggregator, VAULT_PROGRAM_ID, provider);
 
     const solendMarket = await SolendMarket.initialize(provider.connection, "devnet");
     await solendMarket.loadReserves();
@@ -32,7 +32,7 @@ const main = async () => {
         new PublicKey("So11111111111111111111111111111111111111112"),
         TOKEN_PROGRAM_ID,
         wallet.payer,
-    )
+    );
 
     const [vaultAuthority, authorityBump] = await PublicKey.findProgramAddress(
         [vaultStateAccount.publicKey.toBuffer(), utils.bytes.utf8.encode("authority")],

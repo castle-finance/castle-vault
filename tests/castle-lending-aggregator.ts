@@ -105,6 +105,8 @@ describe("castle-vault", () => {
             solendMarketAuthority,
         );
 
+        console.log("Initialized Solend");
+
         portMarket = await port.createLendingMarket(provider);
 
         [portMarketAuthority,] = await PublicKey.findProgramAddress(
@@ -121,6 +123,8 @@ describe("castle-vault", () => {
             port.DEFAULT_RESERVE_CONFIG,
         );
 
+        console.log("Initialized Port");
+
         jetMarket = await jet.createLendingMarket(provider, quoteTokenMint.publicKey);
         jetMarketAuthority = await jet.getMarketAuthority(jetMarket.address);
         jetReserveAccounts = await jet.initReserve(
@@ -133,6 +137,8 @@ describe("castle-vault", () => {
             pythPrice,
             pythProduct,
         )
+
+        console.log("Initialized Jet");
     });
 
     let vaultAuthority: PublicKey;
