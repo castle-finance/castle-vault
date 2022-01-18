@@ -92,8 +92,6 @@ pub struct Initialize<'info> {
 
     pub system_program: Program<'info, System>,
 
-    // SPL token program
-    #[account(address = token::ID)]
     pub token_program: Program<'info, Token>,
 
     pub rent: Sysvar<'info, Rent>,

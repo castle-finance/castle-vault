@@ -1,13 +1,16 @@
+use std::convert::TryFrom;
+use std::ops::Deref;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
 use port_anchor_adaptor::PortReserve;
-use port_variable_rate_lending_instructions::math::TryMul as PortMul;
+use solana_maths::{Decimal, TryMul};
 use solend::SolendReserve;
-use spl_token_lending::math::TryMul as SolendMul;
-use std::cmp::Ordering;
 
 use crate::cpi::solend;
 use crate::errors::ErrorCode;
+use crate::rebalance::assets::{Asset, LendingMarket};
+use crate::rebalance::strategies::{EqualAllocationStrategy, Strategy};
 use crate::state::*;
 
 #[derive(Accounts)]
@@ -24,17 +27,16 @@ pub struct Rebalance<'info> {
 
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
-    pub vault_solend_lp_token: Account<'info, TokenAccount>,
+    pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
-    pub vault_port_lp_token: Account<'info, TokenAccount>,
+    pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
-    pub vault_jet_lp_token: Account<'info, TokenAccount>,
+    pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
     pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
 
     pub port_reserve_state: Box<Account<'info, PortReserve>>,
 
-    #[account(owner = jet::ID)]
     pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
 }
 
@@ -43,63 +45,50 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
         // TODO use introspection make sure that there is a withdraw instruction after
     }
 
-    let solend_allocation: u64 = 33;
-    let port_allocation: u64 = 33;
-    let jet_allocation: u64 = 34;
+    // Convert reserve states to assets
+    let mut assets: Vec<Box<dyn Asset>> = Vec::new();
+    assets.push(Box::new(LendingMarket::try_from(
+        ctx.accounts.solend_reserve_state.clone().into_inner(),
+    )?));
+    assets.push(Box::new(LendingMarket::try_from(
+        ctx.accounts.port_reserve_state.clone().into_inner(),
+    )?));
+    assets.push(Box::new(LendingMarket::try_from(
+        *ctx.accounts.jet_reserve_state.load()?.deref(),
+    )?));
 
-    //let mut solend_allocation: u64 = 0;
-    //let mut port_allocation: u64 = 0;
-    //let mut jet_allocation: u64 = 0;
+    // Create strategy
+    //let strategy = Strategy::from_config(ctx.accounts.vault.strategy_config);
+    let strategy = EqualAllocationStrategy;
 
-    //let solend_reserve = &ctx.accounts.solend_reserve_state;
-    //let solend_deposit_rate = solend_reserve
-    //    .current_borrow_rate()?
-    //    .try_mul(solend_reserve.liquidity.utilization_rate()?)?;
+    // Run strategy to get allocations
+    let strategy_allocations = strategy
+        .calculate_allocations(assets)
+        .ok_or(ErrorCode::StrategyError)?;
+    msg!("{:?}", strategy_allocations);
 
-    //let port_reserve = &ctx.accounts.port_reserve_state;
-    //let port_deposit_rate = port_reserve
-    //    .current_borrow_rate()?
-    //    .try_mul(port_reserve.liquidity.utilization_rate()?)?;
-
-    //match port_deposit_rate
-    //    .to_scaled_val()
-    //    .cmp(&solend_deposit_rate.to_scaled_val())
-    //{
-    //    Ordering::Greater => port_allocation = 100,
-    //    Ordering::Less => solend_allocation = 100,
-    //    Ordering::Equal => {
-    //        port_allocation = 50;
-    //        solend_allocation = 50;
-    //    }
-    //}
-
-    // Convert to right units
+    // Store allocations
     let vault_value = ctx
         .accounts
         .vault
         .total_value
         .checked_sub(to_withdraw_option)
         .ok_or(ErrorCode::MathError)?;
-
-    // TODO get rid of this BS
-    let allocations = &mut ctx.accounts.vault.allocations;
-    allocations.solend = solend_allocation
-        .checked_mul(vault_value)
-        .ok_or(ErrorCode::MathError)?
-        .checked_div(100)
-        .ok_or(ErrorCode::MathError)?;
-
-    allocations.port = port_allocation
-        .checked_mul(vault_value)
-        .ok_or(ErrorCode::MathError)?
-        .checked_div(100)
-        .ok_or(ErrorCode::MathError)?;
-
-    allocations.jet = jet_allocation
-        .checked_mul(vault_value)
-        .ok_or(ErrorCode::MathError)?
-        .checked_div(100)
-        .ok_or(ErrorCode::MathError)?;
+    let clock = Clock::get()?;
+    let vault_allocations = &mut ctx.accounts.vault.allocations;
+    // TODO is there a way to make this less repetitive?
+    vault_allocations.solend.update(
+        Decimal::from(strategy_allocations[0].try_mul(vault_value)?).try_floor_u64()?,
+        clock.slot,
+    );
+    vault_allocations.port.update(
+        Decimal::from(strategy_allocations[1].try_mul(vault_value)?).try_floor_u64()?,
+        clock.slot,
+    );
+    vault_allocations.jet.update(
+        Decimal::from(strategy_allocations[2].try_mul(vault_value)?).try_floor_u64()?,
+        clock.slot,
+    );
 
     Ok(())
 }

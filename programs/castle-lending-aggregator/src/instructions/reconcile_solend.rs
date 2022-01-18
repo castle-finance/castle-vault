@@ -11,6 +11,7 @@ pub struct ReconcileSolend<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
+        constraint = !vault.allocations.solend.last_update.stale @ ErrorCode::AllocationIsNotUpdated,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -103,7 +104,7 @@ pub fn handler(ctx: Context<ReconcileSolend>) -> ProgramResult {
         solend_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_solend_lp_token.amount)?;
     let allocation = ctx.accounts.vault.allocations.solend;
 
-    match allocation.checked_sub(current_solend_value) {
+    match allocation.value.checked_sub(current_solend_value) {
         Some(tokens_to_deposit) => {
             solend::deposit_reserve_liquidity(
                 ctx.accounts
@@ -117,7 +118,7 @@ pub fn handler(ctx: Context<ReconcileSolend>) -> ProgramResult {
                 .accounts
                 .vault_solend_lp_token
                 .amount
-                .checked_sub(solend_exchange_rate.liquidity_to_collateral(allocation)?)
+                .checked_sub(solend_exchange_rate.liquidity_to_collateral(allocation.value)?)
                 .ok_or(ErrorCode::MathError)?;
 
             solend::redeem_reserve_collateral(
@@ -129,7 +130,7 @@ pub fn handler(ctx: Context<ReconcileSolend>) -> ProgramResult {
         }
     }
 
-    ctx.accounts.vault.allocations.solend = 0 as u64;
+    ctx.accounts.vault.allocations.solend.reset();
 
     Ok(())
 }

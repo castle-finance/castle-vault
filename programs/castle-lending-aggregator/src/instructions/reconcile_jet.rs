@@ -10,6 +10,8 @@ pub struct ReconcileJet<'info> {
         mut,
         has_one = vault_authority,
         has_one = vault_reserve_token,
+        has_one = vault_jet_lp_token,
+        constraint = !vault.allocations.jet.last_update.stale @ ErrorCode::AllocationIsNotUpdated,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -103,7 +105,7 @@ pub fn handler(ctx: Context<ReconcileJet>) -> ProgramResult {
         .as_tokens(&reserve_info, Rounding::Down);
     let allocation = ctx.accounts.vault.allocations.jet;
 
-    match allocation.checked_sub(current_jet_value) {
+    match allocation.value.checked_sub(current_jet_value) {
         Some(tokens_to_deposit) => {
             jet::cpi::deposit_tokens(
                 ctx.accounts
@@ -115,7 +117,7 @@ pub fn handler(ctx: Context<ReconcileJet>) -> ProgramResult {
         None => {
             let tokens_to_redeem = Amount::from_tokens(
                 current_jet_value
-                    .checked_sub(allocation)
+                    .checked_sub(allocation.value)
                     .ok_or(ErrorCode::MathError)?,
             )
             .as_deposit_notes(&reserve_info, Rounding::Down)?;
@@ -128,7 +130,7 @@ pub fn handler(ctx: Context<ReconcileJet>) -> ProgramResult {
         }
     }
 
-    ctx.accounts.vault.allocations.jet = 0 as u64;
+    ctx.accounts.vault.allocations.jet.reset();
 
     Ok(())
 }

@@ -11,6 +11,7 @@ pub struct ReconcilePort<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_port_lp_token,
+        constraint = !vault.allocations.port.last_update.stale @ ErrorCode::AllocationIsNotUpdated,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -98,7 +99,7 @@ pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
         port_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_port_lp_token.amount)?;
     let allocation = ctx.accounts.vault.allocations.port;
 
-    match allocation.checked_sub(current_port_value) {
+    match allocation.value.checked_sub(current_port_value) {
         Some(tokens_to_deposit) => {
             port_anchor_adaptor::deposit_reserve(
                 ctx.accounts
@@ -113,7 +114,7 @@ pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
                 .accounts
                 .vault_port_lp_token
                 .amount
-                .checked_sub(port_exchange_rate.liquidity_to_collateral(allocation)?)
+                .checked_sub(port_exchange_rate.liquidity_to_collateral(allocation.value)?)
                 .ok_or(ErrorCode::MathError)?;
 
             port_anchor_adaptor::redeem(
@@ -126,7 +127,7 @@ pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
         }
     }
 
-    ctx.accounts.vault.allocations.port = 0 as u64;
+    ctx.accounts.vault.allocations.port.reset();
 
     Ok(())
 }

@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 use std::cmp::Ordering;
 
 use crate::errors::ErrorCode;
+//use crate::rebalance::strategies::StrategyConfig;
 
 #[account]
 #[derive(Debug, Default)]
@@ -36,6 +37,10 @@ pub struct Vault {
     pub total_value: u64,
 
     pub allocations: Allocations,
+    //pub strategy_config: StrategyConfig,
+
+    // TODO
+    //pub padding: [u8; 512],
 }
 
 impl Vault {
@@ -48,12 +53,29 @@ impl Vault {
     }
 }
 
-// TODO add flag indicating allocations have been set + add as constraint on reconcile ix
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
-    pub solend: u64,
-    pub port: u64,
-    pub jet: u64,
+    pub solend: Allocation,
+    pub port: Allocation,
+    pub jet: Allocation,
+}
+
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
+pub struct Allocation {
+    pub value: u64,
+    pub last_update: LastUpdate,
+}
+
+impl Allocation {
+    pub fn update(&mut self, value: u64, slot: u64) {
+        self.value = value;
+        self.last_update.update_slot(slot);
+    }
+
+    pub fn reset(&mut self) {
+        self.value = 0;
+        self.last_update.mark_stale();
+    }
 }
 
 /// Number of slots to consider stale after
