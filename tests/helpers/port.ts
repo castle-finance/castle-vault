@@ -1,6 +1,7 @@
 import {
     initLendingMarketInstruction,
     initReserveInstruction,
+    PORT_LENDING,
     ReserveConfigProto,
 } from '@port.finance/port-sdk';
 import { BN, Provider } from '@project-serum/anchor';
@@ -8,7 +9,7 @@ import { getTokenAccount } from '@project-serum/common';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Keypair, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 
-export const PORT_LENDING = new PublicKey("pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4");
+export { PORT_LENDING };
 export const TOKEN_ACCOUNT_LEN = 165;
 export const TOKEN_MINT_LEN = 82;
 export const RESERVE_LEN = 575;
@@ -72,7 +73,6 @@ export async function createLendingMarket(
                         'ascii',
                     ),
                     lendingMarket.publicKey,
-                    PORT_LENDING,
                 ),
             );
             return tx;
@@ -170,7 +170,6 @@ export async function createDefaultReserve(
             lendingMarketAuthority,
             provider.wallet.publicKey,
             provider.wallet.publicKey,
-            PORT_LENDING,
         ),
     );
 
