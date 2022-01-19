@@ -7,7 +7,7 @@ import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Port, Environment } from "@port.finance/port-sdk";
 import vaultIdl from "../target/idl/castle_lending_aggregator.json";
 
-const VAULT_PROGRAM_ID = new PublicKey("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb")
+const VAULT_PROGRAM_ID = new PublicKey("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 
 const main = async () => {
     const connection = new Connection(clusterApiUrl('devnet'));
@@ -73,6 +73,7 @@ const main = async () => {
             portLp: portLpBump,
             jetLp: jetLpBump,
         },
+        { equalAllocation: {} },
         {
             accounts: {
                 vault: vaultStateAccount.publicKey,
