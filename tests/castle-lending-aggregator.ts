@@ -7,7 +7,7 @@ import * as jet from './helpers/jet';
 import * as port from './helpers/port';
 import { Solend } from './helpers/solend';
 import { CastleLendingAggregator } from "../target/types/castle_lending_aggregator";
-import { JetMarket } from "@jet-lab/jet-engine";
+import { Amount, JetClient, JetMarket, JetReserve, JetUser } from "@jet-lab/jet-engine";
 
 // TODO use SDK instead of raw code
 // TODO use provider.wallet instead of owner
@@ -55,6 +55,9 @@ describe("castle-vault", () => {
         const sig = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
         await provider.connection.confirmTransaction(sig, "singleGossip");
 
+        const sig2 = await provider.connection.requestAirdrop(owner.publicKey, 1000000000);
+        await provider.connection.confirmTransaction(sig2, "singleGossip");
+
         quoteTokenMint = await Token.createMint(
             provider.connection,
             payer,
@@ -63,7 +66,6 @@ describe("castle-vault", () => {
             2,
             TOKEN_PROGRAM_ID
         );
-
 
         reserveTokenMint = await Token.createMint(
             provider.connection,
@@ -125,10 +127,11 @@ describe("castle-vault", () => {
 
         console.log("Initialized Port");
 
-        jetMarket = await jet.createLendingMarket(provider, quoteTokenMint.publicKey);
+        const jetClient = await JetClient.connect(provider, true);
+        jetMarket = await jet.createLendingMarket(jetClient, provider.wallet.publicKey, quoteTokenMint.publicKey);
         jetMarketAuthority = await jet.getMarketAuthority(jetMarket.address);
         jetReserveAccounts = await jet.initReserve(
-            provider,
+            jetClient,
             jetMarket.address,
             provider.wallet.publicKey,
             quoteTokenMint.publicKey,
@@ -137,6 +140,10 @@ describe("castle-vault", () => {
             pythPrice,
             pythProduct,
         )
+        const jetReserve = await JetReserve.load(jetClient, jetReserveAccounts.accounts.reserve.publicKey);
+        const jetUser = await JetUser.load(jetClient, jetMarket, [jetReserve], owner.publicKey);
+        const depositTx = await jetUser.makeDepositTx(jetReserve, ownerReserveTokenAccount, Amount.tokens(initialReserveAmount));
+        await provider.send(depositTx, [owner]);
 
         console.log("Initialized Jet");
     });
@@ -154,6 +161,7 @@ describe("castle-vault", () => {
     let lpTokenMint: PublicKey;
     let lpTokenMintBump: number;
 
+    // TODO create test vaults for each strategy
     it("Creates vault", async () => {
         [vaultAuthority, authorityBump] = await PublicKey.findProgramAddress(
             [vaultStateAccount.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("authority")],
@@ -194,6 +202,7 @@ describe("castle-vault", () => {
                 portLp: portLpBump,
                 jetLp: jetLpBump,
             },
+            { equalAllocation: {} },
             {
                 accounts: {
                     vault: vaultStateAccount.publicKey,
@@ -485,7 +494,7 @@ describe("castle-vault", () => {
         const jetLiquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(jetReserveAccounts.accounts.vault);
         assert.equal(
             jetLiquiditySupplyAccountInfo.amount.toNumber(),
-            ((depositAmount - withdrawAmount) * jetAllocation)
+            ((depositAmount - withdrawAmount) * jetAllocation) + initialReserveAmount
         );
     });
 

@@ -1,4 +1,4 @@
-import { DEX_ID, JetClient, JetMarket, JET_ID, ReserveConfig } from '@jet-lab/jet-engine'
+import { DEX_ID, Jet, JetClient, JetMarket, JET_ID, ReserveConfig } from '@jet-lab/jet-engine'
 import {
     Keypair,
     PublicKey,
@@ -12,13 +12,13 @@ import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 export const PROGRAM_ID = JET_ID;
 
 export async function createLendingMarket(
-    provider: Provider,
+    client: JetClient,
+    owner: PublicKey,
     quoteCurrencyMint: PublicKey,
 ): Promise<JetMarket> {
-    const client = await JetClient.connect(provider, true);
     const account = Keypair.generate()
 
-    await client.program.rpc.initMarket(provider.wallet.publicKey, "USD", quoteCurrencyMint, {
+    await client.program.rpc.initMarket(owner, "USD", quoteCurrencyMint, {
         accounts: {
             market: account.publicKey
         },
@@ -58,7 +58,7 @@ export interface ReserveAccounts {
 }
 
 export async function initReserve(
-    provider: Provider,
+    client: JetClient,
     market: PublicKey,
     marketOwner: PublicKey,
     quoteTokenMint: PublicKey,
@@ -67,8 +67,6 @@ export async function initReserve(
     pythPrice: PublicKey,
     pythProduct: PublicKey,
 ): Promise<ReserveAccounts> {
-    const client = await JetClient.connect(provider, true);
-
     const reserve = Keypair.generate();
     const [depositNoteMint, depositNoteMintBump] =
         await findProgramAddress(client.program.programId, [

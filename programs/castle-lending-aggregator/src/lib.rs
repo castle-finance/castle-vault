@@ -7,6 +7,7 @@ pub mod math;
 pub mod rebalance;
 pub mod state;
 
+use crate::state::StrategyType;
 use instructions::*;
 
 declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
@@ -17,8 +18,12 @@ pub mod castle_lending_aggregator {
 
     // TODO add docs
 
-    pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumpSeeds) -> ProgramResult {
-        instructions::init::handler(ctx, _bumps)
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        _bumps: InitBumpSeeds,
+        strategy_type: StrategyType,
+    ) -> ProgramResult {
+        instructions::init::handler(ctx, _bumps, strategy_type)
     }
 
     pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {

@@ -99,7 +99,11 @@ pub struct Initialize<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-pub fn handler(ctx: Context<Initialize>, bumps: InitBumpSeeds) -> ProgramResult {
+pub fn handler(
+    ctx: Context<Initialize>,
+    bumps: InitBumpSeeds,
+    strategy_type: StrategyType,
+) -> ProgramResult {
     // TODO also store lending market reserve account addresses in vault?
 
     let vault = &mut ctx.accounts.vault;
@@ -114,6 +118,7 @@ pub fn handler(ctx: Context<Initialize>, bumps: InitBumpSeeds) -> ProgramResult 
     vault.reserve_token_mint = *ctx.accounts.reserve_token_mint.to_account_info().key;
     vault.last_update = LastUpdate::new(ctx.accounts.clock.slot);
     vault.total_value = 0;
+    vault.strategy_type = strategy_type;
 
     Ok(())
 }

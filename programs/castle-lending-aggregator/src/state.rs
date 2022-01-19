@@ -3,10 +3,9 @@ use anchor_lang::prelude::*;
 use std::cmp::Ordering;
 
 use crate::errors::ErrorCode;
-//use crate::rebalance::strategies::StrategyConfig;
 
 #[account]
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Vault {
     pub vault_authority: Pubkey,
 
@@ -37,10 +36,8 @@ pub struct Vault {
     pub total_value: u64,
 
     pub allocations: Allocations,
-    //pub strategy_config: StrategyConfig,
 
-    // TODO
-    //pub padding: [u8; 512],
+    pub strategy_type: StrategyType,
 }
 
 impl Vault {
@@ -51,6 +48,12 @@ impl Vault {
             &self.authority_bump,
         ]
     }
+}
+
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
+pub enum StrategyType {
+    MaxYield,
+    EqualAllocation,
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
@@ -111,6 +114,7 @@ impl LastUpdate {
         self.stale = true;
     }
 
+    // TODO mark stale if slots elapsed and update checks to use is_stale
     /// Check if marked stale or last update slot is too long ago
     pub fn is_stale(&self, slot: u64) -> Result<bool, ProgramError> {
         Ok(self.stale || self.slots_elapsed(slot)? >= STALE_AFTER_SLOTS_ELAPSED)
