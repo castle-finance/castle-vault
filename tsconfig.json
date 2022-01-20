@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
     "types": [
-      "mocha",
-      "chai"
+      "mocha"
     ],
     "typeRoots": [
       "./node_modules/@types"
@@ -13,6 +12,10 @@
     "module": "commonjs",
     "target": "es6",
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": "./",
+    "paths": {
+      "@castlefinance/vault-sdk": ["sdk/src/index.ts"]
+    }
   }
 }

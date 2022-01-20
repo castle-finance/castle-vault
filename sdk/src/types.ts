@@ -34,3 +34,35 @@ export interface VaultState {
   allocations: Allocations;
   strategyType: any;
 }
+
+export interface SolendAccounts {
+  program: PublicKey;
+  market: PublicKey;
+  marketAuthority: PublicKey;
+  reserve: PublicKey;
+  pythPrice: PublicKey;
+  switchboardFeed: PublicKey;
+  collateralMint: PublicKey;
+  liquiditySupply: PublicKey;
+}
+
+export interface PortAccounts {
+  program: PublicKey;
+  market: PublicKey;
+  marketAuthority: PublicKey;
+  reserve: PublicKey;
+  collateralMint: PublicKey;
+  oracle: PublicKey;
+  liquiditySupply: PublicKey;
+}
+
+export interface JetAccounts {
+  program: PublicKey;
+  reserve: PublicKey;
+  market: PublicKey;
+  marketAuthority: PublicKey;
+  feeNoteVault: PublicKey;
+  depositNoteMint: PublicKey;
+  liquiditySupply: PublicKey;
+  pythPrice: PublicKey;
+}

@@ -6,23 +6,38 @@ import {
   SystemProgram,
   SYSVAR_CLOCK_PUBKEY,
   SYSVAR_RENT_PUBKEY,
+  TransactionInstruction,
 } from "@solana/web3.js";
 import { CastleLendingAggregator } from "./castle_lending_aggregator";
-import { StrategyType, VaultState } from "./types";
+import {
+  JetAccounts,
+  PortAccounts,
+  SolendAccounts,
+  StrategyType,
+  VaultState,
+} from "./types";
 
 export class VaultClient {
   vaultId: PublicKey;
   vaultState: VaultState;
-  program: anchor.Program;
+  program: anchor.Program<CastleLendingAggregator>;
 
-  /**
-   * Create a new Castle Vault client object
-   * @param vaultId
-   * @returns
-   */
-  constructor(program: anchor.Program, vaultId: PublicKey) {
+  private constructor(
+    program: anchor.Program<CastleLendingAggregator>,
+    vaultId: PublicKey,
+    vaultState: VaultState
+  ) {
+    this.program = program;
     this.vaultId = vaultId;
-    return;
+    this.vaultState = vaultState;
+  }
+
+  static async load(
+    program: anchor.Program<CastleLendingAggregator>,
+    vaultId: PublicKey
+  ): Promise<VaultClient> {
+    const vaultState = await program.account.vault.fetch(vaultId);
+    return new VaultClient(program, vaultId, vaultState);
   }
 
   static async initialize(
@@ -33,7 +48,7 @@ export class VaultClient {
     portCollateralMint: PublicKey,
     jetCollateralMint: PublicKey,
     strategyType: StrategyType
-  ): Promise<[PublicKey, VaultState]> {
+  ): Promise<VaultClient> {
     const vaultId = Keypair.generate();
 
     const [vaultAuthority, authorityBump] = await PublicKey.findProgramAddress(
@@ -108,7 +123,39 @@ export class VaultClient {
     );
     const vaultState = await program.account.vault.fetch(vaultId.publicKey);
 
-    return [vaultId.publicKey, vaultState];
+    return new VaultClient(program, vaultId.publicKey, vaultState);
+  }
+
+  getRefreshIx(
+    solendAccounts: SolendAccounts,
+    portAccounts: PortAccounts,
+    jetAccounts: JetAccounts
+  ): TransactionInstruction {
+    return this.program.instruction.refresh({
+      accounts: {
+        vault: this.vaultId,
+        vaultReserveToken: this.vaultState.vaultReserveToken,
+        vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
+        vaultPortLpToken: this.vaultState.vaultPortLpToken,
+        vaultJetLpToken: this.vaultState.vaultJetLpToken,
+        solendProgram: solendAccounts.program,
+        solendReserveState: solendAccounts.reserve,
+        solendPyth: solendAccounts.pythPrice,
+        solendSwitchboard: solendAccounts.switchboardFeed,
+        portProgram: portAccounts.program,
+        portReserveState: portAccounts.reserve,
+        portOracle: portAccounts.oracle,
+        jetProgram: jetAccounts.program,
+        jetMarket: jetAccounts.market,
+        jetMarketAuthority: jetAccounts.marketAuthority,
+        jetReserveState: jetAccounts.reserve,
+        jetFeeNoteVault: jetAccounts.feeNoteVault,
+        jetDepositNoteMint: jetAccounts.depositNoteMint,
+        jetPyth: jetAccounts.pythPrice,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        clock: SYSVAR_CLOCK_PUBKEY,
+      },
+    });
   }
 
   deposit(amount: number): string {

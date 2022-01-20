@@ -1,7 +1,10 @@
 import { PublicKey } from "@solana/web3.js";
 
-export { VaultClient } from "./client";
-export { MainnetConfig, DevnetConfig, LocalConfig } from "./config";
+export * from "./client";
+export * from "./config";
+export * from "./types";
+
+export { CastleLendingAggregator } from "./castle_lending_aggregator";
 
 export const PROGRAM_ID = new PublicKey(
   "6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb"

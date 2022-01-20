@@ -1,4 +1,5 @@
 import assert from "assert";
+import { Amount, JetClient, JetReserve, JetUser } from "@jet-lab/jet-engine";
 import * as anchor from "@project-serum/anchor";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import {
@@ -8,13 +9,17 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 
+import {
+  JetAccounts,
+  PortAccounts,
+  SolendAccounts,
+  VaultClient,
+  CastleLendingAggregator,
+} from "@castlefinance/vault-sdk";
+
 import * as jet from "./helpers/jet";
 import * as port from "./helpers/port";
-import { Solend } from "./helpers/solend";
-import { CastleLendingAggregator } from "../target/types/castle_lending_aggregator";
-import { Amount, JetClient, JetMarket, JetReserve, JetUser } from "@jet-lab/jet-engine";
-import { VaultClient } from "../sdk/src/client";
-import { VaultState } from "../sdk/src/types";
+import * as solend from "./helpers/solend";
 
 // TODO use provider.wallet instead of owner
 describe("castle-vault", () => {
@@ -25,40 +30,21 @@ describe("castle-vault", () => {
   const program = anchor.workspace
     .CastleLendingAggregator as anchor.Program<CastleLendingAggregator>;
 
-  const owner = anchor.web3.Keypair.generate();
-  const payer = anchor.web3.Keypair.generate();
-
-  const solendCollateralMint = anchor.web3.Keypair.generate();
-  const solendReserve = anchor.web3.Keypair.generate();
-  const solendLiquiditySupply = anchor.web3.Keypair.generate();
-
-  // TODO change to devnet version
-  const solendProgramId = new PublicKey("ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx");
-  const solendProgram = new Solend(provider, solendProgramId);
+  const owner = Keypair.generate();
+  const payer = Keypair.generate();
 
   const pythProduct = new PublicKey("3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E");
   const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
   const switchboardFeed = new PublicKey("GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR");
 
-  const jetProgram = new PublicKey("JPv1rCqrhagNNmJVM5J1he7msQ5ybtvE1nNuHpDHMNU");
-
   const initialReserveAmount = 100;
-
-  let portReserveState: port.ReserveState;
-  let jetReserveAccounts: jet.ReserveAccounts;
 
   let reserveTokenMint: Token;
   let quoteTokenMint: Token;
 
-  let solendMarket: Keypair;
-  let solendMarketAuthority: PublicKey;
-  let portMarket: Keypair;
-  let portMarketAuthority: PublicKey;
-  let jetMarket: JetMarket;
-  let jetMarketAuthority: PublicKey;
-
-  let vaultId: PublicKey;
-  let vaultState: VaultState;
+  let solendAccounts: SolendAccounts;
+  let portAccounts: PortAccounts;
+  let jetAccounts: JetAccounts;
 
   before("Initialize lending markets", async () => {
     const sig = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
@@ -95,44 +81,28 @@ describe("castle-vault", () => {
       3 * initialReserveAmount
     );
 
-    solendMarket = await solendProgram.initLendingMarket(
+    const solendMarket = await solend.initLendingMarket(
+      provider,
       owner.publicKey,
       payer,
       new PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s"),
       new PublicKey("2TfB33aLaneQb5TNVwyDz3jSZXS6jdW2ARw1Dgf84XCG")
     );
-
-    [solendMarketAuthority] = await PublicKey.findProgramAddress(
-      [solendMarket.publicKey.toBuffer()],
-      solendProgramId
-    );
-
-    await solendProgram.addReserve(
+    solendAccounts = await solend.addReserve(
+      provider,
       initialReserveAmount,
       ownerReserveTokenAccount,
       owner,
       payer,
       reserveTokenMint,
-      solendReserve,
-      solendCollateralMint,
-      solendLiquiditySupply,
       pythProduct,
       pythPrice,
       switchboardFeed,
-      solendMarket.publicKey,
-      solendMarketAuthority
+      solendMarket.publicKey
     );
 
-    console.log("Initialized Solend");
-
-    portMarket = await port.createLendingMarket(provider);
-
-    [portMarketAuthority] = await PublicKey.findProgramAddress(
-      [portMarket.publicKey.toBuffer()],
-      port.PORT_LENDING
-    );
-
-    portReserveState = await port.createDefaultReserve(
+    const portMarket = await port.createLendingMarket(provider);
+    portAccounts = await port.createDefaultReserve(
       provider,
       initialReserveAmount,
       ownerReserveTokenAccount,
@@ -141,16 +111,13 @@ describe("castle-vault", () => {
       owner
     );
 
-    console.log("Initialized Port");
-
     const jetClient = await JetClient.connect(provider, true);
-    jetMarket = await jet.createLendingMarket(
+    const jetMarket = await jet.createLendingMarket(
       jetClient,
       provider.wallet.publicKey,
       quoteTokenMint.publicKey
     );
-    jetMarketAuthority = await jet.getMarketAuthority(jetMarket.address);
-    jetReserveAccounts = await jet.initReserve(
+    jetAccounts = await jet.initReserve(
       jetClient,
       jetMarket.address,
       provider.wallet.publicKey,
@@ -160,10 +127,7 @@ describe("castle-vault", () => {
       pythPrice,
       pythProduct
     );
-    const jetReserve = await JetReserve.load(
-      jetClient,
-      jetReserveAccounts.accounts.reserve.publicKey
-    );
+    const jetReserve = await JetReserve.load(jetClient, jetAccounts.reserve);
     const jetUser = await JetUser.load(
       jetClient,
       jetMarket,
@@ -176,34 +140,35 @@ describe("castle-vault", () => {
       Amount.tokens(initialReserveAmount)
     );
     await provider.send(depositTx, [owner]);
-
-    console.log("Initialized Jet");
   });
+
+  let vaultClient: VaultClient;
 
   // TODO create test vaults for each strategy
   it("Creates vault", async () => {
-    [vaultId, vaultState] = await VaultClient.initialize(
+    vaultClient = await VaultClient.initialize(
       program,
       provider.wallet as anchor.Wallet,
       reserveTokenMint.publicKey,
-      solendCollateralMint.publicKey,
-      portReserveState.collateralMintAccount,
-      jetReserveAccounts.accounts.depositNoteMint,
+      solendAccounts.collateralMint,
+      portAccounts.collateralMint,
+      jetAccounts.depositNoteMint,
       { equalAllocation: {} }
     );
-
     // TODO add more checks
-    assert.notEqual(vaultState, null);
+    assert.notEqual(vaultClient.vaultState, null);
   });
 
   let lpToken: Token;
   let userLpTokenAccount: PublicKey;
-  let refreshIx: anchor.web3.TransactionInstruction;
+
+  let refreshIx: TransactionInstruction;
 
   const depositAmount = 1000;
   const initialCollateralRatio = 1.0;
 
   it("Deposits to vault reserves", async () => {
+    refreshIx = vaultClient.getRefreshIx(solendAccounts, portAccounts, jetAccounts);
     // Create depositor token account
     const userAuthority = anchor.web3.Keypair.generate();
     const userReserveTokenAccount = await reserveTokenMint.createAccount(
@@ -220,44 +185,18 @@ describe("castle-vault", () => {
 
     lpToken = new Token(
       provider.connection,
-      vaultState.lpTokenMint,
+      vaultClient.vaultState.lpTokenMint,
       TOKEN_PROGRAM_ID,
       payer
     );
     userLpTokenAccount = await lpToken.createAccount(owner.publicKey);
 
-    refreshIx = program.instruction.refresh({
-      accounts: {
-        vault: vaultId,
-        vaultReserveToken: vaultState.vaultReserveToken,
-        vaultSolendLpToken: vaultState.vaultSolendLpToken,
-        vaultPortLpToken: vaultState.vaultPortLpToken,
-        vaultJetLpToken: vaultState.vaultJetLpToken,
-        solendProgram: solendProgramId,
-        solendReserveState: solendReserve.publicKey,
-        solendPyth: pythPrice,
-        solendSwitchboard: switchboardFeed,
-        portProgram: port.PORT_LENDING,
-        portReserveState: portReserveState.address,
-        portOracle: portReserveState.oracle,
-        jetProgram: jetProgram,
-        jetMarket: jetMarket.address,
-        jetMarketAuthority: jetMarket.marketAuthority,
-        jetReserveState: jetReserveAccounts.accounts.reserve.publicKey,
-        jetFeeNoteVault: jetReserveAccounts.accounts.feeNoteVault,
-        jetDepositNoteMint: jetReserveAccounts.accounts.depositNoteMint,
-        jetPyth: jetReserveAccounts.accounts.pythPrice,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        clock: SYSVAR_CLOCK_PUBKEY,
-      },
-    });
-
     await program.rpc.deposit(new anchor.BN(depositAmount), {
       accounts: {
-        vault: vaultId,
-        vaultAuthority: vaultState.vaultAuthority,
-        vaultReserveToken: vaultState.vaultReserveToken,
-        lpTokenMint: vaultState.lpTokenMint,
+        vault: vaultClient.vaultId,
+        vaultAuthority: vaultClient.vaultState.vaultAuthority,
+        vaultReserveToken: vaultClient.vaultState.vaultReserveToken,
+        lpTokenMint: vaultClient.vaultState.lpTokenMint,
         userReserveToken: userReserveTokenAccount,
         userLpToken: userLpTokenAccount,
         userAuthority: userAuthority.publicKey,
@@ -273,7 +212,7 @@ describe("castle-vault", () => {
     assert.equal(userTokenAccountInfo.amount.toNumber(), 0);
 
     const tokenAccountInfo = await reserveTokenMint.getAccountInfo(
-      vaultState.vaultReserveToken
+      vaultClient.vaultState.vaultReserveToken
     );
     assert.equal(tokenAccountInfo.amount.toNumber(), depositAmount);
 
@@ -309,13 +248,13 @@ describe("castle-vault", () => {
 
     await program.rpc.withdraw(new anchor.BN(withdrawAmount), {
       accounts: {
-        vault: vaultId,
-        vaultAuthority: vaultState.vaultAuthority,
+        vault: vaultClient.vaultId,
+        vaultAuthority: vaultClient.vaultState.vaultAuthority,
         userAuthority: userAuthority.publicKey,
         userLpToken: userLpTokenAccount,
         userReserveToken: userReserveTokenAccount,
-        vaultReserveToken: vaultState.vaultReserveToken,
-        vaultLpMint: vaultState.lpTokenMint,
+        vaultReserveToken: vaultClient.vaultState.vaultReserveToken,
+        vaultLpMint: vaultClient.vaultState.lpTokenMint,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
       signers: [userAuthority],
@@ -343,29 +282,29 @@ describe("castle-vault", () => {
     tx.add(
       program.instruction.rebalance(new anchor.BN(0), {
         accounts: {
-          vault: vaultId,
-          vaultReserveToken: vaultState.vaultReserveToken,
-          vaultSolendLpToken: vaultState.vaultSolendLpToken,
-          vaultPortLpToken: vaultState.vaultPortLpToken,
-          vaultJetLpToken: vaultState.vaultJetLpToken,
-          solendReserveState: solendReserve.publicKey,
-          portReserveState: portReserveState.address,
-          jetReserveState: jetReserveAccounts.accounts.reserve.publicKey,
+          vault: vaultClient.vaultId,
+          vaultReserveToken: vaultClient.vaultState.vaultReserveToken,
+          vaultSolendLpToken: vaultClient.vaultState.vaultSolendLpToken,
+          vaultPortLpToken: vaultClient.vaultState.vaultPortLpToken,
+          vaultJetLpToken: vaultClient.vaultState.vaultJetLpToken,
+          solendReserveState: solendAccounts.reserve,
+          portReserveState: portAccounts.reserve,
+          jetReserveState: jetAccounts.reserve,
         },
       })
     );
     reconcileSolendIx = program.instruction.reconcileSolend({
       accounts: {
-        vault: vaultId,
-        vaultAuthority: vaultState.vaultAuthority,
-        vaultReserveToken: vaultState.vaultReserveToken,
-        vaultSolendLpToken: vaultState.vaultSolendLpToken,
-        solendProgram: solendProgramId,
-        solendMarketAuthority: solendMarketAuthority,
-        solendMarket: solendMarket.publicKey,
-        solendReserveState: solendReserve.publicKey,
-        solendLpMint: solendCollateralMint.publicKey,
-        solendReserveToken: solendLiquiditySupply.publicKey,
+        vault: vaultClient.vaultId,
+        vaultAuthority: vaultClient.vaultState.vaultAuthority,
+        vaultReserveToken: vaultClient.vaultState.vaultReserveToken,
+        vaultSolendLpToken: vaultClient.vaultState.vaultSolendLpToken,
+        solendProgram: solendAccounts.program,
+        solendMarketAuthority: solendAccounts.marketAuthority,
+        solendMarket: solendAccounts.market,
+        solendReserveState: solendAccounts.reserve,
+        solendLpMint: solendAccounts.collateralMint,
+        solendReserveToken: solendAccounts.liquiditySupply,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
@@ -374,16 +313,16 @@ describe("castle-vault", () => {
 
     reconcilePortIx = program.instruction.reconcilePort({
       accounts: {
-        vault: vaultId,
-        vaultAuthority: vaultState.vaultAuthority,
-        vaultReserveToken: vaultState.vaultReserveToken,
-        vaultPortLpToken: vaultState.vaultPortLpToken,
+        vault: vaultClient.vaultId,
+        vaultAuthority: vaultClient.vaultState.vaultAuthority,
+        vaultReserveToken: vaultClient.vaultState.vaultReserveToken,
+        vaultPortLpToken: vaultClient.vaultState.vaultPortLpToken,
         portProgram: port.PORT_LENDING,
-        portMarketAuthority: portMarketAuthority,
-        portMarket: portMarket.publicKey,
-        portReserveState: portReserveState.address,
-        portLpMint: portReserveState.collateralMintAccount,
-        portReserveToken: portReserveState.liquiditySupplyPubkey,
+        portMarketAuthority: portAccounts.marketAuthority,
+        portMarket: portAccounts.market,
+        portReserveState: portAccounts.reserve,
+        portLpMint: portAccounts.collateralMint,
+        portReserveToken: portAccounts.liquiditySupply,
         clock: SYSVAR_CLOCK_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
@@ -392,16 +331,16 @@ describe("castle-vault", () => {
 
     reconcileJetIx = program.instruction.reconcileJet({
       accounts: {
-        vault: vaultId,
-        vaultAuthority: vaultState.vaultAuthority,
-        vaultReserveToken: vaultState.vaultReserveToken,
-        vaultJetLpToken: vaultState.vaultJetLpToken,
-        jetProgram: jet.PROGRAM_ID,
-        jetMarket: jetMarket.address,
-        jetMarketAuthority: jetMarketAuthority,
-        jetReserveState: jetReserveAccounts.accounts.reserve.publicKey,
-        jetReserveToken: jetReserveAccounts.accounts.vault,
-        jetLpMint: jetReserveAccounts.accounts.depositNoteMint,
+        vault: vaultClient.vaultId,
+        vaultAuthority: vaultClient.vaultState.vaultAuthority,
+        vaultReserveToken: vaultClient.vaultState.vaultReserveToken,
+        vaultJetLpToken: vaultClient.vaultState.vaultJetLpToken,
+        jetProgram: jetAccounts.program,
+        jetMarket: jetAccounts.market,
+        jetMarketAuthority: jetAccounts.marketAuthority,
+        jetReserveState: jetAccounts.reserve,
+        jetReserveToken: jetAccounts.liquiditySupply,
+        jetLpMint: jetAccounts.depositNoteMint,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
     });
@@ -410,7 +349,7 @@ describe("castle-vault", () => {
     await provider.send(tx);
 
     const vaultReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(
-      vaultState.vaultReserveToken
+      vaultClient.vaultState.vaultReserveToken
     );
     assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 2);
 
@@ -418,19 +357,19 @@ describe("castle-vault", () => {
     const solendAllocation = 0.332;
     const solendCollateralToken = new Token(
       provider.connection,
-      solendCollateralMint.publicKey,
+      solendAccounts.collateralMint,
       TOKEN_PROGRAM_ID,
       payer
     );
     const vaultSolendLpTokenAccountInfo = await solendCollateralToken.getAccountInfo(
-      vaultState.vaultSolendLpToken
+      vaultClient.vaultState.vaultSolendLpToken
     );
     assert.equal(
       vaultSolendLpTokenAccountInfo.amount.toNumber(),
       (depositAmount - withdrawAmount) * solendAllocation * solendCollateralRatio
     );
     const solendLiquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(
-      solendLiquiditySupply.publicKey
+      solendAccounts.liquiditySupply
     );
     assert.equal(
       solendLiquiditySupplyAccountInfo.amount.toNumber(),
@@ -441,19 +380,19 @@ describe("castle-vault", () => {
     const portAllocation = 0.332;
     const portCollateralToken = new Token(
       provider.connection,
-      portReserveState.collateralMintAccount,
+      portAccounts.collateralMint,
       TOKEN_PROGRAM_ID,
       payer
     );
     const vaultPortLpTokenAccountInfo = await portCollateralToken.getAccountInfo(
-      vaultState.vaultPortLpToken
+      vaultClient.vaultState.vaultPortLpToken
     );
     assert.equal(
       vaultPortLpTokenAccountInfo.amount.toNumber(),
       (depositAmount - withdrawAmount) * portAllocation * portCollateralRatio
     );
     const portLiquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(
-      portReserveState.liquiditySupplyPubkey
+      portAccounts.liquiditySupply
     );
     assert.equal(
       portLiquiditySupplyAccountInfo.amount.toNumber(),
@@ -464,12 +403,12 @@ describe("castle-vault", () => {
     const jetAllocation = 0.332;
     const jetCollateralToken = new Token(
       provider.connection,
-      jetReserveAccounts.accounts.depositNoteMint,
+      jetAccounts.depositNoteMint,
       TOKEN_PROGRAM_ID,
       payer
     );
     const vaultJetLpTokenAccountInfo = await jetCollateralToken.getAccountInfo(
-      vaultState.vaultJetLpToken
+      vaultClient.vaultState.vaultJetLpToken
     );
     assert.equal(
       vaultJetLpTokenAccountInfo.amount.toNumber(),
@@ -477,7 +416,7 @@ describe("castle-vault", () => {
     );
 
     const jetLiquiditySupplyAccountInfo = await reserveTokenMint.getAccountInfo(
-      jetReserveAccounts.accounts.vault
+      jetAccounts.liquiditySupply
     );
     assert.equal(
       jetLiquiditySupplyAccountInfo.amount.toNumber(),
