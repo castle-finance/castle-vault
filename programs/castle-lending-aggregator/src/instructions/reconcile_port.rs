@@ -105,6 +105,7 @@ pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
                 ctx.accounts
                     .port_deposit_reserve_liquidity_context()
                     .with_signer(&[&vault.authority_seeds()]),
+                port_anchor_adaptor::Cluster::Devnet,
                 tokens_to_deposit,
             )?;
         }
@@ -120,6 +121,7 @@ pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
                 ctx.accounts
                     .port_redeem_reserve_collateral_context()
                     .with_signer(&[&vault.authority_seeds()]),
+                port_anchor_adaptor::Cluster::Devnet,
                 tokens_to_redeem,
             )?;
         }

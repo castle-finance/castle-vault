@@ -127,7 +127,10 @@ impl<'info> Refresh<'info> {
 pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
-    port_anchor_adaptor::refresh_port_reserve(ctx.accounts.port_refresh_reserve_context())?;
+    port_anchor_adaptor::refresh_port_reserve(
+        ctx.accounts.port_refresh_reserve_context(),
+        port_anchor_adaptor::Cluster::Devnet,
+    )?;
     jet::cpi::refresh_reserve(ctx.accounts.jet_refresh_reserve_context())?;
 
     // TODO redeem liquidity mining rewards

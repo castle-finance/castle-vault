@@ -19,7 +19,7 @@ anchor-lang = "0.18.2"
 anchor-spl = "0.18.2"
 jet = {git = "https://github.com/jet-lab/jet-v1/", version = "0.2.0", features = ["no-entrypoint", "cpi"]}
 jet-proto-math = "1.0.1"
-port-anchor-adaptor = {git = "https://github.com/port-finance/port-anchor-adaptor", rev = "b86589f718091a678bc5e1eb2484c5724b72f269"}
+port-anchor-adaptor = {git = "https://github.com/castle-finance/port-anchor-adaptor.git", version = "0.2.9"}
 port-variable-rate-lending-instructions = "0.2.9"
 solana-maths = "0.1.1"
 spl-math = {version = "0.1", features = ["no-entrypoint"]}

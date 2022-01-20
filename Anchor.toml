@@ -27,7 +27,7 @@ address = "CjqQ9kx9STBLtSUdypHTjNJsLE4t6uQossjdSzq9jdmY"
 address = "ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx"
 program = "../../solend/solana-program-library/target/deploy/spl_token_lending.so"
 [[test.genesis]]
-address = "Port7uDYB3wk6GJAw4KT1WpTeMtSu9bTcChBHkX2LfR"
+address = "pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4"
 program = "../../port-finance/variable-rate-lending/target/deploy/port_finance_variable_rate_lending.so"
 [[test.genesis]]
 address = "JPv1rCqrhagNNmJVM5J1he7msQ5ybtvE1nNuHpDHMNU"

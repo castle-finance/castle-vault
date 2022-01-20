@@ -26,6 +26,7 @@ describe("castle-vault", () => {
     const solendReserve = anchor.web3.Keypair.generate();
     const solendLiquiditySupply = anchor.web3.Keypair.generate();
 
+    // TODO change to devnet version
     const solendProgramId = new PublicKey("ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx")
     const solendProgram = new Solend(provider, solendProgramId);
 
