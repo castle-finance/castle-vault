@@ -203,6 +203,70 @@ export class VaultClient {
     });
   }
 
+  // Amount is currently denominated in lp tokens. Convert to reserve tokens?
+  async withdraw(
+    wallet: anchor.Wallet,
+    amount: number,
+    userLpTokenAccount: PublicKey,
+    solendAccounts: SolendAccounts,
+    portAccounts: PortAccounts,
+    jetAccounts: JetAccounts
+  ): Promise<string> {
+    let ixs = [this.getRefreshIx(solendAccounts, portAccounts, jetAccounts)];
+
+    const userReserveTokenAccount = await this.getUserReserveTokenAccount(
+      wallet
+    );
+
+    // Create account if it does not exist
+    const userReserveTokenAccountInfo =
+      await this.program.provider.connection.getAccountInfo(
+        userReserveTokenAccount
+      );
+    if (userReserveTokenAccountInfo == null) {
+      ixs.unshift(
+        createAta(
+          wallet,
+          this.vaultState.reserveTokenMint,
+          userReserveTokenAccount
+        )
+      );
+    }
+    return await this.program.rpc.withdraw(new anchor.BN(amount), {
+      accounts: {
+        vault: this.vaultId,
+        vaultAuthority: this.vaultState.vaultAuthority,
+        userAuthority: wallet.publicKey,
+        userLpToken: userLpTokenAccount,
+        userReserveToken: userReserveTokenAccount,
+        vaultReserveToken: this.vaultState.vaultReserveToken,
+        vaultLpMint: this.vaultState.lpTokenMint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+      instructions: ixs,
+    });
+  }
+
+  // TODO delete / consolidate these 4 fns?
+  async getUserReserveTokenAccount(wallet: anchor.Wallet): Promise<PublicKey> {
+    return await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      this.vaultState.reserveTokenMint,
+      wallet.publicKey
+    );
+  }
+
+  async getReserveTokenAccountInfo(address: PublicKey): Promise<AccountInfo> {
+    const reserveToken = new Token(
+      this.program.provider.connection,
+      this.vaultState.reserveTokenMint,
+      TOKEN_PROGRAM_ID,
+      Keypair.generate() // dummy since we don't need to send txs
+    );
+    return reserveToken.getAccountInfo(address);
+  }
+
   async getUserLpTokenAccount(wallet: anchor.Wallet): Promise<PublicKey> {
     return await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,

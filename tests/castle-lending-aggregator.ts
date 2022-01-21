@@ -212,26 +212,20 @@ describe("castle-vault", () => {
 
   const withdrawAmount = 500;
   it("Withdraws from vault reserves", async () => {
-    // Create token account to withdraw into
-    const userReserveTokenAccount = await reserveTokenMint.createAccount(
-      owner.publicKey
+    await vaultClient.withdraw(
+      wallet,
+      withdrawAmount,
+      userLpTokenAccount,
+      solendAccounts,
+      portAccounts,
+      jetAccounts
     );
 
-    await program.rpc.withdraw(new anchor.BN(withdrawAmount), {
-      accounts: {
-        vault: vaultClient.vaultId,
-        vaultAuthority: vaultClient.vaultState.vaultAuthority,
-        userAuthority: wallet.publicKey,
-        userLpToken: userLpTokenAccount,
-        userReserveToken: userReserveTokenAccount,
-        vaultReserveToken: vaultClient.vaultState.vaultReserveToken,
-        vaultLpMint: vaultClient.vaultState.lpTokenMint,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      },
-      instructions: [refreshIx],
-    });
+    const userReserveTokenAccount = await vaultClient.getUserReserveTokenAccount(
+      wallet
+    );
 
-    const userReserveTokenAccountInfo = await reserveTokenMint.getAccountInfo(
+    const userReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
       userReserveTokenAccount
     );
     assert.equal(userReserveTokenAccountInfo.amount.toNumber(), withdrawAmount);
