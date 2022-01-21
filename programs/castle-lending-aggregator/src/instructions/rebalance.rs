@@ -9,6 +9,7 @@ use solend::SolendReserve;
 
 use crate::cpi::solend;
 use crate::errors::ErrorCode;
+use crate::events::RebalanceEvent;
 use crate::rebalance::assets::{Asset, LendingMarket};
 use crate::rebalance::strategies::*;
 use crate::state::*;
@@ -79,6 +80,7 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
         .map(|a| calc_vault_allocation(*a, vault_value))
         .collect::<Result<Vec<_>, _>>()?;
 
+    // TODO use https://doc.rust-lang.org/std/ops/trait.Index.html to make this less bad
     let clock = Clock::get()?;
     let vault_allocations = &mut ctx.accounts.vault.allocations;
     vault_allocations
@@ -91,8 +93,11 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
         .jet
         .update(new_vault_allocations[2], clock.slot);
 
-    msg!("Vault allocations: {:?}", new_vault_allocations);
-
+    emit!(RebalanceEvent {
+        solend: new_vault_allocations[0],
+        port: new_vault_allocations[1],
+        jet: new_vault_allocations[2],
+    });
     Ok(())
 }
 

@@ -7,7 +7,6 @@ use port_anchor_adaptor::PortReserve;
 use solana_maths::{Rate, TryMul};
 
 use crate::cpi::SolendReserve;
-use crate::errors::ErrorCode::{self, TryFromReserveError};
 
 pub trait Asset {
     fn expected_return(&self) -> Option<Rate>;
