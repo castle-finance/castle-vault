@@ -26,6 +26,7 @@ describe("castle-vault", () => {
   // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
+  const wallet = provider.wallet as anchor.Wallet;
 
   const program = anchor.workspace
     .CastleLendingAggregator as anchor.Program<CastleLendingAggregator>;
@@ -143,6 +144,7 @@ describe("castle-vault", () => {
   });
 
   let vaultClient: VaultClient;
+  let refreshIx: TransactionInstruction;
 
   // TODO create test vaults for each strategy
   it("Creates vault", async () => {
@@ -157,54 +159,31 @@ describe("castle-vault", () => {
     );
     // TODO add more checks
     assert.notEqual(vaultClient.vaultState, null);
+
+    refreshIx = vaultClient.getRefreshIx(solendAccounts, portAccounts, jetAccounts);
   });
 
-  let lpToken: Token;
   let userLpTokenAccount: PublicKey;
-
-  let refreshIx: TransactionInstruction;
 
   const depositAmount = 1000;
   const initialCollateralRatio = 1.0;
 
   it("Deposits to vault reserves", async () => {
-    refreshIx = vaultClient.getRefreshIx(solendAccounts, portAccounts, jetAccounts);
     // Create depositor token account
-    const userAuthority = anchor.web3.Keypair.generate();
     const userReserveTokenAccount = await reserveTokenMint.createAccount(
-      owner.publicKey
+      wallet.publicKey
     );
     await reserveTokenMint.mintTo(userReserveTokenAccount, owner, [], depositAmount);
-    await reserveTokenMint.approve(
+    userLpTokenAccount = await vaultClient.getUserLpTokenAccount(wallet);
+
+    await vaultClient.deposit(
+      wallet,
+      depositAmount,
       userReserveTokenAccount,
-      userAuthority.publicKey,
-      owner,
-      [],
-      depositAmount
+      solendAccounts,
+      portAccounts,
+      jetAccounts
     );
-
-    lpToken = new Token(
-      provider.connection,
-      vaultClient.vaultState.lpTokenMint,
-      TOKEN_PROGRAM_ID,
-      payer
-    );
-    userLpTokenAccount = await lpToken.createAccount(owner.publicKey);
-
-    await program.rpc.deposit(new anchor.BN(depositAmount), {
-      accounts: {
-        vault: vaultClient.vaultId,
-        vaultAuthority: vaultClient.vaultState.vaultAuthority,
-        vaultReserveToken: vaultClient.vaultState.vaultReserveToken,
-        lpTokenMint: vaultClient.vaultState.lpTokenMint,
-        userReserveToken: userReserveTokenAccount,
-        userLpToken: userLpTokenAccount,
-        userAuthority: userAuthority.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      },
-      signers: [userAuthority],
-      instructions: [refreshIx],
-    });
 
     const userTokenAccountInfo = await reserveTokenMint.getAccountInfo(
       userReserveTokenAccount
@@ -216,13 +195,15 @@ describe("castle-vault", () => {
     );
     assert.equal(tokenAccountInfo.amount.toNumber(), depositAmount);
 
-    const userPoolTokenAccountInfo = await lpToken.getAccountInfo(userLpTokenAccount);
+    const userLpTokenAccountInfo = await vaultClient.getLpTokenAccountInfo(
+      userLpTokenAccount
+    );
     assert.equal(
-      userPoolTokenAccountInfo.amount.toNumber(),
+      userLpTokenAccountInfo.amount.toNumber(),
       depositAmount * initialCollateralRatio
     );
 
-    const lpTokenMintInfo = await lpToken.getMintInfo();
+    const lpTokenMintInfo = await vaultClient.getLpTokenMintInfo();
     assert.equal(
       lpTokenMintInfo.supply.toNumber(),
       depositAmount * initialCollateralRatio
@@ -236,28 +217,17 @@ describe("castle-vault", () => {
       owner.publicKey
     );
 
-    // Delegate authority to transfer pool tokens
-    const userAuthority = anchor.web3.Keypair.generate();
-    await lpToken.approve(
-      userLpTokenAccount,
-      userAuthority.publicKey,
-      owner,
-      [],
-      withdrawAmount
-    );
-
     await program.rpc.withdraw(new anchor.BN(withdrawAmount), {
       accounts: {
         vault: vaultClient.vaultId,
         vaultAuthority: vaultClient.vaultState.vaultAuthority,
-        userAuthority: userAuthority.publicKey,
+        userAuthority: wallet.publicKey,
         userLpToken: userLpTokenAccount,
         userReserveToken: userReserveTokenAccount,
         vaultReserveToken: vaultClient.vaultState.vaultReserveToken,
         vaultLpMint: vaultClient.vaultState.lpTokenMint,
         tokenProgram: TOKEN_PROGRAM_ID,
       },
-      signers: [userAuthority],
       instructions: [refreshIx],
     });
 
@@ -266,7 +236,9 @@ describe("castle-vault", () => {
     );
     assert.equal(userReserveTokenAccountInfo.amount.toNumber(), withdrawAmount);
 
-    const userLpTokenAccountInfo = await lpToken.getAccountInfo(userLpTokenAccount);
+    const userLpTokenAccountInfo = await vaultClient.getLpTokenAccountInfo(
+      userLpTokenAccount
+    );
     assert.equal(
       userLpTokenAccountInfo.amount.toNumber(),
       depositAmount * initialCollateralRatio - withdrawAmount

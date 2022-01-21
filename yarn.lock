@@ -11,6 +11,10 @@
 
 "@castlefinance/vault-sdk@file:sdk":
   version "1.0.0"
+  dependencies:
+    "@project-serum/anchor" "0.18.2"
+    "@solana/spl-token" "0.1.8"
+    "@solana/web3.js" "^1.31.0"
 
 "@dbricks/dbricks-solend@0.0.6":
   version "0.0.6"
@@ -60,9 +64,9 @@
     eventemitter3 "^4.0.7"
 
 "@port.finance/port-sdk@^0.2.33":
-  version "0.2.33"
-  resolved "https://registry.yarnpkg.com/@port.finance/port-sdk/-/port-sdk-0.2.33.tgz#a0ed36128202ca0ed2544c91777dbfeb3706f1db"
-  integrity sha512-WLf7ubyVno2h1mYjlIIDQVn6DF87jjqLuPM7dS0sN0Z+4o+tRWUs+9cigUFJ9TpnVPAXp8ADP4PAXQ+N3Nmu3g==
+  version "0.2.37"
+  resolved "https://registry.yarnpkg.com/@port.finance/port-sdk/-/port-sdk-0.2.37.tgz#195d7c9753dc3edca790ba87bd96322aa9a5a6a5"
+  integrity sha512-ait6jjQbcdAjbC7CoWCgH+kku8P7D5MqawNRDu9aieN/sDSea6xfBy5tzZ7NrXQr8cYhJaSx6dq+ynNiqv+DZA==
   dependencies:
     "@solana/buffer-layout" "^3.0.0"
     "@solana/spl-token" "^0.1.8"
@@ -159,9 +163,9 @@
     buffer "~6.0.3"
 
 "@solana/spl-token-registry@^0.2.1107":
-  version "0.2.1588"
-  resolved "https://registry.yarnpkg.com/@solana/spl-token-registry/-/spl-token-registry-0.2.1588.tgz#fa12bffa92b3bb20f3c85fd90eea7f80cd313bb5"
-  integrity sha512-paKr6KLFAO8LdwXEUDPdW9NifrLiZ5P0qu6PvtPJc0Yq76naiIb56XIMzbkCnrdB5njHGblTPZzrNgE/hlOlsA==
+  version "0.2.1670"
+  resolved "https://registry.yarnpkg.com/@solana/spl-token-registry/-/spl-token-registry-0.2.1670.tgz#fd22eb3fc05b0b5c43bcf7708881f4b2f4f4f57e"
+  integrity sha512-bp3MpuF/02XCBpfSbAlDtxPwyvDWHSIbh8Q0znG3x69GztXQc4mI598QiTjz+dk2TPSgDiAcHPc6ax4AbbfB5A==
   dependencies:
     cross-fetch "3.0.6"
 
@@ -210,9 +214,9 @@
     tweetnacl "^1.0.0"
 
 "@solendprotocol/solend-sdk@^0.4.4":
-  version "0.4.4"
-  resolved "https://registry.yarnpkg.com/@solendprotocol/solend-sdk/-/solend-sdk-0.4.4.tgz#38065381ec72616ca12b3a64ab525b78c94b5003"
-  integrity sha512-0m63yA6embTcrCYh6d9Z1aqtM/4LGe6DWe16V+93NlnfLtdIZ4gMUYndMNJ8twZYcGgvkpJFGfHcKe2y/0eN0w==
+  version "0.4.5"
+  resolved "https://registry.yarnpkg.com/@solendprotocol/solend-sdk/-/solend-sdk-0.4.5.tgz#f33e644179a71ef0dbcc8d2d2b41143d6e748ed7"
+  integrity sha512-CBazPU73Ynb9Fa2pYZZ+640f8scV76FHTOB2aUgKCPBEeYEmpGK4bByRmPkxvgeYo3CgXHHz+hav9oYOfoxAHQ==
   dependencies:
     "@pythnetwork/client" "^2.5.1"
     "@solana/buffer-layout" "^3.0.0"
@@ -258,19 +262,19 @@
   integrity sha512-0d5Wd09ItQWH1qFbEyQ7oTQ3GZrMfth5JkbN3EvTKLXcHLRDSXeLnlvlOn0wvxVIwK5o2M8JzP/OWz7T3NRsbw==
 
 "@types/mocha@^9.0.0":
-  version "9.0.0"
-  resolved "https://registry.yarnpkg.com/@types/mocha/-/mocha-9.0.0.tgz#3205bcd15ada9bc681ac20bef64e9e6df88fd297"
-  integrity sha512-scN0hAWyLVAvLR9AyW7HoFF5sJZglyBsbPuHO4fv7JRvfmPBMfp1ozWqOf/e4wwPNxezBZXRfWzMb6iFLgEVRA==
+  version "9.1.0"
+  resolved "https://registry.yarnpkg.com/@types/mocha/-/mocha-9.1.0.tgz#baf17ab2cca3fcce2d322ebc30454bff487efad5"
+  integrity sha512-QCWHkbMv4Y5U9oW10Uxbr45qMMSzl4OzijsozynUAgx3kEHUdXB00udx2dWDQ7f2TU2a2uuiFaRZjCe3unPpeg==
 
 "@types/node@*":
-  version "17.0.8"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.8.tgz#50d680c8a8a78fe30abe6906453b21ad8ab0ad7b"
-  integrity sha512-YofkM6fGv4gDJq78g4j0mMuGMkZVxZDgtU0JRdx6FgiJDG+0fY0GKVolOV8WqVmEhLCXkQRjwDdKyPxJp/uucg==
+  version "17.0.10"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-17.0.10.tgz#616f16e9d3a2a3d618136b1be244315d95bd7cab"
+  integrity sha512-S/3xB4KzyFxYGCppyDt68yzBU9ysL88lSdIah4D6cptdcltc4NCPCAMc0+PCpg/lLIyC7IPvj2Z52OJWeIUkog==
 
 "@types/node@^12.12.54":
-  version "12.20.41"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.41.tgz#81d7734c5257da9f04354bd9084a6ebbdd5198a5"
-  integrity sha512-f6xOqucbDirG7LOzedpvzjP3UTmHttRou3Mosx3vL9wr9AIQGhcPgVnqa8ihpZYnxyM1rxeNCvTyukPKZtq10Q==
+  version "12.20.42"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.42.tgz#2f021733232c2130c26f9eabbdd3bfd881774733"
+  integrity sha512-aI3/oo5DzyiI5R/xAhxxRzfZlWlsbbqdgxfTPkqu/Zt+23GXiJvMCyPJT4+xKSXOnLqoL8jJYMLTwvK2M3a5hw==
 
 "@types/qs@*":
   version "6.9.7"
@@ -597,11 +601,11 @@ cross-fetch@3.0.6:
     node-fetch "2.6.1"
 
 cross-fetch@^3.1.4:
-  version "3.1.4"
-  resolved "https://registry.yarnpkg.com/cross-fetch/-/cross-fetch-3.1.4.tgz#9723f3a3a247bf8b89039f3a380a9244e8fa2f39"
-  integrity sha512-1eAtFWdIubi6T4XPy6ei9iUFoKpUkIF971QLN8lIvvvwueI65+Nw5haMNKUwfJxabqlIIDODJKGrQ66gxC0PbQ==
+  version "3.1.5"
+  resolved "https://registry.yarnpkg.com/cross-fetch/-/cross-fetch-3.1.5.tgz#e1389f44d9e7ba767907f7af8454787952ab534f"
+  integrity sha512-lvb1SBsI0Z7GDwmuid+mU3kWVBwTVUbe7S0H52yaaAdQOXq2YktTCZdlAcNKFzE6QtRz0snpw9bNiPeOIkkQvw==
   dependencies:
-    node-fetch "2.6.1"
+    node-fetch "2.6.7"
 
 crypto-hash@^1.3.0:
   version "1.3.0"
@@ -1291,10 +1295,10 @@ node-fetch@2.6.1:
   resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.1.tgz#045bd323631f76ed2e2b55573394416b639a0052"
   integrity sha512-V4aYg89jEoVRxRb2fJdAg8FHvI7cEyYdVAh94HH0UIK8oJxUfkjlDQN9RbMx+bEjP7+ggMiFRprSti032Oipxw==
 
-node-fetch@^2.6.1:
-  version "2.6.6"
-  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.6.tgz#1751a7c01834e8e1697758732e9efb6eeadfaf89"
-  integrity sha512-Z8/6vRlTUChSdIgMa51jxQ4lrw/Jy5SOW10ObaA47/RElsAN2c5Pn8bTgFGWn/ibwzXTE8qwr1Yzx28vsecXEA==
+node-fetch@2.6.7, node-fetch@^2.6.1:
+  version "2.6.7"
+  resolved "https://registry.yarnpkg.com/node-fetch/-/node-fetch-2.6.7.tgz#24de9fba827e3b4ae44dc8b20256a379160052ad"
+  integrity sha512-ZjMPFEfVx5j+y2yF35Kzx5sF7kDzxuDj6ziH4FFbOp87zKDZNx8yExJIb05OGF4Nlt9IHFIMBkRl41VdvcNdbQ==
   dependencies:
     whatwg-url "^5.0.0"
 
@@ -1631,9 +1635,9 @@ type-detect@^4.0.0, type-detect@^4.0.5:
   integrity sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g==
 
 typescript@^4.3.5:
-  version "4.5.4"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.5.4.tgz#a17d3a0263bf5c8723b9c52f43c5084edf13c2e8"
-  integrity sha512-VgYs2A2QIRuGphtzFV7aQJduJ2gyfTljngLzjpfW9FoYZF6xuw1W0vW9ghCKLfcWrCFxK81CSGRAvS1pn4fIUg==
+  version "4.5.5"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-4.5.5.tgz#d8c953832d28924a9e3d37c73d729c846c5896f3"
+  integrity sha512-TCTIul70LyWe6IJWT8QSYeA54WQe8EjQFU4wY52Fasj5UKx88LNYKCgBEHcOMOrFF1rKGbD8v/xcNWVUq9SymA==
 
 unbox-primitive@^1.0.1:
   version "1.0.1"

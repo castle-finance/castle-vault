@@ -1,5 +1,11 @@
 import * as anchor from "@project-serum/anchor";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import {
+  AccountInfo,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  MintInfo,
+  Token,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 import {
   Keypair,
   PublicKey,
@@ -40,6 +46,7 @@ export class VaultClient {
     return new VaultClient(program, vaultId, vaultState);
   }
 
+  // TODO split into get Tx and send?
   static async initialize(
     program: anchor.Program<CastleLendingAggregator>,
     wallet: anchor.Wallet,
@@ -126,6 +133,8 @@ export class VaultClient {
     return new VaultClient(program, vaultId.publicKey, vaultState);
   }
 
+  // TODO store params as class vars so that caller doesn't have to keep track of them?
+  // Adapter pattern?
   getRefreshIx(
     solendAccounts: SolendAccounts,
     portAccounts: PortAccounts,
@@ -158,7 +167,83 @@ export class VaultClient {
     });
   }
 
-  deposit(amount: number): string {
-    return amount.toString();
+  async deposit(
+    wallet: anchor.Wallet,
+    amount: number,
+    userReserveTokenAccount: PublicKey,
+    solendAccounts: SolendAccounts,
+    portAccounts: PortAccounts,
+    jetAccounts: JetAccounts
+  ): Promise<string> {
+    let ixs = [this.getRefreshIx(solendAccounts, portAccounts, jetAccounts)];
+
+    const userLpTokenAccount = await this.getUserLpTokenAccount(wallet);
+
+    // Create account if it does not exist
+    const userLpTokenAccountInfo =
+      await this.program.provider.connection.getAccountInfo(userLpTokenAccount);
+    if (userLpTokenAccountInfo == null) {
+      ixs.unshift(
+        createAta(wallet, this.vaultState.lpTokenMint, userLpTokenAccount)
+      );
+    }
+
+    return await this.program.rpc.deposit(new anchor.BN(amount), {
+      accounts: {
+        vault: this.vaultId,
+        vaultAuthority: this.vaultState.vaultAuthority,
+        vaultReserveToken: this.vaultState.vaultReserveToken,
+        lpTokenMint: this.vaultState.lpTokenMint,
+        userReserveToken: userReserveTokenAccount,
+        userLpToken: userLpTokenAccount,
+        userAuthority: wallet.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+      instructions: ixs,
+    });
+  }
+
+  async getUserLpTokenAccount(wallet: anchor.Wallet): Promise<PublicKey> {
+    return await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      this.vaultState.lpTokenMint,
+      wallet.publicKey
+    );
+  }
+
+  async getLpTokenAccountInfo(address: PublicKey): Promise<AccountInfo> {
+    const lpToken = new Token(
+      this.program.provider.connection,
+      this.vaultState.lpTokenMint,
+      TOKEN_PROGRAM_ID,
+      Keypair.generate() // dummy since we don't need to send txs
+    );
+    return lpToken.getAccountInfo(address);
+  }
+
+  async getLpTokenMintInfo(): Promise<MintInfo> {
+    const lpToken = new Token(
+      this.program.provider.connection,
+      this.vaultState.lpTokenMint,
+      TOKEN_PROGRAM_ID,
+      Keypair.generate() // dummy since we don't need to send txs
+    );
+    return lpToken.getMintInfo();
   }
 }
+
+const createAta = (
+  wallet: anchor.Wallet,
+  mint: PublicKey,
+  address: PublicKey
+): TransactionInstruction => {
+  return Token.createAssociatedTokenAccountInstruction(
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    TOKEN_PROGRAM_ID,
+    mint,
+    address,
+    wallet.publicKey,
+    wallet.publicKey
+  );
+};

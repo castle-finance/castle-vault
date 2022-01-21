@@ -1,5 +1,6 @@
 {
     "dependencies": {
+        "@castlefinance/vault-sdk": "file:sdk",
         "@dbricks/dbricks-solend": "0.0.6",
         "@jet-lab/jet-engine": "0.2.2",
         "@port.finance/port-sdk": "^0.2.33",
@@ -7,8 +8,7 @@
         "@project-serum/common": "^0.0.1-beta.3",
         "@solana/spl-token": "0.1.8",
         "@solana/web3.js": "^1.31.0",
-        "@solendprotocol/solend-sdk": "^0.4.4",
-        "@castlefinance/vault-sdk": "file:sdk"
+        "@solendprotocol/solend-sdk": "^0.4.4"
     },
     "devDependencies": {
         "@types/mocha": "^9.0.0",
