@@ -21,9 +21,7 @@ import * as jet from "./helpers/jet";
 import * as port from "./helpers/port";
 import * as solend from "./helpers/solend";
 
-// TODO use provider.wallet instead of owner
 describe("castle-vault", () => {
-  // Configure the client to use the local cluster.
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
   const wallet = provider.wallet as anchor.Wallet;
@@ -32,7 +30,6 @@ describe("castle-vault", () => {
     .CastleLendingAggregator as anchor.Program<CastleLendingAggregator>;
 
   const owner = Keypair.generate();
-  const payer = Keypair.generate();
 
   const pythProduct = new PublicKey("3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E");
   const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
@@ -48,15 +45,12 @@ describe("castle-vault", () => {
   let jetAccounts: JetAccounts;
 
   before("Initialize lending markets", async () => {
-    const sig = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
+    const sig = await provider.connection.requestAirdrop(owner.publicKey, 1000000000);
     await provider.connection.confirmTransaction(sig, "singleGossip");
-
-    const sig2 = await provider.connection.requestAirdrop(owner.publicKey, 1000000000);
-    await provider.connection.confirmTransaction(sig2, "singleGossip");
 
     quoteTokenMint = await Token.createMint(
       provider.connection,
-      payer,
+      owner,
       owner.publicKey,
       null,
       2,
@@ -65,7 +59,7 @@ describe("castle-vault", () => {
 
     reserveTokenMint = await Token.createMint(
       provider.connection,
-      payer,
+      owner,
       owner.publicKey,
       null,
       2,
@@ -85,7 +79,7 @@ describe("castle-vault", () => {
     const solendMarket = await solend.initLendingMarket(
       provider,
       owner.publicKey,
-      payer,
+      owner,
       new PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s"),
       new PublicKey("2TfB33aLaneQb5TNVwyDz3jSZXS6jdW2ARw1Dgf84XCG")
     );
@@ -94,7 +88,7 @@ describe("castle-vault", () => {
       initialReserveAmount,
       ownerReserveTokenAccount,
       owner,
-      payer,
+      owner,
       reserveTokenMint,
       pythProduct,
       pythPrice,
@@ -325,7 +319,7 @@ describe("castle-vault", () => {
       provider.connection,
       solendAccounts.collateralMint,
       TOKEN_PROGRAM_ID,
-      payer
+      owner
     );
     const vaultSolendLpTokenAccountInfo = await solendCollateralToken.getAccountInfo(
       vaultClient.vaultState.vaultSolendLpToken
@@ -348,7 +342,7 @@ describe("castle-vault", () => {
       provider.connection,
       portAccounts.collateralMint,
       TOKEN_PROGRAM_ID,
-      payer
+      owner
     );
     const vaultPortLpTokenAccountInfo = await portCollateralToken.getAccountInfo(
       vaultClient.vaultState.vaultPortLpToken
@@ -371,7 +365,7 @@ describe("castle-vault", () => {
       provider.connection,
       jetAccounts.depositNoteMint,
       TOKEN_PROGRAM_ID,
-      payer
+      owner
     );
     const vaultJetLpTokenAccountInfo = await jetCollateralToken.getAccountInfo(
       vaultClient.vaultState.vaultJetLpToken
