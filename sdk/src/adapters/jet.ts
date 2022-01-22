@@ -1,44 +1,169 @@
 import {
-  DEX_ID,
-  Jet,
-  JetClient,
-  JetMarket,
-  JET_ID,
-  ReserveConfig,
-} from "@jet-lab/jet-engine";
-import {
   Keypair,
   PublicKey,
+  Signer,
   SystemProgram,
   SYSVAR_CLOCK_PUBKEY,
   SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
-import { BN, Provider } from "@project-serum/anchor";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { JetAccounts } from "../../sdk/src/types";
+import * as anchor from "@project-serum/anchor";
+import {
+  Amount,
+  DEX_ID,
+  JetClient,
+  JetMarket,
+  JetReserve,
+  JetUser,
+  JET_ID,
+  ReserveConfig,
+} from "@jet-lab/jet-engine";
 
-export async function createLendingMarket(
+import { Asset } from "./asset";
+
+export interface JetAccounts {
+  program: PublicKey;
+  reserve: PublicKey;
+  market: PublicKey;
+  marketAuthority: PublicKey;
+  feeNoteVault: PublicKey;
+  depositNoteMint: PublicKey;
+  liquiditySupply: PublicKey;
+  pythPrice: PublicKey;
+}
+
+export class JetReserveAsset extends Asset {
+  provider: anchor.Provider;
+  accounts: JetAccounts;
+  reserve: JetReserve;
+  market: JetMarket;
+
+  async getLpTokenAccountValue(address: PublicKey): Promise<number> {
+    this.market.refresh();
+
+    const exchangeRate =
+      this.market.reserves[this.reserve.data.index].depositNoteExchangeRate;
+
+    const lpToken = new Token(
+      this.provider.connection,
+      this.reserve.data.depositNoteMint,
+      TOKEN_PROGRAM_ID,
+      Keypair.generate() // dummy signer since we aren't making any txs
+    );
+
+    const lpTokenAccountInfo = await lpToken.getAccountInfo(address);
+    return lpTokenAccountInfo.amount.toNumber() * exchangeRate.toNumber();
+  }
+
+  async getApy(): Promise<number> {
+    await this.reserve.refresh();
+    return this.reserve.data.depositApy;
+  }
+
+  private constructor(
+    provider: anchor.Provider,
+    accounts: JetAccounts,
+    market: JetMarket,
+    reserve: JetReserve
+  ) {
+    super();
+    this.provider = provider;
+    this.accounts = accounts;
+    this.market = market;
+    this.reserve = reserve;
+  }
+
+  /**
+   * Creates a market, reserves, and adds initial liquidity
+   *
+   * TODO Split into create market adding reserves to it
+   *
+   * @param provider
+   * @param owner
+   * @param marketQuoteTokenMint
+   * @param reserveToken
+   * @param pythPrice
+   * @param pythProduct
+   * @param ownerReserveTokenAccount
+   * @param initialReserveAmount
+   * @returns
+   */
+  static async initialize(
+    provider: anchor.Provider,
+    wallet: anchor.Wallet,
+    owner: Signer,
+    marketQuoteTokenMint: PublicKey,
+    reserveToken: Token,
+    pythPrice: PublicKey,
+    pythProduct: PublicKey,
+    ownerReserveTokenAccount: PublicKey,
+    initialReserveAmount: number
+  ): Promise<JetReserveAsset> {
+    const client = await JetClient.connect(provider, true);
+    const market = await createLendingMarket(
+      client,
+      wallet,
+      marketQuoteTokenMint
+    );
+
+    const accounts = await createReserve(
+      wallet,
+      client,
+      market.address,
+      marketQuoteTokenMint,
+      reserveToken,
+      TOKEN_PROGRAM_ID, // dummy dex market addr
+      pythPrice,
+      pythProduct
+    );
+
+    const reserve = await JetReserve.load(client, accounts.reserve);
+    const jetUser = await JetUser.load(
+      client,
+      market,
+      [reserve],
+      owner.publicKey
+    );
+    const depositTx = await jetUser.makeDepositTx(
+      reserve,
+      ownerReserveTokenAccount,
+      Amount.tokens(initialReserveAmount)
+    );
+    await provider.send(depositTx, [owner]);
+
+    return new JetReserveAsset(provider, accounts, market, reserve);
+  }
+}
+
+async function createLendingMarket(
   client: JetClient,
-  owner: PublicKey,
+  wallet: anchor.Wallet,
   quoteCurrencyMint: PublicKey
 ): Promise<JetMarket> {
   const account = Keypair.generate();
 
-  await client.program.rpc.initMarket(owner, "USD", quoteCurrencyMint, {
-    accounts: {
-      market: account.publicKey,
-    },
-    signers: [account],
-    instructions: [await client.program.account.market.createInstruction(account)],
-  });
+  await client.program.rpc.initMarket(
+    wallet.publicKey,
+    "USD",
+    quoteCurrencyMint,
+    {
+      accounts: {
+        market: account.publicKey,
+      },
+      signers: [account],
+      instructions: [
+        await client.program.account.market.createInstruction(account),
+      ],
+    }
+  );
 
   return JetMarket.load(client, account.publicKey);
 }
 
-export async function initReserve(
+async function createReserve(
+  wallet: anchor.Wallet,
   client: JetClient,
   market: PublicKey,
-  marketOwner: PublicKey,
   quoteTokenMint: PublicKey,
   tokenMint: Token,
   dexMarket: PublicKey,
@@ -54,10 +179,10 @@ export async function initReserve(
     client.program.programId,
     ["loans", reserve, tokenMint]
   );
-  const [vault, vaultBump] = await findProgramAddress(client.program.programId, [
-    "vault",
-    reserve,
-  ]);
+  const [vault, vaultBump] = await findProgramAddress(
+    client.program.programId,
+    ["vault", reserve]
+  );
   const [feeNoteVault, feeNoteVaultBump] = await findProgramAddress(
     client.program.programId,
     ["fee-vault", reserve]
@@ -111,10 +236,10 @@ export async function initReserve(
     minCollateralRatio: 12500,
     liquidationPremium: 300,
     manageFeeRate: 0,
-    manageFeeCollectionThreshold: new BN(10),
+    manageFeeCollectionThreshold: new anchor.BN(10),
     loanOriginationFee: 0,
     liquidationSlippage: 300,
-    liquidationDexTradeMax: new BN(100),
+    liquidationDexTradeMax: new anchor.BN(100),
     reserved0: 0,
     reserved1: Array(24).fill(0),
   };
@@ -123,7 +248,7 @@ export async function initReserve(
     accounts: toPublicKeys({
       market,
       marketAuthority,
-      owner: marketOwner,
+      owner: wallet.publicKey,
 
       oracleProduct: reserveAccounts.accounts.pythProduct,
       oraclePrice: reserveAccounts.accounts.pythPrice,
@@ -138,7 +263,7 @@ export async function initReserve(
 
       ...reserveAccounts.accounts,
     }),
-    signers: [reserveAccounts.accounts.reserve],
+    signers: [reserveAccounts.accounts.reserve, wallet.payer],
     instructions: [
       await client.program.account.reserve.createInstruction(
         reserveAccounts.accounts.reserve
@@ -156,14 +281,6 @@ export async function initReserve(
     liquiditySupply: vault,
     pythPrice: pythPrice,
   };
-}
-
-export async function getMarketAuthority(
-  market: PublicKey,
-  programId: PublicKey = JET_ID
-): Promise<PublicKey> {
-  const [marketAuthority] = await findProgramAddress(programId, [market]);
-  return marketAuthority;
 }
 
 /**
