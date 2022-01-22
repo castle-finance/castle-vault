@@ -15,12 +15,16 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 url = "d"
 
 [[test.clone]]
+# SOL/USD pyth product
 address = "3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E"
 [[test.clone]]
+# SOL/USD pyth price
 address = "J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix"
 [[test.clone]]
-address = "GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR"
+# SOL/USD switchboard feed
+address = "AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL"
 [[test.clone]]
+# Something to do with jet--serum?
 address = "CjqQ9kx9STBLtSUdypHTjNJsLE4t6uQossjdSzq9jdmY"
 
 [[test.genesis]]

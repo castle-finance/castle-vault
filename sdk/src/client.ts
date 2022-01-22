@@ -36,23 +36,30 @@ export class VaultClient {
   private constructor(
     program: anchor.Program<CastleLendingAggregator>,
     vaultId: PublicKey,
-    vault: Vault
+    vault: Vault,
+    solend: SolendReserveAsset,
+    port: PortReserveAsset,
+    jet: JetReserveAsset
   ) {
     this.program = program;
     this.vaultId = vaultId;
     this.vaultState = vault;
+    this.solend = solend;
+    this.port = port;
+    this.jet = jet;
   }
 
-  static async load(
-    program: anchor.Program<CastleLendingAggregator>,
-    vaultId: PublicKey
-  ): Promise<VaultClient> {
-    const vaultState = await program.account.vault.fetch(vaultId);
-    return new VaultClient(program, vaultId, vaultState);
-  }
+  //static async load(
+  //  program: anchor.Program<CastleLendingAggregator>,
+  //  vaultId: PublicKey
+  //): Promise<VaultClient> {
+  //  const vaultState = await program.account.vault.fetch(vaultId);
+  //  return new VaultClient(program, vaultId, vaultState);
+  //}
 
   private async reload() {
     this.vaultState = await this.program.account.vault.fetch(this.vaultId);
+    // TODO reload underlying asset data also?
   }
 
   static async initialize(
@@ -141,11 +148,16 @@ export class VaultClient {
     );
     const vaultState = await program.account.vault.fetch(vaultId.publicKey);
 
-    return new VaultClient(program, vaultId.publicKey, vaultState);
+    return new VaultClient(
+      program,
+      vaultId.publicKey,
+      vaultState,
+      solend,
+      port,
+      jet
+    );
   }
 
-  // TODO store params as class vars so that caller doesn't have to keep track of them?
-  // Adapter pattern?
   private getRefreshIx(): TransactionInstruction {
     return this.program.instruction.refresh({
       accounts: {
@@ -181,7 +193,9 @@ export class VaultClient {
   ): Promise<TransactionSignature> {
     let ixs = [this.getRefreshIx()];
 
-    const userLpTokenAccount = await this.getUserLpTokenAccount(wallet);
+    const userLpTokenAccount = await this.getUserLpTokenAccount(
+      wallet.publicKey
+    );
 
     // Create account if it does not exist
     const userLpTokenAccountInfo =
@@ -208,25 +222,39 @@ export class VaultClient {
     });
   }
 
-  // Amount is currently denominated in lp tokens. Convert to reserve tokens?
   async withdraw(
     wallet: anchor.Wallet,
     amount: number,
     userLpTokenAccount: PublicKey
-  ): Promise<TransactionSignature> {
-    let ixs = [this.getRefreshIx()];
+  ): Promise<TransactionSignature[]> {
+    let txs = [];
 
-    const userReserveTokenAccount = await this.getUserReserveTokenAccount(
-      wallet
+    // Withdraw from lending markets if not enough reserves in vault
+    // Has to be 2 transactions because of size limits
+    const vaultReserveTokenAccountInfo = await this.getReserveTokenAccountInfo(
+      this.vaultState.vaultReserveToken
     );
+    const vaultReserveAmount = vaultReserveTokenAccountInfo.amount.toNumber();
+    if (vaultReserveAmount < amount) {
+      const rrTx = new Transaction();
+      rrTx.add(this.getRefreshIx());
+      for (let ix of await this.getRebalanceAndReconcileIxs(amount)) {
+        rrTx.add(ix);
+      }
+      txs.push({ tx: rrTx, signers: [wallet.payer] });
+    }
 
-    // Create account if it does not exist
+    const withdrawTx = new Transaction();
+    const userReserveTokenAccount = await this.getUserReserveTokenAccount(
+      wallet.publicKey
+    );
+    // Create reserve token account to withdraw into if it does not exist
     const userReserveTokenAccountInfo =
       await this.program.provider.connection.getAccountInfo(
         userReserveTokenAccount
       );
     if (userReserveTokenAccountInfo == null) {
-      ixs.unshift(
+      withdrawTx.add(
         createAta(
           wallet,
           this.vaultState.reserveTokenMint,
@@ -234,30 +262,26 @@ export class VaultClient {
         )
       );
     }
-
-    // Withdraw from lending markets if not enough reserves in vault
-    const vaultReserveTokenAccountInfo = await this.getReserveTokenAccountInfo(
-      this.vaultState.vaultReserveToken
+    withdrawTx.add(this.getRefreshIx());
+    // Convert from reserve tokens to LP tokens
+    const exchangeRate = await this.getLpExchangeRate();
+    const convertedAmount = amount / exchangeRate;
+    withdrawTx.add(
+      this.program.instruction.withdraw(new anchor.BN(convertedAmount), {
+        accounts: {
+          vault: this.vaultId,
+          vaultAuthority: this.vaultState.vaultAuthority,
+          userAuthority: wallet.publicKey,
+          userLpToken: userLpTokenAccount,
+          userReserveToken: userReserveTokenAccount,
+          vaultReserveToken: this.vaultState.vaultReserveToken,
+          vaultLpMint: this.vaultState.lpTokenMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      })
     );
-    const vaultReserveAmount = vaultReserveTokenAccountInfo.amount.toNumber();
-    if (vaultReserveAmount < amount) {
-      ixs = [...ixs, ...(await this.getRebalanceAndReconcileIxs(amount))];
-    }
-
-    return this.program.rpc.withdraw(new anchor.BN(amount), {
-      accounts: {
-        vault: this.vaultId,
-        vaultAuthority: this.vaultState.vaultAuthority,
-        userAuthority: wallet.publicKey,
-        userLpToken: userLpTokenAccount,
-        userReserveToken: userReserveTokenAccount,
-        vaultReserveToken: this.vaultState.vaultReserveToken,
-        vaultLpMint: this.vaultState.lpTokenMint,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      },
-      signers: [wallet.payer],
-      instructions: ixs,
-    });
+    txs.push({ tx: withdrawTx, signers: [wallet.payer] });
+    return this.program.provider.sendAll(txs);
   }
 
   async rebalance(): Promise<TransactionSignature> {
@@ -428,7 +452,12 @@ export class VaultClient {
   async getLpExchangeRate(): Promise<number> {
     const totalValue = await this.getTotalValue();
     const lpTokenMintInfo = await this.getLpTokenMintInfo();
-    return totalValue / lpTokenMintInfo.supply.toNumber();
+    const lpTokenSupply = lpTokenMintInfo.supply.toNumber();
+    if (lpTokenSupply == 0 || totalValue == 0) {
+      return 1;
+    } else {
+      return totalValue / lpTokenSupply;
+    }
   }
 
   async getTotalValue(): Promise<number> {
@@ -436,20 +465,20 @@ export class VaultClient {
     return this.vaultState.totalValue.toNumber();
   }
 
-  async getUserValue(wallet: anchor.Wallet): Promise<number> {
-    const userLpTokenAccount = await this.getUserLpTokenAccount(wallet);
+  async getUserValue(address: PublicKey): Promise<number> {
+    const userLpTokenAccount = await this.getUserLpTokenAccount(address);
     const userLpTokenAmount = (
       await this.getLpTokenAccountInfo(userLpTokenAccount)
     ).amount.toNumber();
     return userLpTokenAmount * (await this.getLpExchangeRate());
   }
 
-  async getUserReserveTokenAccount(wallet: anchor.Wallet): Promise<PublicKey> {
+  async getUserReserveTokenAccount(address: PublicKey): Promise<PublicKey> {
     return await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
       TOKEN_PROGRAM_ID,
       this.vaultState.reserveTokenMint,
-      wallet.publicKey
+      address
     );
   }
 
@@ -463,12 +492,12 @@ export class VaultClient {
     return reserveToken.getAccountInfo(address);
   }
 
-  async getUserLpTokenAccount(wallet: anchor.Wallet): Promise<PublicKey> {
+  async getUserLpTokenAccount(address: PublicKey): Promise<PublicKey> {
     return await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
       TOKEN_PROGRAM_ID,
       this.vaultState.lpTokenMint,
-      wallet.publicKey
+      address
     );
   }
 

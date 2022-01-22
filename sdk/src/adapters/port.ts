@@ -29,9 +29,13 @@ export interface PortAccounts {
 }
 
 export class PortReserveAsset extends Asset {
-  provider: anchor.Provider;
-  accounts: PortAccounts;
-  client: Port;
+  private constructor(
+    public provider: anchor.Provider,
+    public accounts: PortAccounts,
+    public client: Port
+  ) {
+    super();
+  }
 
   async getLpTokenAccountValue(address: PublicKey): Promise<number> {
     const reserve = await this.client.getReserve(this.accounts.reserve);
@@ -58,17 +62,6 @@ export class PortReserveAsset extends Asset {
   async getApy(): Promise<number> {
     const reserve = await this.client.getReserve(this.accounts.reserve);
     return reserve.getSupplyApy().getUnchecked().toNumber();
-  }
-
-  private constructor(
-    provider: anchor.Provider,
-    accounts: PortAccounts,
-    client: Port
-  ) {
-    super();
-    this.provider = provider;
-    this.accounts = accounts;
-    this.client = client;
   }
 
   static async initialize(

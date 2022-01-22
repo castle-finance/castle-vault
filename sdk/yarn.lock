@@ -9,19 +9,6 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
-"@dbricks/dbricks-solend@^0.0.6":
-  version "0.0.6"
-  resolved "https://registry.yarnpkg.com/@dbricks/dbricks-solend/-/dbricks-solend-0.0.6.tgz#9ecd7b859bfac6d8ec140f91cedf0b37458992b6"
-  integrity sha512-22WLNrDet8nTsTu/zxdlCjG61U1zCrEUla0ooDWj+aGILVAOspetNEu4ZJKbid7gzrH/Ug6l26YNrir6apsulg==
-  dependencies:
-    "@solana/spl-token" "0.1.6"
-    "@solana/web3.js" "^1.20.0"
-    bigint-buffer "^1.1.5"
-    bignumber.js "^9.0.1"
-    bn.js "^5.2.0"
-    buffer-layout "^1.2.2"
-    mkdirp "^1.0.4"
-
 "@eslint/eslintrc@^1.0.5":
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/@eslint/eslintrc/-/eslintrc-1.0.5.tgz#33f1b838dbf1f923bfa517e008362b78ddbbf318"
@@ -72,12 +59,12 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.1.tgz#b520529ec21d8e5945a1851dfd1c32e94e39ff45"
   integrity sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==
 
-"@jet-lab/jet-engine@0.2.2":
-  version "0.2.2"
-  resolved "https://registry.yarnpkg.com/@jet-lab/jet-engine/-/jet-engine-0.2.2.tgz#4e5641a181b2c9e302560e2be0790fe3d6e92bc7"
-  integrity sha512-RPBQ3Oni3GlblxuDLrONAurvrk+qa5+HyYWMik37ZiJgZ8zN2vpDXtmTkSHeuv3EFYbAkOGlW1EN0bQJICw7oQ==
+"@jet-lab/jet-engine@^0.2.2":
+  version "0.2.5"
+  resolved "https://registry.yarnpkg.com/@jet-lab/jet-engine/-/jet-engine-0.2.5.tgz#c8378f1df268c77567d14fe9193afc5e1699111a"
+  integrity sha512-SbDxk9cUT86j29IDL1gyz9J9KFasrsqNdMHF5CDfnIMg3us1YWQrngJRydAP7kzSwkr2//uI74zKoHCUZd6UkQ==
   dependencies:
-    "@project-serum/anchor" "^0.18.0"
+    "@project-serum/anchor" "^0.20.1"
     "@project-serum/serum" "^0.13.60"
     "@pythnetwork/client" "^2.5.1"
     "@solana/buffer-layout" "^3.0.0"
@@ -100,7 +87,7 @@
     tiny-invariant "^1.2.0"
     typescript "^4.3.5"
 
-"@project-serum/anchor@0.18.2", "@project-serum/anchor@^0.18.0":
+"@project-serum/anchor@0.18.2":
   version "0.18.2"
   resolved "https://registry.yarnpkg.com/@project-serum/anchor/-/anchor-0.18.2.tgz#0f13b5c2046446b7c24cf28763eec90febb28485"
   integrity sha512-uyjiN/3Ipp+4hrZRm/hG18HzGLZyvP790LXrCsGO3IWxSl28YRhiGEpKnZycfMW94R7nxdUoE3wY67V+ZHSQBQ==
@@ -131,6 +118,26 @@
     bn.js "^5.1.2"
     bs58 "^4.0.1"
     buffer-layout "^1.2.0"
+    camelcase "^5.3.1"
+    crypto-hash "^1.3.0"
+    eventemitter3 "^4.0.7"
+    find "^0.3.0"
+    js-sha256 "^0.9.0"
+    pako "^2.0.3"
+    snake-case "^3.0.4"
+    toml "^3.0.0"
+
+"@project-serum/anchor@^0.20.1":
+  version "0.20.1"
+  resolved "https://registry.yarnpkg.com/@project-serum/anchor/-/anchor-0.20.1.tgz#0937807e807e8332aa708cfef4bcb6cbb88b4129"
+  integrity sha512-2TuBmGUn9qeYz6sJINJlElrBuPsaUAtYyUsJ3XplEBf1pczrANAgs5ceJUFzdiqGEWLn+84ObSdBeChT/AXYFA==
+  dependencies:
+    "@project-serum/borsh" "^0.2.2"
+    "@solana/web3.js" "^1.17.0"
+    base64-js "^1.5.1"
+    bn.js "^5.1.2"
+    bs58 "^4.0.1"
+    buffer-layout "^1.2.2"
     camelcase "^5.3.1"
     crypto-hash "^1.3.0"
     eventemitter3 "^4.0.7"
@@ -176,23 +183,11 @@
     buffer "~6.0.3"
 
 "@solana/spl-token-registry@^0.2.1107":
-  version "0.2.1680"
-  resolved "https://registry.yarnpkg.com/@solana/spl-token-registry/-/spl-token-registry-0.2.1680.tgz#19109143103b34492beca8cdf4051809afc557f2"
-  integrity sha512-6MvGL1j/LKMZYPOxPWBDgT/TiUG7poO0yIMc2RHFCN4GqzCKTsTeLDFa58un4WX05SKoE2Mn/X64D8R11cYrgg==
+  version "0.2.1696"
+  resolved "https://registry.yarnpkg.com/@solana/spl-token-registry/-/spl-token-registry-0.2.1696.tgz#57042c3fed4c2dbd488526dfe5c2e55595a90099"
+  integrity sha512-YFydCv/BvK7sjMzKPmgF4w2MKQjKU5K9Qj7oZhoUMS7voGb1fzzu9I2yf+cYHVIwEsr01ICGnSg0cMAuP3OSAQ==
   dependencies:
     cross-fetch "3.0.6"
-
-"@solana/spl-token@0.1.6":
-  version "0.1.6"
-  resolved "https://registry.yarnpkg.com/@solana/spl-token/-/spl-token-0.1.6.tgz#fa136b0a3db84f07a99bc0e54cf4e91f2d6da2e8"
-  integrity sha512-fYj+a3w1bqWN6Ibf85XF3h2JkuxevI3Spvqi+mjsNqVUEo2AgxxTZmujNLn/jIzQDNdWkBfF/wYzH5ikcGHmfw==
-  dependencies:
-    "@babel/runtime" "^7.10.5"
-    "@solana/web3.js" "^1.12.0"
-    bn.js "^5.1.0"
-    buffer "6.0.3"
-    buffer-layout "^1.2.0"
-    dotenv "10.0.0"
 
 "@solana/spl-token@0.1.8", "@solana/spl-token@^0.1.6", "@solana/spl-token@^0.1.8":
   version "0.1.8"
@@ -206,7 +201,7 @@
     buffer-layout "^1.2.0"
     dotenv "10.0.0"
 
-"@solana/web3.js@^1.12.0", "@solana/web3.js@^1.17.0", "@solana/web3.js@^1.20.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.29.3", "@solana/web3.js@^1.30.2", "@solana/web3.js@^1.31.0":
+"@solana/web3.js@^1.17.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.29.3", "@solana/web3.js@^1.30.2", "@solana/web3.js@^1.31.0":
   version "1.32.0"
   resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.32.0.tgz#b9821de52d0e773c363516c3dcef9be701295d82"
   integrity sha512-jquZ/VBvM3zXAaTJvdWd9mlP0WiZaZqjji0vw5UAsb5IKIossrLhHtyUqMfo41Qkdwu1aVwf7YWG748i4XIJnw==
@@ -1228,11 +1223,6 @@ minimatch@^3.0.4:
   integrity sha512-yJHVQEhyqPLUTgt9B83PXu6W3rx4MvvHvSUvToogpwoGDOUQ+yDrR0HRot+yOCdCO7u4hX3pWft6kWBBcqh0UA==
   dependencies:
     brace-expansion "^1.1.7"
-
-mkdirp@^1.0.4:
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/mkdirp/-/mkdirp-1.0.4.tgz#3eb5ed62622756d79a5f0e2a221dfebad75c2f7e"
-  integrity sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
 
 ms@2.1.2:
   version "2.1.2"

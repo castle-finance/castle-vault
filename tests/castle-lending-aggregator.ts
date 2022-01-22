@@ -9,7 +9,8 @@ import {
   PortReserveAsset,
   VaultClient,
   CastleLendingAggregator,
-} from "@castlefinance/vault-sdk";
+} from "../sdk/src/index";
+//} from "@castlefinance/vault-sdk";
 
 describe("castle-vault", () => {
   const provider = anchor.Provider.env();
@@ -23,7 +24,7 @@ describe("castle-vault", () => {
 
   const pythProduct = new PublicKey("3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E");
   const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
-  const switchboardFeed = new PublicKey("GvDMxPzN1sCj7L26YDK2HnMRXEQmQ2aemov8YBtPS7vR");
+  const switchboardFeed = new PublicKey("AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL");
 
   const initialReserveAmount = 100;
 
@@ -67,7 +68,7 @@ describe("castle-vault", () => {
 
     const pythProgram = new PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s");
     const switchboardProgram = new PublicKey(
-      "2TfB33aLaneQb5TNVwyDz3jSZXS6jdW2ARw1Dgf84XCG"
+      "7azgmy1pFXHikv36q1zZASvFq5vFa39TT9NweVugKKTU"
     );
 
     solend = await SolendReserveAsset.initialize(
@@ -82,13 +83,6 @@ describe("castle-vault", () => {
       switchboardFeed,
       ownerReserveTokenAccount,
       initialReserveAmount
-    );
-    const ownerReserveTokenAccountInfo = await reserveToken.getAccountInfo(
-      ownerReserveTokenAccount
-    );
-    console.log(
-      "reserve tokens in owner account after solend init: {}",
-      ownerReserveTokenAccountInfo.amount.toNumber()
     );
 
     port = await PortReserveAsset.initialize(
@@ -139,7 +133,7 @@ describe("castle-vault", () => {
     // Create depositor token account
     const userReserveTokenAccount = await reserveToken.createAccount(wallet.publicKey);
     await reserveToken.mintTo(userReserveTokenAccount, owner, [], depositAmount);
-    userLpTokenAccount = await vaultClient.getUserLpTokenAccount(wallet);
+    userLpTokenAccount = await vaultClient.getUserLpTokenAccount(wallet.publicKey);
 
     await vaultClient.deposit(wallet, depositAmount, userReserveTokenAccount);
 
@@ -173,9 +167,8 @@ describe("castle-vault", () => {
     await vaultClient.withdraw(wallet, withdrawAmount, userLpTokenAccount);
 
     const userReserveTokenAccount = await vaultClient.getUserReserveTokenAccount(
-      wallet
+      wallet.publicKey
     );
-
     const userReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
       userReserveTokenAccount
     );
@@ -193,24 +186,17 @@ describe("castle-vault", () => {
   it("Forwards deposits to lending markets", async () => {
     await vaultClient.rebalance();
 
-    const vaultReserveTokenAccountInfo = await reserveToken.getAccountInfo(
+    const vaultReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
       vaultClient.vaultState.vaultReserveToken
     );
     assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 2);
 
     const solendCollateralRatio = 1;
     const solendAllocation = 0.332;
-    const solendCollateralToken = new Token(
-      provider.connection,
-      vaultClient.solend.accounts.collateralMint,
-      TOKEN_PROGRAM_ID,
-      owner
-    );
-    const vaultSolendLpTokenAccountInfo = await solendCollateralToken.getAccountInfo(
-      vaultClient.vaultState.vaultSolendLpToken
-    );
     assert.equal(
-      vaultSolendLpTokenAccountInfo.amount.toNumber(),
+      await vaultClient.solend.getLpTokenAccountValue(
+        vaultClient.vaultState.vaultSolendLpToken
+      ),
       (depositAmount - withdrawAmount) * solendAllocation * solendCollateralRatio
     );
     const solendLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
@@ -223,17 +209,10 @@ describe("castle-vault", () => {
 
     const portCollateralRatio = 1;
     const portAllocation = 0.332;
-    const portCollateralToken = new Token(
-      provider.connection,
-      vaultClient.port.accounts.collateralMint,
-      TOKEN_PROGRAM_ID,
-      owner
-    );
-    const vaultPortLpTokenAccountInfo = await portCollateralToken.getAccountInfo(
-      vaultClient.vaultState.vaultPortLpToken
-    );
     assert.equal(
-      vaultPortLpTokenAccountInfo.amount.toNumber(),
+      await vaultClient.port.getLpTokenAccountValue(
+        vaultClient.vaultState.vaultPortLpToken
+      ),
       (depositAmount - withdrawAmount) * portAllocation * portCollateralRatio
     );
     const portLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
@@ -246,17 +225,10 @@ describe("castle-vault", () => {
 
     const jetCollateralRatio = 1;
     const jetAllocation = 0.332;
-    const jetCollateralToken = new Token(
-      provider.connection,
-      vaultClient.jet.accounts.depositNoteMint,
-      TOKEN_PROGRAM_ID,
-      owner
-    );
-    const vaultJetLpTokenAccountInfo = await jetCollateralToken.getAccountInfo(
-      vaultClient.vaultState.vaultJetLpToken
-    );
     assert.equal(
-      vaultJetLpTokenAccountInfo.amount.toNumber(),
+      await vaultClient.jet.getLpTokenAccountValue(
+        vaultClient.vaultState.vaultJetLpToken
+      ),
       (depositAmount - withdrawAmount) * jetAllocation * jetCollateralRatio
     );
 
@@ -269,11 +241,20 @@ describe("castle-vault", () => {
     );
   });
 
-  it("Rebalances", async () => {
-    // TODO
-  });
-
   it("Withdraws from lending programs", async () => {
-    // TODO
+    await vaultClient.withdraw(wallet, withdrawAmount, userLpTokenAccount);
+
+    const userReserveTokenAccount = await vaultClient.getUserReserveTokenAccount(
+      wallet.publicKey
+    );
+    const userReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
+      userReserveTokenAccount
+    );
+    assert.equal(userReserveTokenAccountInfo.amount.toNumber(), withdrawAmount * 2);
+
+    const userLpTokenAccountInfo = await vaultClient.getLpTokenAccountInfo(
+      userLpTokenAccount
+    );
+    assert.equal(userLpTokenAccountInfo.amount.toNumber(), 0);
   });
 });

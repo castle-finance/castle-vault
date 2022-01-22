@@ -33,16 +33,22 @@ export interface JetAccounts {
 }
 
 export class JetReserveAsset extends Asset {
-  provider: anchor.Provider;
-  accounts: JetAccounts;
-  reserve: JetReserve;
-  market: JetMarket;
+  private constructor(
+    public provider: anchor.Provider,
+    public accounts: JetAccounts,
+    public market: JetMarket,
+    public reserve: JetReserve
+  ) {
+    super();
+  }
 
   async getLpTokenAccountValue(address: PublicKey): Promise<number> {
-    this.market.refresh();
+    await this.market.refresh();
 
-    const exchangeRate =
-      this.market.reserves[this.reserve.data.index].depositNoteExchangeRate;
+    const reserveInfo = this.market.reserves[this.reserve.data.index];
+    const exchangeRate = reserveInfo.depositNoteExchangeRate.div(
+      new anchor.BN(1e15)
+    );
 
     const lpToken = new Token(
       this.provider.connection,
@@ -58,19 +64,6 @@ export class JetReserveAsset extends Asset {
   async getApy(): Promise<number> {
     await this.reserve.refresh();
     return this.reserve.data.depositApy;
-  }
-
-  private constructor(
-    provider: anchor.Provider,
-    accounts: JetAccounts,
-    market: JetMarket,
-    reserve: JetReserve
-  ) {
-    super();
-    this.provider = provider;
-    this.accounts = accounts;
-    this.market = market;
-    this.reserve = reserve;
   }
 
   /**
@@ -117,6 +110,7 @@ export class JetReserveAsset extends Asset {
       pythProduct
     );
 
+    //const reserve = await JetReserve.load(client, accounts.reserve, market);
     const reserve = await JetReserve.load(client, accounts.reserve);
     const jetUser = await JetUser.load(
       client,

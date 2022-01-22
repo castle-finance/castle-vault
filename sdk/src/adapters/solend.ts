@@ -16,7 +16,10 @@ import * as anchor from "@project-serum/anchor";
 import { blob, struct, u8, Layout } from "buffer-layout";
 import { toBigIntLE, toBufferLE } from "bigint-buffer";
 import {
+  calculateSupplyAPY,
   LENDING_MARKET_SIZE,
+  parseReserve,
+  Reserve,
   //RESERVE_SIZE
 } from "@solendprotocol/solend-sdk";
 
@@ -34,13 +37,12 @@ export interface SolendAccounts {
 }
 
 export class SolendReserveAsset extends Asset {
-  provider: anchor.Provider;
-  accounts: SolendAccounts;
-
-  private constructor(provider: anchor.Provider, accounts: SolendAccounts) {
+  private constructor(
+    public provider: anchor.Provider,
+    public accounts: SolendAccounts,
+    public reserve: Reserve
+  ) {
     super();
-    this.provider = provider;
-    this.accounts = accounts;
   }
 
   static async initialize(
@@ -75,15 +77,50 @@ export class SolendReserveAsset extends Asset {
       switchboardFeed,
       market.publicKey
     );
+    const reserveAccountInfo = await provider.connection.getAccountInfo(
+      accounts.reserve
+    );
+    const reserve = parseReserve(accounts.reserve, reserveAccountInfo).info;
 
-    return new SolendReserveAsset(provider, accounts);
+    return new SolendReserveAsset(provider, accounts, reserve);
+  }
+
+  private async reload() {
+    const reserveAccountInfo = await this.provider.connection.getAccountInfo(
+      this.accounts.reserve
+    );
+    this.reserve = parseReserve(this.accounts.reserve, reserveAccountInfo).info;
   }
 
   async getLpTokenAccountValue(address: PublicKey): Promise<number> {
-    throw new Error("Method not implemented.");
+    await this.reload();
+
+    const lpToken = new Token(
+      this.provider.connection,
+      this.reserve.collateral.mintPubkey,
+      TOKEN_PROGRAM_ID,
+      Keypair.generate() // dummy signer since we aren't making any txs
+    );
+    const lpTokenAmount = new anchor.BN(
+      (await lpToken.getAccountInfo(address)).amount
+    );
+
+    const WAD = "1".concat(Array(18 + 1).join("0"));
+    const totalBorrowsWads = this.reserve.liquidity.borrowedAmountWads;
+    const totalLiquidityWads = this.reserve.liquidity.availableAmount.mul(
+      new anchor.BN(WAD)
+    );
+    const totalDepositsWads = totalBorrowsWads.add(totalLiquidityWads);
+    const exchangeRate = new anchor.BN(totalDepositsWads.toString())
+      .div(new anchor.BN(this.reserve.collateral.mintTotalSupply.toString()))
+      .div(new anchor.BN(WAD));
+
+    return lpTokenAmount.mul(exchangeRate).toNumber();
   }
+
   async getApy(): Promise<number> {
-    throw new Error("Method not implemented.");
+    await this.reload();
+    return parseFloat(calculateSupplyAPY(this.reserve).toHuman());
   }
 }
 
