@@ -1,6 +1,6 @@
 import assert from "assert";
 import * as anchor from "@project-serum/anchor";
-import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, Token, NATIVE_MINT } from "@solana/spl-token";
 import { Keypair, PublicKey } from "@solana/web3.js";
 
 import {
@@ -29,7 +29,6 @@ describe("castle-vault", () => {
   const initialReserveAmount = 100;
 
   let reserveToken: Token;
-  let quoteTokenMint: Token;
 
   let jet: JetReserveAsset;
   let solend: SolendReserveAsset;
@@ -38,16 +37,6 @@ describe("castle-vault", () => {
   before("Initialize lending markets", async () => {
     const sig = await provider.connection.requestAirdrop(owner.publicKey, 1000000000);
     await provider.connection.confirmTransaction(sig, "singleGossip");
-
-    // Can delete and use dummy for jet?
-    quoteTokenMint = await Token.createMint(
-      provider.connection,
-      owner,
-      owner.publicKey,
-      null,
-      2,
-      TOKEN_PROGRAM_ID
-    );
 
     reserveToken = await Token.createMint(
       provider.connection,
@@ -98,7 +87,7 @@ describe("castle-vault", () => {
       provider,
       wallet,
       owner,
-      quoteTokenMint.publicKey,
+      NATIVE_MINT,
       reserveToken,
       pythPrice,
       pythProduct,
