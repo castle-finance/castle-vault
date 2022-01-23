@@ -106,12 +106,14 @@ pub fn handler(ctx: Context<ReconcileSolend>) -> ProgramResult {
 
     match allocation.value.checked_sub(current_solend_value) {
         Some(tokens_to_deposit) => {
-            solend::deposit_reserve_liquidity(
-                ctx.accounts
-                    .solend_deposit_reserve_liquidity_context()
-                    .with_signer(&[&vault.authority_seeds()]),
-                tokens_to_deposit,
-            )?;
+            if tokens_to_deposit != 0 {
+                solend::deposit_reserve_liquidity(
+                    ctx.accounts
+                        .solend_deposit_reserve_liquidity_context()
+                        .with_signer(&[&vault.authority_seeds()]),
+                    tokens_to_deposit,
+                )?;
+            }
         }
         None => {
             let tokens_to_redeem = ctx

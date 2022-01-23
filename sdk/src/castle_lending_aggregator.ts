@@ -37,7 +37,7 @@ export type CastleLendingAggregator = {
         },
         {
           name: "vaultJetLpToken";
-          isMut: false;
+          isMut: true;
           isSigner: false;
         },
         {
@@ -126,7 +126,7 @@ export type CastleLendingAggregator = {
       accounts: [
         {
           name: "vault";
-          isMut: false;
+          isMut: true;
           isSigner: false;
         },
         {
@@ -177,7 +177,7 @@ export type CastleLendingAggregator = {
       accounts: [
         {
           name: "vault";
-          isMut: false;
+          isMut: true;
           isSigner: false;
         },
         {
@@ -847,7 +847,7 @@ export const IDL: CastleLendingAggregator = {
         },
         {
           name: "vaultJetLpToken",
-          isMut: false,
+          isMut: true,
           isSigner: false,
         },
         {
@@ -936,7 +936,7 @@ export const IDL: CastleLendingAggregator = {
       accounts: [
         {
           name: "vault",
-          isMut: false,
+          isMut: true,
           isSigner: false,
         },
         {
@@ -987,7 +987,7 @@ export const IDL: CastleLendingAggregator = {
       accounts: [
         {
           name: "vault",
-          isMut: false,
+          isMut: true,
           isSigner: false,
         },
         {

@@ -107,12 +107,14 @@ pub fn handler(ctx: Context<ReconcileJet>) -> ProgramResult {
 
     match allocation.value.checked_sub(current_jet_value) {
         Some(tokens_to_deposit) => {
-            jet::cpi::deposit_tokens(
-                ctx.accounts
-                    .jet_deposit_context()
-                    .with_signer(&[&vault.authority_seeds()]),
-                Amount::from_tokens(tokens_to_deposit),
-            )?;
+            if tokens_to_deposit != 0 {
+                jet::cpi::deposit_tokens(
+                    ctx.accounts
+                        .jet_deposit_context()
+                        .with_signer(&[&vault.authority_seeds()]),
+                    Amount::from_tokens(tokens_to_deposit),
+                )?;
+            }
         }
         None => {
             let tokens_to_redeem = Amount::from_tokens(

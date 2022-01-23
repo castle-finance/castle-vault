@@ -9,7 +9,6 @@ import {
 } from "@solana/spl-token";
 import {
   Keypair,
-  LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
   SYSVAR_CLOCK_PUBKEY,
@@ -250,6 +249,7 @@ export class VaultClient {
     amount: number,
     userLpTokenAccount: PublicKey
   ): Promise<TransactionSignature[]> {
+    //console.debug("Withdrawing %d reserve tokens", amount);
     let txs = [];
 
     // Withdraw from lending markets if not enough reserves in vault
@@ -258,6 +258,7 @@ export class VaultClient {
       this.vaultState.vaultReserveToken
     );
     const vaultReserveAmount = vaultReserveTokenAccountInfo.amount.toNumber();
+    //console.debug("Reserve tokens in vault: %d", vaultReserveAmount);
     if (vaultReserveAmount < amount) {
       const rrTx = new Transaction();
       rrTx.add(this.getRefreshIx());
@@ -289,6 +290,7 @@ export class VaultClient {
     // Convert from reserve tokens to LP tokens
     const exchangeRate = await this.getLpExchangeRate();
     const convertedAmount = amount / exchangeRate;
+    //console.debug("Converted to %d lp tokens", convertedAmount);
     withdrawTx.add(
       this.program.instruction.withdraw(new anchor.BN(convertedAmount), {
         accounts: {
@@ -474,8 +476,10 @@ export class VaultClient {
   // Denominated in reserve tokens per LP token
   async getLpExchangeRate(): Promise<number> {
     const totalValue = await this.getTotalValue();
+    //console.debug("total vault value: %d", totalValue);
     const lpTokenMintInfo = await this.getLpTokenMintInfo();
     const lpTokenSupply = lpTokenMintInfo.supply.toNumber();
+    //console.debug("lp token supply: %d", lpTokenSupply);
     if (lpTokenSupply == 0 || totalValue == 0) {
       return 1;
     } else {
@@ -483,6 +487,14 @@ export class VaultClient {
     }
   }
 
+  /**
+   * Gets the total value stored in the vault, denominated in reserve tokens
+   *
+   * Note: this assumes that the total value in the vault state is up to date
+   * May need to calculate from ts client instead
+   *
+   * @returns
+   */
   async getTotalValue(): Promise<number> {
     await this.reload();
     return this.vaultState.totalValue.toNumber();

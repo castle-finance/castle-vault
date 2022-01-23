@@ -10,6 +10,7 @@ use crate::state::Vault;
 #[derive(Accounts)]
 pub struct Deposit<'info> {
     #[account(
+        mut,
         constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
         has_one = lp_token_mint,
         has_one = vault_authority,
@@ -84,6 +85,8 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
             .with_signer(&[&vault.authority_seeds()]),
         lp_tokens_to_mint,
     )?;
+
+    ctx.accounts.vault.total_value += reserve_token_amount;
 
     Ok(())
 }

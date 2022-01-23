@@ -101,13 +101,15 @@ pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
 
     match allocation.value.checked_sub(current_port_value) {
         Some(tokens_to_deposit) => {
-            port_anchor_adaptor::deposit_reserve(
-                ctx.accounts
-                    .port_deposit_reserve_liquidity_context()
-                    .with_signer(&[&vault.authority_seeds()]),
-                port_anchor_adaptor::Cluster::Devnet,
-                tokens_to_deposit,
-            )?;
+            if tokens_to_deposit != 0 {
+                port_anchor_adaptor::deposit_reserve(
+                    ctx.accounts
+                        .port_deposit_reserve_liquidity_context()
+                        .with_signer(&[&vault.authority_seeds()]),
+                    port_anchor_adaptor::Cluster::Devnet,
+                    tokens_to_deposit,
+                )?;
+            }
         }
         None => {
             let tokens_to_redeem = ctx

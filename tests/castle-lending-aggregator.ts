@@ -28,6 +28,9 @@ describe("castle-vault", () => {
   const switchboardFeed = new PublicKey("AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL");
 
   const initialReserveAmount = 100;
+  const depositAmount = 1000;
+  const withdrawAmount = 500;
+  const initialCollateralRatio = 1.0;
 
   let reserveToken: Token;
 
@@ -36,10 +39,6 @@ describe("castle-vault", () => {
   let port: PortReserveAsset;
 
   let vaultClient: VaultClient;
-
-  const depositAmount = 1000;
-  const withdrawAmount = 500;
-  const initialCollateralRatio = 1.0;
 
   async function initLendingMarkets() {
     const sig = await provider.connection.requestAirdrop(owner.publicKey, 1000000000);
@@ -264,6 +263,31 @@ describe("castle-vault", () => {
     );
 
     it("Forwards deposits to lending markets", testRebalance(0.332, 0.332, 0.332));
+
+    it("Withdraws from lending markets", testWithdraw(0, withdrawAmount * 2));
+  });
+
+  describe("max yield strategy", () => {
+    before(initLendingMarkets);
+
+    it("Creates vault", testInit({ maxYield: {} }));
+
+    it("Deposits to vault reserves", testDeposit());
+
+    it(
+      "Withdraws from vault reserves",
+      testWithdraw(
+        depositAmount * initialCollateralRatio - withdrawAmount,
+        withdrawAmount
+      )
+    );
+
+    it("Forwards deposits to lending markets", async () => {
+      testRebalance(0, 0, 1)();
+
+      // TODO borrow from solend to increase apy and ensure it switches to that
+      // TODO borrow from port to increase apy and ensure it switches to that
+    });
 
     it("Withdraws from lending markets", testWithdraw(0, withdrawAmount * 2));
   });

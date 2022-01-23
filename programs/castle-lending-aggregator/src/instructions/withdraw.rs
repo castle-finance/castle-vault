@@ -10,6 +10,7 @@ use crate::state::Vault;
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     #[account(
+        mut,
         constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
         has_one = vault_authority,
         has_one = vault_reserve_token,
@@ -79,6 +80,8 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
             .with_signer(&[&vault.authority_seeds()]),
         reserve_tokens_to_transfer,
     )?;
+
+    ctx.accounts.vault.total_value -= reserve_tokens_to_transfer;
 
     Ok(())
 }
