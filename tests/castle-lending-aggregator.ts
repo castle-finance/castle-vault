@@ -34,7 +34,13 @@ describe("castle-vault", () => {
   let solend: SolendReserveAsset;
   let port: PortReserveAsset;
 
-  before("Initialize lending markets", async () => {
+  let vaultClient: VaultClient;
+
+  const depositAmount = 1000;
+  const withdrawAmount = 500;
+  const initialCollateralRatio = 1.0;
+
+  async function initLendingMarkets() {
     const sig = await provider.connection.requestAirdrop(owner.publicKey, 1000000000);
     await provider.connection.confirmTransaction(sig, "singleGossip");
 
@@ -94,156 +100,156 @@ describe("castle-vault", () => {
       ownerReserveTokenAccount,
       initialReserveAmount
     );
-  });
+  }
 
-  let vaultClient: VaultClient;
+  function testDeposit(): () => Promise<void> {
+    return async function () {
+      const userReserveTokenAccount = await reserveToken.createAccount(
+        wallet.publicKey
+      );
+      await reserveToken.mintTo(userReserveTokenAccount, owner, [], depositAmount);
 
-  // TODO create test vaults for each strategy
-  it("Creates vault", async () => {
-    vaultClient = await VaultClient.initialize(
-      program,
-      provider.wallet as anchor.Wallet,
-      reserveToken.publicKey,
-      solend,
-      port,
-      jet,
-      { equalAllocation: {} }
-    );
-    // TODO add more checks
-    assert.notEqual(vaultClient.vaultState, null);
-  });
+      await vaultClient.deposit(wallet, depositAmount, userReserveTokenAccount);
 
-  let userLpTokenAccount: PublicKey;
+      const userTokenAccountInfo = await reserveToken.getAccountInfo(
+        userReserveTokenAccount
+      );
+      assert.equal(userTokenAccountInfo.amount.toNumber(), 0);
 
-  const depositAmount = 1000;
-  const initialCollateralRatio = 1.0;
+      const tokenAccountInfo = await reserveToken.getAccountInfo(
+        vaultClient.vaultState.vaultReserveToken
+      );
+      assert.equal(tokenAccountInfo.amount.toNumber(), depositAmount);
 
-  it("Deposits to vault reserves", async () => {
-    // Create depositor token account
-    const userReserveTokenAccount = await reserveToken.createAccount(wallet.publicKey);
-    await reserveToken.mintTo(userReserveTokenAccount, owner, [], depositAmount);
-    userLpTokenAccount = await vaultClient.getUserLpTokenAccount(wallet.publicKey);
+      const userLpTokenAccount = await vaultClient.getUserLpTokenAccount(
+        wallet.publicKey
+      );
+      const userLpTokenAccountInfo = await vaultClient.getLpTokenAccountInfo(
+        userLpTokenAccount
+      );
+      assert.equal(
+        userLpTokenAccountInfo.amount.toNumber(),
+        depositAmount * initialCollateralRatio
+      );
 
-    await vaultClient.deposit(wallet, depositAmount, userReserveTokenAccount);
+      const lpTokenMintInfo = await vaultClient.getLpTokenMintInfo();
+      assert.equal(
+        lpTokenMintInfo.supply.toNumber(),
+        depositAmount * initialCollateralRatio
+      );
+    };
+  }
 
-    const userTokenAccountInfo = await reserveToken.getAccountInfo(
-      userReserveTokenAccount
-    );
-    assert.equal(userTokenAccountInfo.amount.toNumber(), 0);
+  function testWithdraw(
+    expectUserLp: number,
+    expectUserReserve: number
+  ): () => Promise<void> {
+    return async function () {
+      const userLpTokenAccount = await vaultClient.getUserLpTokenAccount(
+        wallet.publicKey
+      );
+      await vaultClient.withdraw(wallet, withdrawAmount, userLpTokenAccount);
 
-    const tokenAccountInfo = await reserveToken.getAccountInfo(
-      vaultClient.vaultState.vaultReserveToken
-    );
-    assert.equal(tokenAccountInfo.amount.toNumber(), depositAmount);
+      const userReserveTokenAccount = await vaultClient.getUserReserveTokenAccount(
+        wallet.publicKey
+      );
+      const userReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
+        userReserveTokenAccount
+      );
+      assert.equal(userReserveTokenAccountInfo.amount.toNumber(), expectUserReserve);
 
-    const userLpTokenAccountInfo = await vaultClient.getLpTokenAccountInfo(
-      userLpTokenAccount
-    );
-    assert.equal(
-      userLpTokenAccountInfo.amount.toNumber(),
-      depositAmount * initialCollateralRatio
-    );
+      const userLpTokenAccountInfo = await vaultClient.getLpTokenAccountInfo(
+        userLpTokenAccount
+      );
+      assert.equal(userLpTokenAccountInfo.amount.toNumber(), expectUserLp);
+    };
+  }
 
-    const lpTokenMintInfo = await vaultClient.getLpTokenMintInfo();
-    assert.equal(
-      lpTokenMintInfo.supply.toNumber(),
-      depositAmount * initialCollateralRatio
-    );
-  });
+  describe("equal allocation strategy", () => {
+    before(initLendingMarkets);
 
-  const withdrawAmount = 500;
-  it("Withdraws from vault reserves", async () => {
-    await vaultClient.withdraw(wallet, withdrawAmount, userLpTokenAccount);
+    it("Creates vault", async () => {
+      vaultClient = await VaultClient.initialize(
+        program,
+        provider.wallet as anchor.Wallet,
+        reserveToken.publicKey,
+        solend,
+        port,
+        jet,
+        { equalAllocation: {} }
+      );
+      // TODO add more checks
+      assert.notEqual(vaultClient.vaultState, null);
+    });
 
-    const userReserveTokenAccount = await vaultClient.getUserReserveTokenAccount(
-      wallet.publicKey
-    );
-    const userReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
-      userReserveTokenAccount
-    );
-    assert.equal(userReserveTokenAccountInfo.amount.toNumber(), withdrawAmount);
+    it("Deposits to vault reserves", testDeposit());
 
-    const userLpTokenAccountInfo = await vaultClient.getLpTokenAccountInfo(
-      userLpTokenAccount
-    );
-    assert.equal(
-      userLpTokenAccountInfo.amount.toNumber(),
-      depositAmount * initialCollateralRatio - withdrawAmount
-    );
-  });
-
-  it("Forwards deposits to lending markets", async () => {
-    await vaultClient.rebalance();
-
-    const vaultReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
-      vaultClient.vaultState.vaultReserveToken
-    );
-    assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 2);
-
-    const solendCollateralRatio = 1;
-    const solendAllocation = 0.332;
-    assert.equal(
-      await vaultClient.solend.getLpTokenAccountValue(
-        vaultClient.vaultState.vaultSolendLpToken
-      ),
-      (depositAmount - withdrawAmount) * solendAllocation * solendCollateralRatio
-    );
-    const solendLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
-      vaultClient.solend.accounts.liquiditySupply
-    );
-    assert.equal(
-      solendLiquiditySupplyAccountInfo.amount.toNumber(),
-      (depositAmount - withdrawAmount) * solendAllocation + initialReserveAmount
+    it(
+      "Withdraws from vault reserves",
+      testWithdraw(
+        depositAmount * initialCollateralRatio - withdrawAmount,
+        withdrawAmount
+      )
     );
 
-    const portCollateralRatio = 1;
-    const portAllocation = 0.332;
-    assert.equal(
-      await vaultClient.port.getLpTokenAccountValue(
-        vaultClient.vaultState.vaultPortLpToken
-      ),
-      (depositAmount - withdrawAmount) * portAllocation * portCollateralRatio
-    );
-    const portLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
-      vaultClient.port.accounts.liquiditySupply
-    );
-    assert.equal(
-      portLiquiditySupplyAccountInfo.amount.toNumber(),
-      (depositAmount - withdrawAmount) * portAllocation + initialReserveAmount
-    );
+    it("Forwards deposits to lending markets", async () => {
+      await vaultClient.rebalance();
 
-    const jetCollateralRatio = 1;
-    const jetAllocation = 0.332;
-    assert.equal(
-      await vaultClient.jet.getLpTokenAccountValue(
-        vaultClient.vaultState.vaultJetLpToken
-      ),
-      (depositAmount - withdrawAmount) * jetAllocation * jetCollateralRatio
-    );
+      const vaultReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
+        vaultClient.vaultState.vaultReserveToken
+      );
+      assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 2);
 
-    const jetLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
-      vaultClient.jet.accounts.liquiditySupply
-    );
-    assert.equal(
-      jetLiquiditySupplyAccountInfo.amount.toNumber(),
-      (depositAmount - withdrawAmount) * jetAllocation + initialReserveAmount
-    );
-  });
+      const solendCollateralRatio = 1;
+      const solendAllocation = 0.332;
+      assert.equal(
+        await vaultClient.solend.getLpTokenAccountValue(
+          vaultClient.vaultState.vaultSolendLpToken
+        ),
+        (depositAmount - withdrawAmount) * solendAllocation * solendCollateralRatio
+      );
+      const solendLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
+        vaultClient.solend.accounts.liquiditySupply
+      );
+      assert.equal(
+        solendLiquiditySupplyAccountInfo.amount.toNumber(),
+        (depositAmount - withdrawAmount) * solendAllocation + initialReserveAmount
+      );
 
-  it("Withdraws from lending programs", async () => {
-    await vaultClient.withdraw(wallet, withdrawAmount, userLpTokenAccount);
+      const portCollateralRatio = 1;
+      const portAllocation = 0.332;
+      assert.equal(
+        await vaultClient.port.getLpTokenAccountValue(
+          vaultClient.vaultState.vaultPortLpToken
+        ),
+        (depositAmount - withdrawAmount) * portAllocation * portCollateralRatio
+      );
+      const portLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
+        vaultClient.port.accounts.liquiditySupply
+      );
+      assert.equal(
+        portLiquiditySupplyAccountInfo.amount.toNumber(),
+        (depositAmount - withdrawAmount) * portAllocation + initialReserveAmount
+      );
 
-    const userReserveTokenAccount = await vaultClient.getUserReserveTokenAccount(
-      wallet.publicKey
-    );
-    const userReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
-      userReserveTokenAccount
-    );
-    assert.equal(userReserveTokenAccountInfo.amount.toNumber(), withdrawAmount * 2);
+      const jetCollateralRatio = 1;
+      const jetAllocation = 0.332;
+      assert.equal(
+        await vaultClient.jet.getLpTokenAccountValue(
+          vaultClient.vaultState.vaultJetLpToken
+        ),
+        (depositAmount - withdrawAmount) * jetAllocation * jetCollateralRatio
+      );
 
-    const userLpTokenAccountInfo = await vaultClient.getLpTokenAccountInfo(
-      userLpTokenAccount
-    );
-    assert.equal(userLpTokenAccountInfo.amount.toNumber(), 0);
+      const jetLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
+        vaultClient.jet.accounts.liquiditySupply
+      );
+      assert.equal(
+        jetLiquiditySupplyAccountInfo.amount.toNumber(),
+        (depositAmount - withdrawAmount) * jetAllocation + initialReserveAmount
+      );
+    });
+
+    it("Withdraws from lending markets", testWithdraw(0, withdrawAmount * 2));
   });
 });
