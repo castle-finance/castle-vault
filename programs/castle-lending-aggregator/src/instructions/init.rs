@@ -22,6 +22,7 @@ pub struct Initialize<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     #[account(
+        mut,
         seeds = [vault.key().as_ref(), b"authority".as_ref()], 
         bump = bumps.authority,
     )]
@@ -69,15 +70,16 @@ pub struct Initialize<'info> {
     )]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
-    #[account(
-        init,
-        payer = payer,
-        seeds = [vault.key().as_ref(), jet_lp_token_mint.key().as_ref()],
-        bump = bumps.jet_lp,
-        token::authority = vault_authority,
-        token::mint = jet_lp_token_mint,
-    )]
-    pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    pub vault_jet_lp_token: AccountInfo<'info>,
+
+    pub jet_program: AccountInfo<'info>,
+
+    pub jet_market: AccountInfo<'info>,
+
+    pub jet_market_authority: AccountInfo<'info>,
+
+    pub jet_reserve_state: AccountInfo<'info>,
 
     pub reserve_token_mint: Box<Account<'info, Mint>>,
 
@@ -99,6 +101,27 @@ pub struct Initialize<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
+impl<'info> Initialize<'info> {
+    pub fn init_jet_deposit_account_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, jet::cpi::accounts::InitializeDepositAccount<'info>> {
+        CpiContext::new(
+            self.jet_program.clone(),
+            jet::cpi::accounts::InitializeDepositAccount {
+                market: self.jet_market.to_account_info(),
+                market_authority: self.jet_market_authority.clone(),
+                reserve: self.jet_reserve_state.to_account_info(),
+                deposit_note_mint: self.jet_lp_token_mint.clone(),
+                depositor: self.vault_authority.clone(),
+                deposit_account: self.vault_jet_lp_token.to_account_info(),
+                token_program: self.token_program.to_account_info(),
+                system_program: self.system_program.to_account_info(),
+                rent: self.rent.to_account_info(),
+            },
+        )
+    }
+}
+
 pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
@@ -106,16 +129,28 @@ pub fn handler(
 ) -> ProgramResult {
     // TODO also store lending market reserve account addresses in vault?
 
+    // initialize jet deposit account
+    jet::cpi::init_deposit_account(
+        ctx.accounts
+            .init_jet_deposit_account_context()
+            .with_signer(&[&[
+                ctx.accounts.vault.key().as_ref(),
+                b"authority".as_ref(),
+                &[bumps.authority],
+            ]]),
+        bumps.jet_lp,
+    )?;
+
     let vault = &mut ctx.accounts.vault;
-    vault.vault_authority = *ctx.accounts.vault_authority.key;
+    vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.authority_seed = vault.key();
     vault.authority_bump = [bumps.authority];
-    vault.vault_reserve_token = *ctx.accounts.vault_reserve_token.to_account_info().key;
-    vault.vault_solend_lp_token = *ctx.accounts.vault_solend_lp_token.to_account_info().key;
-    vault.vault_port_lp_token = *ctx.accounts.vault_port_lp_token.to_account_info().key;
-    vault.vault_jet_lp_token = *ctx.accounts.vault_jet_lp_token.to_account_info().key;
-    vault.lp_token_mint = *ctx.accounts.lp_token_mint.to_account_info().key;
-    vault.reserve_token_mint = *ctx.accounts.reserve_token_mint.to_account_info().key;
+    vault.vault_reserve_token = ctx.accounts.vault_reserve_token.key();
+    vault.vault_solend_lp_token = ctx.accounts.vault_solend_lp_token.key();
+    vault.vault_port_lp_token = ctx.accounts.vault_port_lp_token.key();
+    vault.vault_jet_lp_token = ctx.accounts.vault_jet_lp_token.key();
+    vault.lp_token_mint = ctx.accounts.lp_token_mint.key();
+    vault.reserve_token_mint = ctx.accounts.reserve_token_mint.key();
     vault.last_update = LastUpdate::new(ctx.accounts.clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;

@@ -12,7 +12,7 @@ export type CastleLendingAggregator = {
         },
         {
           name: "vaultAuthority";
-          isMut: false;
+          isMut: true;
           isSigner: false;
         },
         {
@@ -37,7 +37,27 @@ export type CastleLendingAggregator = {
         },
         {
           name: "vaultJetLpToken";
-          isMut: true;
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "jetProgram";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "jetMarket";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "jetMarketAuthority";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "jetReserveState";
+          isMut: false;
           isSigner: false;
         },
         {
@@ -802,7 +822,7 @@ export const IDL: CastleLendingAggregator = {
         },
         {
           name: "vaultAuthority",
-          isMut: false,
+          isMut: true,
           isSigner: false,
         },
         {
@@ -827,7 +847,27 @@ export const IDL: CastleLendingAggregator = {
         },
         {
           name: "vaultJetLpToken",
-          isMut: true,
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "jetProgram",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "jetMarket",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "jetMarketAuthority",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "jetReserveState",
+          isMut: false,
           isSigner: false,
         },
         {

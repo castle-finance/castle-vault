@@ -1,6 +1,7 @@
 import * as anchor from "@project-serum/anchor";
 import {
   AccountInfo,
+  AccountLayout,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   MintInfo,
   Token,
@@ -8,6 +9,7 @@ import {
 } from "@solana/spl-token";
 import {
   Keypair,
+  LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
   SYSVAR_CLOCK_PUBKEY,
@@ -80,6 +82,19 @@ export class VaultClient {
       ],
       program.programId
     );
+    // send sol to vault authority to pay for jet deposit account init
+    const amount =
+      await program.provider.connection.getMinimumBalanceForRentExemption(
+        AccountLayout.span
+      );
+    const tx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: wallet.publicKey,
+        toPubkey: vaultAuthority,
+        lamports: amount,
+      })
+    );
+    await program.provider.send(tx, [wallet.payer]);
 
     const [vaultReserveTokenAccount, reserveBump] =
       await PublicKey.findProgramAddress(
@@ -104,8 +119,12 @@ export class VaultClient {
 
     const [vaultJetLpTokenAccount, jetLpBump] =
       await PublicKey.findProgramAddress(
-        [vaultId.publicKey.toBuffer(), jet.accounts.depositNoteMint.toBuffer()],
-        program.programId
+        [
+          anchor.utils.bytes.utf8.encode("deposits"),
+          jet.accounts.reserve.toBuffer(),
+          vaultAuthority.toBuffer(),
+        ],
+        jet.accounts.program
       );
 
     const [lpTokenMint, lpTokenMintBump] = await PublicKey.findProgramAddress(
@@ -132,6 +151,10 @@ export class VaultClient {
           vaultSolendLpToken: vaultSolendLpTokenAccount,
           vaultPortLpToken: vaultPortLpTokenAccount,
           vaultJetLpToken: vaultJetLpTokenAccount,
+          jetProgram: jet.accounts.program,
+          jetMarket: jet.accounts.market,
+          jetMarketAuthority: jet.accounts.marketAuthority,
+          jetReserveState: jet.accounts.reserve,
           reserveTokenMint: reserveTokenMint,
           solendLpTokenMint: solend.accounts.collateralMint,
           portLpTokenMint: port.accounts.collateralMint,
