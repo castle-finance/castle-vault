@@ -9,6 +9,7 @@ import {
   PortReserveAsset,
   VaultClient,
   CastleLendingAggregator,
+  StrategyType,
 } from "../sdk/src/index";
 //} from "@castlefinance/vault-sdk";
 
@@ -102,6 +103,22 @@ describe("castle-vault", () => {
     );
   }
 
+  function testInit(strategyType: StrategyType): () => Promise<void> {
+    return async function () {
+      vaultClient = await VaultClient.initialize(
+        program,
+        provider.wallet as anchor.Wallet,
+        reserveToken.publicKey,
+        solend,
+        port,
+        jet,
+        strategyType
+      );
+      // TODO add more checks
+      assert.notEqual(vaultClient.vaultState, null);
+    };
+  }
+
   function testDeposit(): () => Promise<void> {
     return async function () {
       const userReserveTokenAccount = await reserveToken.createAccount(
@@ -165,22 +182,76 @@ describe("castle-vault", () => {
     };
   }
 
+  function testRebalance(
+    expectedSolendAllocation: number,
+    expectedPortAllocation: number,
+    expectedJetAllocation: number
+  ): () => Promise<void> {
+    return async function () {
+      await vaultClient.rebalance();
+
+      const vaultReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
+        vaultClient.vaultState.vaultReserveToken
+      );
+      assert(vaultReserveTokenAccountInfo.amount.toNumber() <= 3);
+
+      const vaultValue = depositAmount - withdrawAmount;
+
+      const solendCollateralRatio = 1;
+      const expectedSolendValue = vaultValue * expectedSolendAllocation;
+      assert.equal(
+        await vaultClient.solend.getLpTokenAccountValue(
+          vaultClient.vaultState.vaultSolendLpToken
+        ),
+        expectedSolendValue * solendCollateralRatio
+      );
+      const solendLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
+        vaultClient.solend.accounts.liquiditySupply
+      );
+      assert.equal(
+        solendLiquiditySupplyAccountInfo.amount.toNumber(),
+        expectedSolendValue + initialReserveAmount
+      );
+
+      const portCollateralRatio = 1;
+      const expectedPortValue = vaultValue * expectedPortAllocation;
+      assert.equal(
+        await vaultClient.port.getLpTokenAccountValue(
+          vaultClient.vaultState.vaultPortLpToken
+        ),
+        expectedPortValue * portCollateralRatio
+      );
+      const portLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
+        vaultClient.port.accounts.liquiditySupply
+      );
+      assert.equal(
+        portLiquiditySupplyAccountInfo.amount.toNumber(),
+        expectedPortValue + initialReserveAmount
+      );
+
+      const jetCollateralRatio = 1;
+      const expectedJetValue = vaultValue * expectedJetAllocation;
+      assert.equal(
+        await vaultClient.jet.getLpTokenAccountValue(
+          vaultClient.vaultState.vaultJetLpToken
+        ),
+        expectedJetValue * jetCollateralRatio
+      );
+
+      const jetLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
+        vaultClient.jet.accounts.liquiditySupply
+      );
+      assert.equal(
+        jetLiquiditySupplyAccountInfo.amount.toNumber(),
+        expectedJetValue + initialReserveAmount
+      );
+    };
+  }
+
   describe("equal allocation strategy", () => {
     before(initLendingMarkets);
 
-    it("Creates vault", async () => {
-      vaultClient = await VaultClient.initialize(
-        program,
-        provider.wallet as anchor.Wallet,
-        reserveToken.publicKey,
-        solend,
-        port,
-        jet,
-        { equalAllocation: {} }
-      );
-      // TODO add more checks
-      assert.notEqual(vaultClient.vaultState, null);
-    });
+    it("Creates vault", testInit({ equalAllocation: {} }));
 
     it("Deposits to vault reserves", testDeposit());
 
@@ -192,63 +263,7 @@ describe("castle-vault", () => {
       )
     );
 
-    it("Forwards deposits to lending markets", async () => {
-      await vaultClient.rebalance();
-
-      const vaultReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
-        vaultClient.vaultState.vaultReserveToken
-      );
-      assert.equal(vaultReserveTokenAccountInfo.amount.toNumber(), 2);
-
-      const solendCollateralRatio = 1;
-      const solendAllocation = 0.332;
-      assert.equal(
-        await vaultClient.solend.getLpTokenAccountValue(
-          vaultClient.vaultState.vaultSolendLpToken
-        ),
-        (depositAmount - withdrawAmount) * solendAllocation * solendCollateralRatio
-      );
-      const solendLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
-        vaultClient.solend.accounts.liquiditySupply
-      );
-      assert.equal(
-        solendLiquiditySupplyAccountInfo.amount.toNumber(),
-        (depositAmount - withdrawAmount) * solendAllocation + initialReserveAmount
-      );
-
-      const portCollateralRatio = 1;
-      const portAllocation = 0.332;
-      assert.equal(
-        await vaultClient.port.getLpTokenAccountValue(
-          vaultClient.vaultState.vaultPortLpToken
-        ),
-        (depositAmount - withdrawAmount) * portAllocation * portCollateralRatio
-      );
-      const portLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
-        vaultClient.port.accounts.liquiditySupply
-      );
-      assert.equal(
-        portLiquiditySupplyAccountInfo.amount.toNumber(),
-        (depositAmount - withdrawAmount) * portAllocation + initialReserveAmount
-      );
-
-      const jetCollateralRatio = 1;
-      const jetAllocation = 0.332;
-      assert.equal(
-        await vaultClient.jet.getLpTokenAccountValue(
-          vaultClient.vaultState.vaultJetLpToken
-        ),
-        (depositAmount - withdrawAmount) * jetAllocation * jetCollateralRatio
-      );
-
-      const jetLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
-        vaultClient.jet.accounts.liquiditySupply
-      );
-      assert.equal(
-        jetLiquiditySupplyAccountInfo.amount.toNumber(),
-        (depositAmount - withdrawAmount) * jetAllocation + initialReserveAmount
-      );
-    });
+    it("Forwards deposits to lending markets", testRebalance(0.332, 0.332, 0.332));
 
     it("Withdraws from lending markets", testWithdraw(0, withdrawAmount * 2));
   });
