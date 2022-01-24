@@ -1,9 +1,4 @@
-import {
-  Token,
-  MintLayout,
-  AccountLayout,
-  TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+import { Token, MintLayout, AccountLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   Cluster,
   Keypair,
@@ -17,9 +12,7 @@ import * as anchor from "@project-serum/anchor";
 import { blob, struct, u8, Layout } from "buffer-layout";
 import { toBigIntLE, toBufferLE } from "bigint-buffer";
 import {
-  calculateSupplyAPY,
   LENDING_MARKET_SIZE,
-  parseReserve,
   SolendReserve,
   SolendMarket,
   //RESERVE_SIZE
@@ -47,6 +40,7 @@ export class SolendReserveAsset extends Asset {
     super();
   }
 
+  // TODO change to connection instead of provider so it doesn't need to be reloaded when wallet changes
   static async load(
     provider: anchor.Provider,
     cluster: Cluster,
@@ -146,9 +140,7 @@ export class SolendReserveAsset extends Asset {
       TOKEN_PROGRAM_ID,
       Keypair.generate() // dummy signer since we aren't making any txs
     );
-    const lpTokenAmount = new anchor.BN(
-      (await lpToken.getAccountInfo(address)).amount
-    );
+    const lpTokenAmount = new anchor.BN((await lpToken.getAccountInfo(address)).amount);
     const exchangeRate = new anchor.BN(this.reserve.stats.cTokenExchangeRate);
 
     return lpTokenAmount.mul(exchangeRate).toNumber();
@@ -160,9 +152,7 @@ export class SolendReserveAsset extends Asset {
   }
 }
 
-const DEVNET_PROGRAM_ID = new PublicKey(
-  "ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx"
-);
+const DEVNET_PROGRAM_ID = new PublicKey("ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx");
 
 export async function initLendingMarket(
   provider: anchor.Provider,
@@ -172,10 +162,9 @@ export async function initLendingMarket(
   switchboardProgramId: PublicKey
 ): Promise<Keypair> {
   const lendingMarketAccount = anchor.web3.Keypair.generate();
-  const balanceNeeded =
-    await provider.connection.getMinimumBalanceForRentExemption(
-      LENDING_MARKET_SIZE
-    );
+  const balanceNeeded = await provider.connection.getMinimumBalanceForRentExemption(
+    LENDING_MARKET_SIZE
+  );
 
   const initTx = new anchor.web3.Transaction()
     .add(
@@ -227,16 +216,15 @@ export async function addReserve(
   const userCollateral = anchor.web3.Keypair.generate();
   const userTransferAuthority = anchor.web3.Keypair.generate();
 
-  const reserveBalance =
-    await provider.connection.getMinimumBalanceForRentExemption(RESERVE_SIZE);
-  const mintBalance =
-    await provider.connection.getMinimumBalanceForRentExemption(
-      MintLayout.span
-    );
-  const accountBalance =
-    await provider.connection.getMinimumBalanceForRentExemption(
-      AccountLayout.span
-    );
+  const reserveBalance = await provider.connection.getMinimumBalanceForRentExemption(
+    RESERVE_SIZE
+  );
+  const mintBalance = await provider.connection.getMinimumBalanceForRentExemption(
+    MintLayout.span
+  );
+  const accountBalance = await provider.connection.getMinimumBalanceForRentExemption(
+    AccountLayout.span
+  );
 
   const tx1 = new anchor.web3.Transaction()
     .add(
@@ -351,13 +339,7 @@ export async function addReserve(
   await provider.sendAll([
     {
       tx: tx1,
-      signers: [
-        payer,
-        reserve,
-        collateralMint,
-        collateralSupply,
-        userCollateral,
-      ],
+      signers: [payer, reserve, collateralMint, collateralSupply, userCollateral],
     },
     { tx: tx2, signers: [payer, liquiditySupply, liquidityFeeReceiver] },
     { tx: tx3, signers: [payer, owner, userTransferAuthority] },
@@ -406,11 +388,7 @@ const publicKey = (property = "publicKey"): Layout<PublicKey> => {
     return new PublicKey(src);
   };
 
-  publicKeyLayout.encode = (
-    publicKey: PublicKey,
-    buffer: Buffer,
-    offset: number
-  ) => {
+  publicKeyLayout.encode = (publicKey: PublicKey, buffer: Buffer, offset: number) => {
     const src = publicKey.toBuffer();
     return encode(src, buffer, offset);
   };

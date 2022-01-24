@@ -21,14 +21,11 @@ import {
 } from "@solana/web3.js";
 
 import { CastleLendingAggregator } from "./castle_lending_aggregator";
-import {
-  PortReserveAsset,
-  SolendReserveAsset,
-  JetReserveAsset,
-} from "./adapters";
+import { PortReserveAsset, SolendReserveAsset, JetReserveAsset } from "./adapters";
 import { StrategyType, Vault } from "./types";
 import { Program } from "@project-serum/anchor";
 import { PROGRAM_ID } from ".";
+import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 
 export class VaultClient {
   private constructor(
@@ -39,6 +36,8 @@ export class VaultClient {
     public port: PortReserveAsset,
     public jet: JetReserveAsset
   ) {}
+
+  // TODO add function to change wallet
 
   static async load(
     provider: anchor.Provider,
@@ -52,11 +51,7 @@ export class VaultClient {
     )) as Program<CastleLendingAggregator>;
     const vaultState = await program.account.vault.fetch(vaultId);
 
-    const solend = await SolendReserveAsset.load(
-      provider,
-      cluster,
-      reserveMint
-    );
+    const solend = await SolendReserveAsset.load(provider, cluster, reserveMint);
     const port = await PortReserveAsset.load(provider, cluster, reserveMint);
     const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
 
@@ -80,17 +75,13 @@ export class VaultClient {
     const vaultId = Keypair.generate();
 
     const [vaultAuthority, authorityBump] = await PublicKey.findProgramAddress(
-      [
-        vaultId.publicKey.toBuffer(),
-        anchor.utils.bytes.utf8.encode("authority"),
-      ],
+      [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("authority")],
       program.programId
     );
     // send sol to vault authority to pay for jet deposit account init
-    const amount =
-      await program.provider.connection.getMinimumBalanceForRentExemption(
-        AccountLayout.span
-      );
+    const amount = await program.provider.connection.getMinimumBalanceForRentExemption(
+      AccountLayout.span
+    );
     const tx = new Transaction().add(
       SystemProgram.transfer({
         fromPubkey: wallet.publicKey,
@@ -100,36 +91,30 @@ export class VaultClient {
     );
     await program.provider.send(tx, [wallet.payer]);
 
-    const [vaultReserveTokenAccount, reserveBump] =
-      await PublicKey.findProgramAddress(
-        [vaultId.publicKey.toBuffer(), reserveTokenMint.toBuffer()],
-        program.programId
-      );
+    const [vaultReserveTokenAccount, reserveBump] = await PublicKey.findProgramAddress(
+      [vaultId.publicKey.toBuffer(), reserveTokenMint.toBuffer()],
+      program.programId
+    );
 
     const [vaultSolendLpTokenAccount, solendLpBump] =
       await PublicKey.findProgramAddress(
-        [
-          vaultId.publicKey.toBuffer(),
-          solend.accounts.collateralMint.toBuffer(),
-        ],
+        [vaultId.publicKey.toBuffer(), solend.accounts.collateralMint.toBuffer()],
         program.programId
       );
 
-    const [vaultPortLpTokenAccount, portLpBump] =
-      await PublicKey.findProgramAddress(
-        [vaultId.publicKey.toBuffer(), port.accounts.collateralMint.toBuffer()],
-        program.programId
-      );
+    const [vaultPortLpTokenAccount, portLpBump] = await PublicKey.findProgramAddress(
+      [vaultId.publicKey.toBuffer(), port.accounts.collateralMint.toBuffer()],
+      program.programId
+    );
 
-    const [vaultJetLpTokenAccount, jetLpBump] =
-      await PublicKey.findProgramAddress(
-        [
-          anchor.utils.bytes.utf8.encode("deposits"),
-          jet.accounts.reserve.toBuffer(),
-          vaultAuthority.toBuffer(),
-        ],
-        jet.accounts.program
-      );
+    const [vaultJetLpTokenAccount, jetLpBump] = await PublicKey.findProgramAddress(
+      [
+        anchor.utils.bytes.utf8.encode("deposits"),
+        jet.accounts.reserve.toBuffer(),
+        vaultAuthority.toBuffer(),
+      ],
+      jet.accounts.program
+    );
 
     const [lpTokenMint, lpTokenMintBump] = await PublicKey.findProgramAddress(
       [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("lp_mint")],
@@ -175,14 +160,7 @@ export class VaultClient {
     );
     const vaultState = await program.account.vault.fetch(vaultId.publicKey);
 
-    return new VaultClient(
-      program,
-      vaultId.publicKey,
-      vaultState,
-      solend,
-      port,
-      jet
-    );
+    return new VaultClient(program, vaultId.publicKey, vaultState, solend, port, jet);
   }
 
   private getRefreshIx(): TransactionInstruction {
@@ -269,38 +247,30 @@ export class VaultClient {
     wallet: anchor.Wallet,
     amount: number,
     userReserveTokenAccount: PublicKey
-  ): Promise<TransactionSignature> {
-    const recentBlockhash = (
-      await this.program.provider.connection.getRecentBlockhash()
-    ).blockhash;
-
-    const tx = new Transaction({
-      feePayer: wallet.publicKey,
-      recentBlockhash: recentBlockhash,
-    });
+  ): Promise<TransactionSignature[]> {
+    const depositTx = new Transaction();
 
     let wrappedSolIxResponse: WrapSolIxResponse;
     if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
       wrappedSolIxResponse = await this.getWrappedSolIxs(wallet, amount);
-      tx.add(...wrappedSolIxResponse.openIxs);
+      depositTx.add(...wrappedSolIxResponse.openIxs);
       userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
     }
 
-    const userLpTokenAccount = await this.getUserLpTokenAccount(
-      wallet.publicKey
-    );
-
-    // Create account if it does not exist
+    const userLpTokenAccount = await this.getUserLpTokenAccount(wallet.publicKey);
     const userLpTokenAccountInfo =
       await this.program.provider.connection.getAccountInfo(userLpTokenAccount);
+
+    // Create account if it does not exist
+    let createLpAcctTx: Transaction;
     if (userLpTokenAccountInfo == null) {
-      tx.add(
+      createLpAcctTx = new Transaction().add(
         createAta(wallet, this.vaultState.lpTokenMint, userLpTokenAccount)
       );
     }
 
-    tx.add(this.getRefreshIx());
-    tx.add(
+    depositTx.add(this.getRefreshIx());
+    depositTx.add(
       this.program.instruction.deposit(new anchor.BN(amount), {
         accounts: {
           vault: this.vaultId,
@@ -315,31 +285,32 @@ export class VaultClient {
       })
     );
 
-    tx.recentBlockhash = (
-      await this.program.provider.connection.getRecentBlockhash()
-    ).blockhash;
-    tx.feePayer = wallet.publicKey;
-
-    if (wrappedSolIxResponse != null) {
-      tx.add(wrappedSolIxResponse.closeIx);
-      tx.partialSign(wrappedSolIxResponse.keyPair);
+    let txs: SendTxRequest[] = [];
+    if (createLpAcctTx != null) {
+      txs.push({ tx: createLpAcctTx, signers: [] });
     }
 
-    const signedTx = await wallet.signTransaction(tx);
-    return await this.program.provider.send(signedTx);
+    if (wrappedSolIxResponse != null) {
+      txs.push({ tx: depositTx, signers: [wrappedSolIxResponse.keyPair] });
+      txs.push({
+        tx: new Transaction().add(wrappedSolIxResponse.closeIx),
+        signers: [],
+      });
+    } else {
+      txs.push({ tx: depositTx, signers: [] });
+    }
+
+    return await this.program.provider.sendAll(txs);
   }
 
+  // TODO derive lp token account from wallet?
   async withdraw(
     wallet: anchor.Wallet,
     amount: number,
     userLpTokenAccount: PublicKey
   ): Promise<TransactionSignature[]> {
     //console.debug("Withdrawing %d reserve tokens", amount);
-    const recentBlockhash = (
-      await this.program.provider.connection.getRecentBlockhash()
-    ).blockhash;
-
-    let txs = [];
+    let txs: SendTxRequest[] = [];
 
     // Withdraw from lending markets if not enough reserves in vault
     // Has to be 2 transactions because of size limits
@@ -349,21 +320,15 @@ export class VaultClient {
     const vaultReserveAmount = vaultReserveTokenAccountInfo.amount.toNumber();
     //console.debug("Reserve tokens in vault: %d", vaultReserveAmount);
     if (vaultReserveAmount < amount) {
-      const rrTx = new Transaction({
-        feePayer: wallet.publicKey,
-        recentBlockhash: recentBlockhash,
-      });
+      const rrTx = new Transaction();
       rrTx.add(this.getRefreshIx());
       for (let ix of await this.getRebalanceAndReconcileIxs(amount)) {
         rrTx.add(ix);
       }
-      txs.push({ tx: await wallet.signTransaction(rrTx) });
+      txs.push({ tx: rrTx, signers: [] });
     }
 
-    const withdrawTx = new Transaction({
-      feePayer: wallet.publicKey,
-      recentBlockhash: recentBlockhash,
-    });
+    const withdrawTx = new Transaction();
     let userReserveTokenAccount: PublicKey;
     let wrappedSolIxResponse: WrapSolIxResponse;
     if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
@@ -371,21 +336,13 @@ export class VaultClient {
       withdrawTx.add(...wrappedSolIxResponse.openIxs);
       userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
     } else {
-      userReserveTokenAccount = await this.getUserReserveTokenAccount(
-        wallet.publicKey
-      );
+      userReserveTokenAccount = await this.getUserReserveTokenAccount(wallet.publicKey);
       // Create reserve token account to withdraw into if it does not exist
       const userReserveTokenAccountInfo =
-        await this.program.provider.connection.getAccountInfo(
-          userReserveTokenAccount
-        );
+        await this.program.provider.connection.getAccountInfo(userReserveTokenAccount);
       if (userReserveTokenAccountInfo == null) {
         withdrawTx.add(
-          createAta(
-            wallet,
-            this.vaultState.reserveTokenMint,
-            userReserveTokenAccount
-          )
+          createAta(wallet, this.vaultState.reserveTokenMint, userReserveTokenAccount)
         );
       }
     }
@@ -412,10 +369,10 @@ export class VaultClient {
 
     if (wrappedSolIxResponse != null) {
       withdrawTx.add(wrappedSolIxResponse.closeIx);
-      withdrawTx.partialSign(wrappedSolIxResponse.keyPair);
+      txs.push({ tx: withdrawTx, signers: [wrappedSolIxResponse.keyPair] });
+    } else {
+      txs.push({ tx: withdrawTx, signers: [] });
     }
-
-    txs.push({ tx: await wallet.signTransaction(withdrawTx) });
     return this.program.provider.sendAll(txs);
   }
 
@@ -433,22 +390,19 @@ export class VaultClient {
   ): Promise<TransactionInstruction[]> {
     // Simulate transaction to get new allocations
     const newAllocations = (
-      await this.program.simulate.rebalance(
-        new anchor.BN(withdrawAmountOption),
-        {
-          accounts: {
-            vault: this.vaultId,
-            vaultReserveToken: this.vaultState.vaultReserveToken,
-            vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-            vaultPortLpToken: this.vaultState.vaultPortLpToken,
-            vaultJetLpToken: this.vaultState.vaultJetLpToken,
-            solendReserveState: this.solend.accounts.reserve,
-            portReserveState: this.port.accounts.reserve,
-            jetReserveState: this.jet.accounts.reserve,
-          },
-          instructions: [this.getRefreshIx()],
-        }
-      )
+      await this.program.simulate.rebalance(new anchor.BN(withdrawAmountOption), {
+        accounts: {
+          vault: this.vaultId,
+          vaultReserveToken: this.vaultState.vaultReserveToken,
+          vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
+          vaultPortLpToken: this.vaultState.vaultPortLpToken,
+          vaultJetLpToken: this.vaultState.vaultJetLpToken,
+          solendReserveState: this.solend.accounts.reserve,
+          portReserveState: this.port.accounts.reserve,
+          jetReserveState: this.jet.accounts.reserve,
+        },
+        instructions: [this.getRefreshIx()],
+      })
     ).events[0].data;
 
     // Sort ixs in ascending order of outflows
@@ -462,16 +416,12 @@ export class VaultClient {
       ],
       [
         newAllocations.port.toNumber() -
-          (await this.port.getLpTokenAccountValue(
-            this.vaultState.vaultPortLpToken
-          )),
+          (await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken)),
         this.getReconcilePortIx(),
       ],
       [
         newAllocations.jet.toNumber() -
-          (await this.jet.getLpTokenAccountValue(
-            this.vaultState.vaultJetLpToken
-          )),
+          (await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken)),
         this.getReconcileJetIx(),
       ],
     ];
@@ -558,15 +508,11 @@ export class VaultClient {
     const assetApysAndValues: [number, number][] = [
       [
         await this.solend.getApy(),
-        await this.solend.getLpTokenAccountValue(
-          this.vaultState.vaultSolendLpToken
-        ),
+        await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken),
       ],
       [
         await this.port.getApy(),
-        await this.port.getLpTokenAccountValue(
-          this.vaultState.vaultPortLpToken
-        ),
+        await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken),
       ],
       [
         await this.jet.getApy(),
@@ -612,10 +558,14 @@ export class VaultClient {
 
   async getUserValue(address: PublicKey): Promise<number> {
     const userLpTokenAccount = await this.getUserLpTokenAccount(address);
-    const userLpTokenAmount = (
-      await this.getLpTokenAccountInfo(userLpTokenAccount)
-    ).amount.toNumber();
-    return userLpTokenAmount * (await this.getLpExchangeRate());
+    const userLpTokenAccountInfo = await this.getLpTokenAccountInfo(userLpTokenAccount);
+    if (userLpTokenAccountInfo == null) {
+      return 0;
+    } else {
+      const userLpTokenAmount = userLpTokenAccountInfo.amount.toNumber();
+      const exchangeRate = await this.getLpExchangeRate();
+      return userLpTokenAmount * exchangeRate;
+    }
   }
 
   async getUserReserveTokenAccount(address: PublicKey): Promise<PublicKey> {
