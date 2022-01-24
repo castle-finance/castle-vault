@@ -4,6 +4,7 @@ import {
   AccountLayout,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   MintInfo,
+  NATIVE_MINT,
   Token,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -212,12 +213,78 @@ export class VaultClient {
     });
   }
 
+  /**
+   *
+   * @param wallet
+   * @param lamports amount depositing
+   * @returns
+   */
+  private async getWrappedSolIxs(
+    wallet: anchor.Wallet,
+    lamports: number = 0
+  ): Promise<WrapSolIxResponse> {
+    const userReserveKeypair = Keypair.generate();
+    const userReserveTokenAccount = userReserveKeypair.publicKey;
+
+    const rent = await Token.getMinBalanceRentForExemptAccount(
+      this.program.provider.connection
+    );
+    return {
+      openIxs: [
+        SystemProgram.createAccount({
+          fromPubkey: wallet.publicKey,
+          newAccountPubkey: userReserveTokenAccount,
+          programId: TOKEN_PROGRAM_ID,
+          space: AccountLayout.span,
+          lamports: lamports + rent,
+        }),
+        Token.createInitAccountInstruction(
+          TOKEN_PROGRAM_ID,
+          NATIVE_MINT,
+          userReserveTokenAccount,
+          wallet.publicKey
+        ),
+      ],
+      closeIx: Token.createCloseAccountInstruction(
+        TOKEN_PROGRAM_ID,
+        userReserveTokenAccount,
+        wallet.publicKey,
+        wallet.publicKey,
+        []
+      ),
+      keyPair: userReserveKeypair,
+    };
+  }
+
+  /**
+   *
+   * TODO refactor to be more clear
+   *
+   * @param wallet
+   * @param amount
+   * @param userReserveTokenAccount
+   * @returns
+   */
   async deposit(
     wallet: anchor.Wallet,
     amount: number,
     userReserveTokenAccount: PublicKey
   ): Promise<TransactionSignature> {
-    let ixs = [this.getRefreshIx()];
+    const recentBlockhash = (
+      await this.program.provider.connection.getRecentBlockhash()
+    ).blockhash;
+
+    const tx = new Transaction({
+      feePayer: wallet.publicKey,
+      recentBlockhash: recentBlockhash,
+    });
+
+    let wrappedSolIxResponse: WrapSolIxResponse;
+    if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
+      wrappedSolIxResponse = await this.getWrappedSolIxs(wallet, amount);
+      tx.add(...wrappedSolIxResponse.openIxs);
+      userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
+    }
 
     const userLpTokenAccount = await this.getUserLpTokenAccount(
       wallet.publicKey
@@ -227,25 +294,39 @@ export class VaultClient {
     const userLpTokenAccountInfo =
       await this.program.provider.connection.getAccountInfo(userLpTokenAccount);
     if (userLpTokenAccountInfo == null) {
-      ixs.unshift(
+      tx.add(
         createAta(wallet, this.vaultState.lpTokenMint, userLpTokenAccount)
       );
     }
 
-    return this.program.rpc.deposit(new anchor.BN(amount), {
-      accounts: {
-        vault: this.vaultId,
-        vaultAuthority: this.vaultState.vaultAuthority,
-        vaultReserveToken: this.vaultState.vaultReserveToken,
-        lpTokenMint: this.vaultState.lpTokenMint,
-        userReserveToken: userReserveTokenAccount,
-        userLpToken: userLpTokenAccount,
-        userAuthority: wallet.publicKey,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      },
-      signers: [wallet.payer],
-      instructions: ixs,
-    });
+    tx.add(this.getRefreshIx());
+    tx.add(
+      this.program.instruction.deposit(new anchor.BN(amount), {
+        accounts: {
+          vault: this.vaultId,
+          vaultAuthority: this.vaultState.vaultAuthority,
+          vaultReserveToken: this.vaultState.vaultReserveToken,
+          lpTokenMint: this.vaultState.lpTokenMint,
+          userReserveToken: userReserveTokenAccount,
+          userLpToken: userLpTokenAccount,
+          userAuthority: wallet.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        },
+      })
+    );
+
+    tx.recentBlockhash = (
+      await this.program.provider.connection.getRecentBlockhash()
+    ).blockhash;
+    tx.feePayer = wallet.publicKey;
+
+    if (wrappedSolIxResponse != null) {
+      tx.add(wrappedSolIxResponse.closeIx);
+      tx.partialSign(wrappedSolIxResponse.keyPair);
+    }
+
+    const signedTx = await wallet.signTransaction(tx);
+    return await this.program.provider.send(signedTx);
   }
 
   async withdraw(
@@ -254,6 +335,10 @@ export class VaultClient {
     userLpTokenAccount: PublicKey
   ): Promise<TransactionSignature[]> {
     //console.debug("Withdrawing %d reserve tokens", amount);
+    const recentBlockhash = (
+      await this.program.provider.connection.getRecentBlockhash()
+    ).blockhash;
+
     let txs = [];
 
     // Withdraw from lending markets if not enough reserves in vault
@@ -264,32 +349,47 @@ export class VaultClient {
     const vaultReserveAmount = vaultReserveTokenAccountInfo.amount.toNumber();
     //console.debug("Reserve tokens in vault: %d", vaultReserveAmount);
     if (vaultReserveAmount < amount) {
-      const rrTx = new Transaction();
+      const rrTx = new Transaction({
+        feePayer: wallet.publicKey,
+        recentBlockhash: recentBlockhash,
+      });
       rrTx.add(this.getRefreshIx());
       for (let ix of await this.getRebalanceAndReconcileIxs(amount)) {
         rrTx.add(ix);
       }
-      txs.push({ tx: rrTx, signers: [wallet.payer] });
+      txs.push({ tx: await wallet.signTransaction(rrTx) });
     }
 
-    const withdrawTx = new Transaction();
-    const userReserveTokenAccount = await this.getUserReserveTokenAccount(
-      wallet.publicKey
-    );
-    // Create reserve token account to withdraw into if it does not exist
-    const userReserveTokenAccountInfo =
-      await this.program.provider.connection.getAccountInfo(
-        userReserveTokenAccount
+    const withdrawTx = new Transaction({
+      feePayer: wallet.publicKey,
+      recentBlockhash: recentBlockhash,
+    });
+    let userReserveTokenAccount: PublicKey;
+    let wrappedSolIxResponse: WrapSolIxResponse;
+    if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
+      wrappedSolIxResponse = await this.getWrappedSolIxs(wallet);
+      withdrawTx.add(...wrappedSolIxResponse.openIxs);
+      userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
+    } else {
+      userReserveTokenAccount = await this.getUserReserveTokenAccount(
+        wallet.publicKey
       );
-    if (userReserveTokenAccountInfo == null) {
-      withdrawTx.add(
-        createAta(
-          wallet,
-          this.vaultState.reserveTokenMint,
+      // Create reserve token account to withdraw into if it does not exist
+      const userReserveTokenAccountInfo =
+        await this.program.provider.connection.getAccountInfo(
           userReserveTokenAccount
-        )
-      );
+        );
+      if (userReserveTokenAccountInfo == null) {
+        withdrawTx.add(
+          createAta(
+            wallet,
+            this.vaultState.reserveTokenMint,
+            userReserveTokenAccount
+          )
+        );
+      }
     }
+
     withdrawTx.add(this.getRefreshIx());
     // Convert from reserve tokens to LP tokens
     const exchangeRate = await this.getLpExchangeRate();
@@ -309,7 +409,13 @@ export class VaultClient {
         },
       })
     );
-    txs.push({ tx: withdrawTx, signers: [wallet.payer] });
+
+    if (wrappedSolIxResponse != null) {
+      withdrawTx.add(wrappedSolIxResponse.closeIx);
+      withdrawTx.partialSign(wrappedSolIxResponse.keyPair);
+    }
+
+    txs.push({ tx: await wallet.signTransaction(withdrawTx) });
     return this.program.provider.sendAll(txs);
   }
 
@@ -575,3 +681,9 @@ const createAta = (
     wallet.publicKey
   );
 };
+
+interface WrapSolIxResponse {
+  openIxs: [TransactionInstruction, TransactionInstruction];
+  closeIx: TransactionInstruction;
+  keyPair: Keypair;
+}
