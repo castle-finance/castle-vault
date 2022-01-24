@@ -523,7 +523,11 @@ export class VaultClient {
       ],
       [0, 0]
     );
-    return valueSum / weightSum;
+    if (weightSum == 0) {
+      return 0;
+    } else {
+      return valueSum / weightSum;
+    }
   }
 
   // Denominated in reserve tokens per LP token
