@@ -291,11 +291,8 @@ export class VaultClient {
     }
 
     if (wrappedSolIxResponse != null) {
+      depositTx.add(wrappedSolIxResponse.closeIx);
       txs.push({ tx: depositTx, signers: [wrappedSolIxResponse.keyPair] });
-      txs.push({
-        tx: new Transaction().add(wrappedSolIxResponse.closeIx),
-        signers: [],
-      });
     } else {
       txs.push({ tx: depositTx, signers: [] });
     }
