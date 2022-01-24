@@ -5,6 +5,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
+  Cluster,
   Keypair,
   PublicKey,
   SystemProgram,
@@ -19,7 +20,8 @@ import {
   calculateSupplyAPY,
   LENDING_MARKET_SIZE,
   parseReserve,
-  Reserve,
+  SolendReserve,
+  SolendMarket,
   //RESERVE_SIZE
 } from "@solendprotocol/solend-sdk";
 
@@ -40,9 +42,40 @@ export class SolendReserveAsset extends Asset {
   private constructor(
     public provider: anchor.Provider,
     public accounts: SolendAccounts,
-    public reserve: Reserve
+    public reserve: SolendReserve
   ) {
     super();
+  }
+
+  static async load(
+    provider: anchor.Provider,
+    cluster: Cluster,
+    reserveMint: PublicKey
+  ): Promise<SolendReserveAsset> {
+    let market: SolendMarket;
+    if (cluster == "devnet") {
+      market = await SolendMarket.initialize(provider.connection, "devnet");
+    } else if (cluster == "mainnet-beta") {
+      market = await SolendMarket.initialize(provider.connection, "production");
+    } else {
+      throw new Error("Cluster ${cluster} not supported");
+    }
+    await market.loadReserves();
+    const reserve = market.reserves.find(
+      (res) => res.config.mintAddress == reserveMint.toBase58()
+    );
+
+    const accounts: SolendAccounts = {
+      program: new PublicKey(market.config.programID),
+      market: new PublicKey(market.config.address),
+      marketAuthority: new PublicKey(market.config.authorityAddress),
+      reserve: new PublicKey(reserve.config.address),
+      pythPrice: new PublicKey(reserve.config.priceAddress),
+      switchboardFeed: new PublicKey(reserve.config.switchboardFeedAddress),
+      collateralMint: new PublicKey(reserve.config.collateralMintAddress),
+      liquiditySupply: new PublicKey(reserve.config.liquidityAddress),
+    };
+    return new SolendReserveAsset(provider, accounts, reserve);
   }
 
   static async initialize(
@@ -58,7 +91,7 @@ export class SolendReserveAsset extends Asset {
     ownerReserveTokenAccount: PublicKey,
     initialReserveAmount: number
   ): Promise<SolendReserveAsset> {
-    const market = await initLendingMarket(
+    const marketKeypair = await initLendingMarket(
       provider,
       owner.publicKey,
       wallet.payer,
@@ -75,21 +108,33 @@ export class SolendReserveAsset extends Asset {
       pythProduct,
       pythPrice,
       switchboardFeed,
-      market.publicKey
+      marketKeypair.publicKey
     );
-    const reserveAccountInfo = await provider.connection.getAccountInfo(
-      accounts.reserve
+    // Mostly dummy info since we don't use any of it
+    const reserve = new SolendReserve(
+      {
+        priceAddress: pythPrice.toBase58(),
+        switchboardFeedAddress: switchboardFeed.toBase58(),
+        name: "",
+        mintAddress: reserveTokenMint.toBase58(),
+        asset: "",
+        collateralMintAddress: accounts.collateralMint.toBase58(),
+        decimals: 8,
+        liquidityAddress: accounts.liquiditySupply.toBase58(),
+        liquidityFeeReceiverAddress: "",
+        symbol: "",
+        address: accounts.reserve.toBase58(),
+        collateralSupplyAddress: "",
+      },
+      await SolendMarket.initialize(provider.connection, "devnet"),
+      provider.connection
     );
-    const reserve = parseReserve(accounts.reserve, reserveAccountInfo).info;
 
     return new SolendReserveAsset(provider, accounts, reserve);
   }
 
   private async reload() {
-    const reserveAccountInfo = await this.provider.connection.getAccountInfo(
-      this.accounts.reserve
-    );
-    this.reserve = parseReserve(this.accounts.reserve, reserveAccountInfo).info;
+    await this.reserve.load();
   }
 
   async getLpTokenAccountValue(address: PublicKey): Promise<number> {
@@ -97,30 +142,21 @@ export class SolendReserveAsset extends Asset {
 
     const lpToken = new Token(
       this.provider.connection,
-      this.reserve.collateral.mintPubkey,
+      new PublicKey(this.reserve.config.collateralMintAddress),
       TOKEN_PROGRAM_ID,
       Keypair.generate() // dummy signer since we aren't making any txs
     );
     const lpTokenAmount = new anchor.BN(
       (await lpToken.getAccountInfo(address)).amount
     );
-
-    const WAD = "1".concat(Array(18 + 1).join("0"));
-    const totalBorrowsWads = this.reserve.liquidity.borrowedAmountWads;
-    const totalLiquidityWads = this.reserve.liquidity.availableAmount.mul(
-      new anchor.BN(WAD)
-    );
-    const totalDepositsWads = totalBorrowsWads.add(totalLiquidityWads);
-    const exchangeRate = new anchor.BN(totalDepositsWads.toString())
-      .div(new anchor.BN(this.reserve.collateral.mintTotalSupply.toString()))
-      .div(new anchor.BN(WAD));
+    const exchangeRate = new anchor.BN(this.reserve.stats.cTokenExchangeRate);
 
     return lpTokenAmount.mul(exchangeRate).toNumber();
   }
 
   async getApy(): Promise<number> {
     await this.reload();
-    return parseFloat(calculateSupplyAPY(this.reserve).toHuman());
+    return this.reserve.stats.supplyInterestAPY;
   }
 }
 

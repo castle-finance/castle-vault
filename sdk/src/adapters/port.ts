@@ -1,4 +1,5 @@
 import {
+  Cluster,
   Keypair,
   PublicKey,
   SystemProgram,
@@ -7,18 +8,26 @@ import {
 import { ENV } from "@solana/spl-token-registry";
 import * as anchor from "@project-serum/anchor";
 import {
+  AssetConfig,
+  AssetDepositConfig,
+  AssetDisplayConfig,
   AssetPrice,
+  AssetPriceConfig,
+  DEFAULT_PORT_LENDING_MARKET,
   Environment,
   initLendingMarketInstruction,
   initReserveInstruction,
+  MintId,
   Port,
+  PORT_STAKING,
   ReserveConfigProto,
+  ReserveId,
 } from "@port.finance/port-sdk";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 
 import { Asset } from "./asset";
 
-export interface PortAccounts {
+interface PortAccounts {
   program: PublicKey;
   market: PublicKey;
   marketAuthority: PublicKey;
@@ -28,6 +37,24 @@ export interface PortAccounts {
   liquiditySupply: PublicKey;
 }
 
+// TODO use constant from port sdk
+// WF port team to make it public
+// https://github.com/port-finance/port-sdk/blob/v2/src/utils/AssetConfigs.ts
+const DEVNET_ASSETS = [
+  new AssetConfig(
+    MintId.fromBase58("So11111111111111111111111111111111111111112"),
+    new AssetDisplayConfig("Solana", "SOL", "#BC57C4"),
+    AssetPriceConfig.fromDecimals(4),
+    new AssetDepositConfig(
+      ReserveId.fromBase58("6FeVStQAGPWvfWijDHF7cTWRCi7He6vTT3ubfNhe9SPt"),
+      {
+        min: 100_000_000, // min 0.1 SOL
+        remain: 20_000_000, // remain 0.02 SOL
+      }
+    )
+  ),
+];
+
 export class PortReserveAsset extends Asset {
   private constructor(
     public provider: anchor.Provider,
@@ -35,6 +62,77 @@ export class PortReserveAsset extends Asset {
     public client: Port
   ) {
     super();
+  }
+
+  static async load(
+    provider: anchor.Provider,
+    cluster: Cluster,
+    reserveMint: PublicKey
+  ): Promise<PortReserveAsset> {
+    let env: Environment;
+    let market: PublicKey;
+    if (cluster == "devnet") {
+      env = new Environment(
+        ENV.Devnet,
+        DEVNET_LENDING_PROGRAM_ID,
+        PORT_STAKING,
+        TOKEN_PROGRAM_ID,
+        DEVNET_ASSETS
+      );
+      market = new PublicKey("H27Quk3DSbu55T4dCr1NddTTSAezXwHU67FPCZVKLhSW");
+    } else if (cluster == "mainnet-beta") {
+      env = Environment.forMainNet();
+      market = DEFAULT_PORT_LENDING_MARKET;
+    } else {
+      throw new Error("Cluster ${cluster} not supported");
+    }
+    const client = new Port(provider.connection, env, market);
+    const reserveContext = await client.getReserveContext();
+    const reserve = reserveContext.getByAssetMintId(MintId.of(reserveMint));
+    const [authority, _] = await PublicKey.findProgramAddress(
+      [market.toBuffer()],
+      env.getLendingProgramPk()
+    );
+    const accounts: PortAccounts = {
+      program: env.getLendingProgramPk(),
+      market: market,
+      marketAuthority: authority,
+      reserve: reserve.getReserveId(),
+      collateralMint: reserve.getShareMintId(),
+      oracle: reserve.getOracleId(),
+      liquiditySupply: reserve.getAssetBalanceId(),
+    };
+
+    return new PortReserveAsset(provider, accounts, client);
+  }
+
+  static async initialize(
+    provider: anchor.Provider,
+    owner: Keypair,
+    reserveTokenMint: PublicKey,
+    pythPrice: PublicKey,
+    ownerReserveTokenAccount: PublicKey,
+    initialReserveAmount: number
+  ): Promise<PortReserveAsset> {
+    const market = await createLendingMarket(provider);
+    const accounts = await createDefaultReserve(
+      provider,
+      initialReserveAmount,
+      reserveTokenMint,
+      ownerReserveTokenAccount,
+      market.publicKey,
+      pythPrice,
+      owner
+    );
+    const env = new Environment(
+      ENV.Devnet,
+      DEVNET_LENDING_PROGRAM_ID,
+      null,
+      TOKEN_PROGRAM_ID,
+      []
+    );
+    const client = new Port(provider.connection, env, market.publicKey);
+    return new PortReserveAsset(provider, accounts, client);
   }
 
   async getLpTokenAccountValue(address: PublicKey): Promise<number> {
@@ -59,39 +157,10 @@ export class PortReserveAsset extends Asset {
       .getRaw()
       .toNumber();
   }
+
   async getApy(): Promise<number> {
     const reserve = await this.client.getReserve(this.accounts.reserve);
     return reserve.getSupplyApy().getUnchecked().toNumber();
-  }
-
-  static async initialize(
-    provider: anchor.Provider,
-    owner: Keypair,
-    reserveTokenMint: PublicKey,
-    pythPrice: PublicKey,
-    ownerReserveTokenAccount: PublicKey,
-    initialReserveAmount: number
-  ): Promise<PortReserveAsset> {
-    const market = await createLendingMarket(provider);
-    const accounts = await createDefaultReserve(
-      provider,
-      initialReserveAmount,
-      reserveTokenMint,
-      ownerReserveTokenAccount,
-      market.publicKey,
-      pythPrice,
-      owner
-    );
-    // TODO make local/devnet/mainnet switch a parameter
-    const env = new Environment(
-      ENV.Devnet,
-      DEVNET_LENDING_PROGRAM_ID,
-      null,
-      TOKEN_PROGRAM_ID,
-      []
-    );
-    const client = new Port(provider.connection, env, market.publicKey);
-    return new PortReserveAsset(provider, accounts, client);
   }
 }
 

@@ -1,4 +1,5 @@
 import {
+  Cluster,
   Keypair,
   PublicKey,
   Signer,
@@ -16,6 +17,8 @@ import {
   JetReserve,
   JetUser,
   JET_ID,
+  JET_MARKET_ADDRESS,
+  JET_MARKET_ADDRESS_DEVNET,
   ReserveConfig,
 } from "@jet-lab/jet-engine";
 
@@ -42,28 +45,38 @@ export class JetReserveAsset extends Asset {
     super();
   }
 
-  async getLpTokenAccountValue(address: PublicKey): Promise<number> {
-    await this.market.refresh();
-
-    const reserveInfo = this.market.reserves[this.reserve.data.index];
-    const exchangeRate = reserveInfo.depositNoteExchangeRate.div(
-      new anchor.BN(1e15)
+  static async load(
+    provider: anchor.Provider,
+    cluster: Cluster,
+    reserveMint: PublicKey
+  ): Promise<JetReserveAsset> {
+    let client: JetClient;
+    let market: JetMarket;
+    if (cluster == "devnet") {
+      client = await JetClient.connect(provider, true);
+      market = await JetMarket.load(client, JET_MARKET_ADDRESS_DEVNET);
+    } else if (cluster == "mainnet-beta") {
+      client = await JetClient.connect(provider, false);
+      market = await JetMarket.load(client, JET_MARKET_ADDRESS);
+    } else {
+      throw new Error("Cluster ${cluster} not supported");
+    }
+    const reserves = await JetReserve.loadMultiple(client, market);
+    const reserve = reserves.find((res) =>
+      res.data.tokenMint.equals(reserveMint)
     );
 
-    const lpToken = new Token(
-      this.provider.connection,
-      this.reserve.data.depositNoteMint,
-      TOKEN_PROGRAM_ID,
-      Keypair.generate() // dummy signer since we aren't making any txs
-    );
-
-    const lpTokenAccountInfo = await lpToken.getAccountInfo(address);
-    return lpTokenAccountInfo.amount.toNumber() * exchangeRate.toNumber();
-  }
-
-  async getApy(): Promise<number> {
-    await this.reserve.refresh();
-    return this.reserve.data.depositApy;
+    const accounts: JetAccounts = {
+      program: JET_ID,
+      reserve: reserve.data.address,
+      market: market.address,
+      marketAuthority: market.marketAuthority,
+      feeNoteVault: reserve.data.feeNoteVault,
+      depositNoteMint: reserve.data.depositNoteMint,
+      liquiditySupply: reserve.data.vault,
+      pythPrice: reserve.data.pythOraclePrice,
+    };
+    return new JetReserveAsset(provider, accounts, market, reserve);
   }
 
   /**
@@ -126,6 +139,30 @@ export class JetReserveAsset extends Asset {
     await provider.send(depositTx, [owner]);
 
     return new JetReserveAsset(provider, accounts, market, reserve);
+  }
+
+  async getLpTokenAccountValue(address: PublicKey): Promise<number> {
+    await this.market.refresh();
+
+    const reserveInfo = this.market.reserves[this.reserve.data.index];
+    const exchangeRate = reserveInfo.depositNoteExchangeRate.div(
+      new anchor.BN(1e15)
+    );
+
+    const lpToken = new Token(
+      this.provider.connection,
+      this.reserve.data.depositNoteMint,
+      TOKEN_PROGRAM_ID,
+      Keypair.generate() // dummy signer since we aren't making any txs
+    );
+
+    const lpTokenAccountInfo = await lpToken.getAccountInfo(address);
+    return lpTokenAccountInfo.amount.toNumber() * exchangeRate.toNumber();
+  }
+
+  async getApy(): Promise<number> {
+    await this.reserve.refresh();
+    return this.reserve.data.depositApy;
   }
 }
 

@@ -8,6 +8,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
+  Cluster,
   Keypair,
   PublicKey,
   SystemProgram,
@@ -25,38 +26,41 @@ import {
   JetReserveAsset,
 } from "./adapters";
 import { StrategyType, Vault } from "./types";
+import { Program } from "@project-serum/anchor";
+import { PROGRAM_ID } from ".";
 
 export class VaultClient {
-  vaultId: PublicKey;
-  vaultState: Vault;
-  program: anchor.Program<CastleLendingAggregator>;
-  jet: JetReserveAsset;
-  solend: SolendReserveAsset;
-  port: PortReserveAsset;
-
   private constructor(
-    program: anchor.Program<CastleLendingAggregator>,
-    vaultId: PublicKey,
-    vault: Vault,
-    solend: SolendReserveAsset,
-    port: PortReserveAsset,
-    jet: JetReserveAsset
-  ) {
-    this.program = program;
-    this.vaultId = vaultId;
-    this.vaultState = vault;
-    this.solend = solend;
-    this.port = port;
-    this.jet = jet;
-  }
+    public program: anchor.Program<CastleLendingAggregator>,
+    public vaultId: PublicKey,
+    public vaultState: Vault,
+    public solend: SolendReserveAsset,
+    public port: PortReserveAsset,
+    public jet: JetReserveAsset
+  ) {}
 
-  //static async load(
-  //  program: anchor.Program<CastleLendingAggregator>,
-  //  vaultId: PublicKey
-  //): Promise<VaultClient> {
-  //  const vaultState = await program.account.vault.fetch(vaultId);
-  //  return new VaultClient(program, vaultId, vaultState);
-  //}
+  static async load(
+    provider: anchor.Provider,
+    cluster: Cluster,
+    reserveMint: PublicKey,
+    vaultId: PublicKey
+  ): Promise<VaultClient> {
+    const program = (await Program.at(
+      PROGRAM_ID,
+      provider
+    )) as Program<CastleLendingAggregator>;
+    const vaultState = await program.account.vault.fetch(vaultId);
+
+    const solend = await SolendReserveAsset.load(
+      provider,
+      cluster,
+      reserveMint
+    );
+    const port = await PortReserveAsset.load(provider, cluster, reserveMint);
+    const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
+
+    return new VaultClient(program, vaultId, vaultState, solend, port, jet);
+  }
 
   private async reload() {
     this.vaultState = await this.program.account.vault.fetch(this.vaultId);
