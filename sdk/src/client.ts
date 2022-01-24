@@ -404,13 +404,13 @@ export class VaultClient {
 
     // Sort ixs in ascending order of outflows
     const diffAndReconcileIxs: [number, TransactionInstruction][] = [
-      [
-        newAllocations.solend.toNumber() -
-          (await this.solend.getLpTokenAccountValue(
-            this.vaultState.vaultSolendLpToken
-          )),
-        this.getReconcileSolendIx(),
-      ],
+      //[
+      //  newAllocations.solend.toNumber() -
+      //    (await this.solend.getLpTokenAccountValue(
+      //      this.vaultState.vaultSolendLpToken
+      //    )),
+      //  this.getReconcileSolendIx(),
+      //],
       [
         newAllocations.port.toNumber() -
           (await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken)),

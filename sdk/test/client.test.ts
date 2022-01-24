@@ -63,11 +63,8 @@ describe("VaultClient", () => {
   });
 
   it("rebalances", async () => {
-    const sigs = await vaultClient.rebalance();
-    const result = await connection.confirmTransaction(
-      sigs[sigs.length - 1],
-      "finalized"
-    );
+    const sig = await vaultClient.rebalance();
+    const result = await connection.confirmTransaction(sig, "finalized");
     assert.isNull(result.value.err);
   });
 });
