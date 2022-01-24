@@ -347,7 +347,8 @@ export class VaultClient {
     withdrawTx.add(this.getRefreshIx());
     // Convert from reserve tokens to LP tokens
     const exchangeRate = await this.getLpExchangeRate();
-    const convertedAmount = amount / exchangeRate;
+    // TODO remove this epsilon
+    const convertedAmount = amount / exchangeRate - 10;
     //console.debug("Converted to %d lp tokens", convertedAmount);
     withdrawTx.add(
       this.program.instruction.withdraw(new anchor.BN(convertedAmount), {
@@ -385,6 +386,7 @@ export class VaultClient {
   private async getRebalanceAndReconcileIxs(
     withdrawAmountOption: number = 0
   ): Promise<TransactionInstruction[]> {
+    // TODO split off into its own public function so that heartbeat can use it to figure out when to actually send txs
     // Simulate transaction to get new allocations
     const newAllocations = (
       await this.program.simulate.rebalance(new anchor.BN(withdrawAmountOption), {
