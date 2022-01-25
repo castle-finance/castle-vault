@@ -17,7 +17,7 @@ describe("VaultClient", () => {
   const wallet = Wallet.local();
   const provider = new Provider(connection, wallet, { commitment: "confirmed" });
 
-  const depositAmount = LAMPORTS_PER_SOL * 0.1;
+  const depositAmount = LAMPORTS_PER_SOL * 1;
 
   let vaultClient: VaultClient;
 
@@ -32,10 +32,16 @@ describe("VaultClient", () => {
     assert.isNotNull(vaultClient);
 
     console.log("Total value: ", await vaultClient.getTotalValue());
-    console.log("Vault APY: ", await vaultClient.getApy());
+    console.log("Vault APY: ", (await vaultClient.getApy()).toNumber());
     console.log("Jet APY: ", await vaultClient.jet.getApy());
     console.log("Port APY: ", await vaultClient.port.getApy());
     console.log("Solend APY: ", await vaultClient.solend.getApy());
+  });
+
+  it("rebalances", async () => {
+    const sig = await vaultClient.rebalance();
+    const result = await connection.confirmTransaction(sig, "finalized");
+    assert.isNull(result.value.err);
   });
 
   it("deposits", async () => {
@@ -43,8 +49,10 @@ describe("VaultClient", () => {
 
     const sigs = await vaultClient.deposit(wallet, depositAmount, wallet.publicKey);
     await connection.confirmTransaction(sigs[sigs.length - 1], "finalized");
+
     const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
 
+    // TODO make this approx equal
     assert.equal(endUserValue - startUserValue, depositAmount);
   });
 
@@ -59,12 +67,8 @@ describe("VaultClient", () => {
     await connection.confirmTransaction(sigs[sigs.length - 1], "finalized");
 
     const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
-    assert.equal(startUserValue - endUserValue, depositAmount);
-  });
 
-  it("rebalances", async () => {
-    const sig = await vaultClient.rebalance();
-    const result = await connection.confirmTransaction(sig, "finalized");
-    assert.isNull(result.value.err);
+    // TODO make this approx equal
+    assert.equal(startUserValue - endUserValue, depositAmount);
   });
 });

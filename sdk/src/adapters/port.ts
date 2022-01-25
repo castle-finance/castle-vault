@@ -1,3 +1,5 @@
+import Big from "big.js";
+
 import {
   Cluster,
   Keypair,
@@ -5,8 +7,10 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
 import * as anchor from "@project-serum/anchor";
+
 import {
   AssetConfig,
   AssetDepositConfig,
@@ -23,7 +27,6 @@ import {
   ReserveConfigProto,
   ReserveId,
 } from "@port.finance/port-sdk";
-import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 
 import { Asset } from "./asset";
 
@@ -135,7 +138,7 @@ export class PortReserveAsset extends Asset {
     return new PortReserveAsset(provider, accounts, client);
   }
 
-  async getLpTokenAccountValue(address: PublicKey): Promise<number> {
+  async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
     const reserve = await this.client.getReserve(this.accounts.reserve);
     const exchangeRate = reserve.getExchangeRatio();
 
@@ -152,15 +155,20 @@ export class PortReserveAsset extends Asset {
       (await lpToken.getAccountInfo(address)).amount.toNumber()
     );
 
-    return lpTokenAmount
-      .divide(exchangeRate.getUnchecked())
-      .getRaw()
-      .toNumber();
+    return lpTokenAmount.divide(exchangeRate.getUnchecked()).getRaw();
   }
 
-  async getApy(): Promise<number> {
+  /**
+   * Continuously compounded APY
+   *
+   * @returns
+   */
+  async getApy(): Promise<Big> {
     const reserve = await this.client.getReserve(this.accounts.reserve);
-    return reserve.getSupplyApy().getUnchecked().toNumber();
+    const apr = reserve.getSupplyApy().getUnchecked();
+    const apy = Math.expm1(apr.toNumber());
+
+    return new Big(apy);
   }
 }
 
@@ -201,9 +209,7 @@ const createAccount = async (
       fromPubkey: provider.wallet.publicKey,
       newAccountPubkey: newAccount.publicKey,
       programId: owner,
-      lamports: await provider.connection.getMinimumBalanceForRentExemption(
-        space
-      ),
+      lamports: await provider.connection.getMinimumBalanceForRentExemption(space),
       space,
     })
   );
@@ -211,9 +217,7 @@ const createAccount = async (
   return newAccount;
 };
 
-async function createLendingMarket(
-  provider: anchor.Provider
-): Promise<Keypair> {
+async function createLendingMarket(provider: anchor.Provider): Promise<Keypair> {
   const lendingMarket = await createAccount(
     provider,
     LENDING_MARKET_LEN,
@@ -249,11 +253,7 @@ async function createDefaultReserve(
   oracle: PublicKey,
   owner: Keypair
 ): Promise<PortAccounts> {
-  const reserve = await createAccount(
-    provider,
-    RESERVE_LEN,
-    DEVNET_LENDING_PROGRAM_ID
-  );
+  const reserve = await createAccount(provider, RESERVE_LEN, DEVNET_LENDING_PROGRAM_ID);
 
   const collateralMintAccount = await createAccount(
     provider,

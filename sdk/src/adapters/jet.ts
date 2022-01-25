@@ -1,3 +1,5 @@
+import Big from "big.js";
+
 import {
   Cluster,
   Keypair,
@@ -9,6 +11,7 @@ import {
 } from "@solana/web3.js";
 import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import * as anchor from "@project-serum/anchor";
+
 import {
   Amount,
   DEX_ID,
@@ -62,9 +65,7 @@ export class JetReserveAsset extends Asset {
       throw new Error("Cluster ${cluster} not supported");
     }
     const reserves = await JetReserve.loadMultiple(client, market);
-    const reserve = reserves.find((res) =>
-      res.data.tokenMint.equals(reserveMint)
-    );
+    const reserve = reserves.find((res) => res.data.tokenMint.equals(reserveMint));
 
     const accounts: JetAccounts = {
       program: JET_ID,
@@ -106,11 +107,7 @@ export class JetReserveAsset extends Asset {
     initialReserveAmount: number
   ): Promise<JetReserveAsset> {
     const client = await JetClient.connect(provider, true);
-    const market = await createLendingMarket(
-      client,
-      wallet,
-      marketQuoteTokenMint
-    );
+    const market = await createLendingMarket(client, wallet, marketQuoteTokenMint);
 
     const accounts = await createReserve(
       wallet,
@@ -123,14 +120,8 @@ export class JetReserveAsset extends Asset {
       pythProduct
     );
 
-    //const reserve = await JetReserve.load(client, accounts.reserve, market);
     const reserve = await JetReserve.load(client, accounts.reserve);
-    const jetUser = await JetUser.load(
-      client,
-      market,
-      [reserve],
-      owner.publicKey
-    );
+    const jetUser = await JetUser.load(client, market, [reserve], owner.publicKey);
     const depositTx = await jetUser.makeDepositTx(
       reserve,
       ownerReserveTokenAccount,
@@ -141,12 +132,12 @@ export class JetReserveAsset extends Asset {
     return new JetReserveAsset(provider, accounts, market, reserve);
   }
 
-  async getLpTokenAccountValue(address: PublicKey): Promise<number> {
+  async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
     await this.market.refresh();
 
     const reserveInfo = this.market.reserves[this.reserve.data.index];
-    const exchangeRate = reserveInfo.depositNoteExchangeRate.div(
-      new anchor.BN(1e15)
+    const exchangeRate = new Big(reserveInfo.depositNoteExchangeRate.toString()).div(
+      new Big(1e15)
     );
 
     const lpToken = new Token(
@@ -157,12 +148,13 @@ export class JetReserveAsset extends Asset {
     );
 
     const lpTokenAccountInfo = await lpToken.getAccountInfo(address);
-    return lpTokenAccountInfo.amount.toNumber() * exchangeRate.toNumber();
+
+    return exchangeRate.mul(new Big(lpTokenAccountInfo.amount.toString()));
   }
 
-  async getApy(): Promise<number> {
+  async getApy(): Promise<Big> {
     await this.reserve.refresh();
-    return this.reserve.data.depositApy;
+    return new Big(this.reserve.data.depositApy);
   }
 }
 
@@ -173,20 +165,13 @@ async function createLendingMarket(
 ): Promise<JetMarket> {
   const account = Keypair.generate();
 
-  await client.program.rpc.initMarket(
-    wallet.publicKey,
-    "USD",
-    quoteCurrencyMint,
-    {
-      accounts: {
-        market: account.publicKey,
-      },
-      signers: [account],
-      instructions: [
-        await client.program.account.market.createInstruction(account),
-      ],
-    }
-  );
+  await client.program.rpc.initMarket(wallet.publicKey, "USD", quoteCurrencyMint, {
+    accounts: {
+      market: account.publicKey,
+    },
+    signers: [account],
+    instructions: [await client.program.account.market.createInstruction(account)],
+  });
 
   return JetMarket.load(client, account.publicKey);
 }
@@ -210,10 +195,10 @@ async function createReserve(
     client.program.programId,
     ["loans", reserve, tokenMint]
   );
-  const [vault, vaultBump] = await findProgramAddress(
-    client.program.programId,
-    ["vault", reserve]
-  );
+  const [vault, vaultBump] = await findProgramAddress(client.program.programId, [
+    "vault",
+    reserve,
+  ]);
   const [feeNoteVault, feeNoteVaultBump] = await findProgramAddress(
     client.program.programId,
     ["fee-vault", reserve]

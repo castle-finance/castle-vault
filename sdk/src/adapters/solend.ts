@@ -1,4 +1,7 @@
-import { Token, MintLayout, AccountLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { blob, struct, u8, Layout } from "buffer-layout";
+import { toBigIntLE, toBufferLE } from "bigint-buffer";
+import Big from "big.js";
+
 import {
   Cluster,
   Keypair,
@@ -8,14 +11,13 @@ import {
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
+import { Token, MintLayout, AccountLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import * as anchor from "@project-serum/anchor";
-import { blob, struct, u8, Layout } from "buffer-layout";
-import { toBigIntLE, toBufferLE } from "bigint-buffer";
+
 import {
   LENDING_MARKET_SIZE,
   SolendReserve,
   SolendMarket,
-  //RESERVE_SIZE
 } from "@solendprotocol/solend-sdk";
 
 import { Asset } from "./asset";
@@ -131,7 +133,7 @@ export class SolendReserveAsset extends Asset {
     await this.reserve.load();
   }
 
-  async getLpTokenAccountValue(address: PublicKey): Promise<number> {
+  async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
     await this.reload();
 
     const lpToken = new Token(
@@ -140,15 +142,20 @@ export class SolendReserveAsset extends Asset {
       TOKEN_PROGRAM_ID,
       Keypair.generate() // dummy signer since we aren't making any txs
     );
-    const lpTokenAmount = new anchor.BN((await lpToken.getAccountInfo(address)).amount);
-    const exchangeRate = new anchor.BN(this.reserve.stats.cTokenExchangeRate);
+    const lpTokenAmount = new Big(
+      (await lpToken.getAccountInfo(address)).amount.toString()
+    );
+    const exchangeRate = new Big(this.reserve.stats.cTokenExchangeRate);
 
-    return lpTokenAmount.mul(exchangeRate).toNumber();
+    return lpTokenAmount.mul(exchangeRate);
   }
 
-  async getApy(): Promise<number> {
+  async getApy(): Promise<Big> {
     await this.reload();
-    return this.reserve.stats.supplyInterestAPY;
+    const apr = this.reserve.stats.supplyInterestAPY;
+    const apy = Math.expm1(apr);
+
+    return Big(apy);
   }
 }
 
