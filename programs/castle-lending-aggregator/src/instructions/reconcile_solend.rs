@@ -92,39 +92,55 @@ impl<'info> ReconcileSolend<'info> {
     }
 }
 
-pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: u64) -> ProgramResult {
-    // Add invariant:
-    //  if withdraw_option == 0: !vault.allocations.port.stale
-    //  else: must be a withdraw ix later in the transaction
-
+// TODO handle case where there allocation amount is greater than vault value
+// TODO eliminate duplication of redeem logic
+pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
     let solend_exchange_rate = ctx
         .accounts
         .solend_reserve_state
         .collateral_exchange_rate()?;
-    let current_solend_value =
-        solend_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_solend_lp_token.amount)?;
-    let allocation = ctx.accounts.vault.allocations.solend;
 
-    match allocation.value.checked_sub(current_solend_value) {
-        Some(tokens_to_deposit) => {
-            if tokens_to_deposit != 0 {
-                solend::deposit_reserve_liquidity(
-                    ctx.accounts
-                        .solend_deposit_reserve_liquidity_context()
-                        .with_signer(&[&vault.authority_seeds()]),
-                    tokens_to_deposit,
-                )?;
-            }
-        }
+    match withdraw_option {
         None => {
-            let tokens_to_redeem = ctx
-                .accounts
-                .vault_solend_lp_token
-                .amount
-                .checked_sub(solend_exchange_rate.liquidity_to_collateral(allocation.value)?)
-                .ok_or(ErrorCode::MathError)?;
+            let current_solend_value = solend_exchange_rate
+                .collateral_to_liquidity(ctx.accounts.vault_solend_lp_token.amount)?;
+            let allocation = ctx.accounts.vault.allocations.solend;
+
+            match allocation.value.checked_sub(current_solend_value) {
+                Some(tokens_to_deposit) => {
+                    if tokens_to_deposit != 0 {
+                        solend::deposit_reserve_liquidity(
+                            ctx.accounts
+                                .solend_deposit_reserve_liquidity_context()
+                                .with_signer(&[&vault.authority_seeds()]),
+                            tokens_to_deposit,
+                        )?;
+                    }
+                }
+                None => {
+                    let tokens_to_redeem = ctx
+                        .accounts
+                        .vault_solend_lp_token
+                        .amount
+                        .checked_sub(
+                            solend_exchange_rate.liquidity_to_collateral(allocation.value)?,
+                        )
+                        .ok_or(ErrorCode::MathError)?;
+
+                    solend::redeem_reserve_collateral(
+                        ctx.accounts
+                            .solend_redeem_reserve_collateral_context()
+                            .with_signer(&[&vault.authority_seeds()]),
+                        tokens_to_redeem,
+                    )?;
+                }
+            }
+            ctx.accounts.vault.allocations.solend.reset();
+        }
+        Some(withdraw_amount) => {
+            let tokens_to_redeem = solend_exchange_rate.liquidity_to_collateral(withdraw_amount)?;
 
             solend::redeem_reserve_collateral(
                 ctx.accounts
@@ -134,8 +150,5 @@ pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: u64) -> ProgramRe
             )?;
         }
     }
-
-    ctx.accounts.vault.allocations.solend.reset();
-
     Ok(())
 }

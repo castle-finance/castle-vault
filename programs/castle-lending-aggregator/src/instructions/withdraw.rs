@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, TokenAccount, Transfer};
+use spl_math::precise_number::PreciseNumber;
 
 use std::convert::Into;
+use std::convert::TryFrom;
 
 use crate::errors::ErrorCode;
-use crate::math::calc_withdraw_from_vault;
 use crate::state::Vault;
 
 #[derive(Accounts)]
@@ -91,4 +92,20 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     ctx.accounts.vault.total_value -= reserve_tokens_to_transfer;
 
     Ok(())
+}
+
+pub fn calc_withdraw_from_vault(
+    lp_token_amount: u64,
+    lp_token_supply: u64,
+    reserve_tokens_in_vault: u64,
+) -> Option<u64> {
+    let lp_token_amount = PreciseNumber::new(lp_token_amount as u128)?;
+    let lp_token_supply = PreciseNumber::new(lp_token_supply as u128)?;
+    let reserve_tokens_in_vault = PreciseNumber::new(reserve_tokens_in_vault as u128)?;
+
+    let reserve_tokens_to_transfer = reserve_tokens_in_vault
+        .checked_mul(&lp_token_amount.checked_div(&lp_token_supply)?)?
+        .to_imprecise()?;
+
+    u64::try_from(reserve_tokens_to_transfer).ok()
 }

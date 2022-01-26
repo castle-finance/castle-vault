@@ -318,7 +318,6 @@ export class VaultClient {
     let txs: SendTxRequest[] = [];
 
     // Withdraw from lending markets if not enough reserves in vault
-    // Has to be 2 transactions because of size limits
     const vaultReserveTokenAccountInfo = await this.getReserveTokenAccountInfo(
       this.vaultState.vaultReserveToken
     );
@@ -331,18 +330,38 @@ export class VaultClient {
     const convertedAmount = exchangeRate.mul(amount);
 
     //console.debug("Withdrawing %d reserve tokens", convertedAmount);
+    console.log(
+      "solend value: ",
+      (
+        await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken)
+      ).toNumber()
+    );
+    console.log(
+      "port value: ",
+      (
+        await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken)
+      ).toNumber()
+    );
+    console.log(
+      "jet value: ",
+      (
+        await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken)
+      ).toNumber()
+    );
 
     if (vaultReserveAmount.lt(convertedAmount)) {
       const newAllocations = await this.getSimulatedAllocations();
       // TODO can add to front of withdrawTx?
       // Get IX to reconcile market with the most outflows
       const reconcileIx = (
-        await this.allocationDiffsWithReconcileIxs(
+        await this.newAndOldallocationsWithReconcileIxs(
           newAllocations,
-          new anchor.BN(convertedAmount.toString())
+          new anchor.BN(vaultReserveAmount.sub(convertedAmount).toString())
         )
-      ).sort((a, b) => a[0].sub(b[0]).toNumber())[0][1];
-      const reconcileTx = new Transaction().add(reconcileIx);
+      )
+        .filter((e) => e[1].gte(convertedAmount.sub(vaultReserveAmount)))
+        .sort((a, b) => a[0].sub(a[1]).sub(b[0].sub(b[1])).toNumber())[0][2];
+      const reconcileTx = new Transaction().add(this.getRefreshIx()).add(reconcileIx);
       txs.push({ tx: reconcileTx, signers: [] });
     }
 
@@ -397,11 +416,12 @@ export class VaultClient {
    * @param threshold
    * @returns
    */
-  async rebalance(threshold: number = 0): Promise<TransactionSignature> {
-    const tx = new Transaction();
-    tx.add(this.getRefreshIx());
+  async rebalance(threshold: number = 0): Promise<TransactionSignature[]> {
+    const txs: SendTxRequest[] = [];
 
-    tx.add(
+    const rebalanceTx = new Transaction();
+    rebalanceTx.add(this.getRefreshIx());
+    rebalanceTx.add(
       this.program.instruction.rebalance({
         accounts: {
           vault: this.vaultId,
@@ -415,20 +435,27 @@ export class VaultClient {
         },
       })
     );
+    txs.push({ tx: rebalanceTx, signers: [] });
 
     // Simulate rebalance to get new allocations
     const newAllocations = await this.getSimulatedAllocations();
 
     // Sort ixs in ascending order of outflows
-    const allocationDiffsWithReconcileIxs = await this.allocationDiffsWithReconcileIxs(
-      newAllocations
-    );
+    const oldAndNewallocationsWithReconcileIxs =
+      await this.newAndOldallocationsWithReconcileIxs(newAllocations);
+
+    const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
+      oldAndNewallocationsWithReconcileIxs.map((e, _) => [e[0].sub(e[1]), e[2]]);
+
     const reconcileIxs = allocationDiffsWithReconcileIxs
       .sort((a, b) => a[0].sub(b[0]).toNumber())
-      .map((val, _) => val[1]);
+      .map((e, _) => e[1]);
 
     for (let ix of reconcileIxs) {
-      tx.add(ix);
+      const reconcileTx = new Transaction();
+      reconcileTx.add(this.getRefreshIx());
+      reconcileTx.add(ix);
+      txs.push({ tx: reconcileTx, signers: [] });
     }
 
     const vaultValue = await this.getTotalValue();
@@ -439,9 +466,9 @@ export class VaultClient {
     );
 
     if (maxAllocationChange > threshold) {
-      return this.program.provider.send(tx);
+      return this.program.provider.sendAll(txs);
     } else {
-      return Promise.resolve("");
+      return Promise.resolve([]);
     }
   }
 
@@ -463,27 +490,25 @@ export class VaultClient {
     ).events[0].data as RebalanceEvent;
   }
 
-  private async allocationDiffsWithReconcileIxs(
+  // TODO this is probably not the best way to do this?
+  private async newAndOldallocationsWithReconcileIxs(
     newAllocations: RebalanceEvent,
     withdrawOption: anchor.BN = new anchor.BN(0)
-  ): Promise<[Big, TransactionInstruction][]> {
+  ): Promise<[Big, Big, TransactionInstruction][]> {
     return [
       [
-        new Big(newAllocations.solend.toString()).sub(
-          await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken)
-        ),
+        new Big(newAllocations.solend.toString()),
+        await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken),
         this.getReconcileSolendIx(withdrawOption),
       ],
       [
-        new Big(newAllocations.port.toString()).sub(
-          await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken)
-        ),
+        new Big(newAllocations.port.toString()),
+        await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken),
         this.getReconcilePortIx(withdrawOption),
       ],
       [
-        new Big(newAllocations.jet.toString()).sub(
-          await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken)
-        ),
+        new Big(newAllocations.jet.toString()),
+        await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken),
         this.getReconcileJetIx(withdrawOption),
       ],
     ];

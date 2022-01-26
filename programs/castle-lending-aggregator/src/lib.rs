@@ -4,7 +4,6 @@ pub mod cpi;
 pub mod errors;
 pub mod events;
 pub mod instructions;
-pub mod math;
 pub mod rebalance;
 pub mod state;
 
@@ -44,14 +43,29 @@ pub mod castle_lending_aggregator {
     }
 
     pub fn reconcile_solend(ctx: Context<ReconcileSolend>, withdraw_option: u64) -> ProgramResult {
-        instructions::reconcile_solend::handler(ctx, withdraw_option)
+        let option = if withdraw_option == 0 {
+            None
+        } else {
+            Some(withdraw_option)
+        };
+        instructions::reconcile_solend::handler(ctx, option)
     }
 
     pub fn reconcile_port(ctx: Context<ReconcilePort>, withdraw_option: u64) -> ProgramResult {
-        instructions::reconcile_port::handler(ctx, withdraw_option)
+        let option = if withdraw_option == 0 {
+            None
+        } else {
+            Some(withdraw_option)
+        };
+        instructions::reconcile_port::handler(ctx, option)
     }
 
     pub fn reconcile_jet(ctx: Context<ReconcileJet>, withdraw_option: u64) -> ProgramResult {
-        instructions::reconcile_jet::handler(ctx, withdraw_option)
+        let option = if withdraw_option == 0 {
+            None
+        } else {
+            Some(withdraw_option)
+        };
+        instructions::reconcile_jet::handler(ctx, option)
     }
 }

@@ -90,42 +90,64 @@ impl<'info> ReconcileJet<'info> {
     }
 }
 
-pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: u64) -> ProgramResult {
-    // Add invariant:
-    //  if withdraw_option == 0: !vault.allocations.port.stale
-    //  else: must be a withdraw ix later in the transaction
-
+// TODO handle case where there allocation amount is greater than vault value
+// TODO eliminate duplication of redeem logic
+pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
-    let reserve_info = {
-        let market = ctx.accounts.jet_market.load()?;
-        let reserve = ctx.accounts.jet_reserve_state.load()?;
-        let clock = Clock::get()?;
-        *market.reserves().get_cached(reserve.index, clock.slot)
-    };
-
-    let current_jet_value = Amount::from_deposit_notes(ctx.accounts.vault_jet_lp_token.amount)
-        .as_tokens(&reserve_info, Rounding::Down);
-    let allocation = ctx.accounts.vault.allocations.jet;
-
-    match allocation.value.checked_sub(current_jet_value) {
-        Some(tokens_to_deposit) => {
-            if tokens_to_deposit != 0 {
-                jet::cpi::deposit_tokens(
-                    ctx.accounts
-                        .jet_deposit_context()
-                        .with_signer(&[&vault.authority_seeds()]),
-                    Amount::from_tokens(tokens_to_deposit),
-                )?;
-            }
-        }
+    match withdraw_option {
         None => {
-            let tokens_to_redeem = Amount::from_tokens(
-                current_jet_value
-                    .checked_sub(allocation.value)
-                    .ok_or(ErrorCode::MathError)?,
-            )
-            .as_deposit_notes(&reserve_info, Rounding::Down)?;
+            let reserve_info = {
+                let market = ctx.accounts.jet_market.load()?;
+                let reserve = ctx.accounts.jet_reserve_state.load()?;
+                let clock = Clock::get()?;
+                *market.reserves().get_cached(reserve.index, clock.slot)
+            };
+
+            let current_jet_value =
+                Amount::from_deposit_notes(ctx.accounts.vault_jet_lp_token.amount)
+                    .as_tokens(&reserve_info, Rounding::Down);
+            let allocation = ctx.accounts.vault.allocations.jet;
+
+            match allocation.value.checked_sub(current_jet_value) {
+                Some(tokens_to_deposit) => {
+                    if tokens_to_deposit != 0 {
+                        jet::cpi::deposit_tokens(
+                            ctx.accounts
+                                .jet_deposit_context()
+                                .with_signer(&[&vault.authority_seeds()]),
+                            Amount::from_tokens(tokens_to_deposit),
+                        )?;
+                    }
+                }
+                None => {
+                    let tokens_to_redeem = Amount::from_tokens(
+                        current_jet_value
+                            .checked_sub(allocation.value)
+                            .ok_or(ErrorCode::MathError)?,
+                    )
+                    .as_deposit_notes(&reserve_info, Rounding::Down)?;
+                    jet::cpi::withdraw_tokens(
+                        ctx.accounts
+                            .jet_withdraw_context()
+                            .with_signer(&[&vault.authority_seeds()]),
+                        Amount::from_deposit_notes(tokens_to_redeem),
+                    )?;
+                }
+            }
+            ctx.accounts.vault.allocations.jet.reset();
+        }
+        Some(withdraw_amount) => {
+            let reserve_info = {
+                let market = ctx.accounts.jet_market.load()?;
+                let reserve = ctx.accounts.jet_reserve_state.load()?;
+                let clock = Clock::get()?;
+                *market.reserves().get_cached(reserve.index, clock.slot)
+            };
+
+            let tokens_to_redeem = Amount::from_tokens(withdraw_amount)
+                .as_deposit_notes(&reserve_info, Rounding::Down)?;
+
             jet::cpi::withdraw_tokens(
                 ctx.accounts
                     .jet_withdraw_context()
@@ -134,8 +156,6 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: u64) -> ProgramResul
             )?;
         }
     }
-
-    ctx.accounts.vault.allocations.jet.reset();
 
     Ok(())
 }
