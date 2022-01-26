@@ -31,9 +31,16 @@ impl TryFrom<SolendReserve> for LendingMarket {
         let utilization_rate = value.liquidity.utilization_rate()?;
         let borrow_rate = value.current_borrow_rate()?;
 
+        let converted_utilization_rate =
+            Rate::from_scaled_val(utilization_rate.to_scaled_val() as u64);
+        let converted_borrow_rate = Rate::from_scaled_val(borrow_rate.to_scaled_val() as u64);
+
+        //msg!("solend util {:?}", converted_utilization_rate);
+        //msg!("solend port borrow {:?}", converted_borrow_rate);
+
         Ok(LendingMarket {
-            utilization_rate: Rate::from_scaled_val(utilization_rate.to_scaled_val() as u64),
-            borrow_rate: Rate::from_scaled_val(borrow_rate.to_scaled_val() as u64),
+            utilization_rate: converted_utilization_rate,
+            borrow_rate: converted_borrow_rate,
         })
     }
 }
@@ -45,9 +52,16 @@ impl TryFrom<PortReserve> for LendingMarket {
         let utilization_rate = value.liquidity.utilization_rate()?;
         let borrow_rate = value.current_borrow_rate()?;
 
+        let converted_utilization_rate =
+            Rate::from_scaled_val(utilization_rate.to_scaled_val() as u64);
+        let converted_borrow_rate = Rate::from_scaled_val(borrow_rate.to_scaled_val() as u64);
+
+        //msg!("port util {:?}", converted_utilization_rate);
+        //msg!("port borrow {:?}", converted_borrow_rate);
+
         Ok(LendingMarket {
-            utilization_rate: Rate::from_scaled_val(utilization_rate.to_scaled_val() as u64),
-            borrow_rate: Rate::from_scaled_val(borrow_rate.to_scaled_val() as u64),
+            utilization_rate: converted_utilization_rate,
+            borrow_rate: converted_borrow_rate,
         })
     }
 }
@@ -62,9 +76,15 @@ impl TryFrom<JetReserve> for LendingMarket {
         let utilization_rate = jet::state::utilization_rate(outstanding_debt, vault_total);
         let borrow_rate = value.interest_rate(outstanding_debt, vault_total);
 
+        let converted_util = Rate::from_bips(utilization_rate.as_u64(-4));
+        let converted_borrow = Rate::from_bips(borrow_rate.as_u64(-4));
+
+        //msg!("jet util {:?}", converted_util);
+        //msg!("jet borrow {:?}", converted_borrow);
+
         Ok(LendingMarket {
-            utilization_rate: Rate::from_bips(utilization_rate.as_u64(-4)),
-            borrow_rate: Rate::from_bips(borrow_rate.as_u64(-4)),
+            utilization_rate: converted_util,
+            borrow_rate: converted_borrow,
         })
     }
 }

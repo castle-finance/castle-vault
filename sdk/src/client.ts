@@ -410,12 +410,12 @@ export class VaultClient {
 
     // Sort ixs in ascending order of outflows
     const diffAndReconcileIxs: [Big, TransactionInstruction][] = [
-      [
-        new Big(newAllocations.solend.toString()).sub(
-          await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken)
-        ),
-        this.getReconcileSolendIx(),
-      ],
+      //[
+      //  new Big(newAllocations.solend.toString()).sub(
+      //    await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken)
+      //  ),
+      //  this.getReconcileSolendIx(),
+      //],
       [
         new Big(newAllocations.port.toString()).sub(
           await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken)
