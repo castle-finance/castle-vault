@@ -192,6 +192,7 @@ export class VaultClient {
   }
 
   /**
+   * @todo use bignumber
    *
    * @param wallet
    * @param lamports amount depositing

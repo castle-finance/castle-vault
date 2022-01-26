@@ -23,7 +23,7 @@ import {
   JET_MARKET_ADDRESS,
   JET_MARKET_ADDRESS_DEVNET,
   ReserveConfig,
-} from "@castlefinance/jet-engine-fork";
+} from "@jet-lab/jet-engine";
 
 import { Asset } from "./asset";
 

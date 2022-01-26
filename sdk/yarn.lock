@@ -9,20 +9,6 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
-"@castlefinance/jet-engine-fork@0.2.7":
-  version "0.2.7"
-  resolved "https://registry.yarnpkg.com/@castlefinance/jet-engine-fork/-/jet-engine-fork-0.2.7.tgz#813076d91bf6ad9e7ed578e501981f77d973f7b7"
-  integrity sha512-GCc+8TcUzqt21A7zrJKszPh5oTBppwk33tAJdxrtfcmM0wIBvBdceubR+/GWAPYnzSHT9rJ8cf/nd9GmydAGwQ==
-  dependencies:
-    "@project-serum/anchor" "^0.20.1"
-    "@project-serum/serum" "^0.13.60"
-    "@pythnetwork/client" "^2.5.1"
-    "@solana/buffer-layout" "^3.0.0"
-    "@solana/spl-token" "^0.1.8"
-    "@solana/web3.js" "^1.29.3"
-    eventemitter3 "^4.0.7"
-    react "^16.13.1"
-
 "@eslint/eslintrc@^1.0.5":
   version "1.0.5"
   resolved "https://registry.yarnpkg.com/@eslint/eslintrc/-/eslintrc-1.0.5.tgz#33f1b838dbf1f923bfa517e008362b78ddbbf318"
@@ -72,6 +58,20 @@
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.1.tgz#b520529ec21d8e5945a1851dfd1c32e94e39ff45"
   integrity sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==
+
+"@jet-lab/jet-engine@0.2.6":
+  version "0.2.6"
+  resolved "https://registry.yarnpkg.com/@jet-lab/jet-engine/-/jet-engine-0.2.6.tgz#511fad24fa2bd52c304e1c7368bc501de6383516"
+  integrity sha512-wxItNzx5EIFw8Nv3k0rB0wA91tFhXstS2UXYKzCS5XJen/BeOKy4escYz/zkPFiWGRx5oqIvTMtKbvHKBPMvbA==
+  dependencies:
+    "@project-serum/anchor" "^0.20.1"
+    "@project-serum/serum" "^0.13.60"
+    "@pythnetwork/client" "^2.5.1"
+    "@solana/buffer-layout" "^3.0.0"
+    "@solana/spl-token" "^0.1.8"
+    "@solana/web3.js" "^1.29.3"
+    eventemitter3 "^4.0.7"
+    react "^16.13.1"
 
 "@port.finance/port-sdk@^0.2.33":
   version "0.2.54"
