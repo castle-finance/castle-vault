@@ -34,3 +34,9 @@ export interface Vault {
   allocations: Allocations;
   strategyType: any;
 }
+
+export interface RebalanceEvent {
+  solend: BN;
+  port: BN;
+  jet: BN;
+}

@@ -25,7 +25,7 @@ import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 import { PROGRAM_ID } from ".";
 import { CastleLendingAggregator } from "./castle_lending_aggregator";
 import { PortReserveAsset, SolendReserveAsset, JetReserveAsset } from "./adapters";
-import { StrategyType, Vault } from "./types";
+import { StrategyType, RebalanceEvent, Vault } from "./types";
 
 export class VaultClient {
   private constructor(
@@ -301,12 +301,18 @@ export class VaultClient {
   }
 
   // TODO derive lp token account from wallet?
+  /**
+   *
+   * @param wallet
+   * @param amount denominated in lp tokens
+   * @returns
+   */
   async withdraw(
     wallet: anchor.Wallet,
-    amount: number,
-    userLpTokenAccount: PublicKey
+    amount: number
   ): Promise<TransactionSignature[]> {
-    //console.debug("Withdrawing %d reserve tokens", amount);
+    const userLpTokenAccount = await this.getUserLpTokenAccount(wallet.publicKey);
+    //console.debug("Withdrawing %d lp tokens", amount);
 
     let txs: SendTxRequest[] = [];
 
@@ -315,11 +321,17 @@ export class VaultClient {
     const vaultReserveTokenAccountInfo = await this.getReserveTokenAccountInfo(
       this.vaultState.vaultReserveToken
     );
-    const vaultReserveAmount = vaultReserveTokenAccountInfo.amount.toNumber();
+    const vaultReserveAmount = new Big(vaultReserveTokenAccountInfo.amount.toString());
 
     //console.debug("Reserve tokens in vault: %d", vaultReserveAmount);
 
-    if (vaultReserveAmount < amount) {
+    // Convert from reserve tokens to LP tokens
+    const exchangeRate = await this.getLpExchangeRate();
+    const convertedAmount = exchangeRate.mul(amount);
+
+    //console.debug("Withdrawing %d reserve tokens", convertedAmount);
+
+    if (vaultReserveAmount.lt(convertedAmount)) {
       const rrTx = new Transaction();
       rrTx.add(this.getRefreshIx());
       for (let ix of await this.getRebalanceAndReconcileIxs(amount)) {
@@ -348,14 +360,9 @@ export class VaultClient {
     }
 
     withdrawTx.add(this.getRefreshIx());
-    // Convert from reserve tokens to LP tokens
-    const exchangeRate = await this.getLpExchangeRate();
-    const convertedAmount = amount / exchangeRate;
-
-    //console.debug("Converted to %d lp tokens", convertedAmount);
 
     withdrawTx.add(
-      this.program.instruction.withdraw(new anchor.BN(convertedAmount), {
+      this.program.instruction.withdraw(new anchor.BN(amount), {
         accounts: {
           vault: this.vaultId,
           vaultAuthority: this.vaultState.vaultAuthority,
@@ -387,13 +394,9 @@ export class VaultClient {
     return this.program.provider.send(tx);
   }
 
-  private async getRebalanceAndReconcileIxs(
-    withdrawAmountOption: number = 0
-  ): Promise<TransactionInstruction[]> {
-    // TODO split off into its own public function so that heartbeat can use it to figure out when to actually send txs
-    // Simulate transaction to get new allocations
-    const newAllocations = (
-      await this.program.simulate.rebalance(new anchor.BN(withdrawAmountOption), {
+  private async getSimulatedAllocations(): Promise<RebalanceEvent> {
+    return (
+      await this.program.simulate.rebalance({
         accounts: {
           vault: this.vaultId,
           vaultReserveToken: this.vaultState.vaultReserveToken,
@@ -406,16 +409,22 @@ export class VaultClient {
         },
         instructions: [this.getRefreshIx()],
       })
-    ).events[0].data;
+    ).events[0].data as RebalanceEvent;
+  }
+
+  private async getRebalanceAndReconcileIxs(
+    withdrawAmountOption: number = 0
+  ): Promise<TransactionInstruction[]> {
+    const newAllocations = await this.getSimulatedAllocations();
 
     // Sort ixs in ascending order of outflows
     const diffAndReconcileIxs: [Big, TransactionInstruction][] = [
-      //[
-      //  new Big(newAllocations.solend.toString()).sub(
-      //    await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken)
-      //  ),
-      //  this.getReconcileSolendIx(),
-      //],
+      [
+        new Big(newAllocations.solend.toString()).sub(
+          await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken)
+        ),
+        this.getReconcileSolendIx(),
+      ],
       [
         new Big(newAllocations.port.toString()).sub(
           await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken)
@@ -423,7 +432,7 @@ export class VaultClient {
         this.getReconcilePortIx(),
       ],
       [
-        new Big(newAllocations.jet.toNumber()).sub(
+        new Big(newAllocations.jet.toString()).sub(
           await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken)
         ),
         this.getReconcileJetIx(),
@@ -433,21 +442,18 @@ export class VaultClient {
       .sort((a, b) => a[0].sub(b[0]).toNumber())
       .map((val, _) => val[1]);
 
-    const rebalanceIx = this.program.instruction.rebalance(
-      new anchor.BN(withdrawAmountOption),
-      {
-        accounts: {
-          vault: this.vaultId,
-          vaultReserveToken: this.vaultState.vaultReserveToken,
-          vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-          vaultPortLpToken: this.vaultState.vaultPortLpToken,
-          vaultJetLpToken: this.vaultState.vaultJetLpToken,
-          solendReserveState: this.solend.accounts.reserve,
-          portReserveState: this.port.accounts.reserve,
-          jetReserveState: this.jet.accounts.reserve,
-        },
-      }
-    );
+    const rebalanceIx = this.program.instruction.rebalance({
+      accounts: {
+        vault: this.vaultId,
+        vaultReserveToken: this.vaultState.vaultReserveToken,
+        vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
+        vaultPortLpToken: this.vaultState.vaultPortLpToken,
+        vaultJetLpToken: this.vaultState.vaultJetLpToken,
+        solendReserveState: this.solend.accounts.reserve,
+        portReserveState: this.port.accounts.reserve,
+        jetReserveState: this.jet.accounts.reserve,
+      },
+    });
     return [rebalanceIx, ...reconcileIxs];
   }
 
@@ -538,16 +544,17 @@ export class VaultClient {
   }
 
   // Denominated in reserve tokens per LP token
-  async getLpExchangeRate(): Promise<number> {
+  async getLpExchangeRate(): Promise<Big> {
     const totalValue = await this.getTotalValue();
     //console.debug("total vault value: %d", totalValue);
     const lpTokenMintInfo = await this.getLpTokenMintInfo();
-    const lpTokenSupply = lpTokenMintInfo.supply.toNumber();
+    const lpTokenSupply = new Big(lpTokenMintInfo.supply.toString());
     //console.debug("lp token supply: %d", lpTokenSupply);
-    if (lpTokenSupply == 0 || totalValue == 0) {
-      return 1;
+    const bigZero = new Big(0);
+    if (lpTokenSupply.eq(bigZero) || totalValue.eq(bigZero)) {
+      return new Big(1);
     } else {
-      return totalValue / lpTokenSupply;
+      return totalValue.div(lpTokenSupply);
     }
   }
 
@@ -559,20 +566,20 @@ export class VaultClient {
    *
    * @returns
    */
-  async getTotalValue(): Promise<number> {
+  async getTotalValue(): Promise<Big> {
     await this.reload();
-    return this.vaultState.totalValue.toNumber();
+    return new Big(this.vaultState.totalValue.toString());
   }
 
-  async getUserValue(address: PublicKey): Promise<number> {
+  async getUserValue(address: PublicKey): Promise<Big> {
     const userLpTokenAccount = await this.getUserLpTokenAccount(address);
     const userLpTokenAccountInfo = await this.getLpTokenAccountInfo(userLpTokenAccount);
     if (userLpTokenAccountInfo == null) {
-      return 0;
+      return new Big(0);
     } else {
-      const userLpTokenAmount = userLpTokenAccountInfo.amount.toNumber();
+      const userLpTokenAmount = new Big(userLpTokenAccountInfo.amount.toString());
       const exchangeRate = await this.getLpExchangeRate();
-      return userLpTokenAmount * exchangeRate;
+      return userLpTokenAmount.mul(exchangeRate);
     }
   }
 

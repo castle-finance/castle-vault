@@ -41,11 +41,7 @@ pub struct Rebalance<'info> {
     pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
 }
 
-pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResult {
-    if to_withdraw_option != 0 {
-        // TODO use introspection make sure that there is a withdraw instruction after
-    }
-
+pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
     // Convert reserve states to assets
     let mut assets: Vec<Box<dyn Asset>> = Vec::new();
     assets.push(Box::new(LendingMarket::try_from(
@@ -67,17 +63,9 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
 
     msg!("Strategy allocations: {:?}", strategy_allocations);
 
-    // Store allocations
-    let vault_value = ctx
-        .accounts
-        .vault
-        .total_value
-        .checked_sub(to_withdraw_option)
-        .ok_or(ErrorCode::MathError)?;
-
     let new_vault_allocations = strategy_allocations
         .iter()
-        .map(|a| calc_vault_allocation(*a, vault_value))
+        .map(|a| calc_vault_allocation(*a, ctx.accounts.vault.total_value))
         .collect::<Result<Vec<_>, _>>()?;
 
     // TODO use https://doc.rust-lang.org/std/ops/trait.Index.html to make this less bad
