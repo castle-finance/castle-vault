@@ -11,7 +11,6 @@ pub struct ReconcileJet<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_jet_lp_token,
-        constraint = !vault.allocations.jet.last_update.stale @ ErrorCode::AllocationIsNotUpdated,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -91,7 +90,11 @@ impl<'info> ReconcileJet<'info> {
     }
 }
 
-pub fn handler(ctx: Context<ReconcileJet>) -> ProgramResult {
+pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: u64) -> ProgramResult {
+    // Add invariant:
+    //  if withdraw_option == 0: !vault.allocations.port.stale
+    //  else: must be a withdraw ix later in the transaction
+
     let vault = &ctx.accounts.vault;
 
     let reserve_info = {

@@ -444,7 +444,12 @@ export type CastleLendingAggregator = {
           isSigner: false;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "withdrawOption";
+          type: "u64";
+        }
+      ];
     },
     {
       name: "reconcilePort";
@@ -510,7 +515,12 @@ export type CastleLendingAggregator = {
           isSigner: false;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "withdrawOption";
+          type: "u64";
+        }
+      ];
     },
     {
       name: "reconcileJet";
@@ -571,7 +581,12 @@ export type CastleLendingAggregator = {
           isSigner: false;
         }
       ];
-      args: [];
+      args: [
+        {
+          name: "withdrawOption";
+          type: "u64";
+        }
+      ];
     }
   ];
   accounts: [
@@ -1249,7 +1264,12 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "withdrawOption",
+          type: "u64",
+        },
+      ],
     },
     {
       name: "reconcilePort",
@@ -1315,7 +1335,12 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "withdrawOption",
+          type: "u64",
+        },
+      ],
     },
     {
       name: "reconcileJet",
@@ -1376,7 +1401,12 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
       ],
-      args: [],
+      args: [
+        {
+          name: "withdrawOption",
+          type: "u64",
+        },
+      ],
     },
   ],
   accounts: [

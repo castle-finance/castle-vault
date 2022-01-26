@@ -300,8 +300,8 @@ export class VaultClient {
     return await this.program.provider.sendAll(txs);
   }
 
-  // TODO derive lp token account from wallet?
   /**
+   * @todo currently this fails if the amount to withdraw is greater than the amount in the lending market with greatest outflows
    *
    * @param wallet
    * @param amount denominated in lp tokens
@@ -332,12 +332,17 @@ export class VaultClient {
     //console.debug("Withdrawing %d reserve tokens", convertedAmount);
 
     if (vaultReserveAmount.lt(convertedAmount)) {
-      const rrTx = new Transaction();
-      rrTx.add(this.getRefreshIx());
-      for (let ix of await this.getRebalanceAndReconcileIxs(amount)) {
-        rrTx.add(ix);
-      }
-      txs.push({ tx: rrTx, signers: [] });
+      const newAllocations = await this.getSimulatedAllocations();
+      // TODO can add to front of withdrawTx?
+      // Get IX to reconcile market with the most outflows
+      const reconcileIx = (
+        await this.allocationDiffsWithReconcileIxs(
+          newAllocations,
+          new anchor.BN(convertedAmount.toString())
+        )
+      ).sort((a, b) => a[0].sub(b[0]).toNumber())[0][1];
+      const reconcileTx = new Transaction().add(reconcileIx);
+      txs.push({ tx: reconcileTx, signers: [] });
     }
 
     const withdrawTx = new Transaction();
@@ -385,13 +390,58 @@ export class VaultClient {
     return this.program.provider.sendAll(txs);
   }
 
-  async rebalance(): Promise<TransactionSignature> {
+  /**
+   * @todo send multiple txs to avoid tx size limit
+   *
+   * @param threshold
+   * @returns
+   */
+  async rebalance(threshold: number = 0): Promise<TransactionSignature> {
     const tx = new Transaction();
     tx.add(this.getRefreshIx());
-    for (let ix of await this.getRebalanceAndReconcileIxs()) {
+
+    tx.add(
+      this.program.instruction.rebalance({
+        accounts: {
+          vault: this.vaultId,
+          vaultReserveToken: this.vaultState.vaultReserveToken,
+          vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
+          vaultPortLpToken: this.vaultState.vaultPortLpToken,
+          vaultJetLpToken: this.vaultState.vaultJetLpToken,
+          solendReserveState: this.solend.accounts.reserve,
+          portReserveState: this.port.accounts.reserve,
+          jetReserveState: this.jet.accounts.reserve,
+        },
+      })
+    );
+
+    // Simulate rebalance to get new allocations
+    const newAllocations = await this.getSimulatedAllocations();
+
+    // Sort ixs in ascending order of outflows
+    const allocationDiffsWithReconcileIxs = await this.allocationDiffsWithReconcileIxs(
+      newAllocations
+    );
+    const reconcileIxs = allocationDiffsWithReconcileIxs
+      .sort((a, b) => a[0].sub(b[0]).toNumber())
+      .map((val, _) => val[1]);
+
+    for (let ix of reconcileIxs) {
       tx.add(ix);
     }
-    return this.program.provider.send(tx);
+
+    const vaultValue = await this.getTotalValue();
+    const maxAllocationChange = Math.max(
+      ...allocationDiffsWithReconcileIxs.map((e, _) =>
+        e[0].abs().div(vaultValue).toNumber()
+      )
+    );
+
+    if (maxAllocationChange > threshold) {
+      return this.program.provider.send(tx);
+    } else {
+      return Promise.resolve("");
+    }
   }
 
   private async getSimulatedAllocations(): Promise<RebalanceEvent> {
@@ -412,53 +462,36 @@ export class VaultClient {
     ).events[0].data as RebalanceEvent;
   }
 
-  private async getRebalanceAndReconcileIxs(
-    withdrawAmountOption: number = 0
-  ): Promise<TransactionInstruction[]> {
-    const newAllocations = await this.getSimulatedAllocations();
-
-    // Sort ixs in ascending order of outflows
-    const diffAndReconcileIxs: [Big, TransactionInstruction][] = [
+  private async allocationDiffsWithReconcileIxs(
+    newAllocations: RebalanceEvent,
+    withdrawOption: anchor.BN = new anchor.BN(0)
+  ): Promise<[Big, TransactionInstruction][]> {
+    return [
       [
         new Big(newAllocations.solend.toString()).sub(
           await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken)
         ),
-        this.getReconcileSolendIx(),
+        this.getReconcileSolendIx(withdrawOption),
       ],
       [
         new Big(newAllocations.port.toString()).sub(
           await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken)
         ),
-        this.getReconcilePortIx(),
+        this.getReconcilePortIx(withdrawOption),
       ],
       [
         new Big(newAllocations.jet.toString()).sub(
           await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken)
         ),
-        this.getReconcileJetIx(),
+        this.getReconcileJetIx(withdrawOption),
       ],
     ];
-    const reconcileIxs = diffAndReconcileIxs
-      .sort((a, b) => a[0].sub(b[0]).toNumber())
-      .map((val, _) => val[1]);
-
-    const rebalanceIx = this.program.instruction.rebalance({
-      accounts: {
-        vault: this.vaultId,
-        vaultReserveToken: this.vaultState.vaultReserveToken,
-        vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-        vaultPortLpToken: this.vaultState.vaultPortLpToken,
-        vaultJetLpToken: this.vaultState.vaultJetLpToken,
-        solendReserveState: this.solend.accounts.reserve,
-        portReserveState: this.port.accounts.reserve,
-        jetReserveState: this.jet.accounts.reserve,
-      },
-    });
-    return [rebalanceIx, ...reconcileIxs];
   }
 
-  private getReconcilePortIx(): TransactionInstruction {
-    return this.program.instruction.reconcilePort({
+  private getReconcilePortIx(
+    withdrawOption: anchor.BN = new anchor.BN(0)
+  ): TransactionInstruction {
+    return this.program.instruction.reconcilePort(withdrawOption, {
       accounts: {
         vault: this.vaultId,
         vaultAuthority: this.vaultState.vaultAuthority,
@@ -476,8 +509,10 @@ export class VaultClient {
     });
   }
 
-  private getReconcileJetIx(): TransactionInstruction {
-    return this.program.instruction.reconcileJet({
+  private getReconcileJetIx(
+    withdrawOption: anchor.BN = new anchor.BN(0)
+  ): TransactionInstruction {
+    return this.program.instruction.reconcileJet(withdrawOption, {
       accounts: {
         vault: this.vaultId,
         vaultAuthority: this.vaultState.vaultAuthority,
@@ -494,8 +529,10 @@ export class VaultClient {
     });
   }
 
-  private getReconcileSolendIx(): TransactionInstruction {
-    return this.program.instruction.reconcileSolend({
+  private getReconcileSolendIx(
+    withdrawOption: anchor.BN = new anchor.BN(0)
+  ): TransactionInstruction {
+    return this.program.instruction.reconcileSolend(withdrawOption, {
       accounts: {
         vault: this.vaultId,
         vaultAuthority: this.vaultState.vaultAuthority,

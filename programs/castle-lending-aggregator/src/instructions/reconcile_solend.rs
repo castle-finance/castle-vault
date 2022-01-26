@@ -11,7 +11,6 @@ pub struct ReconcileSolend<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
-        constraint = !vault.allocations.solend.last_update.stale @ ErrorCode::AllocationIsNotUpdated,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -93,7 +92,11 @@ impl<'info> ReconcileSolend<'info> {
     }
 }
 
-pub fn handler(ctx: Context<ReconcileSolend>) -> ProgramResult {
+pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: u64) -> ProgramResult {
+    // Add invariant:
+    //  if withdraw_option == 0: !vault.allocations.port.stale
+    //  else: must be a withdraw ix later in the transaction
+
     let vault = &ctx.accounts.vault;
 
     let solend_exchange_rate = ctx

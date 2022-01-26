@@ -11,7 +11,6 @@ pub struct ReconcilePort<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_port_lp_token,
-        constraint = !vault.allocations.port.last_update.stale @ ErrorCode::AllocationIsNotUpdated,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -91,7 +90,11 @@ impl<'info> ReconcilePort<'info> {
     }
 }
 
-pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
+pub fn handler(ctx: Context<ReconcilePort>, withdraw_option: u64) -> ProgramResult {
+    // Add invariant:
+    //  if withdraw_option == 0: !vault.allocations.port.stale
+    //  else: must be a withdraw ix later in the transaction
+
     let vault = &ctx.accounts.vault;
 
     let port_exchange_rate = ctx.accounts.port_reserve_state.collateral_exchange_rate()?;

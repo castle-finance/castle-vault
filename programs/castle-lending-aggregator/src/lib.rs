@@ -43,15 +43,15 @@ pub mod castle_lending_aggregator {
         instructions::refresh::handler(ctx)
     }
 
-    pub fn reconcile_solend(ctx: Context<ReconcileSolend>) -> ProgramResult {
-        instructions::reconcile_solend::handler(ctx)
+    pub fn reconcile_solend(ctx: Context<ReconcileSolend>, withdraw_option: u64) -> ProgramResult {
+        instructions::reconcile_solend::handler(ctx, withdraw_option)
     }
 
-    pub fn reconcile_port(ctx: Context<ReconcilePort>) -> ProgramResult {
-        instructions::reconcile_port::handler(ctx)
+    pub fn reconcile_port(ctx: Context<ReconcilePort>, withdraw_option: u64) -> ProgramResult {
+        instructions::reconcile_port::handler(ctx, withdraw_option)
     }
 
-    pub fn reconcile_jet(ctx: Context<ReconcileJet>) -> ProgramResult {
-        instructions::reconcile_jet::handler(ctx)
+    pub fn reconcile_jet(ctx: Context<ReconcileJet>, withdraw_option: u64) -> ProgramResult {
+        instructions::reconcile_jet::handler(ctx, withdraw_option)
     }
 }
