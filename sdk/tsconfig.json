@@ -9,10 +9,9 @@
         "rootDir": "src",
         "esModuleInterop": true,
         "declaration": true,
-        "sourceMap": true
+        "sourceMap": true,
     },
     "include": [
-        "typings/**/*",
-        "src/**/*"
+        "src/",
     ]
 }
