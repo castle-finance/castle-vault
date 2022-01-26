@@ -1,6 +1,6 @@
 {
   "name": "@castlefinance/vault-sdk",
-  "version": "1.0.0",
+  "version": "1.0.6",
   "license": "MIT",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
@@ -33,9 +33,8 @@
     "test": "ts-mocha test/*.test.ts -t 100000"
   },
   "files": [
-    "./lib/*",
     "package.json",
-    "tsconfig.json"
+    "lib"
   ],
   "directories": {
     "lib": "lib"
