@@ -267,12 +267,7 @@ export type CastleLendingAggregator = {
           isSigner: false;
         }
       ];
-      args: [
-        {
-          name: "toWithdrawOption";
-          type: "u64";
-        }
-      ];
+      args: [];
     },
     {
       name: "refresh";
@@ -1077,12 +1072,7 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
       ],
-      args: [
-        {
-          name: "toWithdrawOption",
-          type: "u64",
-        },
-      ],
+      args: [],
     },
     {
       name: "refresh",

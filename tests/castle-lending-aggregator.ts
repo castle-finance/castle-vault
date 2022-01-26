@@ -161,10 +161,7 @@ describe("castle-vault", () => {
     expectUserReserve: number
   ): () => Promise<void> {
     return async function () {
-      const userLpTokenAccount = await vaultClient.getUserLpTokenAccount(
-        wallet.publicKey
-      );
-      await vaultClient.withdraw(wallet, withdrawAmount, userLpTokenAccount);
+      await vaultClient.withdraw(wallet, withdrawAmount);
 
       const userReserveTokenAccount = await vaultClient.getUserReserveTokenAccount(
         wallet.publicKey
@@ -174,6 +171,9 @@ describe("castle-vault", () => {
       );
       assert.equal(userReserveTokenAccountInfo.amount.toNumber(), expectUserReserve);
 
+      const userLpTokenAccount = await vaultClient.getUserLpTokenAccount(
+        wallet.publicKey
+      );
       const userLpTokenAccountInfo = await vaultClient.getLpTokenAccountInfo(
         userLpTokenAccount
       );
@@ -199,9 +199,11 @@ describe("castle-vault", () => {
       const solendCollateralRatio = 1;
       const expectedSolendValue = vaultValue * expectedSolendAllocation;
       assert.equal(
-        await vaultClient.solend.getLpTokenAccountValue(
-          vaultClient.vaultState.vaultSolendLpToken
-        ),
+        (
+          await vaultClient.solend.getLpTokenAccountValue(
+            vaultClient.vaultState.vaultSolendLpToken
+          )
+        ).toNumber(),
         expectedSolendValue * solendCollateralRatio
       );
       const solendLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
@@ -215,9 +217,11 @@ describe("castle-vault", () => {
       const portCollateralRatio = 1;
       const expectedPortValue = vaultValue * expectedPortAllocation;
       assert.equal(
-        await vaultClient.port.getLpTokenAccountValue(
-          vaultClient.vaultState.vaultPortLpToken
-        ),
+        (
+          await vaultClient.port.getLpTokenAccountValue(
+            vaultClient.vaultState.vaultPortLpToken
+          )
+        ).toNumber(),
         expectedPortValue * portCollateralRatio
       );
       const portLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
@@ -231,9 +235,11 @@ describe("castle-vault", () => {
       const jetCollateralRatio = 1;
       const expectedJetValue = vaultValue * expectedJetAllocation;
       assert.equal(
-        await vaultClient.jet.getLpTokenAccountValue(
-          vaultClient.vaultState.vaultJetLpToken
-        ),
+        (
+          await vaultClient.jet.getLpTokenAccountValue(
+            vaultClient.vaultState.vaultJetLpToken
+          )
+        ).toNumber(),
         expectedJetValue * jetCollateralRatio
       );
 
@@ -283,7 +289,7 @@ describe("castle-vault", () => {
     );
 
     it("Forwards deposits to lending markets", async () => {
-      testRebalance(0, 0, 1)();
+      await testRebalance(0, 0, 1)();
 
       // TODO borrow from solend to increase apy and ensure it switches to that
       // TODO borrow from port to increase apy and ensure it switches to that
