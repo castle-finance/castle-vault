@@ -11,7 +11,6 @@ pub struct ReconcilePort<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_port_lp_token,
-        constraint = !vault.allocations.port.last_update.stale @ ErrorCode::AllocationIsNotUpdated,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -91,31 +90,54 @@ impl<'info> ReconcilePort<'info> {
     }
 }
 
-pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
+// TODO handle case where there allocation amount is greater than vault value
+// TODO eliminate duplication of redeem logic
+pub fn handler(ctx: Context<ReconcilePort>, withdraw_option: Option<u64>) -> ProgramResult {
     let vault = &ctx.accounts.vault;
-
     let port_exchange_rate = ctx.accounts.port_reserve_state.collateral_exchange_rate()?;
-    let current_port_value =
-        port_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_port_lp_token.amount)?;
-    let allocation = ctx.accounts.vault.allocations.port;
 
-    match allocation.value.checked_sub(current_port_value) {
-        Some(tokens_to_deposit) => {
-            port_anchor_adaptor::deposit_reserve(
-                ctx.accounts
-                    .port_deposit_reserve_liquidity_context()
-                    .with_signer(&[&vault.authority_seeds()]),
-                port_anchor_adaptor::Cluster::Devnet,
-                tokens_to_deposit,
-            )?;
-        }
+    match withdraw_option {
         None => {
-            let tokens_to_redeem = ctx
-                .accounts
-                .vault_port_lp_token
-                .amount
-                .checked_sub(port_exchange_rate.liquidity_to_collateral(allocation.value)?)
-                .ok_or(ErrorCode::MathError)?;
+            // TODO check !vault.allocations.port.stale
+            let current_port_value = port_exchange_rate
+                .collateral_to_liquidity(ctx.accounts.vault_port_lp_token.amount)?;
+            let allocation = ctx.accounts.vault.allocations.port;
+
+            match allocation.value.checked_sub(current_port_value) {
+                Some(tokens_to_deposit) => {
+                    if tokens_to_deposit != 0 {
+                        port_anchor_adaptor::deposit_reserve(
+                            ctx.accounts
+                                .port_deposit_reserve_liquidity_context()
+                                .with_signer(&[&vault.authority_seeds()]),
+                            port_anchor_adaptor::Cluster::Devnet,
+                            tokens_to_deposit,
+                        )?;
+                    }
+                }
+                None => {
+                    let tokens_to_redeem = ctx
+                        .accounts
+                        .vault_port_lp_token
+                        .amount
+                        .checked_sub(port_exchange_rate.liquidity_to_collateral(allocation.value)?)
+                        .ok_or(ErrorCode::MathError)?;
+
+                    port_anchor_adaptor::redeem(
+                        ctx.accounts
+                            .port_redeem_reserve_collateral_context()
+                            .with_signer(&[&vault.authority_seeds()]),
+                        port_anchor_adaptor::Cluster::Devnet,
+                        tokens_to_redeem,
+                    )?;
+                }
+            }
+            ctx.accounts.vault.allocations.port.reset();
+        }
+        Some(withdraw_amount) => {
+            // TODO verify withdraw ix later in tx
+            // Redeem
+            let tokens_to_redeem = port_exchange_rate.liquidity_to_collateral(withdraw_amount)?;
 
             port_anchor_adaptor::redeem(
                 ctx.accounts
@@ -126,8 +148,6 @@ pub fn handler(ctx: Context<ReconcilePort>) -> ProgramResult {
             )?;
         }
     }
-
-    ctx.accounts.vault.allocations.port.reset();
 
     Ok(())
 }

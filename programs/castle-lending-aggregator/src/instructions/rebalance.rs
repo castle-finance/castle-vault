@@ -4,13 +4,14 @@ use std::ops::Deref;
 use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
 use port_anchor_adaptor::PortReserve;
-use solana_maths::{Decimal, TryMul};
+use solana_maths::{Decimal, Rate, TryMul};
 use solend::SolendReserve;
 
 use crate::cpi::solend;
 use crate::errors::ErrorCode;
+use crate::events::RebalanceEvent;
 use crate::rebalance::assets::{Asset, LendingMarket};
-use crate::rebalance::strategies::{EqualAllocationStrategy, Strategy};
+use crate::rebalance::strategies::*;
 use crate::state::*;
 
 #[derive(Accounts)]
@@ -40,11 +41,7 @@ pub struct Rebalance<'info> {
     pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
 }
 
-pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResult {
-    if to_withdraw_option != 0 {
-        // TODO use introspection make sure that there is a withdraw instruction after
-    }
-
+pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
     // Convert reserve states to assets
     let mut assets: Vec<Box<dyn Asset>> = Vec::new();
     assets.push(Box::new(LendingMarket::try_from(
@@ -57,38 +54,41 @@ pub fn handler(ctx: Context<Rebalance>, to_withdraw_option: u64) -> ProgramResul
         *ctx.accounts.jet_reserve_state.load()?.deref(),
     )?));
 
-    // Create strategy
-    //let strategy = Strategy::from_config(ctx.accounts.vault.strategy_config);
-    let strategy = EqualAllocationStrategy;
-
     // Run strategy to get allocations
-    let strategy_allocations = strategy
-        .calculate_allocations(assets)
-        .ok_or(ErrorCode::StrategyError)?;
-    msg!("{:?}", strategy_allocations);
+    let strategy_allocations = match ctx.accounts.vault.strategy_type {
+        StrategyType::MaxYield => MaxYieldStrategy.calculate_allocations(assets),
+        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_allocations(assets),
+    }
+    .ok_or(ErrorCode::StrategyError)?;
 
-    // Store allocations
-    let vault_value = ctx
-        .accounts
-        .vault
-        .total_value
-        .checked_sub(to_withdraw_option)
-        .ok_or(ErrorCode::MathError)?;
+    msg!("Strategy allocations: {:?}", strategy_allocations);
+
+    let new_vault_allocations = strategy_allocations
+        .iter()
+        .map(|a| calc_vault_allocation(*a, ctx.accounts.vault.total_value))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // TODO use https://doc.rust-lang.org/std/ops/trait.Index.html to make this less bad
     let clock = Clock::get()?;
     let vault_allocations = &mut ctx.accounts.vault.allocations;
-    // TODO is there a way to make this less repetitive?
-    vault_allocations.solend.update(
-        Decimal::from(strategy_allocations[0].try_mul(vault_value)?).try_floor_u64()?,
-        clock.slot,
-    );
-    vault_allocations.port.update(
-        Decimal::from(strategy_allocations[1].try_mul(vault_value)?).try_floor_u64()?,
-        clock.slot,
-    );
-    vault_allocations.jet.update(
-        Decimal::from(strategy_allocations[2].try_mul(vault_value)?).try_floor_u64()?,
-        clock.slot,
-    );
+    vault_allocations
+        .solend
+        .update(new_vault_allocations[0], clock.slot);
+    vault_allocations
+        .port
+        .update(new_vault_allocations[1], clock.slot);
+    vault_allocations
+        .jet
+        .update(new_vault_allocations[2], clock.slot);
 
+    emit!(RebalanceEvent {
+        solend: new_vault_allocations[0],
+        port: new_vault_allocations[1],
+        jet: new_vault_allocations[2],
+    });
     Ok(())
+}
+
+fn calc_vault_allocation(strategy_allocation: Rate, vault_value: u64) -> Result<u64, ProgramError> {
+    Decimal::from(strategy_allocation.try_mul(vault_value)?).try_floor_u64()
 }

@@ -1,15 +1,17 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
+use spl_math::precise_number::PreciseNumber;
 
 use std::convert::Into;
+use std::convert::TryFrom;
 
 use crate::errors::ErrorCode;
-use crate::math::calc_deposit_to_vault;
 use crate::state::Vault;
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
     #[account(
+        mut,
         constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
         has_one = lp_token_mint,
         has_one = vault_authority,
@@ -85,5 +87,31 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
         lp_tokens_to_mint,
     )?;
 
+    ctx.accounts.vault.total_value += reserve_token_amount;
+
     Ok(())
+}
+
+pub const INITIAL_COLLATERAL_RATIO: u64 = 1;
+
+// TODO move to state.rs as a Calculator?
+pub fn calc_deposit_to_vault(
+    reserve_token_amount: u64,
+    lp_token_supply: u64,
+    reserve_tokens_in_vault: u64,
+) -> Option<u64> {
+    match reserve_tokens_in_vault {
+        0 => Some(INITIAL_COLLATERAL_RATIO * reserve_token_amount),
+        _ => {
+            let lp_token_amount = PreciseNumber::new(reserve_token_amount as u128)?;
+            let lp_token_supply = PreciseNumber::new(lp_token_supply as u128)?;
+            let reserve_tokens_in_vault = PreciseNumber::new(reserve_tokens_in_vault as u128)?;
+
+            let lp_tokens_to_mint = lp_token_supply
+                .checked_mul(&lp_token_amount.checked_div(&reserve_tokens_in_vault)?)?
+                .to_imprecise()?;
+
+            u64::try_from(lp_tokens_to_mint).ok()
+        }
+    }
 }
