@@ -10,6 +10,7 @@ import { NATIVE_MINT } from "@solana/spl-token";
 import { Wallet, Provider } from "@project-serum/anchor";
 
 import { VaultClient } from "../src";
+import Big from "big.js";
 
 describe("VaultClient", () => {
   const cluster: Cluster = "devnet";
@@ -27,21 +28,18 @@ describe("VaultClient", () => {
   });
 
   it("loads devnet sol vault", async () => {
-    const vaultId = new PublicKey("81krfC8ptDbjwY5bkur1SqHYKLPxGQLYBQEUv5zhojUW");
+    const vaultId = new PublicKey(
+      "81krfC8ptDbjwY5bkur1SqHYKLPxGQLYBQEUv5zhojUW"
+      //"5XQQsVf1sRseuTqdC4qRuSsCbbu3o7dBTwRtUGoWopC7"
+    );
     vaultClient = await VaultClient.load(provider, cluster, NATIVE_MINT, vaultId);
     assert.isNotNull(vaultClient);
 
-    console.log("Total value: ", await vaultClient.getTotalValue());
+    console.log("Total value: ", await (await vaultClient.getTotalValue()).toNumber());
     console.log("Vault APY: ", (await vaultClient.getApy()).toNumber());
-    console.log("Jet APY: ", await vaultClient.jet.getApy());
-    console.log("Port APY: ", await vaultClient.port.getApy());
-    console.log("Solend APY: ", await vaultClient.solend.getApy());
-  });
-
-  it("rebalances", async () => {
-    const sig = await vaultClient.rebalance();
-    const result = await connection.confirmTransaction(sig, "finalized");
-    assert.isNull(result.value.err);
+    console.log("Jet APY: ", (await vaultClient.jet.getApy()).toNumber());
+    console.log("Port APY: ", (await vaultClient.port.getApy()).toNumber());
+    console.log("Solend APY: ", (await vaultClient.solend.getApy()).toNumber());
   });
 
   it("deposits", async () => {
@@ -52,23 +50,32 @@ describe("VaultClient", () => {
 
     const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
 
-    // TODO make this approx equal
-    assert.equal(endUserValue - startUserValue, depositAmount);
+    assert.isAtMost(
+      Math.abs(endUserValue.sub(startUserValue).sub(depositAmount).toNumber()),
+      100000
+    );
   });
 
   it("withdraws", async () => {
     const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
 
-    const userLpTokenAccount = await vaultClient.getUserLpTokenAccount(
-      wallet.publicKey
-    );
-
-    const sigs = await vaultClient.withdraw(wallet, depositAmount, userLpTokenAccount);
+    const sigs = await vaultClient.withdraw(wallet, depositAmount);
     await connection.confirmTransaction(sigs[sigs.length - 1], "finalized");
 
     const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
 
-    // TODO make this approx equal
-    assert.equal(startUserValue - endUserValue, depositAmount);
+    assert.isAtMost(
+      Math.abs(startUserValue.sub(endUserValue).sub(depositAmount).toNumber()),
+      100000
+    );
+  });
+
+  it("rebalances", async () => {
+    const sigs = await vaultClient.rebalance();
+    const result = await connection.confirmTransaction(
+      sigs[sigs.length - 1],
+      "finalized"
+    );
+    assert.isNull(result.value.err);
   });
 });

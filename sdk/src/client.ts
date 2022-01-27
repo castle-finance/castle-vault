@@ -192,7 +192,6 @@ export class VaultClient {
   }
 
   /**
-   * @todo use bignumber
    *
    * @param wallet
    * @param lamports amount depositing
@@ -302,7 +301,6 @@ export class VaultClient {
   }
 
   /**
-   * @todo currently this fails if the amount to withdraw is greater than the amount in the lending market with greatest outflows
    *
    * @param wallet
    * @param amount denominated in lp tokens
@@ -339,7 +337,7 @@ export class VaultClient {
         const [_, oldAlloc, ix] = reconcileIxs[n];
         const reconcileTx = new Transaction()
           .add(this.getRefreshIx())
-          .add(ix(new anchor.BN(oldAlloc.toString())));
+          .add(ix(new anchor.BN(oldAlloc.toNumber())));
         txs.push({ tx: reconcileTx, signers: [] });
 
         withdrawnAmount += oldAlloc.toNumber();
@@ -392,7 +390,6 @@ export class VaultClient {
   }
 
   /**
-   * @todo send multiple txs to avoid tx size limit
    *
    * @param threshold
    * @returns
@@ -439,7 +436,7 @@ export class VaultClient {
     const vaultValue = await this.getTotalValue();
     const maxAllocationChange = Math.max(
       ...allocationDiffsWithReconcileIxs.map((e, _) =>
-        e[0].abs().div(vaultValue).toNumber()
+        vaultValue.eq(0) ? 100 : e[0].abs().div(vaultValue).toNumber()
       )
     );
 
@@ -611,13 +608,15 @@ export class VaultClient {
 
   async getUserValue(address: PublicKey): Promise<Big> {
     const userLpTokenAccount = await this.getUserLpTokenAccount(address);
-    const userLpTokenAccountInfo = await this.getLpTokenAccountInfo(userLpTokenAccount);
-    if (userLpTokenAccountInfo == null) {
-      return new Big(0);
-    } else {
+    try {
+      const userLpTokenAccountInfo = await this.getLpTokenAccountInfo(
+        userLpTokenAccount
+      );
       const userLpTokenAmount = new Big(userLpTokenAccountInfo.amount.toString());
       const exchangeRate = await this.getLpExchangeRate();
       return userLpTokenAmount.mul(exchangeRate);
+    } catch {
+      return new Big(0);
     }
   }
 

@@ -159,6 +159,8 @@ export class PortReserveAsset extends Asset {
   }
 
   /**
+   * @todo make this the same as program's calculation
+   *
    * Continuously compounded APY
    *
    * @returns

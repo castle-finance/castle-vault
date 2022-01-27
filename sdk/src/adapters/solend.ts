@@ -150,6 +150,12 @@ export class SolendReserveAsset extends Asset {
     return lpTokenAmount.mul(exchangeRate);
   }
 
+  /**
+   *
+   * @todo make this the same as program's calculation
+   *
+   * @returns
+   */
   async getApy(): Promise<Big> {
     await this.reload();
     const apr = this.reserve.stats.supplyInterestAPY;
