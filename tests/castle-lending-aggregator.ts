@@ -11,7 +11,6 @@ import {
   CastleLendingAggregator,
   StrategyType,
 } from "../sdk/src/index";
-//} from "@castlefinance/vault-sdk";
 
 describe("castle-vault", () => {
   const provider = anchor.Provider.env();
@@ -23,8 +22,8 @@ describe("castle-vault", () => {
 
   const owner = Keypair.generate();
 
-  const pythProduct = new PublicKey("3Mnn2fX6rQyUsyELYms1sBJyChWofzSNRoqYzvgMVz5E");
-  const pythPrice = new PublicKey("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
+  const pythProduct = new PublicKey("ALP8SdU9oARYVLgLR7LrqMNCYBnhtnQz1cj6bwgwQmgj");
+  const pythPrice = new PublicKey("H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG");
   const switchboardFeed = new PublicKey("AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL");
 
   const initialReserveAmount = 100;
@@ -61,9 +60,9 @@ describe("castle-vault", () => {
       3 * initialReserveAmount
     );
 
-    const pythProgram = new PublicKey("gSbePebfvPy7tRqimPoVecS2UsBvYv46ynrzWocc92s");
+    const pythProgram = new PublicKey("FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH");
     const switchboardProgram = new PublicKey(
-      "7azgmy1pFXHikv36q1zZASvFq5vFa39TT9NweVugKKTU"
+      "DtmE9D2CSB4L5D6A15mraeEjrGMm6auWVzgaD8hK2tZM"
     );
 
     solend = await SolendReserveAsset.initialize(

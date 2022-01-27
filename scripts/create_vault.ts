@@ -6,12 +6,12 @@ import {
   CastleLendingAggregator,
   JetReserveAsset,
   PortReserveAsset,
-  //PROGRAM_ID,
+  PROGRAM_ID,
   SolendReserveAsset,
   VaultClient,
 } from "vault-sdk";
 
-const PROGRAM_ID = new PublicKey("E5xEvrNhrknmgGbRv8iDDqHsgqG1xeMEdfPjL8i4YEVo");
+//const PROGRAM_ID = new PublicKey("E5xEvrNhrknmgGbRv8iDDqHsgqG1xeMEdfPjL8i4YEVo");
 
 const main = async () => {
   const cluster: Cluster = "devnet";
