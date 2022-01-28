@@ -148,8 +148,9 @@ export class JetReserveAsset extends Asset {
     );
 
     const lpTokenAccountInfo = await lpToken.getAccountInfo(address);
+    const lpTokenAmount = new Big(lpTokenAccountInfo.amount.toString());
 
-    return exchangeRate.mul(new Big(lpTokenAccountInfo.amount.toString()));
+    return exchangeRate.mul(lpTokenAmount);
   }
 
   async getApy(): Promise<Big> {

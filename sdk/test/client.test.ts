@@ -35,7 +35,7 @@ describe("VaultClient", () => {
     vaultClient = await VaultClient.load(provider, cluster, NATIVE_MINT, vaultId);
     assert.isNotNull(vaultClient);
 
-    console.log("Total value: ", await (await vaultClient.getTotalValue()).toNumber());
+    console.log("Total value: ", (await vaultClient.getTotalValue()).toNumber());
     console.log("Vault APY: ", (await vaultClient.getApy()).toNumber());
     console.log("Jet APY: ", (await vaultClient.jet.getApy()).toNumber());
     console.log("Port APY: ", (await vaultClient.port.getApy()).toNumber());
@@ -44,29 +44,17 @@ describe("VaultClient", () => {
 
   it("deposits", async () => {
     const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
+    console.log("start value: ", startUserValue.toNumber());
 
     const sigs = await vaultClient.deposit(wallet, depositAmount, wallet.publicKey);
     await connection.confirmTransaction(sigs[sigs.length - 1], "finalized");
 
     const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
+    console.log("end value: ", endUserValue.toNumber());
 
     assert.isAtMost(
       Math.abs(endUserValue.sub(startUserValue).sub(depositAmount).toNumber()),
-      100000
-    );
-  });
-
-  it("withdraws", async () => {
-    const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
-
-    const sigs = await vaultClient.withdraw(wallet, depositAmount);
-    await connection.confirmTransaction(sigs[sigs.length - 1], "finalized");
-
-    const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
-
-    assert.isAtMost(
-      Math.abs(startUserValue.sub(endUserValue).sub(depositAmount).toNumber()),
-      100000
+      1000000
     );
   });
 
@@ -77,5 +65,28 @@ describe("VaultClient", () => {
       "finalized"
     );
     assert.isNull(result.value.err);
+  });
+
+  it("withdraws", async () => {
+    const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
+    console.log("start value: ", startUserValue.toNumber());
+
+    const exchangeRate = await vaultClient.getLpExchangeRate();
+    const withdrawAmount = new Big(depositAmount).div(exchangeRate).toNumber();
+    try {
+      const sigs = await vaultClient.withdraw(wallet, withdrawAmount);
+      await connection.confirmTransaction(sigs[sigs.length - 1], "finalized");
+    } catch (e) {
+      console.log(e);
+      console.log(Object.keys(e));
+    }
+
+    const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
+    console.log("end value: ", endUserValue.toNumber());
+
+    assert.isAtMost(
+      Math.abs(startUserValue.sub(endUserValue).sub(depositAmount).toNumber()),
+      1000000
+    );
   });
 });

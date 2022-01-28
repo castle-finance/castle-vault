@@ -75,11 +75,6 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     .ok_or(ErrorCode::MathError)?;
 
     token::burn(ctx.accounts.burn_context(), lp_token_amount)?;
-    msg!(
-        "{} reserve tokens in vault",
-        ctx.accounts.vault_reserve_token.amount
-    );
-    msg!("Withdrawing {} reserve tokens", reserve_tokens_to_transfer);
 
     // Transfer reserve tokens to user
     token::transfer(
@@ -103,8 +98,10 @@ pub fn calc_withdraw_from_vault(
     let lp_token_supply = PreciseNumber::new(lp_token_supply as u128)?;
     let reserve_tokens_in_vault = PreciseNumber::new(reserve_tokens_in_vault as u128)?;
 
-    let reserve_tokens_to_transfer = reserve_tokens_in_vault
-        .checked_mul(&lp_token_amount.checked_div(&lp_token_supply)?)?
+    let reserve_tokens_to_transfer = lp_token_amount
+        .checked_mul(&reserve_tokens_in_vault)?
+        .checked_div(&lp_token_supply)?
+        .floor()?
         .to_imprecise()?;
 
     u64::try_from(reserve_tokens_to_transfer).ok()

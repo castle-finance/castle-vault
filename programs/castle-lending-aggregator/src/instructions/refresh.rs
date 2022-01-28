@@ -133,10 +133,6 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     )?;
     jet::cpi::refresh_reserve(ctx.accounts.jet_refresh_reserve_context())?;
 
-    // TODO redeem liquidity mining rewards
-
-    let vault = &mut ctx.accounts.vault;
-
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
 
     let solend_exchange_rate = ctx
@@ -156,10 +152,11 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         jet_reserve.total_deposits(),
         jet_reserve.total_deposit_notes(),
     );
-    let jet_value = jet_exchange_rate * Number::from(ctx.accounts.vault_jet_lp_token.amount);
+    let jet_value =
+        (jet_exchange_rate * Number::from(ctx.accounts.vault_jet_lp_token.amount)).as_u64(0);
 
-    vault.total_value =
-        vault_reserve_token_amount + solend_value + port_value + jet_value.as_u64(0);
+    let vault = &mut ctx.accounts.vault;
+    vault.total_value = vault_reserve_token_amount + solend_value + port_value + jet_value;
     vault.last_update.update_slot(ctx.accounts.clock.slot);
 
     Ok(())

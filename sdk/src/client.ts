@@ -318,11 +318,20 @@ export class VaultClient {
     const vaultReserveTokenAccountInfo = await this.getReserveTokenAccountInfo(
       this.vaultState.vaultReserveToken
     );
-    const vaultReserveAmount = new Big(vaultReserveTokenAccountInfo.amount.toString());
+    const vaultReserveAmount = new Big(
+      vaultReserveTokenAccountInfo.amount.toString()
+    ).round(0, Big.roundDown);
 
     // Convert from reserve tokens to LP tokens
+    // NOTE: this rate is slightly lower than what it will be in the transaction
+    //  by about 1/10000th of the current yield (1bp per 100%).
+    //  To avoid a insufficient funds error, we slightly over-correct for this
     const exchangeRate = await this.getLpExchangeRate();
-    const convertedAmount = exchangeRate.mul(amount);
+    const adjustFactor = (await this.getApy()).mul(0.0001);
+    const convertedAmount = exchangeRate
+      .mul(amount)
+      .mul(new Big(1).add(adjustFactor))
+      .round(0, Big.roundUp);
 
     if (vaultReserveAmount.lt(convertedAmount)) {
       // Sort reconcile ixs by most to least outflows
@@ -330,15 +339,20 @@ export class VaultClient {
         (a, b) => a[0].sub(a[1]).sub(b[0].sub(b[1])).toNumber()
       );
 
+      const toWithdrawAmount = convertedAmount.sub(vaultReserveAmount).toNumber();
       // TODO use bignumber
       let withdrawnAmount = 0;
       let n = 0;
-      while (withdrawnAmount < convertedAmount.sub(vaultReserveAmount).toNumber()) {
+      while (withdrawnAmount < toWithdrawAmount) {
         const [_, oldAlloc, ix] = reconcileIxs[n];
-        const reconcileTx = new Transaction()
-          .add(this.getRefreshIx())
-          .add(ix(new anchor.BN(oldAlloc.toNumber())));
-        txs.push({ tx: reconcileTx, signers: [] });
+        const reconcileAmount = Math.min(oldAlloc.toNumber(), toWithdrawAmount);
+        if (reconcileAmount != 0) {
+          const reconcileTx = new Transaction();
+          reconcileTx.add(this.getRefreshIx());
+          reconcileTx.add(ix(new anchor.BN(reconcileAmount)));
+
+          txs.push({ tx: reconcileTx, signers: [] });
+        }
 
         withdrawnAmount += oldAlloc.toNumber();
         n += 1;
@@ -366,7 +380,7 @@ export class VaultClient {
 
     withdrawTx.add(this.getRefreshIx());
     withdrawTx.add(
-      this.program.instruction.withdraw(new anchor.BN(amount), {
+      this.program.instruction.withdraw(new anchor.BN(Math.floor(amount)), {
         accounts: {
           vault: this.vaultId,
           vaultAuthority: this.vaultState.vaultAuthority,
@@ -548,6 +562,11 @@ export class VaultClient {
     });
   }
 
+  /**
+   * @todo account for unallocated tokens
+   *
+   * @returns
+   */
   async getApy(): Promise<Big> {
     // Weighted average of APYs by allocation
     const assetApysAndValues: [Big, Big][] = [
@@ -581,10 +600,9 @@ export class VaultClient {
   // Denominated in reserve tokens per LP token
   async getLpExchangeRate(): Promise<Big> {
     const totalValue = await this.getTotalValue();
-    //console.debug("total vault value: %d", totalValue);
     const lpTokenMintInfo = await this.getLpTokenMintInfo();
     const lpTokenSupply = new Big(lpTokenMintInfo.supply.toString());
-    //console.debug("lp token supply: %d", lpTokenSupply);
+
     const bigZero = new Big(0);
     if (lpTokenSupply.eq(bigZero) || totalValue.eq(bigZero)) {
       return new Big(1);
@@ -596,14 +614,25 @@ export class VaultClient {
   /**
    * Gets the total value stored in the vault, denominated in reserve tokens
    *
-   * Note: this assumes that the total value in the vault state is up to date
-   * May need to calculate from ts client instead
-   *
    * @returns
    */
   async getTotalValue(): Promise<Big> {
     await this.reload();
-    return new Big(this.vaultState.totalValue.toString());
+
+    const values = [
+      await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken),
+      await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken),
+      await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken),
+      new Big(
+        (
+          await this.getReserveTokenAccountInfo(this.vaultState.vaultReserveToken)
+        ).amount.toString()
+      ),
+    ];
+
+    const valueSum = values.reduce((a, b) => a.add(b), new Big(0));
+
+    return valueSum;
   }
 
   async getUserValue(address: PublicKey): Promise<Big> {
