@@ -2,7 +2,7 @@
 description = "Created with Anchor"
 edition = "2018"
 name = "castle-lending-aggregator"
-version = "0.1.0"
+version = "1.0.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]
