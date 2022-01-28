@@ -571,6 +571,14 @@ export class VaultClient {
     // Weighted average of APYs by allocation
     const assetApysAndValues: [Big, Big][] = [
       [
+        new Big(0),
+        new Big(
+          (
+            await this.getReserveTokenAccountInfo(this.vaultState.vaultReserveToken)
+          ).amount.toString()
+        ),
+      ],
+      [
         await this.solend.getApy(),
         await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken),
       ],
