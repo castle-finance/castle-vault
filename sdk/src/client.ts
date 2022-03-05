@@ -108,12 +108,8 @@ export class VaultClient {
     );
 
     const [vaultJetLpTokenAccount, jetLpBump] = await PublicKey.findProgramAddress(
-      [
-        anchor.utils.bytes.utf8.encode("deposits"),
-        jet.accounts.reserve.toBuffer(),
-        vaultAuthority.toBuffer(),
-      ],
-      jet.accounts.program
+      [vaultId.publicKey.toBuffer(), jet.accounts.depositNoteMint.toBuffer()],
+      program.programId
     );
 
     const [lpTokenMint, lpTokenMintBump] = await PublicKey.findProgramAddress(

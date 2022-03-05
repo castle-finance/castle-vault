@@ -70,8 +70,15 @@ pub struct Initialize<'info> {
     )]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut)]
-    pub vault_jet_lp_token: AccountInfo<'info>,
+    #[account(
+        init,
+        payer = payer,
+        seeds = [vault.key().as_ref(), jet_lp_token_mint.key().as_ref()],
+        bump = bumps.jet_lp,
+        token::authority = vault_authority,
+        token::mint = jet_lp_token_mint,
+    )]
+    pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
     pub jet_program: AccountInfo<'info>,
 
@@ -128,18 +135,6 @@ pub fn handler(
     strategy_type: StrategyType,
 ) -> ProgramResult {
     // TODO also store lending market reserve account addresses in vault?
-
-    // initialize jet deposit account
-    jet::cpi::init_deposit_account(
-        ctx.accounts
-            .init_jet_deposit_account_context()
-            .with_signer(&[&[
-                ctx.accounts.vault.key().as_ref(),
-                b"authority".as_ref(),
-                &[bumps.authority],
-            ]]),
-        bumps.jet_lp,
-    )?;
 
     let vault = &mut ctx.accounts.vault;
     vault.vault_authority = ctx.accounts.vault_authority.key();
