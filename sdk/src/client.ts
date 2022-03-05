@@ -450,7 +450,7 @@ export class VaultClient {
       )
     );
 
-    if (maxAllocationChange > threshold) {
+    if (vaultValue.gt(0) && maxAllocationChange > threshold) {
       return this.program.provider.sendAll(txs);
     } else {
       return Promise.resolve([]);
