@@ -108,27 +108,6 @@ pub struct Initialize<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl<'info> Initialize<'info> {
-    pub fn init_jet_deposit_account_context(
-        &self,
-    ) -> CpiContext<'_, '_, '_, 'info, jet::cpi::accounts::InitializeDepositAccount<'info>> {
-        CpiContext::new(
-            self.jet_program.clone(),
-            jet::cpi::accounts::InitializeDepositAccount {
-                market: self.jet_market.to_account_info(),
-                market_authority: self.jet_market_authority.clone(),
-                reserve: self.jet_reserve_state.to_account_info(),
-                deposit_note_mint: self.jet_lp_token_mint.clone(),
-                depositor: self.vault_authority.clone(),
-                deposit_account: self.vault_jet_lp_token.to_account_info(),
-                token_program: self.token_program.to_account_info(),
-                system_program: self.system_program.to_account_info(),
-                rent: self.rent.to_account_info(),
-            },
-        )
-    }
-}
-
 pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
