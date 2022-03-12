@@ -109,6 +109,7 @@ pub fn calc_deposit_to_vault(
 
             let lp_tokens_to_mint = lp_token_supply
                 .checked_mul(&reserve_token_amount.checked_div(&reserve_tokens_in_vault)?)?
+                .floor()?
                 .to_imprecise()?;
 
             u64::try_from(lp_tokens_to_mint).ok()
