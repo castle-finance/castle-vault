@@ -96,6 +96,8 @@ pub struct Initialize<'info> {
 
     pub jet_lp_token_mint: AccountInfo<'info>,
 
+    pub fee_receiver: Box<Account<'info, TokenAccount>>,
+
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -103,8 +105,10 @@ pub struct Initialize<'info> {
 
     pub token_program: Program<'info, Token>,
 
+    // is this needed?
     pub rent: Sysvar<'info, Rent>,
 
+    // TODO replace with Clock::get()
     pub clock: Sysvar<'info, Clock>,
 }
 
@@ -112,6 +116,7 @@ pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
+    fee_bps: u64,
 ) -> ProgramResult {
     // TODO also store lending market reserve account addresses in vault?
 
@@ -125,6 +130,8 @@ pub fn handler(
     vault.vault_jet_lp_token = ctx.accounts.vault_jet_lp_token.key();
     vault.lp_token_mint = ctx.accounts.lp_token_mint.key();
     vault.reserve_token_mint = ctx.accounts.reserve_token_mint.key();
+    vault.fee_receiver = ctx.accounts.fee_receiver.key();
+    vault.fee_bps = fee_bps;
     vault.last_update = LastUpdate::new(ctx.accounts.clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;

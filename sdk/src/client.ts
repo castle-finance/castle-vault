@@ -70,7 +70,9 @@ export class VaultClient {
     solend: SolendReserveAsset,
     port: PortReserveAsset,
     jet: JetReserveAsset,
-    strategyType: StrategyType
+    strategyType: StrategyType,
+    feeReceiver: PublicKey,
+    feeBps: number = 0
   ): Promise<VaultClient> {
     const vaultId = Keypair.generate();
 
@@ -78,6 +80,7 @@ export class VaultClient {
       [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("authority")],
       program.programId
     );
+    // TODO delete
     // send sol to vault authority to pay for jet deposit account init
     const amount = await program.provider.connection.getMinimumBalanceForRentExemption(
       AccountLayout.span
@@ -127,6 +130,7 @@ export class VaultClient {
         jetLp: jetLpBump,
       },
       strategyType,
+      new anchor.BN(feeBps),
       {
         accounts: {
           vault: vaultId.publicKey,
@@ -144,6 +148,7 @@ export class VaultClient {
           solendLpTokenMint: solend.accounts.collateralMint,
           portLpTokenMint: port.accounts.collateralMint,
           jetLpTokenMint: jet.accounts.depositNoteMint,
+          feeReceiver: feeReceiver,
           payer: wallet.payer.publicKey,
           systemProgram: SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,

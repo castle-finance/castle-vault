@@ -1,6 +1,7 @@
 import { BN } from "@project-serum/anchor";
 import { PublicKey } from "@solana/web3.js";
 
+// TODO change to enum or mapping
 export type StrategyType = { equalAllocation: {} } | { maxYield: {} };
 
 export interface LastUpdate {

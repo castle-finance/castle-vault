@@ -32,6 +32,7 @@ describe("castle-vault", () => {
   const initialCollateralRatio = 1.0;
 
   let reserveToken: Token;
+  let feeReceiver: PublicKey;
 
   let jet: JetReserveAsset;
   let solend: SolendReserveAsset;
@@ -51,6 +52,8 @@ describe("castle-vault", () => {
       2,
       TOKEN_PROGRAM_ID
     );
+
+    feeReceiver = await reserveToken.createAccount(owner.publicKey);
 
     const ownerReserveTokenAccount = await reserveToken.createAccount(owner.publicKey);
     await reserveToken.mintTo(
@@ -110,7 +113,8 @@ describe("castle-vault", () => {
         solend,
         port,
         jet,
-        strategyType
+        strategyType,
+        feeReceiver
       );
       // TODO add more checks
       assert.notEqual(vaultClient.vaultState, null);

@@ -29,6 +29,10 @@ pub struct Vault {
     // Mint address of the tokens that are stored in vault
     pub reserve_token_mint: Pubkey,
 
+    pub fee_receiver: Pubkey,
+
+    pub fee_bps: u64,
+
     // Last slot when vault was updated
     pub last_update: LastUpdate,
 
