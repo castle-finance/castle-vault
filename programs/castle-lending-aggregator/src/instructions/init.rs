@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount};
+use anchor_spl::token::{self, InitializeAccount, Mint, Token, TokenAccount};
 
 use std::convert::Into;
 
@@ -9,10 +9,11 @@ use crate::state::*;
 pub struct InitBumpSeeds {
     authority: u8,
     reserve: u8,
+    lp_mint: u8,
+    fee_receiver: u8,
     solend_lp: u8,
     port_lp: u8,
     jet_lp: u8,
-    lp_mint: u8,
 }
 
 #[derive(Accounts)]
@@ -80,14 +81,6 @@ pub struct Initialize<'info> {
     )]
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
-    pub jet_program: AccountInfo<'info>,
-
-    pub jet_market: AccountInfo<'info>,
-
-    pub jet_market_authority: AccountInfo<'info>,
-
-    pub jet_reserve_state: AccountInfo<'info>,
-
     pub reserve_token_mint: Box<Account<'info, Mint>>,
 
     pub solend_lp_token_mint: AccountInfo<'info>,
@@ -96,32 +89,55 @@ pub struct Initialize<'info> {
 
     pub jet_lp_token_mint: AccountInfo<'info>,
 
-    pub fee_receiver: Box<Account<'info, TokenAccount>>,
+    #[account(
+        init,
+        payer = payer,
+        seeds = [vault.key().as_ref(), b"fee_receiver".as_ref()],
+        bump = bumps.fee_receiver,
+        owner = token::ID,
+        space = TokenAccount::LEN
+    )]
+    pub fee_receiver: AccountInfo<'info>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
+
+    pub owner: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
 
     pub token_program: Program<'info, Token>,
 
-    // is this needed?
     pub rent: Sysvar<'info, Rent>,
+}
 
-    // TODO replace with Clock::get()
-    pub clock: Sysvar<'info, Clock>,
+impl<'info> Initialize<'info> {
+    fn init_fee_receiver_context(&self) -> CpiContext<'_, '_, '_, 'info, InitializeAccount<'info>> {
+        CpiContext::new(
+            self.token_program.to_account_info(),
+            InitializeAccount {
+                account: self.fee_receiver.clone(),
+                authority: self.owner.to_account_info(),
+                mint: self.lp_token_mint.to_account_info(),
+                rent: self.rent.to_account_info(),
+            },
+        )
+    }
 }
 
 pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
-    fee_bps: u64,
+    fee_bps: u8,
 ) -> ProgramResult {
     // TODO also store lending market reserve account addresses in vault?
 
+    let clock = Clock::get()?;
+
     let vault = &mut ctx.accounts.vault;
     vault.vault_authority = ctx.accounts.vault_authority.key();
+    vault.owner = ctx.accounts.owner.key();
     vault.authority_seed = vault.key();
     vault.authority_bump = [bumps.authority];
     vault.vault_reserve_token = ctx.accounts.vault_reserve_token.key();
@@ -132,9 +148,13 @@ pub fn handler(
     vault.reserve_token_mint = ctx.accounts.reserve_token_mint.key();
     vault.fee_receiver = ctx.accounts.fee_receiver.key();
     vault.fee_bps = fee_bps;
-    vault.last_update = LastUpdate::new(ctx.accounts.clock.slot);
+    vault.last_update = LastUpdate::new(clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;
+
+    // Initialize fee receiver account
+    // Needs to be manually done here instead of with anchor because the mint is initialized with anchor
+    token::initialize_account(ctx.accounts.init_fee_receiver_context())?;
 
     Ok(())
 }

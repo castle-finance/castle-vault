@@ -71,7 +71,7 @@ export class VaultClient {
     port: PortReserveAsset,
     jet: JetReserveAsset,
     strategyType: StrategyType,
-    feeReceiver: PublicKey,
+    owner: PublicKey,
     feeBps: number = 0
   ): Promise<VaultClient> {
     const vaultId = Keypair.generate();
@@ -107,11 +107,17 @@ export class VaultClient {
       program.programId
     );
 
+    const [feeReceiver, feeReceiverBump] = await PublicKey.findProgramAddress(
+      [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("fee_receiver")],
+      program.programId
+    );
+
     await program.rpc.initialize(
       {
         authority: authorityBump,
         reserve: reserveBump,
         lpMint: lpTokenMintBump,
+        feeReceiver: feeReceiverBump,
         solendLp: solendLpBump,
         portLp: portLpBump,
         jetLp: jetLpBump,
@@ -127,20 +133,16 @@ export class VaultClient {
           vaultSolendLpToken: vaultSolendLpTokenAccount,
           vaultPortLpToken: vaultPortLpTokenAccount,
           vaultJetLpToken: vaultJetLpTokenAccount,
-          jetProgram: jet.accounts.program,
-          jetMarket: jet.accounts.market,
-          jetMarketAuthority: jet.accounts.marketAuthority,
-          jetReserveState: jet.accounts.reserve,
           reserveTokenMint: reserveTokenMint,
           solendLpTokenMint: solend.accounts.collateralMint,
           portLpTokenMint: port.accounts.collateralMint,
           jetLpTokenMint: jet.accounts.depositNoteMint,
           feeReceiver: feeReceiver,
           payer: wallet.payer.publicKey,
+          owner: owner,
           systemProgram: SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: SYSVAR_RENT_PUBKEY,
-          clock: SYSVAR_CLOCK_PUBKEY,
         },
         signers: [vaultId, wallet.payer],
         instructions: [await program.account.vault.createInstruction(vaultId)],
@@ -155,10 +157,12 @@ export class VaultClient {
     return this.program.instruction.refresh({
       accounts: {
         vault: this.vaultId,
+        vaultAuthority: this.vaultState.vaultAuthority,
         vaultReserveToken: this.vaultState.vaultReserveToken,
         vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
         vaultPortLpToken: this.vaultState.vaultPortLpToken,
         vaultJetLpToken: this.vaultState.vaultJetLpToken,
+        lpTokenMint: this.vaultState.lpTokenMint,
         solendProgram: this.solend.accounts.program,
         solendReserveState: this.solend.accounts.reserve,
         solendPyth: this.solend.accounts.pythPrice,
@@ -173,6 +177,7 @@ export class VaultClient {
         jetFeeNoteVault: this.jet.accounts.feeNoteVault,
         jetDepositNoteMint: this.jet.accounts.depositNoteMint,
         jetPyth: this.jet.accounts.pythPrice,
+        feeReceiver: this.vaultState.feeReceiver,
         tokenProgram: TOKEN_PROGRAM_ID,
         clock: SYSVAR_CLOCK_PUBKEY,
       },

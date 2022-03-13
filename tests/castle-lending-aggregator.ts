@@ -111,7 +111,8 @@ describe("castle-vault", () => {
         solend,
         port,
         jet,
-        strategyType
+        strategyType,
+        owner.publicKey
       );
       // TODO add more checks
       assert.notEqual(vaultClient.vaultState, null);

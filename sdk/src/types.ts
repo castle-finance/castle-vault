@@ -34,6 +34,9 @@ export interface Vault {
   vaultSolendLpToken: PublicKey;
   allocations: Allocations;
   strategyType: any;
+  owner: PublicKey;
+  feeReceiver: PublicKey;
+  feeBps: number;
 }
 
 export interface RebalanceEvent {

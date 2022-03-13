@@ -9,6 +9,10 @@ use crate::errors::ErrorCode;
 pub struct Vault {
     pub vault_authority: Pubkey,
 
+    /// Account which is allowed to call restricted instructions
+    /// Also the authority of the fee receiver account
+    pub owner: Pubkey,
+
     pub authority_seed: Pubkey,
 
     pub authority_bump: [u8; 1],
@@ -31,7 +35,7 @@ pub struct Vault {
 
     pub fee_receiver: Pubkey,
 
-    pub fee_bps: u64,
+    pub fee_bps: u8,
 
     // Last slot when vault was updated
     pub last_update: LastUpdate,

@@ -14,6 +14,7 @@ pub struct Refresh<'info> {
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
         has_one = vault_jet_lp_token,
+        has_one = fee_receiver,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -176,6 +177,9 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
 
     // TODO add fee collection
 
+    let prev_vault_value = ctx.accounts.vault.total_value;
+
+    // Store exchange rate?
     let vault = &mut ctx.accounts.vault;
     vault.total_value = vault_reserve_token_amount + solend_value + port_value + jet_value;
     vault.last_update.update_slot(ctx.accounts.clock.slot);

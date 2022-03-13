@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use spl_math::precise_number::PreciseNumber;
 
@@ -39,15 +40,13 @@ pub struct Deposit<'info> {
 
     pub user_authority: Signer<'info>,
 
-    // SPL token program
-    #[account(address = token::ID)]
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 impl<'info> Deposit<'info> {
     fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
-            self.token_program.clone(),
+            self.token_program.to_account_info(),
             MintTo {
                 mint: self.lp_token_mint.to_account_info(),
                 to: self.user_lp_token.to_account_info(),
@@ -58,7 +57,7 @@ impl<'info> Deposit<'info> {
 
     fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
         CpiContext::new(
-            self.token_program.clone(),
+            self.token_program.to_account_info(),
             Transfer {
                 from: self.user_reserve_token.to_account_info(),
                 to: self.vault_reserve_token.to_account_info(),
