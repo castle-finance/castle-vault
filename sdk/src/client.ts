@@ -80,19 +80,6 @@ export class VaultClient {
       [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("authority")],
       program.programId
     );
-    // TODO delete
-    // send sol to vault authority to pay for jet deposit account init
-    const amount = await program.provider.connection.getMinimumBalanceForRentExemption(
-      AccountLayout.span
-    );
-    const tx = new Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: wallet.publicKey,
-        toPubkey: vaultAuthority,
-        lamports: amount,
-      })
-    );
-    await program.provider.send(tx, [wallet.payer]);
 
     const [vaultReserveTokenAccount, reserveBump] = await PublicKey.findProgramAddress(
       [vaultId.publicKey.toBuffer(), reserveTokenMint.toBuffer()],

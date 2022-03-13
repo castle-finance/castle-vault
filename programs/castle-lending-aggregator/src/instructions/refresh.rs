@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, TokenAccount};
+use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
 use jet_proto_math::Number;
 use port_anchor_adaptor::PortReserve;
 
@@ -17,6 +17,8 @@ pub struct Refresh<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    pub vault_authority: AccountInfo<'info>,
+
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
@@ -24,6 +26,9 @@ pub struct Refresh<'info> {
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
+
+    #[account(mut)]
+    pub lp_token_mint: Box<Account<'info, Mint>>,
 
     #[account(
         executable,
@@ -70,6 +75,9 @@ pub struct Refresh<'info> {
     pub jet_deposit_note_mint: AccountInfo<'info>,
 
     pub jet_pyth: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub fee_receiver: Box<Account<'info, TokenAccount>>,
 
     #[account(address = token::ID)]
     pub token_program: AccountInfo<'info>,
@@ -119,6 +127,17 @@ impl<'info> Refresh<'info> {
                 deposit_note_mint: self.jet_deposit_note_mint.clone(),
                 pyth_oracle_price: self.jet_pyth.clone(),
                 token_program: self.token_program.clone(),
+            },
+        )
+    }
+
+    fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+        CpiContext::new(
+            self.token_program.clone(),
+            MintTo {
+                mint: self.lp_token_mint.to_account_info(),
+                to: self.fee_receiver.to_account_info(),
+                authority: self.vault_authority.clone(),
             },
         )
     }

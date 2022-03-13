@@ -53,8 +53,6 @@ describe("castle-vault", () => {
       TOKEN_PROGRAM_ID
     );
 
-    feeReceiver = await reserveToken.createAccount(owner.publicKey);
-
     const ownerReserveTokenAccount = await reserveToken.createAccount(owner.publicKey);
     await reserveToken.mintTo(
       ownerReserveTokenAccount,
@@ -113,8 +111,7 @@ describe("castle-vault", () => {
         solend,
         port,
         jet,
-        strategyType,
-        feeReceiver
+        strategyType
       );
       // TODO add more checks
       assert.notEqual(vaultClient.vaultState, null);
