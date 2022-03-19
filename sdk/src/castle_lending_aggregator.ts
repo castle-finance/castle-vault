@@ -1,5 +1,5 @@
 export type CastleLendingAggregator = {
-  version: "1.0.0";
+  version: "1.2.0";
   name: "castle_lending_aggregator";
   instructions: [
     {
@@ -819,7 +819,7 @@ export type CastleLendingAggregator = {
 };
 
 export const IDL: CastleLendingAggregator = {
-  version: "1.0.0",
+  version: "1.2.0",
   name: "castle_lending_aggregator",
   instructions: [
     {
