@@ -15,6 +15,7 @@ pub struct Withdraw<'info> {
         constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
         has_one = vault_authority,
         has_one = vault_reserve_token,
+        has_one = lp_token_mint,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -24,7 +25,7 @@ pub struct Withdraw<'info> {
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
-    pub vault_lp_mint: Box<Account<'info, Mint>>,
+    pub lp_token_mint: Box<Account<'info, Mint>>,
 
     #[account(mut)]
     pub user_lp_token: Box<Account<'info, TokenAccount>>,
@@ -43,7 +44,7 @@ impl<'info> Withdraw<'info> {
         CpiContext::new(
             self.token_program.clone(),
             Burn {
-                mint: self.vault_lp_mint.to_account_info(),
+                mint: self.lp_token_mint.to_account_info(),
                 to: self.user_lp_token.to_account_info(),
                 authority: self.user_authority.to_account_info(),
             },
@@ -69,7 +70,7 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
 
     let reserve_tokens_to_transfer = calc_withdraw_from_vault(
         lp_token_amount,
-        ctx.accounts.vault_lp_mint.supply,
+        ctx.accounts.lp_token_mint.supply,
         vault.total_value,
     )
     .ok_or(ErrorCode::MathError)?;
