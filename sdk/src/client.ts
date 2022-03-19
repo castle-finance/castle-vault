@@ -381,7 +381,7 @@ export class VaultClient {
           userLpToken: userLpTokenAccount,
           userReserveToken: userReserveTokenAccount,
           vaultReserveToken: this.vaultState.vaultReserveToken,
-          vaultLpMint: this.vaultState.lpTokenMint,
+          lpTokenMint: this.vaultState.lpTokenMint,
           tokenProgram: TOKEN_PROGRAM_ID,
         },
       })

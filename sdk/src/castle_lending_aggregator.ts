@@ -1,5 +1,5 @@
 export type CastleLendingAggregator = {
-  version: "1.0.0";
+  version: "1.2.0";
   name: "castle_lending_aggregator";
   instructions: [
     {
@@ -180,7 +180,7 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "vaultLpMint";
+          name: "lpTokenMint";
           isMut: true;
           isSigner: false;
         },
@@ -839,7 +839,7 @@ export type CastleLendingAggregator = {
 };
 
 export const IDL: CastleLendingAggregator = {
-  version: "1.0.0",
+  version: "1.2.0",
   name: "castle_lending_aggregator",
   instructions: [
     {
@@ -1020,7 +1020,7 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "vaultLpMint",
+          name: "lpTokenMint",
           isMut: true,
           isSigner: false,
         },
