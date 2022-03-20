@@ -129,7 +129,8 @@ pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
-    fee_bps: u8,
+    fee_carry_bps: u16,
+    fee_mgmt_bps: u16,
 ) -> ProgramResult {
     // TODO also store lending market reserve account addresses in vault?
 
@@ -147,7 +148,8 @@ pub fn handler(
     vault.lp_token_mint = ctx.accounts.lp_token_mint.key();
     vault.reserve_token_mint = ctx.accounts.reserve_token_mint.key();
     vault.fee_receiver = ctx.accounts.fee_receiver.key();
-    vault.fee_bps = fee_bps;
+    vault.fee_carry_bps = fee_carry_bps;
+    vault.fee_mgmt_bps = fee_mgmt_bps;
     vault.last_update = LastUpdate::new(clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;

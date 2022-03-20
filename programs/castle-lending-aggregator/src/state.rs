@@ -7,40 +7,47 @@ use crate::errors::ErrorCode;
 #[account]
 #[derive(Debug)]
 pub struct Vault {
-    pub vault_authority: Pubkey,
-
     /// Account which is allowed to call restricted instructions
     /// Also the authority of the fee receiver account
     pub owner: Pubkey,
+
+    pub vault_authority: Pubkey,
 
     pub authority_seed: Pubkey,
 
     pub authority_bump: [u8; 1],
 
-    // Account where reserve tokens are stored
+    /// Account where reserve tokens are stored
     pub vault_reserve_token: Pubkey,
 
-    // Account where solend LP tokens are stored
+    /// Account where solend LP tokens are stored
     pub vault_solend_lp_token: Pubkey,
 
+    /// Account where port LP tokens are stored
     pub vault_port_lp_token: Pubkey,
 
+    /// Account where jet LP tokens are stored
     pub vault_jet_lp_token: Pubkey,
 
-    // Mint address of vault LP tokens
+    /// Mint address of vault LP tokens
     pub lp_token_mint: Pubkey,
 
-    // Mint address of the tokens that are stored in vault
+    /// Mint address of the tokens that are stored in vault
     pub reserve_token_mint: Pubkey,
 
+    /// Account that fees from this vault are sent to
     pub fee_receiver: Pubkey,
 
-    pub fee_bps: u8,
+    /// Basis points of the accrued interest that gets sent to the fee_receiver
+    pub fee_carry_bps: u16,
 
-    // Last slot when vault was updated
+    /// Basis points of the AUM that gets sent to the fee_receiver
+    pub fee_mgmt_bps: u16,
+
+    /// Last slot when vault was refreshed
     pub last_update: LastUpdate,
 
-    // Total value of vault denominated in the reserve token
+    /// Total value of vault denominated in the reserve token
     pub total_value: u64,
 
     pub allocations: Allocations,

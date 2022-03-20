@@ -105,8 +105,12 @@ export type CastleLendingAggregator = {
           };
         },
         {
-          name: "feeBps";
-          type: "u8";
+          name: "feeCarryBps";
+          type: "u16";
+        },
+        {
+          name: "feeMgmtBps";
+          type: "u16";
         }
       ];
     },
@@ -600,11 +604,11 @@ export type CastleLendingAggregator = {
         kind: "struct";
         fields: [
           {
-            name: "vaultAuthority";
+            name: "owner";
             type: "publicKey";
           },
           {
-            name: "owner";
+            name: "vaultAuthority";
             type: "publicKey";
           },
           {
@@ -646,8 +650,12 @@ export type CastleLendingAggregator = {
             type: "publicKey";
           },
           {
-            name: "feeBps";
-            type: "u8";
+            name: "feeCarryBps";
+            type: "u16";
+          },
+          {
+            name: "feeMgmtBps";
+            type: "u16";
           },
           {
             name: "lastUpdate";
@@ -945,8 +953,12 @@ export const IDL: CastleLendingAggregator = {
           },
         },
         {
-          name: "feeBps",
-          type: "u8",
+          name: "feeCarryBps",
+          type: "u16",
+        },
+        {
+          name: "feeMgmtBps",
+          type: "u16",
         },
       ],
     },
@@ -1440,11 +1452,11 @@ export const IDL: CastleLendingAggregator = {
         kind: "struct",
         fields: [
           {
-            name: "vaultAuthority",
+            name: "owner",
             type: "publicKey",
           },
           {
-            name: "owner",
+            name: "vaultAuthority",
             type: "publicKey",
           },
           {
@@ -1486,8 +1498,12 @@ export const IDL: CastleLendingAggregator = {
             type: "publicKey",
           },
           {
-            name: "feeBps",
-            type: "u8",
+            name: "feeCarryBps",
+            type: "u16",
+          },
+          {
+            name: "feeMgmtBps",
+            type: "u16",
           },
           {
             name: "lastUpdate",

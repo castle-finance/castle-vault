@@ -72,7 +72,8 @@ export class VaultClient {
     jet: JetReserveAsset,
     strategyType: StrategyType,
     owner: PublicKey,
-    feeBps: number = 0
+    feeCarryBps: number = 0,
+    feeMgmtBps: number = 0
   ): Promise<VaultClient> {
     const vaultId = Keypair.generate();
 
@@ -123,7 +124,8 @@ export class VaultClient {
         jetLp: jetLpBump,
       },
       strategyType,
-      new anchor.BN(feeBps),
+      new anchor.BN(feeCarryBps),
+      new anchor.BN(feeMgmtBps),
       {
         accounts: {
           vault: vaultId.publicKey,
