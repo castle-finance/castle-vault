@@ -93,6 +93,8 @@ impl<'info> ReconcilePort<'info> {
 // TODO handle case where there allocation amount is greater than vault value
 // TODO eliminate duplication of redeem logic
 pub fn handler(ctx: Context<ReconcilePort>, withdraw_option: Option<u64>) -> ProgramResult {
+    msg!("Reconciling Port");
+
     let vault = &ctx.accounts.vault;
     let port_exchange_rate = ctx.accounts.port_reserve_state.collateral_exchange_rate()?;
 
@@ -105,6 +107,7 @@ pub fn handler(ctx: Context<ReconcilePort>, withdraw_option: Option<u64>) -> Pro
 
             match allocation.value.checked_sub(current_port_value) {
                 Some(tokens_to_deposit) => {
+                    msg!("Depositing {}", tokens_to_deposit);
                     if tokens_to_deposit != 0 {
                         port_anchor_adaptor::deposit_reserve(
                             ctx.accounts
@@ -123,6 +126,8 @@ pub fn handler(ctx: Context<ReconcilePort>, withdraw_option: Option<u64>) -> Pro
                         .checked_sub(port_exchange_rate.liquidity_to_collateral(allocation.value)?)
                         .ok_or(ErrorCode::MathError)?;
 
+                    msg!("Redeeming {}", tokens_to_redeem);
+
                     port_anchor_adaptor::redeem(
                         ctx.accounts
                             .port_redeem_reserve_collateral_context()
@@ -135,6 +140,7 @@ pub fn handler(ctx: Context<ReconcilePort>, withdraw_option: Option<u64>) -> Pro
             ctx.accounts.vault.allocations.port.reset();
         }
         Some(withdraw_amount) => {
+            msg!("Redeeming {}", withdraw_amount);
             // TODO verify withdraw ix later in tx
             // Redeem
             let tokens_to_redeem = port_exchange_rate.liquidity_to_collateral(withdraw_amount)?;

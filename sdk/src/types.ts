@@ -1,6 +1,7 @@
 import { BN } from "@project-serum/anchor";
 import { PublicKey } from "@solana/web3.js";
 
+// TODO change to enum or mapping
 export type StrategyType = { equalAllocation: {} } | { maxYield: {} };
 
 export interface LastUpdate {
@@ -33,6 +34,10 @@ export interface Vault {
   vaultSolendLpToken: PublicKey;
   allocations: Allocations;
   strategyType: any;
+  owner: PublicKey;
+  feeReceiver: PublicKey;
+  feeCarryBps: number;
+  feeMgmtBps: number;
 }
 
 export interface RebalanceEvent {

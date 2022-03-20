@@ -70,7 +70,10 @@ export class VaultClient {
     solend: SolendReserveAsset,
     port: PortReserveAsset,
     jet: JetReserveAsset,
-    strategyType: StrategyType
+    strategyType: StrategyType,
+    owner: PublicKey,
+    feeCarryBps: number = 0,
+    feeMgmtBps: number = 0
   ): Promise<VaultClient> {
     const vaultId = Keypair.generate();
 
@@ -78,18 +81,6 @@ export class VaultClient {
       [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("authority")],
       program.programId
     );
-    // send sol to vault authority to pay for jet deposit account init
-    const amount = await program.provider.connection.getMinimumBalanceForRentExemption(
-      AccountLayout.span
-    );
-    const tx = new Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: wallet.publicKey,
-        toPubkey: vaultAuthority,
-        lamports: amount,
-      })
-    );
-    await program.provider.send(tx, [wallet.payer]);
 
     const [vaultReserveTokenAccount, reserveBump] = await PublicKey.findProgramAddress(
       [vaultId.publicKey.toBuffer(), reserveTokenMint.toBuffer()],
@@ -117,16 +108,24 @@ export class VaultClient {
       program.programId
     );
 
+    const [feeReceiver, feeReceiverBump] = await PublicKey.findProgramAddress(
+      [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("fee_receiver")],
+      program.programId
+    );
+
     await program.rpc.initialize(
       {
         authority: authorityBump,
         reserve: reserveBump,
         lpMint: lpTokenMintBump,
+        feeReceiver: feeReceiverBump,
         solendLp: solendLpBump,
         portLp: portLpBump,
         jetLp: jetLpBump,
       },
       strategyType,
+      new anchor.BN(feeCarryBps),
+      new anchor.BN(feeMgmtBps),
       {
         accounts: {
           vault: vaultId.publicKey,
@@ -136,19 +135,16 @@ export class VaultClient {
           vaultSolendLpToken: vaultSolendLpTokenAccount,
           vaultPortLpToken: vaultPortLpTokenAccount,
           vaultJetLpToken: vaultJetLpTokenAccount,
-          jetProgram: jet.accounts.program,
-          jetMarket: jet.accounts.market,
-          jetMarketAuthority: jet.accounts.marketAuthority,
-          jetReserveState: jet.accounts.reserve,
           reserveTokenMint: reserveTokenMint,
           solendLpTokenMint: solend.accounts.collateralMint,
           portLpTokenMint: port.accounts.collateralMint,
           jetLpTokenMint: jet.accounts.depositNoteMint,
+          feeReceiver: feeReceiver,
           payer: wallet.payer.publicKey,
+          owner: owner,
           systemProgram: SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           rent: SYSVAR_RENT_PUBKEY,
-          clock: SYSVAR_CLOCK_PUBKEY,
         },
         signers: [vaultId, wallet.payer],
         instructions: [await program.account.vault.createInstruction(vaultId)],
@@ -163,10 +159,12 @@ export class VaultClient {
     return this.program.instruction.refresh({
       accounts: {
         vault: this.vaultId,
+        vaultAuthority: this.vaultState.vaultAuthority,
         vaultReserveToken: this.vaultState.vaultReserveToken,
         vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
         vaultPortLpToken: this.vaultState.vaultPortLpToken,
         vaultJetLpToken: this.vaultState.vaultJetLpToken,
+        lpTokenMint: this.vaultState.lpTokenMint,
         solendProgram: this.solend.accounts.program,
         solendReserveState: this.solend.accounts.reserve,
         solendPyth: this.solend.accounts.pythPrice,
@@ -181,6 +179,7 @@ export class VaultClient {
         jetFeeNoteVault: this.jet.accounts.feeNoteVault,
         jetDepositNoteMint: this.jet.accounts.depositNoteMint,
         jetPyth: this.jet.accounts.pythPrice,
+        feeReceiver: this.vaultState.feeReceiver,
         tokenProgram: TOKEN_PROGRAM_ID,
         clock: SYSVAR_CLOCK_PUBKEY,
       },
@@ -317,6 +316,8 @@ export class VaultClient {
     const vaultReserveAmount = new Big(
       vaultReserveTokenAccountInfo.amount.toString()
     ).round(0, Big.roundDown);
+
+    // TODO sdk input should be in lp tokens, not reserve tokens
 
     // Convert from reserve tokens to LP tokens
     // NOTE: this rate is slightly lower than what it will be in the transaction
@@ -699,6 +700,16 @@ export class VaultClient {
       Keypair.generate() // dummy since we don't need to send txs
     );
     return lpToken.getMintInfo();
+  }
+
+  async getFeeReceiverAccountInfo(): Promise<AccountInfo> {
+    const lpToken = new Token(
+      this.program.provider.connection,
+      this.vaultState.lpTokenMint,
+      TOKEN_PROGRAM_ID,
+      Keypair.generate() // dummy since we don't need to send txs
+    );
+    return lpToken.getAccountInfo(this.vaultState.feeReceiver);
   }
 
   async debug_log() {

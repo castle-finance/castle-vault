@@ -41,26 +41,6 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "jetProgram";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "jetMarket";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "jetMarketAuthority";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "jetReserveState";
-          isMut: false;
-          isSigner: false;
-        },
-        {
           name: "reserveTokenMint";
           isMut: false;
           isSigner: false;
@@ -81,9 +61,19 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
+          name: "feeReceiver";
+          isMut: true;
+          isSigner: false;
+        },
+        {
           name: "payer";
           isMut: true;
           isSigner: true;
+        },
+        {
+          name: "owner";
+          isMut: false;
+          isSigner: false;
         },
         {
           name: "systemProgram";
@@ -97,11 +87,6 @@ export type CastleLendingAggregator = {
         },
         {
           name: "rent";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "clock";
           isMut: false;
           isSigner: false;
         }
@@ -118,6 +103,14 @@ export type CastleLendingAggregator = {
           type: {
             defined: "StrategyType";
           };
+        },
+        {
+          name: "feeCarryBps";
+          type: "u16";
+        },
+        {
+          name: "feeMgmtBps";
+          type: "u16";
         }
       ];
     },
@@ -278,6 +271,11 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
+          name: "vaultAuthority";
+          isMut: false;
+          isSigner: false;
+        },
+        {
           name: "vaultReserveToken";
           isMut: false;
           isSigner: false;
@@ -295,6 +293,11 @@ export type CastleLendingAggregator = {
         {
           name: "vaultJetLpToken";
           isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "lpTokenMint";
+          isMut: true;
           isSigner: false;
         },
         {
@@ -365,6 +368,11 @@ export type CastleLendingAggregator = {
         {
           name: "jetPyth";
           isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "feeReceiver";
+          isMut: true;
           isSigner: false;
         },
         {
@@ -596,6 +604,10 @@ export type CastleLendingAggregator = {
         kind: "struct";
         fields: [
           {
+            name: "owner";
+            type: "publicKey";
+          },
+          {
             name: "vaultAuthority";
             type: "publicKey";
           },
@@ -632,6 +644,18 @@ export type CastleLendingAggregator = {
           {
             name: "reserveTokenMint";
             type: "publicKey";
+          },
+          {
+            name: "feeReceiver";
+            type: "publicKey";
+          },
+          {
+            name: "feeCarryBps";
+            type: "u16";
+          },
+          {
+            name: "feeMgmtBps";
+            type: "u16";
           },
           {
             name: "lastUpdate";
@@ -674,6 +698,14 @@ export type CastleLendingAggregator = {
             type: "u8";
           },
           {
+            name: "lpMint";
+            type: "u8";
+          },
+          {
+            name: "feeReceiver";
+            type: "u8";
+          },
+          {
             name: "solendLp";
             type: "u8";
           },
@@ -683,10 +715,6 @@ export type CastleLendingAggregator = {
           },
           {
             name: "jetLp";
-            type: "u8";
-          },
-          {
-            name: "lpMint";
             type: "u8";
           }
         ];
@@ -861,26 +889,6 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "jetProgram",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "jetMarket",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "jetMarketAuthority",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "jetReserveState",
-          isMut: false,
-          isSigner: false,
-        },
-        {
           name: "reserveTokenMint",
           isMut: false,
           isSigner: false,
@@ -901,9 +909,19 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
+          name: "feeReceiver",
+          isMut: true,
+          isSigner: false,
+        },
+        {
           name: "payer",
           isMut: true,
           isSigner: true,
+        },
+        {
+          name: "owner",
+          isMut: false,
+          isSigner: false,
         },
         {
           name: "systemProgram",
@@ -920,11 +938,6 @@ export const IDL: CastleLendingAggregator = {
           isMut: false,
           isSigner: false,
         },
-        {
-          name: "clock",
-          isMut: false,
-          isSigner: false,
-        },
       ],
       args: [
         {
@@ -938,6 +951,14 @@ export const IDL: CastleLendingAggregator = {
           type: {
             defined: "StrategyType",
           },
+        },
+        {
+          name: "feeCarryBps",
+          type: "u16",
+        },
+        {
+          name: "feeMgmtBps",
+          type: "u16",
         },
       ],
     },
@@ -1098,6 +1119,11 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
+          name: "vaultAuthority",
+          isMut: false,
+          isSigner: false,
+        },
+        {
           name: "vaultReserveToken",
           isMut: false,
           isSigner: false,
@@ -1115,6 +1141,11 @@ export const IDL: CastleLendingAggregator = {
         {
           name: "vaultJetLpToken",
           isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "lpTokenMint",
+          isMut: true,
           isSigner: false,
         },
         {
@@ -1185,6 +1216,11 @@ export const IDL: CastleLendingAggregator = {
         {
           name: "jetPyth",
           isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "feeReceiver",
+          isMut: true,
           isSigner: false,
         },
         {
@@ -1416,6 +1452,10 @@ export const IDL: CastleLendingAggregator = {
         kind: "struct",
         fields: [
           {
+            name: "owner",
+            type: "publicKey",
+          },
+          {
             name: "vaultAuthority",
             type: "publicKey",
           },
@@ -1452,6 +1492,18 @@ export const IDL: CastleLendingAggregator = {
           {
             name: "reserveTokenMint",
             type: "publicKey",
+          },
+          {
+            name: "feeReceiver",
+            type: "publicKey",
+          },
+          {
+            name: "feeCarryBps",
+            type: "u16",
+          },
+          {
+            name: "feeMgmtBps",
+            type: "u16",
           },
           {
             name: "lastUpdate",
@@ -1494,6 +1546,14 @@ export const IDL: CastleLendingAggregator = {
             type: "u8",
           },
           {
+            name: "lpMint",
+            type: "u8",
+          },
+          {
+            name: "feeReceiver",
+            type: "u8",
+          },
+          {
             name: "solendLp",
             type: "u8",
           },
@@ -1503,10 +1563,6 @@ export const IDL: CastleLendingAggregator = {
           },
           {
             name: "jetLp",
-            type: "u8",
-          },
-          {
-            name: "lpMint",
             type: "u8",
           },
         ],

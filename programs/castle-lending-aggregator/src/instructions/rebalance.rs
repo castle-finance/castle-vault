@@ -42,17 +42,20 @@ pub struct Rebalance<'info> {
 }
 
 pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
+    msg!("Rebalancing");
+
     // Convert reserve states to assets
-    let mut assets: Vec<Box<dyn Asset>> = Vec::new();
-    assets.push(Box::new(LendingMarket::try_from(
-        ctx.accounts.solend_reserve_state.clone().into_inner(),
-    )?));
-    assets.push(Box::new(LendingMarket::try_from(
-        ctx.accounts.port_reserve_state.clone().into_inner(),
-    )?));
-    assets.push(Box::new(LendingMarket::try_from(
-        *ctx.accounts.jet_reserve_state.load()?.deref(),
-    )?));
+    let assets: Vec<Box<dyn Asset>> = vec![
+        Box::new(LendingMarket::try_from(
+            ctx.accounts.solend_reserve_state.clone().into_inner(),
+        )?),
+        Box::new(LendingMarket::try_from(
+            ctx.accounts.port_reserve_state.clone().into_inner(),
+        )?),
+        Box::new(LendingMarket::try_from(
+            *ctx.accounts.jet_reserve_state.load()?.deref(),
+        )?),
+    ];
 
     // Run strategy to get allocations
     let strategy_allocations = match ctx.accounts.vault.strategy_type {

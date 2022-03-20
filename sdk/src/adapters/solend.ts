@@ -311,8 +311,8 @@ export async function addReserve(
       flashLoanFeeWad: BigInt(3_000_000_000_000_000),
       hostFeePercentage: 20,
     },
-    depositLimit: BigInt(100_000_000),
-    borrowLimit: BigInt(100_000_000),
+    depositLimit: BigInt(100_000_000_000),
+    borrowLimit: BigInt(100_000_000_000),
     feeReceiver: liquidityFeeReceiver.publicKey,
   };
 

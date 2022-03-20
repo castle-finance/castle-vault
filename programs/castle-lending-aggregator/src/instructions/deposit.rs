@@ -1,9 +1,8 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::Token;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
-use spl_math::precise_number::PreciseNumber;
 
 use std::convert::Into;
-use std::convert::TryFrom;
 
 use crate::errors::ErrorCode;
 use crate::state::Vault;
@@ -39,15 +38,13 @@ pub struct Deposit<'info> {
 
     pub user_authority: Signer<'info>,
 
-    // SPL token program
-    #[account(address = token::ID)]
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 impl<'info> Deposit<'info> {
     fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
-            self.token_program.clone(),
+            self.token_program.to_account_info(),
             MintTo {
                 mint: self.lp_token_mint.to_account_info(),
                 to: self.user_lp_token.to_account_info(),
@@ -58,7 +55,7 @@ impl<'info> Deposit<'info> {
 
     fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
         CpiContext::new(
-            self.token_program.clone(),
+            self.token_program.to_account_info(),
             Transfer {
                 from: self.user_reserve_token.to_account_info(),
                 to: self.vault_reserve_token.to_account_info(),
@@ -69,9 +66,11 @@ impl<'info> Deposit<'info> {
 }
 
 pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
+    msg!("Depositing {} reserve tokens", reserve_token_amount);
+
     let vault = &ctx.accounts.vault;
 
-    let lp_tokens_to_mint = calc_deposit_to_vault(
+    let lp_tokens_to_mint = crate::math::calc_reserve_to_lp(
         reserve_token_amount,
         ctx.accounts.lp_token_mint.supply,
         vault.total_value,
@@ -90,28 +89,4 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
     ctx.accounts.vault.total_value += reserve_token_amount;
 
     Ok(())
-}
-
-pub const INITIAL_COLLATERAL_RATIO: u64 = 1;
-
-// TODO move to state.rs as a Calculator?
-pub fn calc_deposit_to_vault(
-    reserve_token_amount: u64,
-    lp_token_supply: u64,
-    reserve_tokens_in_vault: u64,
-) -> Option<u64> {
-    match reserve_tokens_in_vault {
-        0 => Some(INITIAL_COLLATERAL_RATIO * reserve_token_amount),
-        _ => {
-            let reserve_token_amount = PreciseNumber::new(reserve_token_amount as u128)?;
-            let lp_token_supply = PreciseNumber::new(lp_token_supply as u128)?;
-            let reserve_tokens_in_vault = PreciseNumber::new(reserve_tokens_in_vault as u128)?;
-
-            let lp_tokens_to_mint = lp_token_supply
-                .checked_mul(&reserve_token_amount.checked_div(&reserve_tokens_in_vault)?)?
-                .to_imprecise()?;
-
-            u64::try_from(lp_tokens_to_mint).ok()
-        }
-    }
 }

@@ -95,6 +95,7 @@ impl<'info> ReconcileSolend<'info> {
 // TODO handle case where there allocation amount is greater than vault value
 // TODO eliminate duplication of redeem logic
 pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> ProgramResult {
+    msg!("Reconciling solend");
     let vault = &ctx.accounts.vault;
 
     let solend_exchange_rate = ctx
@@ -110,6 +111,7 @@ pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> P
 
             match allocation.value.checked_sub(current_solend_value) {
                 Some(tokens_to_deposit) => {
+                    msg!("Redeeming {}", tokens_to_deposit);
                     if tokens_to_deposit != 0 {
                         solend::deposit_reserve_liquidity(
                             ctx.accounts
@@ -129,6 +131,7 @@ pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> P
                         )
                         .ok_or(ErrorCode::MathError)?;
 
+                    msg!("Redeeming {}", tokens_to_redeem);
                     solend::redeem_reserve_collateral(
                         ctx.accounts
                             .solend_redeem_reserve_collateral_context()
@@ -141,7 +144,7 @@ pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> P
         }
         Some(withdraw_amount) => {
             let tokens_to_redeem = solend_exchange_rate.liquidity_to_collateral(withdraw_amount)?;
-
+            msg!("Redeeming {}", tokens_to_redeem);
             solend::redeem_reserve_collateral(
                 ctx.accounts
                     .solend_redeem_reserve_collateral_context()
