@@ -317,6 +317,8 @@ export class VaultClient {
       vaultReserveTokenAccountInfo.amount.toString()
     ).round(0, Big.roundDown);
 
+    // TODO sdk input should be in lp tokens, not reserve tokens
+
     // Convert from reserve tokens to LP tokens
     // NOTE: this rate is slightly lower than what it will be in the transaction
     //  by about 1/10000th of the current yield (1bp per 100%).
@@ -698,6 +700,16 @@ export class VaultClient {
       Keypair.generate() // dummy since we don't need to send txs
     );
     return lpToken.getMintInfo();
+  }
+
+  async getFeeReceiverAccountInfo(): Promise<AccountInfo> {
+    const lpToken = new Token(
+      this.program.provider.connection,
+      this.vaultState.lpTokenMint,
+      TOKEN_PROGRAM_ID,
+      Keypair.generate() // dummy since we don't need to send txs
+    );
+    return lpToken.getAccountInfo(this.vaultState.feeReceiver);
   }
 
   async debug_log() {

@@ -1,8 +1,17 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::clock::{
+    DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
+};
 
 use std::cmp::Ordering;
 
 use crate::errors::ErrorCode;
+
+/// Number of slots per year
+pub const SLOTS_PER_YEAR: u64 =
+    DEFAULT_TICKS_PER_SECOND / DEFAULT_TICKS_PER_SLOT * SECONDS_PER_DAY * 365;
+
+pub const ONE_AS_BPS: u64 = 10000;
 
 #[account]
 #[derive(Debug)]
@@ -50,12 +59,39 @@ pub struct Vault {
     /// Total value of vault denominated in the reserve token
     pub total_value: u64,
 
+    /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
+    /// Strategy type that is executed during rebalance
     pub strategy_type: StrategyType,
 }
 
 impl Vault {
+    // TODO use a more specific error type
+    // TODO use safe math
+    pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
+        let vault_value_diff = new_vault_value - self.total_value;
+        let slots_elapsed = self.last_update.slots_elapsed(slot)?;
+        // Return early to avoid divide by zero
+        if slots_elapsed == 0 {
+            return Ok(0);
+        }
+        //msg!("Slots elapsed: {}", slots_elapsed);
+        //msg!("New vault value: {}", new_vault_value);
+        //msg!("Old vault value: {}", self.total_value);
+
+        let carry = (vault_value_diff * (self.fee_carry_bps as u64)) / ONE_AS_BPS;
+        let mgmt = new_vault_value * (self.fee_carry_bps as u64)
+            / ONE_AS_BPS
+            / SLOTS_PER_YEAR
+            / slots_elapsed;
+
+        //msg!("Carry: {}", carry);
+        //msg!("Mgmt: {}", mgmt);
+
+        Ok(carry + mgmt)
+    }
+
     pub fn update_value(&mut self, new_value: u64, slot: u64) {
         self.total_value = new_value;
         self.last_update.update_slot(slot);

@@ -27,12 +27,16 @@ describe("castle-vault", () => {
   const switchboardFeed = new PublicKey("AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL");
 
   const initialReserveAmount = 100;
-  const depositAmount = 1000;
-  const withdrawAmount = 500;
+  const depositAmount = 1000000000;
+  const withdrawAmount = 500000000;
   const initialCollateralRatio = 1.0;
+  const feeMgmtBps = 10000;
+  const feeCarryBps = 10000;
+
+  // TODO auto calculate from above vars
+  const feeAmount = 8;
 
   let reserveToken: Token;
-  let feeReceiver: PublicKey;
 
   let jet: JetReserveAsset;
   let solend: SolendReserveAsset;
@@ -112,7 +116,9 @@ describe("castle-vault", () => {
         port,
         jet,
         strategyType,
-        owner.publicKey
+        owner.publicKey,
+        feeCarryBps,
+        feeMgmtBps
       );
       // TODO add more checks
       assert.notEqual(vaultClient.vaultState, null);
@@ -179,6 +185,10 @@ describe("castle-vault", () => {
         userLpTokenAccount
       );
       assert.equal(userLpTokenAccountInfo.amount.toNumber(), expectUserLp);
+
+      const feeReceiverAccountInfo = await vaultClient.getFeeReceiverAccountInfo();
+      const feesReceived = feeReceiverAccountInfo.amount.toNumber();
+      assert.notEqual(feesReceived, 0);
     };
   }
 
@@ -193,12 +203,13 @@ describe("castle-vault", () => {
       const vaultReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
         vaultClient.vaultState.vaultReserveToken
       );
-      assert(vaultReserveTokenAccountInfo.amount.toNumber() <= 3);
+      const vaultReserveTokens = vaultReserveTokenAccountInfo.amount.toNumber();
+      assert(vaultReserveTokens <= 3);
 
-      const vaultValue = depositAmount - withdrawAmount;
+      const vaultValue = depositAmount - (withdrawAmount - feeAmount);
 
       const solendCollateralRatio = 1;
-      const expectedSolendValue = vaultValue * expectedSolendAllocation;
+      const expectedSolendValue = Math.floor(vaultValue * expectedSolendAllocation);
       assert.equal(
         (
           await vaultClient.solend.getLpTokenAccountValue(
@@ -216,7 +227,7 @@ describe("castle-vault", () => {
       );
 
       const portCollateralRatio = 1;
-      const expectedPortValue = vaultValue * expectedPortAllocation;
+      const expectedPortValue = Math.floor(vaultValue * expectedPortAllocation);
       assert.equal(
         (
           await vaultClient.port.getLpTokenAccountValue(
@@ -234,7 +245,7 @@ describe("castle-vault", () => {
       );
 
       const jetCollateralRatio = 1;
-      const expectedJetValue = vaultValue * expectedJetAllocation;
+      const expectedJetValue = Math.floor(vaultValue * expectedJetAllocation);
       assert.equal(
         (
           await vaultClient.jet.getLpTokenAccountValue(
@@ -265,13 +276,19 @@ describe("castle-vault", () => {
       "Withdraws from vault reserves",
       testWithdraw(
         depositAmount * initialCollateralRatio - withdrawAmount,
-        withdrawAmount
+        withdrawAmount - feeAmount
       )
     );
 
-    it("Forwards deposits to lending markets", testRebalance(0.332, 0.332, 0.332));
+    it("Forwards deposits to lending markets", testRebalance(1 / 3, 1 / 3, 1 / 3));
 
-    it("Withdraws from lending markets", testWithdraw(0, withdrawAmount * 2));
+    // This fee amount is higher since it takes longer to execute than the other strategy
+    // TODO auto-calculate these based on which slots the txs are confirmed in
+    const finalFeeAmount = feeAmount + 55;
+    it(
+      "Withdraws from lending markets",
+      testWithdraw(0, depositAmount - finalFeeAmount)
+    );
   });
 
   describe("max yield strategy", () => {
@@ -285,7 +302,7 @@ describe("castle-vault", () => {
       "Withdraws from vault reserves",
       testWithdraw(
         depositAmount * initialCollateralRatio - withdrawAmount,
-        withdrawAmount
+        withdrawAmount - feeAmount
       )
     );
 
@@ -296,6 +313,11 @@ describe("castle-vault", () => {
       // TODO borrow from port to increase apy and ensure it switches to that
     });
 
-    it("Withdraws from lending markets", testWithdraw(0, withdrawAmount * 2));
+    // TODO auto-calculate these based on which slots the txs are confirmed in
+    const finalFeeAmount = feeAmount + 43;
+    it(
+      "Withdraws from lending markets",
+      testWithdraw(0, depositAmount - finalFeeAmount)
+    );
   });
 });

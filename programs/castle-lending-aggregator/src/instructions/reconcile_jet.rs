@@ -93,6 +93,8 @@ impl<'info> ReconcileJet<'info> {
 // TODO handle case where there allocation amount is greater than vault value
 // TODO eliminate duplication of redeem logic
 pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> ProgramResult {
+    msg!("Reconciling Jet");
+
     let vault = &ctx.accounts.vault;
 
     match withdraw_option {
@@ -111,6 +113,7 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
 
             match allocation.value.checked_sub(current_jet_value) {
                 Some(tokens_to_deposit) => {
+                    msg!("Depositing {}", tokens_to_deposit);
                     if tokens_to_deposit != 0 {
                         jet::cpi::deposit_tokens(
                             ctx.accounts
@@ -127,6 +130,7 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
                             .ok_or(ErrorCode::MathError)?,
                     )
                     .as_deposit_notes(&reserve_info, Rounding::Down)?;
+                    msg!("Redeeming {}", tokens_to_redeem);
                     jet::cpi::withdraw_tokens(
                         ctx.accounts
                             .jet_withdraw_context()
@@ -138,6 +142,8 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
             ctx.accounts.vault.allocations.jet.reset();
         }
         Some(withdraw_amount) => {
+            msg!("Withdrawing {}", withdraw_amount);
+
             let reserve_info = {
                 let market = ctx.accounts.jet_market.load()?;
                 let reserve = ctx.accounts.jet_reserve_state.load()?;

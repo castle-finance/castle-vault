@@ -42,6 +42,8 @@ pub struct Rebalance<'info> {
 }
 
 pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
+    msg!("Rebalancing");
+
     // Convert reserve states to assets
     let assets: Vec<Box<dyn Asset>> = vec![
         Box::new(LendingMarket::try_from(
