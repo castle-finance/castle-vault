@@ -175,14 +175,17 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     let jet_value =
         (jet_exchange_rate * Number::from(ctx.accounts.vault_jet_lp_token.amount)).as_u64(0);
 
-    // TODO add fee collection
-
-    let prev_vault_value = ctx.accounts.vault.total_value;
-
     // Store exchange rate?
+
     let vault = &mut ctx.accounts.vault;
-    vault.total_value = vault_reserve_token_amount + solend_value + port_value + jet_value;
-    vault.last_update.update_slot(ctx.accounts.clock.slot);
+
+    // Collect fees
+
+    // Update vault total value
+    vault.update_value(
+        vault_reserve_token_amount + solend_value + port_value + jet_value,
+        ctx.accounts.clock.slot,
+    );
 
     Ok(())
 }

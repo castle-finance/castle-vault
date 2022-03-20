@@ -56,6 +56,11 @@ pub struct Vault {
 }
 
 impl Vault {
+    pub fn update_value(&mut self, new_value: u64, slot: u64) {
+        self.total_value = new_value;
+        self.last_update.update_slot(slot);
+    }
+
     pub fn authority_seeds(&self) -> [&[u8]; 3] {
         [
             self.authority_seed.as_ref(),
@@ -102,7 +107,6 @@ pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 1;
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct LastUpdate {
     pub slot: u64,
-
     pub stale: bool,
 }
 
