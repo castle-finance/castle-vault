@@ -4,6 +4,8 @@ use jet::{Amount, Rounding};
 
 use crate::{errors::ErrorCode, state::Vault};
 
+use std::cmp;
+
 #[derive(Accounts)]
 pub struct ReconcileJet<'info> {
     #[account(
@@ -90,7 +92,6 @@ impl<'info> ReconcileJet<'info> {
     }
 }
 
-// TODO handle case where there allocation amount is greater than vault value
 // TODO eliminate duplication of redeem logic
 pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> ProgramResult {
     msg!("Reconciling Jet");
@@ -98,6 +99,7 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
     let vault = &ctx.accounts.vault;
 
     match withdraw_option {
+        // Normal case where reconcile is being called after rebalance
         None => {
             let reserve_info = {
                 let market = ctx.accounts.jet_market.load()?;
@@ -113,13 +115,18 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
 
             match allocation.value.checked_sub(current_jet_value) {
                 Some(tokens_to_deposit) => {
-                    msg!("Depositing {}", tokens_to_deposit);
+                    // Make sure that the amount deposited is not more than the vault has in reserves
+                    let tokens_to_deposit_checked =
+                        cmp::min(tokens_to_deposit, ctx.accounts.vault_reserve_token.amount);
+
+                    msg!("Depositing {}", tokens_to_deposit_checked);
+
                     if tokens_to_deposit != 0 {
                         jet::cpi::deposit_tokens(
                             ctx.accounts
                                 .jet_deposit_context()
                                 .with_signer(&[&vault.authority_seeds()]),
-                            Amount::from_tokens(tokens_to_deposit),
+                            Amount::from_tokens(tokens_to_deposit_checked),
                         )?;
                     }
                 }
@@ -130,7 +137,9 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
                             .ok_or(ErrorCode::MathError)?,
                     )
                     .as_deposit_notes(&reserve_info, Rounding::Down)?;
+
                     msg!("Redeeming {}", tokens_to_redeem);
+
                     jet::cpi::withdraw_tokens(
                         ctx.accounts
                             .jet_withdraw_context()
@@ -141,8 +150,9 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
             }
             ctx.accounts.vault.allocations.jet.reset();
         }
+        // Extra case where reconcile is being called in same tx as a withdraw or by vault owner to emergency brake
         Some(withdraw_amount) => {
-            msg!("Withdrawing {}", withdraw_amount);
+            // TODO check that tx is signed by owner OR there is a withdraw tx later with the withdraw_option <= withdraw_amount
 
             let reserve_info = {
                 let market = ctx.accounts.jet_market.load()?;
@@ -153,6 +163,8 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
 
             let tokens_to_redeem = Amount::from_tokens(withdraw_amount)
                 .as_deposit_notes(&reserve_info, Rounding::Down)?;
+
+            msg!("Redeeming {}", tokens_to_redeem);
 
             jet::cpi::withdraw_tokens(
                 ctx.accounts

@@ -4,6 +4,8 @@ use solend::SolendReserve;
 
 use crate::{cpi::solend, errors::ErrorCode, state::Vault};
 
+use std::cmp;
+
 #[derive(Accounts)]
 pub struct ReconcileSolend<'info> {
     #[account(
@@ -92,18 +94,18 @@ impl<'info> ReconcileSolend<'info> {
     }
 }
 
-// TODO handle case where there allocation amount is greater than vault value
 // TODO eliminate duplication of redeem logic
 pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> ProgramResult {
     msg!("Reconciling solend");
-    let vault = &ctx.accounts.vault;
 
+    let vault = &ctx.accounts.vault;
     let solend_exchange_rate = ctx
         .accounts
         .solend_reserve_state
         .collateral_exchange_rate()?;
 
     match withdraw_option {
+        // Normal case where reconcile is being called after rebalance
         None => {
             let current_solend_value = solend_exchange_rate
                 .collateral_to_liquidity(ctx.accounts.vault_solend_lp_token.amount)?;
@@ -111,13 +113,18 @@ pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> P
 
             match allocation.value.checked_sub(current_solend_value) {
                 Some(tokens_to_deposit) => {
-                    msg!("Redeeming {}", tokens_to_deposit);
+                    // Make sure that the amount deposited is not more than the vault has in reserves
+                    let tokens_to_deposit_checked =
+                        cmp::min(tokens_to_deposit, ctx.accounts.vault_reserve_token.amount);
+
+                    msg!("Depositing {}", tokens_to_deposit_checked);
+
                     if tokens_to_deposit != 0 {
                         solend::deposit_reserve_liquidity(
                             ctx.accounts
                                 .solend_deposit_reserve_liquidity_context()
                                 .with_signer(&[&vault.authority_seeds()]),
-                            tokens_to_deposit,
+                            tokens_to_deposit_checked,
                         )?;
                     }
                 }
@@ -132,6 +139,7 @@ pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> P
                         .ok_or(ErrorCode::MathError)?;
 
                     msg!("Redeeming {}", tokens_to_redeem);
+
                     solend::redeem_reserve_collateral(
                         ctx.accounts
                             .solend_redeem_reserve_collateral_context()
@@ -142,9 +150,14 @@ pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> P
             }
             ctx.accounts.vault.allocations.solend.reset();
         }
+        // Extra case where reconcile is being called in same tx as a withdraw or by vault owner to emergency brake
         Some(withdraw_amount) => {
+            // TODO check that tx is signed by owner OR there is a withdraw tx later with the withdraw_option <= withdraw_amount
+
             let tokens_to_redeem = solend_exchange_rate.liquidity_to_collateral(withdraw_amount)?;
+
             msg!("Redeeming {}", tokens_to_redeem);
+
             solend::redeem_reserve_collateral(
                 ctx.accounts
                     .solend_redeem_reserve_collateral_context()
