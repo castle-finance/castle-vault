@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
-use jet_proto_math::Number;
 use port_anchor_adaptor::PortReserve;
 
 use crate::cpi::solend::{self, SolendReserve};
@@ -194,13 +193,21 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         jet_reserve.total_deposits(),
         jet_reserve.total_deposit_notes(),
     );
-    let jet_value =
-        (jet_exchange_rate * Number::from(ctx.accounts.vault_jet_lp_token.amount)).as_u64(0);
+    let jet_value = jet_exchange_rate
+        .as_u64(0)
+        .checked_mul(ctx.accounts.vault_jet_lp_token.amount)
+        .ok_or(ErrorCode::OverflowError)?;
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
-    // TODO CRITICAL use checked addition to prevent overflow
-    let vault_value = vault_reserve_token_amount + solend_value + port_value + jet_value;
+    let vault_value = vault_reserve_token_amount
+        .checked_add(solend_value)
+        .ok_or(ErrorCode::OverflowError)?
+        .checked_add(port_value)
+        .ok_or(ErrorCode::OverflowError)?
+        .checked_add(jet_value)
+        .ok_or(ErrorCode::OverflowError)?;
+
     msg!("Tokens value: {}", vault_reserve_token_amount);
     msg!("Solend value: {}", solend_value);
     msg!("Port value: {}", port_value);

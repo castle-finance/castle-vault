@@ -17,4 +17,7 @@ pub enum ErrorCode {
 
     #[msg("Failed to convert from Reserve")]
     TryFromReserveError,
+
+    #[msg("Failed to perform a math operation without an overflow")]
+    OverflowError,
 }

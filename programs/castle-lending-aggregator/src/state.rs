@@ -69,9 +69,8 @@ pub struct Vault {
 
 impl Vault {
     // TODO use a more specific error type
-    // TODO use safe math
     pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
-        let vault_value_diff = new_vault_value - self.total_value;
+        let vault_value_diff = new_vault_value.saturating_sub(self.total_value);
         let slots_elapsed = self.last_update.slots_elapsed(slot)?;
         // Return early to avoid divide by zero
         if slots_elapsed == 0 {
@@ -81,8 +80,15 @@ impl Vault {
         //msg!("New vault value: {}", new_vault_value);
         //msg!("Old vault value: {}", self.total_value);
 
-        let carry = (vault_value_diff * (self.fee_carry_bps as u64)) / ONE_AS_BPS;
-        let mgmt = new_vault_value * (self.fee_carry_bps as u64)
+        let carry = vault_value_diff
+            .checked_mul(self.fee_carry_bps as u64)
+            .ok_or(ErrorCode::OverflowError)?
+            .checked_div(ONE_AS_BPS)
+            .ok_or(ErrorCode::OverflowError)?;
+
+        let mgmt = new_vault_value
+            .checked_mul(self.fee_carry_bps as u64)
+            .ok_or(ErrorCode::OverflowError)?
             / ONE_AS_BPS
             / SLOTS_PER_YEAR
             / slots_elapsed;
@@ -90,7 +96,8 @@ impl Vault {
         //msg!("Carry: {}", carry);
         //msg!("Mgmt: {}", mgmt);
 
-        Ok(carry + mgmt)
+        let fees = carry.checked_add(mgmt).ok_or(ErrorCode::OverflowError)?;
+        Ok(fees)
     }
 
     pub fn update_value(&mut self, new_value: u64, slot: u64) {
