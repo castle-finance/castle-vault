@@ -10,7 +10,6 @@ use crate::state::Vault;
 // since eventually we will hit into transaction size limits
 #[derive(Accounts)]
 pub struct Refresh<'info> {
-    // TODO CRITICAL check lending market reserve addresses are as expected
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -19,6 +18,9 @@ pub struct Refresh<'info> {
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
         has_one = vault_jet_lp_token,
+        has_one = solend_reserve,
+        has_one = port_reserve,
+        has_one = jet_reserve,
         has_one = fee_receiver,
     )]
     pub vault: Box<Account<'info, Vault>>,
@@ -49,7 +51,7 @@ pub struct Refresh<'info> {
     pub solend_program: AccountInfo<'info>,
 
     #[account(mut)]
-    pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
+    pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
     pub solend_pyth: AccountInfo<'info>,
 
@@ -64,7 +66,7 @@ pub struct Refresh<'info> {
     pub port_program: AccountInfo<'info>,
 
     #[account(mut)]
-    pub port_reserve_state: Box<Account<'info, PortReserve>>,
+    pub port_reserve: Box<Account<'info, PortReserve>>,
 
     pub port_oracle: AccountInfo<'info>,
 
@@ -80,7 +82,7 @@ pub struct Refresh<'info> {
     pub jet_market_authority: AccountInfo<'info>,
 
     #[account(mut)]
-    pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
+    pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
     #[account(mut)]
     pub jet_fee_note_vault: AccountInfo<'info>,
@@ -109,7 +111,7 @@ impl<'info> Refresh<'info> {
             self.solend_program.clone(),
             solend::RefreshReserve {
                 lending_program: self.solend_program.clone(),
-                reserve: self.solend_reserve_state.to_account_info(),
+                reserve: self.solend_reserve.to_account_info(),
                 pyth_reserve_liquidity_oracle: self.solend_pyth.clone(),
                 switchboard_reserve_liquidity_oracle: self.solend_switchboard.clone(),
                 clock: self.clock.to_account_info(),
@@ -124,7 +126,7 @@ impl<'info> Refresh<'info> {
         CpiContext::new(
             self.port_program.clone(),
             port_anchor_adaptor::RefreshReserve {
-                reserve: self.port_reserve_state.to_account_info(),
+                reserve: self.port_reserve.to_account_info(),
                 clock: self.clock.to_account_info(),
             },
         )
@@ -140,7 +142,7 @@ impl<'info> Refresh<'info> {
             jet::cpi::accounts::RefreshReserve {
                 market: self.jet_market.clone(),
                 market_authority: self.jet_market_authority.clone(),
-                reserve: self.jet_reserve_state.to_account_info(),
+                reserve: self.jet_reserve.to_account_info(),
                 fee_note_vault: self.jet_fee_note_vault.clone(),
                 deposit_note_mint: self.jet_deposit_note_mint.clone(),
                 pyth_oracle_price: self.jet_pyth.clone(),
@@ -176,18 +178,15 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     jet::cpi::refresh_reserve(ctx.accounts.jet_refresh_reserve_context())?;
 
     // Calculate value of solend position
-    let solend_exchange_rate = ctx
-        .accounts
-        .solend_reserve_state
-        .collateral_exchange_rate()?;
+    let solend_exchange_rate = ctx.accounts.solend_reserve.collateral_exchange_rate()?;
     let solend_value =
         solend_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_solend_lp_token.amount)?;
     // Calculate value of port position
-    let port_exchange_rate = ctx.accounts.port_reserve_state.collateral_exchange_rate()?;
+    let port_exchange_rate = ctx.accounts.port_reserve.collateral_exchange_rate()?;
     let port_value =
         port_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_port_lp_token.amount)?;
     // Calculate value of jet position
-    let jet_reserve = ctx.accounts.jet_reserve_state.load()?;
+    let jet_reserve = ctx.accounts.jet_reserve.load()?;
     let jet_exchange_rate = jet_reserve.deposit_note_exchange_rate(
         ctx.accounts.clock.slot,
         jet_reserve.total_deposits(),

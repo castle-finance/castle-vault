@@ -8,7 +8,6 @@ use std::cmp;
 
 #[derive(Accounts)]
 pub struct ReconcilePort<'info> {
-    // TODO CRITICAL check lending market reserve addresses are as expected
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -16,6 +15,7 @@ pub struct ReconcilePort<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_port_lp_token,
+        has_one = port_reserve,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -44,7 +44,7 @@ pub struct ReconcilePort<'info> {
     pub port_market: AccountInfo<'info>,
 
     #[account(mut)]
-    pub port_reserve_state: Box<Account<'info, PortReserve>>,
+    pub port_reserve: Box<Account<'info, PortReserve>>,
 
     #[account(mut)]
     pub port_lp_mint: AccountInfo<'info>,
@@ -67,7 +67,7 @@ impl<'info> ReconcilePort<'info> {
             port_anchor_adaptor::Deposit {
                 source_liquidity: self.vault_reserve_token.to_account_info(),
                 destination_collateral: self.vault_port_lp_token.to_account_info(),
-                reserve: self.port_reserve_state.to_account_info(),
+                reserve: self.port_reserve.to_account_info(),
                 reserve_collateral_mint: self.port_lp_mint.clone(),
                 reserve_liquidity_supply: self.port_reserve_token.clone(),
                 lending_market: self.port_market.clone(),
@@ -88,7 +88,7 @@ impl<'info> ReconcilePort<'info> {
             port_anchor_adaptor::Redeem {
                 source_collateral: self.vault_port_lp_token.to_account_info(),
                 destination_liquidity: self.vault_reserve_token.to_account_info(),
-                reserve: self.port_reserve_state.to_account_info(),
+                reserve: self.port_reserve.to_account_info(),
                 reserve_collateral_mint: self.port_lp_mint.clone(),
                 reserve_liquidity_supply: self.port_reserve_token.clone(),
                 lending_market: self.port_market.clone(),
@@ -107,7 +107,7 @@ pub fn handler(ctx: Context<ReconcilePort>, withdraw_option: Option<u64>) -> Pro
     msg!("Reconciling Port");
 
     let vault = &ctx.accounts.vault;
-    let port_exchange_rate = ctx.accounts.port_reserve_state.collateral_exchange_rate()?;
+    let port_exchange_rate = ctx.accounts.port_reserve.collateral_exchange_rate()?;
 
     match withdraw_option {
         // Normal case where reconcile is being called after rebalance

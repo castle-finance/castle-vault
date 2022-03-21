@@ -26,6 +26,9 @@ pub struct Rebalance<'info> {
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
         has_one = vault_jet_lp_token,
+        has_one = solend_reserve,
+        has_one = port_reserve,
+        has_one = jet_reserve,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -41,11 +44,11 @@ pub struct Rebalance<'info> {
     /// Token account for the vault's jet lp tokens
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
-    pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
+    pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
-    pub port_reserve_state: Box<Account<'info, PortReserve>>,
+    pub port_reserve: Box<Account<'info, PortReserve>>,
 
-    pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
+    pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
     pub clock: Sysvar<'info, Clock>,
 }
@@ -57,13 +60,13 @@ pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
     // Convert reserve states to assets
     let assets: Vec<Box<dyn Asset>> = vec![
         Box::new(LendingMarket::try_from(
-            ctx.accounts.solend_reserve_state.clone().into_inner(),
+            ctx.accounts.solend_reserve.clone().into_inner(),
         )?),
         Box::new(LendingMarket::try_from(
-            ctx.accounts.port_reserve_state.clone().into_inner(),
+            ctx.accounts.port_reserve.clone().into_inner(),
         )?),
         Box::new(LendingMarket::try_from(
-            *ctx.accounts.jet_reserve_state.load()?.deref(),
+            *ctx.accounts.jet_reserve.load()?.deref(),
         )?),
     ];
 

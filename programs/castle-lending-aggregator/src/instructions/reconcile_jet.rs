@@ -8,7 +8,6 @@ use std::cmp;
 
 #[derive(Accounts)]
 pub struct ReconcileJet<'info> {
-    // TODO CRITICAL check lending market reserve addresses are as expected
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -16,6 +15,7 @@ pub struct ReconcileJet<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_jet_lp_token,
+        has_one = jet_reserve,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -44,7 +44,7 @@ pub struct ReconcileJet<'info> {
 
     /// The reserve being deposited into
     #[account(mut)]
-    pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
+    pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
     /// The reserve's vault where the deposited tokens will be transferred to
     #[account(mut)]
@@ -67,7 +67,7 @@ impl<'info> ReconcileJet<'info> {
             jet::cpi::accounts::DepositTokens {
                 market: self.jet_market.to_account_info(),
                 market_authority: self.jet_market_authority.clone(),
-                reserve: self.jet_reserve_state.to_account_info(),
+                reserve: self.jet_reserve.to_account_info(),
                 vault: self.jet_reserve_token.clone(),
                 deposit_note_mint: self.jet_lp_mint.clone(),
                 depositor: self.vault_authority.clone(),
@@ -87,7 +87,7 @@ impl<'info> ReconcileJet<'info> {
             jet::cpi::accounts::WithdrawTokens {
                 market: self.jet_market.to_account_info(),
                 market_authority: self.jet_market_authority.clone(),
-                reserve: self.jet_reserve_state.to_account_info(),
+                reserve: self.jet_reserve.to_account_info(),
                 vault: self.jet_reserve_token.clone(),
                 deposit_note_mint: self.jet_lp_mint.clone(),
                 depositor: self.vault_authority.clone(),
@@ -111,7 +111,7 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
         None => {
             let reserve_info = {
                 let market = ctx.accounts.jet_market.load()?;
-                let reserve = ctx.accounts.jet_reserve_state.load()?;
+                let reserve = ctx.accounts.jet_reserve.load()?;
                 let clock = Clock::get()?;
                 *market.reserves().get_cached(reserve.index, clock.slot)
             };
@@ -164,7 +164,7 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
 
             let reserve_info = {
                 let market = ctx.accounts.jet_market.load()?;
-                let reserve = ctx.accounts.jet_reserve_state.load()?;
+                let reserve = ctx.accounts.jet_reserve.load()?;
                 let clock = Clock::get()?;
                 *market.reserves().get_cached(reserve.index, clock.slot)
             };

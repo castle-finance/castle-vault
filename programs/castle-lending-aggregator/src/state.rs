@@ -27,6 +27,12 @@ pub struct Vault {
 
     pub authority_bump: [u8; 1],
 
+    pub solend_reserve: Pubkey,
+
+    pub port_reserve: Pubkey,
+
+    pub jet_reserve: Pubkey,
+
     /// Account where reserve tokens are stored
     pub vault_reserve_token: Pubkey,
 

@@ -1,9 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, InitializeAccount, Mint, Token, TokenAccount};
+use port_anchor_adaptor::PortReserve;
 
 use std::convert::Into;
 
-use crate::state::*;
+use crate::{cpi::SolendReserve, state::*};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct InitBumpSeeds {
@@ -98,6 +99,12 @@ pub struct Initialize<'info> {
     /// Mint of the jet lp token
     pub jet_lp_token_mint: AccountInfo<'info>,
 
+    pub solend_reserve: Box<Account<'info, SolendReserve>>,
+
+    pub port_reserve: Box<Account<'info, PortReserve>>,
+
+    pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
+
     /// Token account that collects fees from the vault
     /// denominated in vault lp tokens
     #[account(
@@ -155,8 +162,6 @@ pub fn handler(
     fee_carry_bps: u16,
     fee_mgmt_bps: u16,
 ) -> ProgramResult {
-    // TODO CRITICAL also store lending market reserve account addresses in vault
-
     let clock = Clock::get()?;
 
     let vault = &mut ctx.accounts.vault;
@@ -164,6 +169,9 @@ pub fn handler(
     vault.owner = ctx.accounts.owner.key();
     vault.authority_seed = vault.key();
     vault.authority_bump = [bumps.authority];
+    vault.solend_reserve = ctx.accounts.solend_reserve.key();
+    vault.port_reserve = ctx.accounts.port_reserve.key();
+    vault.jet_reserve = ctx.accounts.jet_reserve.key();
     vault.vault_reserve_token = ctx.accounts.vault_reserve_token.key();
     vault.vault_solend_lp_token = ctx.accounts.vault_solend_lp_token.key();
     vault.vault_port_lp_token = ctx.accounts.vault_port_lp_token.key();

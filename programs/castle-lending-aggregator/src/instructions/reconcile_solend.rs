@@ -8,7 +8,6 @@ use std::cmp;
 
 #[derive(Accounts)]
 pub struct ReconcileSolend<'info> {
-    // TODO CRITICAL check lending market reserve addresses are as expected
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -16,6 +15,7 @@ pub struct ReconcileSolend<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
+        has_one = solend_reserve,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -42,7 +42,7 @@ pub struct ReconcileSolend<'info> {
     pub solend_market: AccountInfo<'info>,
 
     #[account(mut)]
-    pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
+    pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
     #[account(mut)]
     pub solend_lp_mint: AccountInfo<'info>,
@@ -66,7 +66,7 @@ impl<'info> ReconcileSolend<'info> {
                 lending_program: self.solend_program.clone(),
                 source_liquidity: self.vault_reserve_token.to_account_info(),
                 destination_collateral_account: self.vault_solend_lp_token.to_account_info(),
-                reserve: self.solend_reserve_state.to_account_info(),
+                reserve: self.solend_reserve.to_account_info(),
                 reserve_collateral_mint: self.solend_lp_mint.clone(),
                 reserve_liquidity_supply: self.solend_reserve_token.clone(),
                 lending_market: self.solend_market.clone(),
@@ -88,7 +88,7 @@ impl<'info> ReconcileSolend<'info> {
                 lending_program: self.solend_program.clone(),
                 source_collateral: self.vault_solend_lp_token.to_account_info(),
                 destination_liquidity: self.vault_reserve_token.to_account_info(),
-                reserve: self.solend_reserve_state.to_account_info(),
+                reserve: self.solend_reserve.to_account_info(),
                 reserve_collateral_mint: self.solend_lp_mint.clone(),
                 reserve_liquidity_supply: self.solend_reserve_token.clone(),
                 lending_market: self.solend_market.clone(),
@@ -107,10 +107,7 @@ pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> P
     msg!("Reconciling solend");
 
     let vault = &ctx.accounts.vault;
-    let solend_exchange_rate = ctx
-        .accounts
-        .solend_reserve_state
-        .collateral_exchange_rate()?;
+    let solend_exchange_rate = ctx.accounts.solend_reserve.collateral_exchange_rate()?;
 
     match withdraw_option {
         // Normal case where reconcile is being called after rebalance
