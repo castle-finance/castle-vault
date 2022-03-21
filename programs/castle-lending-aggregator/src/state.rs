@@ -89,8 +89,7 @@ impl Vault {
         let carry = vault_value_diff
             .checked_mul(self.fee_carry_bps as u64)
             .ok_or(ErrorCode::OverflowError)?
-            .checked_div(ONE_AS_BPS)
-            .ok_or(ErrorCode::OverflowError)?;
+            / ONE_AS_BPS;
 
         let mgmt = new_vault_value
             .checked_mul(self.fee_carry_bps as u64)

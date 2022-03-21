@@ -199,12 +199,11 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
+
     let vault_value = vault_reserve_token_amount
         .checked_add(solend_value)
-        .ok_or(ErrorCode::OverflowError)?
-        .checked_add(port_value)
-        .ok_or(ErrorCode::OverflowError)?
-        .checked_add(jet_value)
+        .and_then(|lhs| lhs.checked_add(port_value))
+        .and_then(|lhs| lhs.checked_add(jet_value))
         .ok_or(ErrorCode::OverflowError)?;
 
     msg!("Tokens value: {}", vault_reserve_token_amount);
