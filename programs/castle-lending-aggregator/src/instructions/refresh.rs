@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
+use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use jet_proto_math::Number;
 use port_anchor_adaptor::PortReserve;
 
@@ -7,8 +7,13 @@ use crate::cpi::solend::{self, SolendReserve};
 use crate::errors::ErrorCode;
 use crate::state::Vault;
 
+// NOTE: having all accounts for each lending market reserve here is not scalable
+// since eventually we will hit into transaction size limits
 #[derive(Accounts)]
 pub struct Refresh<'info> {
+    // TODO CRITICAL check lending market reserve addresses are as expected
+    /// Vault state account
+    /// Checks that the accounts passed in are correct
     #[account(
         mut,
         has_one = vault_reserve_token,
@@ -19,16 +24,22 @@ pub struct Refresh<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
 
+    /// Token account for the vault's reserve tokens
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's solend lp tokens
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's port lp tokens
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's jet lp tokens
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Mint for the vault lp token
     #[account(mut)]
     pub lp_token_mint: Box<Account<'info, Mint>>,
 
@@ -45,6 +56,8 @@ pub struct Refresh<'info> {
 
     pub solend_switchboard: AccountInfo<'info>,
 
+    // NOTE address check is commented out because port has a different
+    // ID in devnet than they do in mainnet
     #[account(
         executable,
         //address = port_variable_rate_lending_instructions::ID,
@@ -78,16 +91,18 @@ pub struct Refresh<'info> {
 
     pub jet_pyth: AccountInfo<'info>,
 
+    /// Token account that collects fees from the vault
+    /// denominated in vault lp tokens
     #[account(mut)]
     pub fee_receiver: Box<Account<'info, TokenAccount>>,
 
-    #[account(address = token::ID)]
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 
     pub clock: Sysvar<'info, Clock>,
 }
 
 impl<'info> Refresh<'info> {
+    /// CpiContext for refreshing solend reserve
     pub fn solend_refresh_reserve_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, solend::RefreshReserve<'info>> {
@@ -103,6 +118,7 @@ impl<'info> Refresh<'info> {
         )
     }
 
+    /// CpiContext for refreshing port reserve
     pub fn port_refresh_reserve_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, port_anchor_adaptor::RefreshReserve<'info>> {
@@ -116,6 +132,7 @@ impl<'info> Refresh<'info> {
         .with_remaining_accounts(vec![self.port_oracle.clone()])
     }
 
+    /// CpiContext for refreshing jet reserve
     pub fn jet_refresh_reserve_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, jet::cpi::accounts::RefreshReserve<'info>> {
@@ -128,14 +145,15 @@ impl<'info> Refresh<'info> {
                 fee_note_vault: self.jet_fee_note_vault.clone(),
                 deposit_note_mint: self.jet_deposit_note_mint.clone(),
                 pyth_oracle_price: self.jet_pyth.clone(),
-                token_program: self.token_program.clone(),
+                token_program: self.token_program.to_account_info(),
             },
         )
     }
 
+    /// CpiContext for collecting fees by minting new vault lp tokens
     fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
-            self.token_program.clone(),
+            self.token_program.to_account_info(),
             MintTo {
                 mint: self.lp_token_mint.to_account_info(),
                 to: self.fee_receiver.to_account_info(),
@@ -145,6 +163,8 @@ impl<'info> Refresh<'info> {
     }
 }
 
+/// Refreshes the reserves of downstream lending markets,
+/// updates the vault total value, and collects fees
 pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     msg!("Refreshing");
 
@@ -179,6 +199,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
+    // TODO CRITICAL use checked addition to prevent overflow
     let vault_value = vault_reserve_token_amount + solend_value + port_value + jet_value;
     msg!("Tokens value: {}", vault_reserve_token_amount);
     msg!("Solend value: {}", solend_value);

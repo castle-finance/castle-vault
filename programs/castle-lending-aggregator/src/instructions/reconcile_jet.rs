@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, TokenAccount};
+use anchor_spl::token::{Token, TokenAccount};
 use jet::{Amount, Rounding};
 
 use crate::{errors::ErrorCode, state::Vault};
@@ -8,6 +8,9 @@ use std::cmp;
 
 #[derive(Accounts)]
 pub struct ReconcileJet<'info> {
+    // TODO CRITICAL check lending market reserve addresses are as expected
+    /// Vault state account
+    /// Checks that the accounts passed in are correct
     #[account(
         mut,
         has_one = vault_authority,
@@ -16,11 +19,14 @@ pub struct ReconcileJet<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
 
+    /// Token account for the vault's reserve tokens
     #[account(mut)]
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's jet lp tokens
     #[account(mut)]
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
@@ -48,11 +54,11 @@ pub struct ReconcileJet<'info> {
     #[account(mut)]
     pub jet_lp_mint: AccountInfo<'info>,
 
-    #[account(address = token::ID)]
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 impl<'info> ReconcileJet<'info> {
+    /// CpiContext for depositing to jet
     pub fn jet_deposit_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, jet::cpi::accounts::DepositTokens<'info>> {
@@ -67,11 +73,12 @@ impl<'info> ReconcileJet<'info> {
                 depositor: self.vault_authority.clone(),
                 deposit_note_account: self.vault_jet_lp_token.to_account_info(),
                 deposit_source: self.vault_reserve_token.to_account_info(),
-                token_program: self.token_program.clone(),
+                token_program: self.token_program.to_account_info(),
             },
         )
     }
 
+    /// CpiContext for withdrawing from jet
     pub fn jet_withdraw_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, jet::cpi::accounts::WithdrawTokens<'info>> {
@@ -86,13 +93,14 @@ impl<'info> ReconcileJet<'info> {
                 depositor: self.vault_authority.clone(),
                 deposit_note_account: self.vault_jet_lp_token.to_account_info(),
                 withdraw_account: self.vault_reserve_token.to_account_info(),
-                token_program: self.token_program.clone(),
+                token_program: self.token_program.to_account_info(),
             },
         )
     }
 }
 
 // TODO eliminate duplication of redeem logic
+/// Deposit or withdraw from jet to match the stored allocation or to process a withdrawal
 pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> ProgramResult {
     msg!("Reconciling Jet");
 

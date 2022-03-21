@@ -19,9 +19,11 @@ pub struct InitBumpSeeds {
 #[derive(Accounts)]
 #[instruction(bumps: InitBumpSeeds)]
 pub struct Initialize<'info> {
+    /// Vault state account
     #[account(zero)]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"authority".as_ref()], 
@@ -29,7 +31,7 @@ pub struct Initialize<'info> {
     )]
     pub vault_authority: AccountInfo<'info>,
 
-    // Mint address of pool LP token
+    /// Mint for vault lp token
     #[account(
         init,
         payer = payer,
@@ -40,7 +42,7 @@ pub struct Initialize<'info> {
     )]
     pub lp_token_mint: Box<Account<'info, Mint>>,
 
-    // Account where tokens in pool are stored
+    /// Token account for vault reserve tokens
     #[account(
         init,
         payer = payer,
@@ -51,6 +53,7 @@ pub struct Initialize<'info> {
     )]
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's solend lp tokens
     #[account(
         init,
         payer = payer,
@@ -61,6 +64,7 @@ pub struct Initialize<'info> {
     )]
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's port lp tokens
     #[account(
         init,
         payer = payer,
@@ -71,6 +75,7 @@ pub struct Initialize<'info> {
     )]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's jet lp tokens
     #[account(
         init,
         payer = payer,
@@ -81,14 +86,20 @@ pub struct Initialize<'info> {
     )]
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Mint of the token that the vault accepts and stores
     pub reserve_token_mint: Box<Account<'info, Mint>>,
 
+    /// Mint of the solend lp token
     pub solend_lp_token_mint: AccountInfo<'info>,
 
+    /// Mint of the port lp token
     pub port_lp_token_mint: AccountInfo<'info>,
 
+    /// Mint of the jet lp token
     pub jet_lp_token_mint: AccountInfo<'info>,
 
+    /// Token account that collects fees from the vault
+    /// denominated in vault lp tokens
     #[account(
         init,
         payer = payer,
@@ -99,9 +110,13 @@ pub struct Initialize<'info> {
     )]
     pub fee_receiver: AccountInfo<'info>,
 
+    /// Account that pays for above account inits
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// Owner of the vault
+    /// Only this account can call restricted instructions
+    /// Acts as authority of the fee receiver account
     pub owner: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
@@ -125,6 +140,14 @@ impl<'info> Initialize<'info> {
     }
 }
 
+/// Creates a new vault
+///
+/// # Arguments
+///
+/// * `bumps` - bump seeds for creating PDAs
+/// * `strategy_type` - type of strategy that rebalance will execute
+/// * `fee_carry_bps` - carry fee that the vault collects denominated in basis points
+/// * `fee_mgmt_bps` - management fee that the vault collects denominated in basis points
 pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
@@ -132,7 +155,7 @@ pub fn handler(
     fee_carry_bps: u16,
     fee_mgmt_bps: u16,
 ) -> ProgramResult {
-    // TODO also store lending market reserve account addresses in vault?
+    // TODO CRITICAL also store lending market reserve account addresses in vault
 
     let clock = Clock::get()?;
 

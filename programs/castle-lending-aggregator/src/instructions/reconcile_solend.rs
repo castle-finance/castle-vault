@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, TokenAccount};
+use anchor_spl::token::{Token, TokenAccount};
 use solend::SolendReserve;
 
 use crate::{cpi::solend, errors::ErrorCode, state::Vault};
@@ -8,6 +8,9 @@ use std::cmp;
 
 #[derive(Accounts)]
 pub struct ReconcileSolend<'info> {
+    // TODO CRITICAL check lending market reserve addresses are as expected
+    /// Vault state account
+    /// Checks that the accounts passed in are correct
     #[account(
         mut,
         has_one = vault_authority,
@@ -16,11 +19,14 @@ pub struct ReconcileSolend<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
 
+    /// Token account for the vault's reserve tokens
     #[account(mut)]
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's solend lp tokens
     #[account(mut)]
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
@@ -46,11 +52,11 @@ pub struct ReconcileSolend<'info> {
 
     pub clock: Sysvar<'info, Clock>,
 
-    #[account(address = token::ID)]
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 impl<'info> ReconcileSolend<'info> {
+    /// CpiContext for depositing to solend
     pub fn solend_deposit_reserve_liquidity_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, solend::DepositReserveLiquidity<'info>> {
@@ -67,11 +73,12 @@ impl<'info> ReconcileSolend<'info> {
                 lending_market_authority: self.solend_market_authority.clone(),
                 transfer_authority: self.vault_authority.clone(),
                 clock: self.clock.to_account_info(),
-                token_program_id: self.token_program.clone(),
+                token_program_id: self.token_program.to_account_info(),
             },
         )
     }
 
+    /// CpiContext for redeeming from solend
     fn solend_redeem_reserve_collateral_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, solend::RedeemReserveCollateral<'info>> {
@@ -88,13 +95,14 @@ impl<'info> ReconcileSolend<'info> {
                 lending_market_authority: self.solend_market_authority.clone(),
                 transfer_authority: self.vault_authority.clone(),
                 clock: self.clock.to_account_info(),
-                token_program_id: self.token_program.clone(),
+                token_program_id: self.token_program.to_account_info(),
             },
         )
     }
 }
 
 // TODO eliminate duplication of redeem logic
+/// Deposit or withdraw from solend to match the stored allocation or to process a withdrawal
 pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> ProgramResult {
     msg!("Reconciling solend");
 

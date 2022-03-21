@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, TokenAccount};
+use anchor_spl::token::{Token, TokenAccount};
 use port_anchor_adaptor::PortReserve;
 
 use crate::{errors::ErrorCode, state::Vault};
@@ -8,6 +8,9 @@ use std::cmp;
 
 #[derive(Accounts)]
 pub struct ReconcilePort<'info> {
+    // TODO CRITICAL check lending market reserve addresses are as expected
+    /// Vault state account
+    /// Checks that the accounts passed in are correct
     #[account(
         mut,
         has_one = vault_authority,
@@ -16,14 +19,19 @@ pub struct ReconcilePort<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
 
+    /// Token account for the vault's reserve tokens
     #[account(mut)]
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's port lp tokens
     #[account(mut)]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    // NOTE address check is commented out because port has a different
+    // ID in devnet than they do in mainnet
     #[account(
         executable,
         //address = port_variable_rate_lending_instructions::ID,
@@ -46,11 +54,11 @@ pub struct ReconcilePort<'info> {
 
     pub clock: Sysvar<'info, Clock>,
 
-    #[account(address = token::ID)]
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 }
 
 impl<'info> ReconcilePort<'info> {
+    /// CpiContext for depositing to port
     pub fn port_deposit_reserve_liquidity_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, port_anchor_adaptor::Deposit<'info>> {
@@ -66,11 +74,12 @@ impl<'info> ReconcilePort<'info> {
                 lending_market_authority: self.port_market_authority.clone(),
                 transfer_authority: self.vault_authority.clone(),
                 clock: self.clock.to_account_info(),
-                token_program: self.token_program.clone(),
+                token_program: self.token_program.to_account_info(),
             },
         )
     }
 
+    /// CpiContext for redeeming from port
     fn port_redeem_reserve_collateral_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, port_anchor_adaptor::Redeem<'info>> {
@@ -86,13 +95,14 @@ impl<'info> ReconcilePort<'info> {
                 lending_market_authority: self.port_market_authority.clone(),
                 transfer_authority: self.vault_authority.clone(),
                 clock: self.clock.to_account_info(),
-                token_program: self.token_program.clone(),
+                token_program: self.token_program.to_account_info(),
             },
         )
     }
 }
 
 // TODO eliminate duplication of redeem logic
+/// Deposit or withdraw from port to match the stored allocation or to process a withdrawal
 pub fn handler(ctx: Context<ReconcilePort>, withdraw_option: Option<u64>) -> ProgramResult {
     msg!("Reconciling Port");
 

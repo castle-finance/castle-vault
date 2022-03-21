@@ -20,6 +20,7 @@ pub struct Vault {
     /// Also the authority of the fee receiver account
     pub owner: Pubkey,
 
+    /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: Pubkey,
 
     pub authority_seed: Pubkey,

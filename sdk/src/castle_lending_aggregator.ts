@@ -1,5 +1,5 @@
 export type CastleLendingAggregator = {
-  version: "1.2.0";
+  version: "1.3.0";
   name: "castle_lending_aggregator";
   instructions: [
     {
@@ -156,6 +156,11 @@ export type CastleLendingAggregator = {
           name: "tokenProgram";
           isMut: false;
           isSigner: false;
+        },
+        {
+          name: "clock";
+          isMut: false;
+          isSigner: false;
         }
       ];
       args: [
@@ -207,6 +212,11 @@ export type CastleLendingAggregator = {
           name: "tokenProgram";
           isMut: false;
           isSigner: false;
+        },
+        {
+          name: "clock";
+          isMut: false;
+          isSigner: false;
         }
       ];
       args: [
@@ -256,6 +266,11 @@ export type CastleLendingAggregator = {
         },
         {
           name: "jetReserveState";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "clock";
           isMut: false;
           isSigner: false;
         }
@@ -847,7 +862,7 @@ export type CastleLendingAggregator = {
 };
 
 export const IDL: CastleLendingAggregator = {
-  version: "1.2.0",
+  version: "1.3.0",
   name: "castle_lending_aggregator",
   instructions: [
     {
@@ -1005,6 +1020,11 @@ export const IDL: CastleLendingAggregator = {
           isMut: false,
           isSigner: false,
         },
+        {
+          name: "clock",
+          isMut: false,
+          isSigner: false,
+        },
       ],
       args: [
         {
@@ -1056,6 +1076,11 @@ export const IDL: CastleLendingAggregator = {
           isMut: false,
           isSigner: false,
         },
+        {
+          name: "clock",
+          isMut: false,
+          isSigner: false,
+        },
       ],
       args: [
         {
@@ -1104,6 +1129,11 @@ export const IDL: CastleLendingAggregator = {
         },
         {
           name: "jetReserveState",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "clock",
           isMut: false,
           isSigner: false,
         },

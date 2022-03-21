@@ -9,39 +9,48 @@ use crate::state::Vault;
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
+    /// Vault state account
+    /// Checks that the refresh has been called in the same slot
+    /// Checks that the accounts passed in are correct
     #[account(
         mut,
-        constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
+        constraint = !vault.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
         has_one = lp_token_mint,
         has_one = vault_authority,
         has_one = vault_reserve_token,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
 
-    // Account where tokens in vault are stored
+    /// Token account for the vault's reserve tokens
     #[account(mut)]
-    pub vault_reserve_token: Account<'info, TokenAccount>,
+    pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
-    // Mint address of vault LP token
+    /// Mint for the vault's lp token
     #[account(mut)]
-    pub lp_token_mint: Account<'info, Mint>,
+    pub lp_token_mint: Box<Account<'info, Mint>>,
 
-    // Account from which tokens are transferred
+    /// Token account from which reserve tokens are transferred
     #[account(mut)]
-    pub user_reserve_token: Account<'info, TokenAccount>,
+    pub user_reserve_token: Box<Account<'info, TokenAccount>>,
 
-    // Account where vault LP tokens are minted to
+    /// Account where vault LP tokens are minted to
     #[account(mut)]
-    pub user_lp_token: Account<'info, TokenAccount>,
+    pub user_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Authority of the user_reserve_token account
+    /// Must be a signer
     pub user_authority: Signer<'info>,
 
     pub token_program: Program<'info, Token>,
+
+    pub clock: Sysvar<'info, Clock>,
 }
 
 impl<'info> Deposit<'info> {
+    /// CpiContext for minting vault Lp tokens to user account
     fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
             self.token_program.to_account_info(),
@@ -53,6 +62,7 @@ impl<'info> Deposit<'info> {
         )
     }
 
+    /// CpiContext for transferring reserve tokens from user to vault
     fn transfer_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
         CpiContext::new(
             self.token_program.to_account_info(),
@@ -65,6 +75,9 @@ impl<'info> Deposit<'info> {
     }
 }
 
+/// Deposit to the vault
+///
+/// Transfers reserve tokens from user to vault and mints their share of lp tokens
 pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
     msg!("Depositing {} reserve tokens", reserve_token_amount);
 

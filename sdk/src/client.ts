@@ -276,6 +276,7 @@ export class VaultClient {
           userLpToken: userLpTokenAccount,
           userAuthority: wallet.publicKey,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: SYSVAR_CLOCK_PUBKEY,
         },
       })
     );
@@ -387,6 +388,7 @@ export class VaultClient {
           vaultReserveToken: this.vaultState.vaultReserveToken,
           lpTokenMint: this.vaultState.lpTokenMint,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: SYSVAR_CLOCK_PUBKEY,
         },
       })
     );
@@ -421,6 +423,7 @@ export class VaultClient {
           solendReserveState: this.solend.accounts.reserve,
           portReserveState: this.port.accounts.reserve,
           jetReserveState: this.jet.accounts.reserve,
+          clock: SYSVAR_CLOCK_PUBKEY,
         },
       })
     );
@@ -473,6 +476,7 @@ export class VaultClient {
           solendReserveState: this.solend.accounts.reserve,
           portReserveState: this.port.accounts.reserve,
           jetReserveState: this.jet.accounts.reserve,
+          clock: SYSVAR_CLOCK_PUBKEY,
         },
         instructions: [this.getRefreshIx()],
       })
