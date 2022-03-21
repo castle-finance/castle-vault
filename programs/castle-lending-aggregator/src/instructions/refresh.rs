@@ -1,34 +1,46 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, MintTo, TokenAccount};
-use jet_proto_math::Number;
+use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use port_anchor_adaptor::PortReserve;
 
 use crate::cpi::solend::{self, SolendReserve};
 use crate::errors::ErrorCode;
 use crate::state::Vault;
 
+// NOTE: having all accounts for each lending market reserve here is not scalable
+// since eventually we will hit into transaction size limits
 #[derive(Accounts)]
 pub struct Refresh<'info> {
+    /// Vault state account
+    /// Checks that the accounts passed in are correct
     #[account(
         mut,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
         has_one = vault_jet_lp_token,
+        has_one = solend_reserve,
+        has_one = port_reserve,
+        has_one = jet_reserve,
         has_one = fee_receiver,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
 
+    /// Token account for the vault's reserve tokens
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's solend lp tokens
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's port lp tokens
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's jet lp tokens
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Mint for the vault lp token
     #[account(mut)]
     pub lp_token_mint: Box<Account<'info, Mint>>,
 
@@ -39,12 +51,14 @@ pub struct Refresh<'info> {
     pub solend_program: AccountInfo<'info>,
 
     #[account(mut)]
-    pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
+    pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
     pub solend_pyth: AccountInfo<'info>,
 
     pub solend_switchboard: AccountInfo<'info>,
 
+    // NOTE address check is commented out because port has a different
+    // ID in devnet than they do in mainnet
     #[account(
         executable,
         //address = port_variable_rate_lending_instructions::ID,
@@ -52,7 +66,7 @@ pub struct Refresh<'info> {
     pub port_program: AccountInfo<'info>,
 
     #[account(mut)]
-    pub port_reserve_state: Box<Account<'info, PortReserve>>,
+    pub port_reserve: Box<Account<'info, PortReserve>>,
 
     pub port_oracle: AccountInfo<'info>,
 
@@ -68,7 +82,7 @@ pub struct Refresh<'info> {
     pub jet_market_authority: AccountInfo<'info>,
 
     #[account(mut)]
-    pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
+    pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
     #[account(mut)]
     pub jet_fee_note_vault: AccountInfo<'info>,
@@ -78,16 +92,18 @@ pub struct Refresh<'info> {
 
     pub jet_pyth: AccountInfo<'info>,
 
+    /// Token account that collects fees from the vault
+    /// denominated in vault lp tokens
     #[account(mut)]
     pub fee_receiver: Box<Account<'info, TokenAccount>>,
 
-    #[account(address = token::ID)]
-    pub token_program: AccountInfo<'info>,
+    pub token_program: Program<'info, Token>,
 
     pub clock: Sysvar<'info, Clock>,
 }
 
 impl<'info> Refresh<'info> {
+    /// CpiContext for refreshing solend reserve
     pub fn solend_refresh_reserve_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, solend::RefreshReserve<'info>> {
@@ -95,7 +111,7 @@ impl<'info> Refresh<'info> {
             self.solend_program.clone(),
             solend::RefreshReserve {
                 lending_program: self.solend_program.clone(),
-                reserve: self.solend_reserve_state.to_account_info(),
+                reserve: self.solend_reserve.to_account_info(),
                 pyth_reserve_liquidity_oracle: self.solend_pyth.clone(),
                 switchboard_reserve_liquidity_oracle: self.solend_switchboard.clone(),
                 clock: self.clock.to_account_info(),
@@ -103,19 +119,21 @@ impl<'info> Refresh<'info> {
         )
     }
 
+    /// CpiContext for refreshing port reserve
     pub fn port_refresh_reserve_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, port_anchor_adaptor::RefreshReserve<'info>> {
         CpiContext::new(
             self.port_program.clone(),
             port_anchor_adaptor::RefreshReserve {
-                reserve: self.port_reserve_state.to_account_info(),
+                reserve: self.port_reserve.to_account_info(),
                 clock: self.clock.to_account_info(),
             },
         )
         .with_remaining_accounts(vec![self.port_oracle.clone()])
     }
 
+    /// CpiContext for refreshing jet reserve
     pub fn jet_refresh_reserve_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, jet::cpi::accounts::RefreshReserve<'info>> {
@@ -124,18 +142,19 @@ impl<'info> Refresh<'info> {
             jet::cpi::accounts::RefreshReserve {
                 market: self.jet_market.clone(),
                 market_authority: self.jet_market_authority.clone(),
-                reserve: self.jet_reserve_state.to_account_info(),
+                reserve: self.jet_reserve.to_account_info(),
                 fee_note_vault: self.jet_fee_note_vault.clone(),
                 deposit_note_mint: self.jet_deposit_note_mint.clone(),
                 pyth_oracle_price: self.jet_pyth.clone(),
-                token_program: self.token_program.clone(),
+                token_program: self.token_program.to_account_info(),
             },
         )
     }
 
+    /// CpiContext for collecting fees by minting new vault lp tokens
     fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
-            self.token_program.clone(),
+            self.token_program.to_account_info(),
             MintTo {
                 mint: self.lp_token_mint.to_account_info(),
                 to: self.fee_receiver.to_account_info(),
@@ -145,6 +164,8 @@ impl<'info> Refresh<'info> {
     }
 }
 
+/// Refreshes the reserves of downstream lending markets,
+/// updates the vault total value, and collects fees
 pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     msg!("Refreshing");
 
@@ -157,29 +178,34 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     jet::cpi::refresh_reserve(ctx.accounts.jet_refresh_reserve_context())?;
 
     // Calculate value of solend position
-    let solend_exchange_rate = ctx
-        .accounts
-        .solend_reserve_state
-        .collateral_exchange_rate()?;
+    let solend_exchange_rate = ctx.accounts.solend_reserve.collateral_exchange_rate()?;
     let solend_value =
         solend_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_solend_lp_token.amount)?;
     // Calculate value of port position
-    let port_exchange_rate = ctx.accounts.port_reserve_state.collateral_exchange_rate()?;
+    let port_exchange_rate = ctx.accounts.port_reserve.collateral_exchange_rate()?;
     let port_value =
         port_exchange_rate.collateral_to_liquidity(ctx.accounts.vault_port_lp_token.amount)?;
     // Calculate value of jet position
-    let jet_reserve = ctx.accounts.jet_reserve_state.load()?;
+    let jet_reserve = ctx.accounts.jet_reserve.load()?;
     let jet_exchange_rate = jet_reserve.deposit_note_exchange_rate(
         ctx.accounts.clock.slot,
         jet_reserve.total_deposits(),
         jet_reserve.total_deposit_notes(),
     );
-    let jet_value =
-        (jet_exchange_rate * Number::from(ctx.accounts.vault_jet_lp_token.amount)).as_u64(0);
+    let jet_value = jet_exchange_rate
+        .as_u64(0)
+        .checked_mul(ctx.accounts.vault_jet_lp_token.amount)
+        .ok_or(ErrorCode::OverflowError)?;
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
-    let vault_value = vault_reserve_token_amount + solend_value + port_value + jet_value;
+
+    let vault_value = vault_reserve_token_amount
+        .checked_add(solend_value)
+        .and_then(|lhs| lhs.checked_add(port_value))
+        .and_then(|lhs| lhs.checked_add(jet_value))
+        .ok_or(ErrorCode::OverflowError)?;
+
     msg!("Tokens value: {}", vault_reserve_token_amount);
     msg!("Solend value: {}", solend_value);
     msg!("Port value: {}", port_value);

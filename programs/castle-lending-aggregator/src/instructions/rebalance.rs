@@ -16,44 +16,57 @@ use crate::state::*;
 
 #[derive(Accounts)]
 pub struct Rebalance<'info> {
+    /// Vault state account
+    /// Checks that the refresh has been called in the same slot
+    /// Checks that the accounts passed in are correct
     #[account(
         mut,
-        constraint = !vault.last_update.stale @ ErrorCode::VaultIsNotRefreshed,
+        constraint = !vault.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
         has_one = vault_jet_lp_token,
+        has_one = solend_reserve,
+        has_one = port_reserve,
+        has_one = jet_reserve,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// Token account for the vault's reserve tokens
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's solend lp tokens
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's port lp tokens
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for the vault's jet lp tokens
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
-    pub solend_reserve_state: Box<Account<'info, SolendReserve>>,
+    pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
-    pub port_reserve_state: Box<Account<'info, PortReserve>>,
+    pub port_reserve: Box<Account<'info, PortReserve>>,
 
-    pub jet_reserve_state: AccountLoader<'info, jet::state::Reserve>,
+    pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
+
+    pub clock: Sysvar<'info, Clock>,
 }
 
+/// Calculate and store optimal allocations to downstream lending markets
 pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
     msg!("Rebalancing");
 
     // Convert reserve states to assets
     let assets: Vec<Box<dyn Asset>> = vec![
         Box::new(LendingMarket::try_from(
-            ctx.accounts.solend_reserve_state.clone().into_inner(),
+            ctx.accounts.solend_reserve.clone().into_inner(),
         )?),
         Box::new(LendingMarket::try_from(
-            ctx.accounts.port_reserve_state.clone().into_inner(),
+            ctx.accounts.port_reserve.clone().into_inner(),
         )?),
         Box::new(LendingMarket::try_from(
-            *ctx.accounts.jet_reserve_state.load()?.deref(),
+            *ctx.accounts.jet_reserve.load()?.deref(),
         )?),
     ];
 
@@ -89,6 +102,7 @@ pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
         port: new_vault_allocations[1],
         jet: new_vault_allocations[2],
     });
+
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 export type CastleLendingAggregator = {
-  version: "1.2.0";
+  version: "1.3.0";
   name: "castle_lending_aggregator";
   instructions: [
     {
@@ -57,6 +57,21 @@ export type CastleLendingAggregator = {
         },
         {
           name: "jetLpTokenMint";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "solendReserve";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "portReserve";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "jetReserve";
           isMut: false;
           isSigner: false;
         },
@@ -156,6 +171,11 @@ export type CastleLendingAggregator = {
           name: "tokenProgram";
           isMut: false;
           isSigner: false;
+        },
+        {
+          name: "clock";
+          isMut: false;
+          isSigner: false;
         }
       ];
       args: [
@@ -207,6 +227,11 @@ export type CastleLendingAggregator = {
           name: "tokenProgram";
           isMut: false;
           isSigner: false;
+        },
+        {
+          name: "clock";
+          isMut: false;
+          isSigner: false;
         }
       ];
       args: [
@@ -245,17 +270,22 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "solendReserveState";
+          name: "solendReserve";
           isMut: false;
           isSigner: false;
         },
         {
-          name: "portReserveState";
+          name: "portReserve";
           isMut: false;
           isSigner: false;
         },
         {
-          name: "jetReserveState";
+          name: "jetReserve";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "clock";
           isMut: false;
           isSigner: false;
         }
@@ -306,7 +336,7 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "solendReserveState";
+          name: "solendReserve";
           isMut: true;
           isSigner: false;
         },
@@ -326,7 +356,7 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "portReserveState";
+          name: "portReserve";
           isMut: true;
           isSigner: false;
         },
@@ -351,7 +381,7 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "jetReserveState";
+          name: "jetReserve";
           isMut: true;
           isSigner: false;
         },
@@ -427,7 +457,7 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "solendReserveState";
+          name: "solendReserve";
           isMut: true;
           isSigner: false;
         },
@@ -498,7 +528,7 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "portReserveState";
+          name: "portReserve";
           isMut: true;
           isSigner: false;
         },
@@ -569,7 +599,7 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "jetReserveState";
+          name: "jetReserve";
           isMut: true;
           isSigner: false;
         },
@@ -620,6 +650,18 @@ export type CastleLendingAggregator = {
             type: {
               array: ["u8", 1];
             };
+          },
+          {
+            name: "solendReserve";
+            type: "publicKey";
+          },
+          {
+            name: "portReserve";
+            type: "publicKey";
+          },
+          {
+            name: "jetReserve";
+            type: "publicKey";
           },
           {
             name: "vaultReserveToken";
@@ -842,12 +884,17 @@ export type CastleLendingAggregator = {
       code: 6004;
       name: "TryFromReserveError";
       msg: "Failed to convert from Reserve";
+    },
+    {
+      code: 6005;
+      name: "OverflowError";
+      msg: "Failed to perform a math operation without an overflow";
     }
   ];
 };
 
 export const IDL: CastleLendingAggregator = {
-  version: "1.2.0",
+  version: "1.3.0",
   name: "castle_lending_aggregator",
   instructions: [
     {
@@ -905,6 +952,21 @@ export const IDL: CastleLendingAggregator = {
         },
         {
           name: "jetLpTokenMint",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "solendReserve",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "portReserve",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "jetReserve",
           isMut: false,
           isSigner: false,
         },
@@ -1005,6 +1067,11 @@ export const IDL: CastleLendingAggregator = {
           isMut: false,
           isSigner: false,
         },
+        {
+          name: "clock",
+          isMut: false,
+          isSigner: false,
+        },
       ],
       args: [
         {
@@ -1056,6 +1123,11 @@ export const IDL: CastleLendingAggregator = {
           isMut: false,
           isSigner: false,
         },
+        {
+          name: "clock",
+          isMut: false,
+          isSigner: false,
+        },
       ],
       args: [
         {
@@ -1093,17 +1165,22 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "solendReserveState",
+          name: "solendReserve",
           isMut: false,
           isSigner: false,
         },
         {
-          name: "portReserveState",
+          name: "portReserve",
           isMut: false,
           isSigner: false,
         },
         {
-          name: "jetReserveState",
+          name: "jetReserve",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "clock",
           isMut: false,
           isSigner: false,
         },
@@ -1154,7 +1231,7 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "solendReserveState",
+          name: "solendReserve",
           isMut: true,
           isSigner: false,
         },
@@ -1174,7 +1251,7 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "portReserveState",
+          name: "portReserve",
           isMut: true,
           isSigner: false,
         },
@@ -1199,7 +1276,7 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "jetReserveState",
+          name: "jetReserve",
           isMut: true,
           isSigner: false,
         },
@@ -1275,7 +1352,7 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "solendReserveState",
+          name: "solendReserve",
           isMut: true,
           isSigner: false,
         },
@@ -1346,7 +1423,7 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "portReserveState",
+          name: "portReserve",
           isMut: true,
           isSigner: false,
         },
@@ -1417,7 +1494,7 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "jetReserveState",
+          name: "jetReserve",
           isMut: true,
           isSigner: false,
         },
@@ -1468,6 +1545,18 @@ export const IDL: CastleLendingAggregator = {
             type: {
               array: ["u8", 1],
             },
+          },
+          {
+            name: "solendReserve",
+            type: "publicKey",
+          },
+          {
+            name: "portReserve",
+            type: "publicKey",
+          },
+          {
+            name: "jetReserve",
+            type: "publicKey",
           },
           {
             name: "vaultReserveToken",
@@ -1690,6 +1779,11 @@ export const IDL: CastleLendingAggregator = {
       code: 6004,
       name: "TryFromReserveError",
       msg: "Failed to convert from Reserve",
+    },
+    {
+      code: 6005,
+      name: "OverflowError",
+      msg: "Failed to perform a math operation without an overflow",
     },
   ],
 };

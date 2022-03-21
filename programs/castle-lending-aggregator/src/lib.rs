@@ -17,8 +17,6 @@ declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 pub mod castle_lending_aggregator {
     use super::*;
 
-    // TODO add docs
-
     pub fn initialize(
         ctx: Context<Initialize>,
         _bumps: InitBumpSeeds,
