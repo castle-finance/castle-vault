@@ -129,7 +129,7 @@ pub fn handler(ctx: Context<ReconcileJet>, withdraw_option: Option<u64>) -> Prog
 
                     msg!("Depositing {}", tokens_to_deposit_checked);
 
-                    if tokens_to_deposit != 0 {
+                    if tokens_to_deposit_checked != 0 {
                         jet::cpi::deposit_tokens(
                             ctx.accounts
                                 .jet_deposit_context()

@@ -5,16 +5,26 @@ use anchor_lang::solana_program;
 use jet::state::Reserve as JetReserve;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Rate, TryMul};
+use strum_macros::EnumIter;
 
 use crate::cpi::SolendReserve;
 
+#[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
+pub enum Provider {
+    Solend,
+    Port,
+    Jet,
+}
+
 pub trait Asset {
     fn expected_return(&self) -> Option<Rate>;
+    fn provider(&self) -> Provider;
 }
 
 pub struct LendingMarket {
     utilization_rate: Rate,
     borrow_rate: Rate,
+    provider: Provider,
 }
 
 impl Asset for LendingMarket {
@@ -22,12 +32,15 @@ impl Asset for LendingMarket {
         // TODO add liquidity mining rewards
         self.utilization_rate.try_mul(self.borrow_rate).ok()
     }
+    fn provider(&self) -> Provider {
+        self.provider
+    }
 }
 
-impl TryFrom<SolendReserve> for LendingMarket {
+impl TryFrom<&SolendReserve> for LendingMarket {
     type Error = solana_program::program_error::ProgramError;
 
-    fn try_from(value: SolendReserve) -> Result<Self, Self::Error> {
+    fn try_from(value: &SolendReserve) -> Result<Self, Self::Error> {
         let utilization_rate = value.liquidity.utilization_rate()?;
         let borrow_rate = value.current_borrow_rate()?;
 
@@ -41,14 +54,15 @@ impl TryFrom<SolendReserve> for LendingMarket {
         Ok(LendingMarket {
             utilization_rate: converted_utilization_rate,
             borrow_rate: converted_borrow_rate,
+            provider: Provider::Solend,
         })
     }
 }
 
-impl TryFrom<PortReserve> for LendingMarket {
+impl TryFrom<&PortReserve> for LendingMarket {
     type Error = solana_program::program_error::ProgramError;
 
-    fn try_from(value: PortReserve) -> Result<Self, Self::Error> {
+    fn try_from(value: &PortReserve) -> Result<Self, Self::Error> {
         let utilization_rate = value.liquidity.utilization_rate()?;
         let borrow_rate = value.current_borrow_rate()?;
 
@@ -62,14 +76,15 @@ impl TryFrom<PortReserve> for LendingMarket {
         Ok(LendingMarket {
             utilization_rate: converted_utilization_rate,
             borrow_rate: converted_borrow_rate,
+            provider: Provider::Port,
         })
     }
 }
 
-impl TryFrom<JetReserve> for LendingMarket {
+impl TryFrom<&JetReserve> for LendingMarket {
     type Error = ProgramError;
 
-    fn try_from(value: JetReserve) -> Result<Self, Self::Error> {
+    fn try_from(value: &JetReserve) -> Result<Self, Self::Error> {
         let vault_total = value.total_deposits();
         let outstanding_debt = *value.unwrap_outstanding_debt(Clock::get()?.slot);
 
@@ -85,6 +100,7 @@ impl TryFrom<JetReserve> for LendingMarket {
         Ok(LendingMarket {
             utilization_rate: converted_util,
             borrow_rate: converted_borrow,
+            provider: Provider::Jet,
         })
     }
 }

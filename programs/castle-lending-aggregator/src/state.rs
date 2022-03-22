@@ -125,6 +125,7 @@ pub enum StrategyType {
     EqualAllocation,
 }
 
+// How can we connect this with Provider?
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: Allocation,

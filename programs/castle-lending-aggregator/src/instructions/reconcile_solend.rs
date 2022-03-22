@@ -124,7 +124,7 @@ pub fn handler(ctx: Context<ReconcileSolend>, withdraw_option: Option<u64>) -> P
 
                     msg!("Depositing {}", tokens_to_deposit_checked);
 
-                    if tokens_to_deposit != 0 {
+                    if tokens_to_deposit_checked != 0 {
                         solend::deposit_reserve_liquidity(
                             ctx.accounts
                                 .solend_deposit_reserve_liquidity_context()

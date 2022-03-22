@@ -125,7 +125,7 @@ pub fn handler(ctx: Context<ReconcilePort>, withdraw_option: Option<u64>) -> Pro
 
                     msg!("Depositing {}", tokens_to_deposit_checked);
 
-                    if tokens_to_deposit != 0 {
+                    if tokens_to_deposit_checked != 0 {
                         port_anchor_adaptor::deposit_reserve(
                             ctx.accounts
                                 .port_deposit_reserve_liquidity_context()

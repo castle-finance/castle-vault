@@ -66,8 +66,8 @@ impl<'info> Withdraw<'info> {
         CpiContext::new(
             self.token_program.to_account_info(),
             Transfer {
-                from: self.vault_reserve_token.to_account_info().clone(),
-                to: self.user_reserve_token.to_account_info().clone(),
+                from: self.vault_reserve_token.to_account_info(),
+                to: self.user_reserve_token.to_account_info(),
                 authority: self.vault_authority.clone(),
             },
         )

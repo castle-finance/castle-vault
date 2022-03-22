@@ -2,30 +2,40 @@ use std::{cmp::Ordering, convert::TryInto};
 
 use solana_maths::{Rate, TryDiv, TryMul};
 
-use super::assets::Asset;
+use crate::instructions::RateUpdate;
+
+use super::assets::{Asset, Provider};
 
 pub trait Strategy {
-    fn calculate_allocations(&self, assets: Vec<Box<dyn Asset>>) -> Option<Vec<Rate>>;
+    fn calculate_allocations(&self, assets: &[impl Asset]) -> Option<Vec<RateUpdate>>;
 }
 
 pub struct EqualAllocationStrategy;
 impl Strategy for EqualAllocationStrategy {
-    fn calculate_allocations(&self, assets: Vec<Box<dyn Asset>>) -> Option<Vec<Rate>> {
+    // TODO return a Result
+    fn calculate_allocations(&self, assets: &[impl Asset]) -> Option<Vec<RateUpdate>> {
         let num_assets = assets.len();
-        let equal_allocation = Rate::one()
-            .try_div(
-                Rate::from_percent(num_assets.try_into().unwrap())
-                    .try_mul(100)
-                    .ok()?,
-            )
-            .ok()?;
-        Some(vec![equal_allocation; num_assets])
+        let allocations = Provider::iter()
+            .map(|provider| RateUpdate {
+                provider,
+                rate: Rate::one()
+                    .try_div(
+                        Rate::from_percent(num_assets.try_into().unwrap())
+                            .try_mul(100)
+                            .unwrap(),
+                    )
+                    .unwrap(),
+            })
+            .collect::<Vec<RateUpdate>>();
+        Some(allocations)
     }
 }
 
+use strum::IntoEnumIterator;
 pub struct MaxYieldStrategy;
 impl MaxYieldStrategy {
-    fn compare(&self, lhs: &dyn Asset, rhs: &dyn Asset) -> Ordering {
+    // TODO return a Result
+    fn compare(&self, lhs: &impl Asset, rhs: &impl Asset) -> Ordering {
         lhs.expected_return()
             .unwrap()
             .cmp(&rhs.expected_return().unwrap())
@@ -33,11 +43,20 @@ impl MaxYieldStrategy {
 }
 
 impl Strategy for MaxYieldStrategy {
-    fn calculate_allocations(&self, assets: Vec<Box<dyn Asset>>) -> Option<Vec<Rate>> {
-        let iter = assets.iter().enumerate();
-        let idx = iter.max_by(|x, y| self.compare(&**x.1, &**y.1))?.0;
-        let mut ret_vec = vec![Rate::zero(); assets.len()];
-        ret_vec[idx] = Rate::one();
+    // TODO return a Result
+    fn calculate_allocations(&self, assets: &[impl Asset]) -> Option<Vec<RateUpdate>> {
+        let asset = assets.iter().max_by(|x, y| self.compare(*x, *y))?;
+
+        let ret_vec = Provider::iter()
+            .map(|provider| RateUpdate {
+                provider,
+                rate: if provider == asset.provider() {
+                    Rate::one()
+                } else {
+                    Rate::zero()
+                },
+            })
+            .collect::<Vec<RateUpdate>>();
         Some(ret_vec)
     }
 }
