@@ -5,9 +5,9 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Decimal, Rate, TryMul};
-use solend::SolendReserve;
+use solend_cpi::SolendReserve;
 
-use crate::cpi::solend;
+use crate::cpi::solend_cpi;
 use crate::errors::ErrorCode;
 use crate::events::RebalanceEvent;
 use crate::rebalance::assets::{LendingMarket, Provider};

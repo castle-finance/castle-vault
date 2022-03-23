@@ -1,3 +1,3 @@
-pub mod solend;
+pub mod solend_cpi;
 
-pub use solend::*;
+pub use solend_cpi::*;
