@@ -84,7 +84,13 @@ pub struct Vault {
 
 impl Vault {
     // TODO use a more specific error type
-    pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
+    pub fn calculate_fees(
+        &self,
+        new_vault_value: u64,
+        slot: u64,
+        carry_fee_bps: u16,
+        mgmt_fee_bps: u16,
+    ) -> Result<u64, ProgramError> {
         let vault_value_diff = new_vault_value.saturating_sub(self.total_value);
         let slots_elapsed = self.last_update.slots_elapsed(slot)?;
         // Return early to avoid divide by zero
@@ -96,12 +102,12 @@ impl Vault {
         //msg!("Old vault value: {}", self.total_value);
 
         let carry = vault_value_diff
-            .checked_mul(self.fee_carry_bps as u64)
+            .checked_mul(carry_fee_bps as u64)
             .ok_or(ErrorCode::OverflowError)?
             / ONE_AS_BPS;
 
         let mgmt = new_vault_value
-            .checked_mul(self.fee_carry_bps as u64)
+            .checked_mul(mgmt_fee_bps as u64)
             .ok_or(ErrorCode::OverflowError)?
             / ONE_AS_BPS
             / SLOTS_PER_YEAR

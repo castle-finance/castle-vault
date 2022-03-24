@@ -92,10 +92,15 @@ pub struct Refresh<'info> {
 
     pub jet_pyth: AccountInfo<'info>,
 
-    /// Token account that collects fees from the vault
+    /// Token account that collects primary fees from the vault
     /// denominated in vault lp tokens
     #[account(mut)]
     pub fee_receiver: Box<Account<'info, TokenAccount>>,
+
+    /// Token account that collects supplementary fees from the vault
+    /// denominated in vault lp tokens
+    #[account(mut)]
+    pub suppl_fee_receiver: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
 
@@ -152,12 +157,15 @@ impl<'info> Refresh<'info> {
     }
 
     /// CpiContext for collecting fees by minting new vault lp tokens
-    fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+    fn mint_to_context(
+        &self,
+        fee_receiver: &Box<Account<'info, TokenAccount>>,
+    ) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
             self.token_program.to_account_info(),
             MintTo {
                 mint: self.lp_token_mint.to_account_info(),
-                to: self.fee_receiver.to_account_info(),
+                to: fee_receiver.to_account_info(),
                 authority: self.vault_authority.clone(),
             },
         )
@@ -213,22 +221,58 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
     // Calculate fees
-    let fees = vault.calculate_fees(vault_value, ctx.accounts.clock.slot)?;
-    let fees_converted =
-        crate::math::calc_reserve_to_lp(fees, ctx.accounts.lp_token_mint.supply, vault_value)
+    let primary_fees = vault.calculate_fees(
+        vault_value,
+        ctx.accounts.clock.slot,
+        ctx.accounts.vault.fee_carry_bps,
+        ctx.accounts.vault.fee_mgmt_bps,
+    )?;
+
+    let primary_fees_converted = crate::math::calc_reserve_to_lp(
+        primary_fees,
+        ctx.accounts.lp_token_mint.supply,
+        vault_value,
+    )
+    .ok_or(ErrorCode::MathError)?;
+
+    // Calculate Suppl Fees
+    let suppl_fees = vault.calculate_fees(
+        vault_value,
+        ctx.accounts.clock.slot,
+        ctx.accounts.vault.suppl_fee_carry_bps,
+        ctx.accounts.vault.suppl_fee_mgmt_bps,
+    )?;
+
+    let suppl_fees_converted =
+        crate::math::calc_reserve_to_lp(suppl_fees, ctx.accounts.lp_token_mint.supply, vault_value)
             .ok_or(ErrorCode::MathError)?;
 
-    // Mint new LP tokens to fee_receiver
+    // Mint new LP tokens to primary_fee_receiver
     msg!(
-        "Collecting fees: {} reserve tokens, {} lp tokens",
-        fees,
-        fees_converted
+        "Collecting primary fees: {} reserve tokens, {} lp tokens",
+        primary_fees,
+        primary_fees_converted
     );
+
     token::mint_to(
         ctx.accounts
-            .mint_to_context()
+            .mint_to_context(&ctx.accounts.fee_receiver)
             .with_signer(&[&vault.authority_seeds()]),
-        fees_converted,
+        primary_fees_converted,
+    )?;
+
+    // Mint new LP tokens to suppl_fee_receiver
+    msg!(
+        "Collecting supplementary fees: {} reserve tokens, {} lp tokens",
+        suppl_fees,
+        suppl_fees_converted
+    );
+
+    token::mint_to(
+        ctx.accounts
+            .mint_to_context(&ctx.accounts.suppl_fee_receiver)
+            .with_signer(&[&vault.authority_seeds()]),
+        suppl_fees_converted,
     )?;
 
     // Update vault total value
