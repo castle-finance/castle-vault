@@ -4,7 +4,7 @@ use port_anchor_adaptor::PortReserve;
 
 use std::convert::Into;
 
-use crate::{cpi::SolendReserve, state::*};
+use crate::{cpi::SolendReserve, errors::ErrorCode, state::*};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct InitBumpSeeds {
@@ -158,9 +158,17 @@ impl<'info> Initialize<'info> {
         )
     }
 
-    fn validate_suppl_fee_receiver(&self) -> Result<(), ProgramError> {
+    fn validate_suppl_fees(
+        &self,
+        suppl_carry_fees: u16,
+        suppl_mgmt_fees: u16,
+    ) -> Result<(), ProgramError> {
         if !self.suppl_fee_receiver.mint.eq(&self.lp_token_mint.key()) {
             return Err(ProgramError::InvalidAccountData);
+        }
+
+        if suppl_carry_fees >= 5000 || suppl_mgmt_fees >= 5000 {
+            return Err(ErrorCode::FeeError.into());
         }
 
         Ok(())
@@ -183,7 +191,8 @@ pub fn handler(
     let clock = Clock::get()?;
 
     // Validating suppl token account's mint
-    ctx.accounts.validate_suppl_fee_receiver()?;
+    ctx.accounts
+        .validate_suppl_fees(fees.suppl_fee_carry_bps, fees.suppl_fee_mgmt_bps)?;
 
     let vault = &mut ctx.accounts.vault;
     vault.vault_authority = ctx.accounts.vault_authority.key();
