@@ -1,5 +1,5 @@
 export type CastleLendingAggregator = {
-  version: "1.3.0";
+  version: "1.3.1";
   name: "castle_lending_aggregator";
   instructions: [
     {
@@ -81,6 +81,11 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
+          name: "supplFeeReceiver";
+          isMut: false;
+          isSigner: false;
+        },
+        {
           name: "payer";
           isMut: true;
           isSigner: true;
@@ -120,12 +125,10 @@ export type CastleLendingAggregator = {
           };
         },
         {
-          name: "feeCarryBps";
-          type: "u16";
-        },
-        {
-          name: "feeMgmtBps";
-          type: "u16";
+          name: "fees";
+          type: {
+            defined: "AllFees";
+          };
         }
       ];
     },
@@ -247,26 +250,6 @@ export type CastleLendingAggregator = {
         {
           name: "vault";
           isMut: true;
-          isSigner: false;
-        },
-        {
-          name: "vaultReserveToken";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "vaultSolendLpToken";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "vaultPortLpToken";
-          isMut: false;
-          isSigner: false;
-        },
-        {
-          name: "vaultJetLpToken";
-          isMut: false;
           isSigner: false;
         },
         {
@@ -692,11 +675,23 @@ export type CastleLendingAggregator = {
             type: "publicKey";
           },
           {
+            name: "supplFeeReceiver";
+            type: "publicKey";
+          },
+          {
             name: "feeCarryBps";
             type: "u16";
           },
           {
             name: "feeMgmtBps";
+            type: "u16";
+          },
+          {
+            name: "supplFeeCarryBps";
+            type: "u16";
+          },
+          {
+            name: "supplFeeMgmtBps";
             type: "u16";
           },
           {
@@ -758,6 +753,30 @@ export type CastleLendingAggregator = {
           {
             name: "jetLp";
             type: "u8";
+          }
+        ];
+      };
+    },
+    {
+      name: "AllFees";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "feeCarryBps";
+            type: "u16";
+          },
+          {
+            name: "feeMgmtBps";
+            type: "u16";
+          },
+          {
+            name: "supplFeeCarryBps";
+            type: "u16";
+          },
+          {
+            name: "supplFeeMgmtBps";
+            type: "u16";
           }
         ];
       };
@@ -861,40 +880,45 @@ export type CastleLendingAggregator = {
   ];
   errors: [
     {
-      code: 6000;
+      code: 300;
       name: "MathError";
       msg: "failed to perform some math operation safely";
     },
     {
-      code: 6001;
+      code: 301;
       name: "StrategyError";
       msg: "Failed to run the strategy";
     },
     {
-      code: 6002;
+      code: 302;
       name: "VaultIsNotRefreshed";
       msg: "Vault is not refreshed";
     },
     {
-      code: 6003;
+      code: 303;
       name: "AllocationIsNotUpdated";
       msg: "Allocation is not updated";
     },
     {
-      code: 6004;
+      code: 304;
       name: "TryFromReserveError";
       msg: "Failed to convert from Reserve";
     },
     {
-      code: 6005;
+      code: 305;
       name: "OverflowError";
       msg: "Failed to perform a math operation without an overflow";
+    },
+    {
+      code: 306;
+      name: "FeeError";
+      msg: "Invalid fee share";
     }
   ];
 };
 
 export const IDL: CastleLendingAggregator = {
-  version: "1.3.0",
+  version: "1.3.1",
   name: "castle_lending_aggregator",
   instructions: [
     {
@@ -976,6 +1000,11 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
+          name: "supplFeeReceiver",
+          isMut: false,
+          isSigner: false,
+        },
+        {
           name: "payer",
           isMut: true,
           isSigner: true,
@@ -1015,12 +1044,10 @@ export const IDL: CastleLendingAggregator = {
           },
         },
         {
-          name: "feeCarryBps",
-          type: "u16",
-        },
-        {
-          name: "feeMgmtBps",
-          type: "u16",
+          name: "fees",
+          type: {
+            defined: "AllFees",
+          },
         },
       ],
     },
@@ -1142,26 +1169,6 @@ export const IDL: CastleLendingAggregator = {
         {
           name: "vault",
           isMut: true,
-          isSigner: false,
-        },
-        {
-          name: "vaultReserveToken",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "vaultSolendLpToken",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "vaultPortLpToken",
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: "vaultJetLpToken",
-          isMut: false,
           isSigner: false,
         },
         {
@@ -1587,11 +1594,23 @@ export const IDL: CastleLendingAggregator = {
             type: "publicKey",
           },
           {
+            name: "supplFeeReceiver",
+            type: "publicKey",
+          },
+          {
             name: "feeCarryBps",
             type: "u16",
           },
           {
             name: "feeMgmtBps",
+            type: "u16",
+          },
+          {
+            name: "supplFeeCarryBps",
+            type: "u16",
+          },
+          {
+            name: "supplFeeMgmtBps",
             type: "u16",
           },
           {
@@ -1653,6 +1672,30 @@ export const IDL: CastleLendingAggregator = {
           {
             name: "jetLp",
             type: "u8",
+          },
+        ],
+      },
+    },
+    {
+      name: "AllFees",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "feeCarryBps",
+            type: "u16",
+          },
+          {
+            name: "feeMgmtBps",
+            type: "u16",
+          },
+          {
+            name: "supplFeeCarryBps",
+            type: "u16",
+          },
+          {
+            name: "supplFeeMgmtBps",
+            type: "u16",
           },
         ],
       },
@@ -1756,34 +1799,39 @@ export const IDL: CastleLendingAggregator = {
   ],
   errors: [
     {
-      code: 6000,
+      code: 300,
       name: "MathError",
       msg: "failed to perform some math operation safely",
     },
     {
-      code: 6001,
+      code: 301,
       name: "StrategyError",
       msg: "Failed to run the strategy",
     },
     {
-      code: 6002,
+      code: 302,
       name: "VaultIsNotRefreshed",
       msg: "Vault is not refreshed",
     },
     {
-      code: 6003,
+      code: 303,
       name: "AllocationIsNotUpdated",
       msg: "Allocation is not updated",
     },
     {
-      code: 6004,
+      code: 304,
       name: "TryFromReserveError",
       msg: "Failed to convert from Reserve",
     },
     {
-      code: 6005,
+      code: 305,
       name: "OverflowError",
       msg: "Failed to perform a math operation without an overflow",
+    },
+    {
+      code: 306,
+      name: "FeeError",
+      msg: "Invalid fee share",
     },
   ],
 };
