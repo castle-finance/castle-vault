@@ -2,7 +2,6 @@ use std::convert::TryFrom;
 use std::ops::Deref;
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::TokenAccount;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Decimal, Rate, TryMul};
 use solend_cpi::SolendReserve;
@@ -22,27 +21,11 @@ pub struct Rebalance<'info> {
     #[account(
         mut,
         constraint = !vault.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
-        has_one = vault_reserve_token,
-        has_one = vault_solend_lp_token,
-        has_one = vault_port_lp_token,
-        has_one = vault_jet_lp_token,
         has_one = solend_reserve,
         has_one = port_reserve,
         has_one = jet_reserve,
     )]
     pub vault: Box<Account<'info, Vault>>,
-
-    /// Token account for the vault's reserve tokens
-    pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
-
-    /// Token account for the vault's solend lp tokens
-    pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
-
-    /// Token account for the vault's port lp tokens
-    pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
-
-    /// Token account for the vault's jet lp tokens
-    pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
 

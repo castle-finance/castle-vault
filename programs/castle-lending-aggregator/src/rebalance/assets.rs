@@ -17,7 +17,7 @@ pub enum Provider {
 }
 
 pub trait Asset {
-    fn expected_return(&self) -> Option<Rate>;
+    fn expected_return(&self) -> Result<Rate, ProgramError>;
     fn provider(&self) -> Provider;
 }
 
@@ -28,9 +28,9 @@ pub struct LendingMarket {
 }
 
 impl Asset for LendingMarket {
-    fn expected_return(&self) -> Option<Rate> {
+    fn expected_return(&self) -> Result<Rate, ProgramError> {
         // TODO add liquidity mining rewards
-        self.utilization_rate.try_mul(self.borrow_rate).ok()
+        self.utilization_rate.try_mul(self.borrow_rate)
     }
     fn provider(&self) -> Provider {
         self.provider
