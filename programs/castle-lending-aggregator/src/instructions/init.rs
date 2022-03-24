@@ -17,6 +17,14 @@ pub struct InitBumpSeeds {
     jet_lp: u8,
 }
 
+#[derive(AnchorDeserialize, AnchorSerialize)]
+pub struct AllFees {
+    fee_carry_bps: u16,
+    fee_mgmt_bps: u16,
+    suppl_fee_carry_bps: u16,
+    suppl_fee_mgmt_bps: u16,
+}
+
 #[derive(Accounts)]
 #[instruction(bumps: InitBumpSeeds)]
 pub struct Initialize<'info> {
@@ -105,7 +113,7 @@ pub struct Initialize<'info> {
 
     pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
-    /// Token account that collects fees from the vault
+    /// Token account that receives the primary ratio of fees from the vault
     /// denominated in vault lp tokens
     #[account(
         init,
@@ -116,6 +124,10 @@ pub struct Initialize<'info> {
         space = TokenAccount::LEN
     )]
     pub fee_receiver: AccountInfo<'info>,
+
+    /// Token account that receives the secondary ratio of fees from the vault
+    /// denominated in vault lp tokens
+    pub suppl_fee_receiver: Account<'info, TokenAccount>,
 
     /// Account that pays for above account inits
     #[account(mut)]
@@ -145,6 +157,14 @@ impl<'info> Initialize<'info> {
             },
         )
     }
+
+    fn validate_suppl_fee_receiver(&self) -> Result<(), ProgramError> {
+        if !self.suppl_fee_receiver.mint.eq(&self.lp_token_mint.key()) {
+            return Err(ProgramError::InvalidAccountData);
+        }
+
+        Ok(())
+    }
 }
 
 /// Creates a new vault
@@ -153,16 +173,17 @@ impl<'info> Initialize<'info> {
 ///
 /// * `bumps` - bump seeds for creating PDAs
 /// * `strategy_type` - type of strategy that rebalance will execute
-/// * `fee_carry_bps` - carry fee that the vault collects denominated in basis points
-/// * `fee_mgmt_bps` - management fee that the vault collects denominated in basis points
+/// * `fees` - carry and management fee that the vault collects denominated in basis points on behalf of primary and supplementary fee receivers
 pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
-    fee_carry_bps: u16,
-    fee_mgmt_bps: u16,
+    fees: AllFees,
 ) -> ProgramResult {
     let clock = Clock::get()?;
+
+    // Validating suppl token account's mint
+    ctx.accounts.validate_suppl_fee_receiver()?;
 
     let vault = &mut ctx.accounts.vault;
     vault.vault_authority = ctx.accounts.vault_authority.key();
@@ -179,8 +200,11 @@ pub fn handler(
     vault.lp_token_mint = ctx.accounts.lp_token_mint.key();
     vault.reserve_token_mint = ctx.accounts.reserve_token_mint.key();
     vault.fee_receiver = ctx.accounts.fee_receiver.key();
-    vault.fee_carry_bps = fee_carry_bps;
-    vault.fee_mgmt_bps = fee_mgmt_bps;
+    vault.suppl_fee_receiver = ctx.accounts.suppl_fee_receiver.key();
+    vault.fee_carry_bps = fees.fee_carry_bps;
+    vault.fee_mgmt_bps = fees.fee_mgmt_bps;
+    vault.suppl_fee_carry_bps = fees.suppl_fee_carry_bps;
+    vault.suppl_fee_mgmt_bps = fees.suppl_fee_mgmt_bps;
     vault.last_update = LastUpdate::new(clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;

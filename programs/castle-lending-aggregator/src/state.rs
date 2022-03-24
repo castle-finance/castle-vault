@@ -51,14 +51,23 @@ pub struct Vault {
     /// Mint address of the tokens that are stored in vault
     pub reserve_token_mint: Pubkey,
 
-    /// Account that fees from this vault are sent to
+    /// Account that primary fees from this vault are sent to
     pub fee_receiver: Pubkey,
+
+    /// Account that supplementary fees from this vault are sent to
+    pub suppl_fee_receiver: Pubkey,
 
     /// Basis points of the accrued interest that gets sent to the fee_receiver
     pub fee_carry_bps: u16,
 
     /// Basis points of the AUM that gets sent to the fee_receiver
     pub fee_mgmt_bps: u16,
+
+    /// Basis points of the accrued interest that gets sent to the suppl_fee_receiver
+    pub suppl_fee_carry_bps: u16,
+
+    /// Basis points of the AUM that gets sent to the suppl_fee_receiver
+    pub suppl_fee_mgmt_bps: u16,
 
     /// Last slot when vault was refreshed
     pub last_update: LastUpdate,

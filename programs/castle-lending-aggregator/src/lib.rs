@@ -21,10 +21,9 @@ pub mod castle_lending_aggregator {
         ctx: Context<Initialize>,
         _bumps: InitBumpSeeds,
         strategy_type: StrategyType,
-        fee_carry_bps: u16,
-        fee_mgmt_bps: u16,
+        fees: AllFees,
     ) -> ProgramResult {
-        instructions::init::handler(ctx, _bumps, strategy_type, fee_carry_bps, fee_mgmt_bps)
+        instructions::init::handler(ctx, _bumps, strategy_type, fees)
     }
 
     pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {

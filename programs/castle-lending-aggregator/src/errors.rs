@@ -20,4 +20,7 @@ pub enum ErrorCode {
 
     #[msg("Failed to perform a math operation without an overflow")]
     OverflowError,
+
+    #[msg("Invalid fee share")]
+    FeeError,
 }
