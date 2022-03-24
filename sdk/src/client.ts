@@ -82,7 +82,7 @@ export class VaultClient {
     owner: PublicKey,
     feeCarryBps: number = 0,
     feeMgmtBps: number = 0,
-    supplFeeReceiver: PublicKey,
+    supplFeeOwner: PublicKey,
     supplFeeCarryBps: number = 0,
     supplFeeMgmtBps: number = 0
   ): Promise<VaultClient> {
@@ -136,6 +136,14 @@ export class VaultClient {
       program.programId
     );
 
+    const supplFeeReceiver = await Token.getAssociatedTokenAddress(
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+      TOKEN_PROGRAM_ID,
+      lpTokenMint,
+      supplFeeOwner,
+      true
+    );
+
     await program.rpc.initialize(
       {
         authority: authorityBump,
@@ -171,10 +179,12 @@ export class VaultClient {
           jetReserve: jet.accounts.reserve,
           feeReceiver: feeReceiver,
           supplFeeReceiver: supplFeeReceiver,
+          supplFeeOwner: supplFeeOwner,
           payer: wallet.payer.publicKey,
           owner: owner,
           systemProgram: SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
           rent: SYSVAR_RENT_PUBKEY,
         },
         signers: [vaultId, wallet.payer],
@@ -778,6 +788,16 @@ export class VaultClient {
       Keypair.generate() // dummy since we don't need to send txs
     );
     return lpToken.getAccountInfo(this.vaultState.feeReceiver);
+  }
+
+  async getSupplFeeReceiverAccountInfo(): Promise<AccountInfo> {
+    const lpToken = new Token(
+      this.program.provider.connection,
+      this.vaultState.lpTokenMint,
+      TOKEN_PROGRAM_ID,
+      Keypair.generate() // dummy since we don't need to send txs
+    );
+    return lpToken.getAccountInfo(this.vaultState.supplFeeReceiver);
   }
 
   async debug_log() {

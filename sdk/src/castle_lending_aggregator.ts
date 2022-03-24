@@ -1,5 +1,5 @@
 export type CastleLendingAggregator = {
-  version: "1.3.1";
+  version: "1.4.1";
   name: "castle_lending_aggregator";
   instructions: [
     {
@@ -86,6 +86,11 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
+          name: "supplFeeOwner";
+          isMut: false;
+          isSigner: false;
+        },
+        {
           name: "payer";
           isMut: true;
           isSigner: true;
@@ -102,6 +107,11 @@ export type CastleLendingAggregator = {
         },
         {
           name: "tokenProgram";
+          isMut: false;
+          isSigner: false;
+        },
+        {
+          name: "associatedTokenProgram";
           isMut: false;
           isSigner: false;
         },
@@ -940,7 +950,7 @@ export type CastleLendingAggregator = {
 };
 
 export const IDL: CastleLendingAggregator = {
-  version: "1.3.1",
+  version: "1.4.1",
   name: "castle_lending_aggregator",
   instructions: [
     {
@@ -1027,6 +1037,11 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
+          name: "supplFeeOwner",
+          isMut: false,
+          isSigner: false,
+        },
+        {
           name: "payer",
           isMut: true,
           isSigner: true,
@@ -1043,6 +1058,11 @@ export const IDL: CastleLendingAggregator = {
         },
         {
           name: "tokenProgram",
+          isMut: false,
+          isSigner: false,
+        },
+        {
+          name: "associatedTokenProgram",
           isMut: false,
           isSigner: false,
         },
