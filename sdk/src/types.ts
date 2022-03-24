@@ -36,6 +36,7 @@ export interface Vault {
   strategyType: any;
   owner: PublicKey;
   feeReceiver: PublicKey;
+  supplFeeReceiver: PublicKey;
   feeCarryBps: number;
   feeMgmtBps: number;
 }

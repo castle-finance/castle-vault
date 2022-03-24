@@ -218,6 +218,7 @@ export class VaultClient {
         jetDepositNoteMint: this.jet.accounts.depositNoteMint,
         jetPyth: this.jet.accounts.pythPrice,
         feeReceiver: this.vaultState.feeReceiver,
+        supplFeeReceiver: this.vaultState.supplFeeReceiver,
         tokenProgram: TOKEN_PROGRAM_ID,
         clock: SYSVAR_CLOCK_PUBKEY,
       },

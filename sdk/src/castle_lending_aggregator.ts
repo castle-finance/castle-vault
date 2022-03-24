@@ -389,6 +389,11 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
+          name: "supplFeeReceiver";
+          isMut: true;
+          isSigner: false;
+        },
+        {
           name: "tokenProgram";
           isMut: false;
           isSigner: false;
@@ -837,6 +842,23 @@ export type CastleLendingAggregator = {
           {
             name: "stale";
             type: "bool";
+          }
+        ];
+      };
+    },
+    {
+      name: "Provider";
+      type: {
+        kind: "enum";
+        variants: [
+          {
+            name: "Solend";
+          },
+          {
+            name: "Port";
+          },
+          {
+            name: "Jet";
           }
         ];
       };
@@ -1308,6 +1330,11 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
+          name: "supplFeeReceiver",
+          isMut: true,
+          isSigner: false,
+        },
+        {
           name: "tokenProgram",
           isMut: false,
           isSigner: false,
@@ -1756,6 +1783,23 @@ export const IDL: CastleLendingAggregator = {
           {
             name: "stale",
             type: "bool",
+          },
+        ],
+      },
+    },
+    {
+      name: "Provider",
+      type: {
+        kind: "enum",
+        variants: [
+          {
+            name: "Solend",
+          },
+          {
+            name: "Port",
+          },
+          {
+            name: "Jet",
           },
         ],
       },
