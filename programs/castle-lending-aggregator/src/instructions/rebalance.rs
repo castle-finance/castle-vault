@@ -75,8 +75,7 @@ pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
     let strategy_allocations = match ctx.accounts.vault.strategy_type {
         StrategyType::MaxYield => MaxYieldStrategy.calculate_allocations(&assets),
         StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_allocations(&assets),
-    }
-    .ok_or(ErrorCode::StrategyError)?;
+    }?;
 
     msg!("Strategy allocations: {:?}", strategy_allocations);
 
