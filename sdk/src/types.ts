@@ -35,10 +35,22 @@ export interface Vault {
   allocations: Allocations;
   strategyType: any;
   owner: PublicKey;
+  fees: VaultFees;
+}
+
+export interface VaultFees {
   feeReceiver: PublicKey;
-  supplFeeReceiver: PublicKey;
+  referralFeeReceiver: PublicKey;
   feeCarryBps: number;
   feeMgmtBps: number;
+  referralFeeShare: number;
+}
+
+export interface FeeArgs {
+  feeCarryBps: number;
+  feeMgmtBps: number;
+  referralFeeShare: number;
+  referralFeeOwner: PublicKey;
 }
 
 export interface RebalanceEvent {

@@ -1,5 +1,5 @@
 export type CastleLendingAggregator = {
-  version: "1.4.1";
+  version: "1.3.0";
   name: "castle_lending_aggregator";
   instructions: [
     {
@@ -81,12 +81,12 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "supplFeeReceiver";
-          isMut: false;
+          name: "referralFeeReceiver";
+          isMut: true;
           isSigner: false;
         },
         {
-          name: "supplFeeOwner";
+          name: "referralFeeOwner";
           isMut: false;
           isSigner: false;
         },
@@ -137,7 +137,7 @@ export type CastleLendingAggregator = {
         {
           name: "fees";
           type: {
-            defined: "AllFees";
+            defined: "FeeArgs";
           };
         }
       ];
@@ -399,7 +399,7 @@ export type CastleLendingAggregator = {
           isSigner: false;
         },
         {
-          name: "supplFeeReceiver";
+          name: "referralFeeReceiver";
           isMut: true;
           isSigner: false;
         },
@@ -686,28 +686,10 @@ export type CastleLendingAggregator = {
             type: "publicKey";
           },
           {
-            name: "feeReceiver";
-            type: "publicKey";
-          },
-          {
-            name: "supplFeeReceiver";
-            type: "publicKey";
-          },
-          {
-            name: "feeCarryBps";
-            type: "u16";
-          },
-          {
-            name: "feeMgmtBps";
-            type: "u16";
-          },
-          {
-            name: "supplFeeCarryBps";
-            type: "u16";
-          },
-          {
-            name: "supplFeeMgmtBps";
-            type: "u16";
+            name: "fees";
+            type: {
+              defined: "VaultFees";
+            };
           },
           {
             name: "lastUpdate";
@@ -773,7 +755,7 @@ export type CastleLendingAggregator = {
       };
     },
     {
-      name: "AllFees";
+      name: "FeeArgs";
       type: {
         kind: "struct";
         fields: [
@@ -786,12 +768,36 @@ export type CastleLendingAggregator = {
             type: "u16";
           },
           {
-            name: "supplFeeCarryBps";
+            name: "referralFeeShare";
+            type: "u8";
+          }
+        ];
+      };
+    },
+    {
+      name: "VaultFees";
+      type: {
+        kind: "struct";
+        fields: [
+          {
+            name: "feeCarryBps";
             type: "u16";
           },
           {
-            name: "supplFeeMgmtBps";
+            name: "feeMgmtBps";
             type: "u16";
+          },
+          {
+            name: "referralFeeShare";
+            type: "u8";
+          },
+          {
+            name: "feeReceiver";
+            type: "publicKey";
+          },
+          {
+            name: "referralFeeReceiver";
+            type: "publicKey";
           }
         ];
       };
@@ -944,13 +950,13 @@ export type CastleLendingAggregator = {
     {
       code: 306;
       name: "FeeError";
-      msg: "Invalid fee share";
+      msg: "Failed to set referral fee share which is greater than 50%";
     }
   ];
 };
 
 export const IDL: CastleLendingAggregator = {
-  version: "1.4.1",
+  version: "1.3.0",
   name: "castle_lending_aggregator",
   instructions: [
     {
@@ -1032,12 +1038,12 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "supplFeeReceiver",
-          isMut: false,
+          name: "referralFeeReceiver",
+          isMut: true,
           isSigner: false,
         },
         {
-          name: "supplFeeOwner",
+          name: "referralFeeOwner",
           isMut: false,
           isSigner: false,
         },
@@ -1088,7 +1094,7 @@ export const IDL: CastleLendingAggregator = {
         {
           name: "fees",
           type: {
-            defined: "AllFees",
+            defined: "FeeArgs",
           },
         },
       ],
@@ -1350,7 +1356,7 @@ export const IDL: CastleLendingAggregator = {
           isSigner: false,
         },
         {
-          name: "supplFeeReceiver",
+          name: "referralFeeReceiver",
           isMut: true,
           isSigner: false,
         },
@@ -1637,28 +1643,10 @@ export const IDL: CastleLendingAggregator = {
             type: "publicKey",
           },
           {
-            name: "feeReceiver",
-            type: "publicKey",
-          },
-          {
-            name: "supplFeeReceiver",
-            type: "publicKey",
-          },
-          {
-            name: "feeCarryBps",
-            type: "u16",
-          },
-          {
-            name: "feeMgmtBps",
-            type: "u16",
-          },
-          {
-            name: "supplFeeCarryBps",
-            type: "u16",
-          },
-          {
-            name: "supplFeeMgmtBps",
-            type: "u16",
+            name: "fees",
+            type: {
+              defined: "VaultFees",
+            },
           },
           {
             name: "lastUpdate",
@@ -1724,7 +1712,7 @@ export const IDL: CastleLendingAggregator = {
       },
     },
     {
-      name: "AllFees",
+      name: "FeeArgs",
       type: {
         kind: "struct",
         fields: [
@@ -1737,12 +1725,36 @@ export const IDL: CastleLendingAggregator = {
             type: "u16",
           },
           {
-            name: "supplFeeCarryBps",
+            name: "referralFeeShare",
+            type: "u8",
+          },
+        ],
+      },
+    },
+    {
+      name: "VaultFees",
+      type: {
+        kind: "struct",
+        fields: [
+          {
+            name: "feeCarryBps",
             type: "u16",
           },
           {
-            name: "supplFeeMgmtBps",
+            name: "feeMgmtBps",
             type: "u16",
+          },
+          {
+            name: "referralFeeShare",
+            type: "u8",
+          },
+          {
+            name: "feeReceiver",
+            type: "publicKey",
+          },
+          {
+            name: "referralFeeReceiver",
+            type: "publicKey",
           },
         ],
       },
@@ -1895,7 +1907,7 @@ export const IDL: CastleLendingAggregator = {
     {
       code: 306,
       name: "FeeError",
-      msg: "Invalid fee share",
+      msg: "Failed to set referral fee share which is greater than 50%",
     },
   ],
 };

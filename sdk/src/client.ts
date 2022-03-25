@@ -24,12 +24,8 @@ import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 
 import { PROGRAM_ID } from ".";
 import { CastleLendingAggregator } from "./castle_lending_aggregator";
-import {
-  PortReserveAsset,
-  SolendReserveAsset,
-  JetReserveAsset,
-} from "./adapters";
-import { StrategyType, RebalanceEvent, Vault } from "./types";
+import { PortReserveAsset, SolendReserveAsset, JetReserveAsset } from "./adapters";
+import { StrategyType, RebalanceEvent, Vault, FeeArgs } from "./types";
 
 export class VaultClient {
   private constructor(
@@ -55,11 +51,7 @@ export class VaultClient {
     )) as anchor.Program<CastleLendingAggregator>;
     const vaultState = await program.account.vault.fetch(vaultId);
 
-    const solend = await SolendReserveAsset.load(
-      provider,
-      cluster,
-      reserveMint
-    );
+    const solend = await SolendReserveAsset.load(provider, cluster, reserveMint);
     const port = await PortReserveAsset.load(provider, cluster, reserveMint);
     const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
 
@@ -80,48 +72,35 @@ export class VaultClient {
     jet: JetReserveAsset,
     strategyType: StrategyType,
     owner: PublicKey,
-    feeCarryBps: number = 0,
-    feeMgmtBps: number = 0,
-    supplFeeOwner: PublicKey,
-    supplFeeCarryBps: number = 0,
-    supplFeeMgmtBps: number = 0
+    feeData: FeeArgs
   ): Promise<VaultClient> {
+    const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeeShare } = feeData;
     const vaultId = Keypair.generate();
 
     const [vaultAuthority, authorityBump] = await PublicKey.findProgramAddress(
-      [
-        vaultId.publicKey.toBuffer(),
-        anchor.utils.bytes.utf8.encode("authority"),
-      ],
+      [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("authority")],
       program.programId
     );
 
-    const [vaultReserveTokenAccount, reserveBump] =
-      await PublicKey.findProgramAddress(
-        [vaultId.publicKey.toBuffer(), reserveTokenMint.toBuffer()],
-        program.programId
-      );
+    const [vaultReserveTokenAccount, reserveBump] = await PublicKey.findProgramAddress(
+      [vaultId.publicKey.toBuffer(), reserveTokenMint.toBuffer()],
+      program.programId
+    );
 
-    const [vaultSolendLpTokenAccount, solendLpBump] =
-      await PublicKey.findProgramAddress(
-        [
-          vaultId.publicKey.toBuffer(),
-          solend.accounts.collateralMint.toBuffer(),
-        ],
-        program.programId
-      );
+    const [vaultSolendLpTokenAccount, solendLpBump] = await PublicKey.findProgramAddress(
+      [vaultId.publicKey.toBuffer(), solend.accounts.collateralMint.toBuffer()],
+      program.programId
+    );
 
-    const [vaultPortLpTokenAccount, portLpBump] =
-      await PublicKey.findProgramAddress(
-        [vaultId.publicKey.toBuffer(), port.accounts.collateralMint.toBuffer()],
-        program.programId
-      );
+    const [vaultPortLpTokenAccount, portLpBump] = await PublicKey.findProgramAddress(
+      [vaultId.publicKey.toBuffer(), port.accounts.collateralMint.toBuffer()],
+      program.programId
+    );
 
-    const [vaultJetLpTokenAccount, jetLpBump] =
-      await PublicKey.findProgramAddress(
-        [vaultId.publicKey.toBuffer(), jet.accounts.depositNoteMint.toBuffer()],
-        program.programId
-      );
+    const [vaultJetLpTokenAccount, jetLpBump] = await PublicKey.findProgramAddress(
+      [vaultId.publicKey.toBuffer(), jet.accounts.depositNoteMint.toBuffer()],
+      program.programId
+    );
 
     const [lpTokenMint, lpTokenMintBump] = await PublicKey.findProgramAddress(
       [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("lp_mint")],
@@ -129,18 +108,15 @@ export class VaultClient {
     );
 
     const [feeReceiver, feeReceiverBump] = await PublicKey.findProgramAddress(
-      [
-        vaultId.publicKey.toBuffer(),
-        anchor.utils.bytes.utf8.encode("fee_receiver"),
-      ],
+      [vaultId.publicKey.toBuffer(), anchor.utils.bytes.utf8.encode("fee_receiver")],
       program.programId
     );
 
-    const supplFeeReceiver = await Token.getAssociatedTokenAddress(
+    const referralFeeReceiver = await Token.getAssociatedTokenAddress(
       ASSOCIATED_TOKEN_PROGRAM_ID,
       TOKEN_PROGRAM_ID,
       lpTokenMint,
-      supplFeeOwner,
+      referralFeeOwner,
       true
     );
 
@@ -158,8 +134,7 @@ export class VaultClient {
       {
         feeCarryBps: new anchor.BN(feeCarryBps),
         feeMgmtBps: new anchor.BN(feeMgmtBps),
-        supplFeeCarryBps: new anchor.BN(supplFeeCarryBps),
-        supplFeeMgmtBps: new anchor.BN(supplFeeMgmtBps),
+        referralFeeShare: new anchor.BN(referralFeeShare),
       },
       {
         accounts: {
@@ -178,8 +153,8 @@ export class VaultClient {
           portReserve: port.accounts.reserve,
           jetReserve: jet.accounts.reserve,
           feeReceiver: feeReceiver,
-          supplFeeReceiver: supplFeeReceiver,
-          supplFeeOwner: supplFeeOwner,
+          referralFeeReceiver: referralFeeReceiver,
+          referralFeeOwner: referralFeeOwner,
           payer: wallet.payer.publicKey,
           owner: owner,
           systemProgram: SystemProgram.programId,
@@ -193,14 +168,7 @@ export class VaultClient {
     );
     const vaultState = await program.account.vault.fetch(vaultId.publicKey);
 
-    return new VaultClient(
-      program,
-      vaultId.publicKey,
-      vaultState,
-      solend,
-      port,
-      jet
-    );
+    return new VaultClient(program, vaultId.publicKey, vaultState, solend, port, jet);
   }
 
   private getRefreshIx(): TransactionInstruction {
@@ -227,8 +195,8 @@ export class VaultClient {
         jetFeeNoteVault: this.jet.accounts.feeNoteVault,
         jetDepositNoteMint: this.jet.accounts.depositNoteMint,
         jetPyth: this.jet.accounts.pythPrice,
-        feeReceiver: this.vaultState.feeReceiver,
-        supplFeeReceiver: this.vaultState.supplFeeReceiver,
+        feeReceiver: this.vaultState.fees.feeReceiver,
+        referralFeeReceiver: this.vaultState.fees.referralFeeReceiver,
         tokenProgram: TOKEN_PROGRAM_ID,
         clock: SYSVAR_CLOCK_PUBKEY,
       },
@@ -301,11 +269,10 @@ export class VaultClient {
       userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
     }
 
-    const userLpTokenAccount = await this.getUserLpTokenAccount(
-      wallet.publicKey
+    const userLpTokenAccount = await this.getUserLpTokenAccount(wallet.publicKey);
+    const userLpTokenAccountInfo = await this.program.provider.connection.getAccountInfo(
+      userLpTokenAccount
     );
-    const userLpTokenAccountInfo =
-      await this.program.provider.connection.getAccountInfo(userLpTokenAccount);
 
     // Create account if it does not exist
     let createLpAcctTx: Transaction;
@@ -353,13 +320,8 @@ export class VaultClient {
    * @param amount denominated in lp tokens
    * @returns
    */
-  async withdraw(
-    wallet: anchor.Wallet,
-    amount: number
-  ): Promise<TransactionSignature[]> {
-    const userLpTokenAccount = await this.getUserLpTokenAccount(
-      wallet.publicKey
-    );
+  async withdraw(wallet: anchor.Wallet, amount: number): Promise<TransactionSignature[]> {
+    const userLpTokenAccount = await this.getUserLpTokenAccount(wallet.publicKey);
 
     let txs: SendTxRequest[] = [];
 
@@ -386,13 +348,11 @@ export class VaultClient {
 
     if (vaultReserveAmount.lt(convertedAmount)) {
       // Sort reconcile ixs by most to least outflows
-      const reconcileIxs = (
-        await this.newAndOldallocationsWithReconcileIxs()
-      ).sort((a, b) => a[0].sub(a[1]).sub(b[0].sub(b[1])).toNumber());
+      const reconcileIxs = (await this.newAndOldallocationsWithReconcileIxs()).sort(
+        (a, b) => a[0].sub(a[1]).sub(b[0].sub(b[1])).toNumber()
+      );
 
-      const toWithdrawAmount = convertedAmount
-        .sub(vaultReserveAmount)
-        .toNumber();
+      const toWithdrawAmount = convertedAmount.sub(vaultReserveAmount).toNumber();
       // TODO use bignumber
       let withdrawnAmount = 0;
       let n = 0;
@@ -420,21 +380,13 @@ export class VaultClient {
       withdrawTx.add(...wrappedSolIxResponse.openIxs);
       userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
     } else {
-      userReserveTokenAccount = await this.getUserReserveTokenAccount(
-        wallet.publicKey
-      );
+      userReserveTokenAccount = await this.getUserReserveTokenAccount(wallet.publicKey);
       // Create reserve token account to withdraw into if it does not exist
       const userReserveTokenAccountInfo =
-        await this.program.provider.connection.getAccountInfo(
-          userReserveTokenAccount
-        );
+        await this.program.provider.connection.getAccountInfo(userReserveTokenAccount);
       if (userReserveTokenAccountInfo == null) {
         withdrawTx.add(
-          createAta(
-            wallet,
-            this.vaultState.reserveTokenMint,
-            userReserveTokenAccount
-          )
+          createAta(wallet, this.vaultState.reserveTokenMint, userReserveTokenAccount)
         );
       }
     }
@@ -493,10 +445,7 @@ export class VaultClient {
       await this.newAndOldallocationsWithReconcileIxs();
 
     const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
-      oldAndNewallocationsWithReconcileIxs.map((e, _) => [
-        e[0].sub(e[1]),
-        e[2](),
-      ]);
+      oldAndNewallocationsWithReconcileIxs.map((e, _) => [e[0].sub(e[1]), e[2]()]);
 
     const reconcileIxs = allocationDiffsWithReconcileIxs
       .sort((a, b) => a[0].sub(b[0]).toNumber())
@@ -543,16 +492,12 @@ export class VaultClient {
     return [
       [
         new Big(newAllocations.solend.toString()),
-        await this.solend.getLpTokenAccountValue(
-          this.vaultState.vaultSolendLpToken
-        ),
+        await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken),
         this.getReconcileSolendIx.bind(this),
       ],
       [
         new Big(newAllocations.port.toString()),
-        await this.port.getLpTokenAccountValue(
-          this.vaultState.vaultPortLpToken
-        ),
+        await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken),
         this.getReconcilePortIx.bind(this),
       ],
       [
@@ -637,23 +582,17 @@ export class VaultClient {
         new Big(0),
         new Big(
           (
-            await this.getReserveTokenAccountInfo(
-              this.vaultState.vaultReserveToken
-            )
+            await this.getReserveTokenAccountInfo(this.vaultState.vaultReserveToken)
           ).amount.toString()
         ),
       ],
       [
         await this.solend.getApy(),
-        await this.solend.getLpTokenAccountValue(
-          this.vaultState.vaultSolendLpToken
-        ),
+        await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken),
       ],
       [
         await this.port.getApy(),
-        await this.port.getLpTokenAccountValue(
-          this.vaultState.vaultPortLpToken
-        ),
+        await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken),
       ],
       [
         await this.jet.getApy(),
@@ -697,16 +636,12 @@ export class VaultClient {
     await this.reload();
 
     const values = [
-      await this.solend.getLpTokenAccountValue(
-        this.vaultState.vaultSolendLpToken
-      ),
+      await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken),
       await this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken),
       await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken),
       new Big(
         (
-          await this.getReserveTokenAccountInfo(
-            this.vaultState.vaultReserveToken
-          )
+          await this.getReserveTokenAccountInfo(this.vaultState.vaultReserveToken)
         ).amount.toString()
       ),
     ];
@@ -719,12 +654,8 @@ export class VaultClient {
   async getUserValue(address: PublicKey): Promise<Big> {
     const userLpTokenAccount = await this.getUserLpTokenAccount(address);
     try {
-      const userLpTokenAccountInfo = await this.getLpTokenAccountInfo(
-        userLpTokenAccount
-      );
-      const userLpTokenAmount = new Big(
-        userLpTokenAccountInfo.amount.toString()
-      );
+      const userLpTokenAccountInfo = await this.getLpTokenAccountInfo(userLpTokenAccount);
+      const userLpTokenAmount = new Big(userLpTokenAccountInfo.amount.toString());
       const exchangeRate = await this.getLpExchangeRate();
       return userLpTokenAmount.mul(exchangeRate);
     } catch {
@@ -787,26 +718,24 @@ export class VaultClient {
       TOKEN_PROGRAM_ID,
       Keypair.generate() // dummy since we don't need to send txs
     );
-    return lpToken.getAccountInfo(this.vaultState.feeReceiver);
+    return lpToken.getAccountInfo(this.vaultState.fees.feeReceiver);
   }
 
-  async getSupplFeeReceiverAccountInfo(): Promise<AccountInfo> {
+  async getReferralFeeReceiverAccountInfo(): Promise<AccountInfo> {
     const lpToken = new Token(
       this.program.provider.connection,
       this.vaultState.lpTokenMint,
       TOKEN_PROGRAM_ID,
       Keypair.generate() // dummy since we don't need to send txs
     );
-    return lpToken.getAccountInfo(this.vaultState.supplFeeReceiver);
+    return lpToken.getAccountInfo(this.vaultState.fees.referralFeeReceiver);
   }
 
   async debug_log() {
     console.log(
       "solend value: ",
       (
-        await this.solend.getLpTokenAccountValue(
-          this.vaultState.vaultSolendLpToken
-        )
+        await this.solend.getLpTokenAccountValue(this.vaultState.vaultSolendLpToken)
       ).toNumber()
     );
     console.log(
@@ -817,9 +746,7 @@ export class VaultClient {
     );
     console.log(
       "jet value: ",
-      (
-        await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken)
-      ).toNumber()
+      (await this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken)).toNumber()
     );
   }
 }
