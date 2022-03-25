@@ -21,6 +21,6 @@ pub enum ErrorCode {
     #[msg("Failed to perform a math operation without an overflow")]
     OverflowError,
 
-    #[msg("Invalid fee share")]
+    #[msg("Failed to set referral fee share which is greater than 50%")]
     FeeError,
 }

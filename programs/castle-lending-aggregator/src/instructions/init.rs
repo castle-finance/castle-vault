@@ -21,11 +21,10 @@ pub struct InitBumpSeeds {
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
-pub struct AllFees {
-    fee_carry_bps: u16,
-    fee_mgmt_bps: u16,
-    suppl_fee_carry_bps: u16,
-    suppl_fee_mgmt_bps: u16,
+pub struct FeeArgs {
+    pub fee_carry_bps: u16,
+    pub fee_mgmt_bps: u16,
+    pub referral_fee_share: u8,
 }
 
 #[derive(Accounts)]
@@ -131,10 +130,10 @@ pub struct Initialize<'info> {
     /// Token account that receives the secondary ratio of fees from the vault
     /// denominated in vault lp tokens
     #[account(mut)]
-    pub suppl_fee_receiver: AccountInfo<'info>,
+    pub referral_fee_receiver: AccountInfo<'info>,
 
-    /// Owner of the suppl fee reciever token account
-    pub suppl_fee_owner: AccountInfo<'info>,
+    /// Owner of the referral fee reciever token account
+    pub referral_fee_owner: AccountInfo<'info>,
 
     /// Account that pays for above account inits
     #[account(mut)]
@@ -167,13 +166,13 @@ impl<'info> Initialize<'info> {
         )
     }
 
-    fn init_suppl_fee_receiver_context(&self) -> CpiContext<'_, '_, '_, 'info, Create<'info>> {
+    fn init_referral_fee_receiver_context(&self) -> CpiContext<'_, '_, '_, 'info, Create<'info>> {
         CpiContext::new(
             self.associated_token_program.to_account_info(),
             Create {
                 payer: self.payer.to_account_info(),
-                associated_token: self.suppl_fee_receiver.to_account_info(),
-                authority: self.suppl_fee_owner.to_account_info(),
+                associated_token: self.referral_fee_receiver.to_account_info(),
+                authority: self.referral_fee_owner.to_account_info(),
                 mint: self.lp_token_mint.to_account_info(),
                 system_program: self.system_program.to_account_info(),
                 token_program: self.token_program.to_account_info(),
@@ -182,24 +181,23 @@ impl<'info> Initialize<'info> {
         )
     }
 
-    fn validate_suppl_token(&self) -> ProgramResult {
-        let suppl_fee_receiver = associated_token::get_associated_token_address(
-            &self.suppl_fee_owner.key(),
+    fn validate_referral_token(&self) -> ProgramResult {
+        let referral_fee_receiver = associated_token::get_associated_token_address(
+            &self.referral_fee_owner.key(),
             &self.lp_token_mint.key(),
         );
 
-        if suppl_fee_receiver.ne(&self.suppl_fee_receiver.key()) {
+        if referral_fee_receiver.ne(&self.referral_fee_receiver.key()) {
             return Err(ProgramError::InvalidAccountData);
         }
 
         Ok(())
     }
 
-    fn validate_suppl_fees(&self, suppl_carry_fees: u16, suppl_mgmt_fees: u16) -> ProgramResult {
-        if suppl_carry_fees >= 5000 || suppl_mgmt_fees >= 5000 {
+    fn validate_referral_fees(&self, fee_share: u8) -> ProgramResult {
+        if fee_share > 50 {
             return Err(ErrorCode::FeeError.into());
         }
-
         Ok(())
     }
 }
@@ -215,16 +213,16 @@ pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
-    fees: AllFees,
+    fees: FeeArgs,
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
-    // Validating suppl token address
-    ctx.accounts.validate_suppl_token()?;
+    // Validating referral token address
+    ctx.accounts.validate_referral_token()?;
 
-    // Validating suppl token account's mint
+    // Validating referral token account's mint
     ctx.accounts
-        .validate_suppl_fees(fees.suppl_fee_carry_bps, fees.suppl_fee_mgmt_bps)?;
+        .validate_referral_fees(fees.referral_fee_share)?;
 
     let vault = &mut ctx.accounts.vault;
     vault.vault_authority = ctx.accounts.vault_authority.key();
@@ -240,22 +238,24 @@ pub fn handler(
     vault.vault_jet_lp_token = ctx.accounts.vault_jet_lp_token.key();
     vault.lp_token_mint = ctx.accounts.lp_token_mint.key();
     vault.reserve_token_mint = ctx.accounts.reserve_token_mint.key();
-    vault.fee_receiver = ctx.accounts.fee_receiver.key();
-    vault.suppl_fee_receiver = ctx.accounts.suppl_fee_receiver.key();
-    vault.fee_carry_bps = fees.fee_carry_bps;
-    vault.fee_mgmt_bps = fees.fee_mgmt_bps;
-    vault.suppl_fee_carry_bps = fees.suppl_fee_carry_bps;
-    vault.suppl_fee_mgmt_bps = fees.suppl_fee_mgmt_bps;
     vault.last_update = LastUpdate::new(clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;
+
+    vault.fees = VaultFees {
+        fee_receiver: ctx.accounts.fee_receiver.key(),
+        referral_fee_receiver: ctx.accounts.referral_fee_receiver.key(),
+        fee_carry_bps: fees.fee_carry_bps,
+        fee_mgmt_bps: fees.fee_mgmt_bps,
+        referral_fee_share: fees.referral_fee_share,
+    };
 
     // Initialize fee receiver account
     // Needs to be manually done here instead of with anchor because the mint is initialized with anchor
     token::initialize_account(ctx.accounts.init_fee_receiver_context())?;
 
-    // Initialize suppl fee receiver account
-    associated_token::create(ctx.accounts.init_suppl_fee_receiver_context())?;
+    // Initialize referral fee receiver account
+    associated_token::create(ctx.accounts.init_referral_fee_receiver_context())?;
 
     Ok(())
 }

@@ -8,7 +8,7 @@ pub mod math;
 pub mod rebalance;
 pub mod state;
 
-use crate::state::StrategyType;
+use crate::{init::FeeArgs, state::StrategyType};
 use instructions::*;
 
 declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
@@ -21,7 +21,7 @@ pub mod castle_lending_aggregator {
         ctx: Context<Initialize>,
         _bumps: InitBumpSeeds,
         strategy_type: StrategyType,
-        fees: AllFees,
+        fees: FeeArgs,
     ) -> ProgramResult {
         instructions::init::handler(ctx, _bumps, strategy_type, fees)
     }
