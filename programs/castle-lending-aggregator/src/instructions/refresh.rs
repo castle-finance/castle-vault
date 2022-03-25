@@ -244,12 +244,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
     // Calculate fees
-    let total_fees = vault.calculate_fees(
-        vault_value,
-        ctx.accounts.clock.slot,
-        ctx.accounts.vault.fees.fee_carry_bps,
-        ctx.accounts.vault.fees.fee_mgmt_bps,
-    )?;
+    let total_fees = vault.calculate_fees(vault_value, ctx.accounts.clock.slot)?;
 
     msg!("Total fees accrued: {}", total_fees);
 

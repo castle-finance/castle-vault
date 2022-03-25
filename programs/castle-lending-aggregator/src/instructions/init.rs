@@ -22,8 +22,8 @@ pub struct InitBumpSeeds {
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct FeeArgs {
-    pub fee_carry_bps: u16,
-    pub fee_mgmt_bps: u16,
+    pub fee_carry_bps: u32,
+    pub fee_mgmt_bps: u32,
     pub referral_fee_share: u8,
 }
 
