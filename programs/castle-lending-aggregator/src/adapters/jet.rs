@@ -1,8 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
-use jet::{Amount, Rounding};
+use jet::{state::CachedReserveInfo, Amount, Rounding};
 
-use crate::{reconcile::LendingMarket, state::Vault};
+use crate::{
+    reconcile::LendingMarket,
+    state::{Allocation, Vault},
+};
 
 #[derive(Accounts)]
 pub struct JetAccounts<'info> {
@@ -53,6 +56,16 @@ pub struct JetAccounts<'info> {
     pub jet_lp_mint: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
+}
+
+impl<'info> JetAccounts<'info> {
+    // TODO should this return a reference?
+    fn get_reserve_info(&self) -> Result<CachedReserveInfo, ProgramError> {
+        let market = self.jet_market.load()?;
+        let reserve = self.jet_reserve.load()?;
+        let clock = Clock::get()?;
+        Ok(*market.reserves().get_cached(reserve.index, clock.slot))
+    }
 }
 
 impl<'info> LendingMarket for JetAccounts<'info> {
@@ -106,22 +119,12 @@ impl<'info> LendingMarket for JetAccounts<'info> {
     }
 
     fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64, ProgramError> {
-        let reserve_info = {
-            let market = self.jet_market.load()?;
-            let reserve = self.jet_reserve.load()?;
-            let clock = Clock::get()?;
-            *market.reserves().get_cached(reserve.index, clock.slot)
-        };
-        Ok(Amount::from_deposit_notes(amount).as_tokens(&reserve_info, Rounding::Down))
+        let reserve_info = self.get_reserve_info()?;
+        Ok(Amount::from_tokens(amount).as_deposit_notes(&reserve_info, Rounding::Down)?)
     }
 
     fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64, ProgramError> {
-        let reserve_info = {
-            let market = self.jet_market.load()?;
-            let reserve = self.jet_reserve.load()?;
-            let clock = Clock::get()?;
-            *market.reserves().get_cached(reserve.index, clock.slot)
-        };
+        let reserve_info = self.get_reserve_info()?;
         Ok(Amount::from_deposit_notes(amount).as_tokens(&reserve_info, Rounding::Down))
     }
 
@@ -133,11 +136,11 @@ impl<'info> LendingMarket for JetAccounts<'info> {
         self.vault_jet_lp_token.amount
     }
 
-    fn get_allocation(&self) -> u64 {
-        self.vault.allocations.jet.value
+    fn get_allocation(&self) -> Allocation {
+        self.vault.allocations.jet
     }
 
-    fn reset_allocations(&mut self) {
+    fn reset_allocation(&mut self) {
         self.vault.allocations.jet.reset();
     }
 }

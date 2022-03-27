@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-pub mod cpi;
+pub mod adapters;
 pub mod errors;
 pub mod events;
 pub mod instructions;
@@ -8,8 +8,9 @@ pub mod math;
 pub mod rebalance;
 pub mod state;
 
-use crate::state::StrategyType;
+use adapters::*;
 use instructions::*;
+use state::StrategyType;
 
 declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 

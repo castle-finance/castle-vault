@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use port_anchor_adaptor::PortReserve;
 
-use crate::cpi::solend_cpi::{self, SolendReserve};
+use crate::adapters::{solend, SolendReserve};
 use crate::errors::ErrorCode;
 use crate::state::Vault;
 
@@ -102,14 +102,15 @@ pub struct Refresh<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
+// TODO refactor refresh cpi calls into adapter pattern
 impl<'info> Refresh<'info> {
     /// CpiContext for refreshing solend reserve
     pub fn solend_refresh_reserve_context(
         &self,
-    ) -> CpiContext<'_, '_, '_, 'info, solend_cpi::RefreshReserve<'info>> {
+    ) -> CpiContext<'_, '_, '_, 'info, solend::RefreshReserve<'info>> {
         CpiContext::new(
             self.solend_program.clone(),
-            solend_cpi::RefreshReserve {
+            solend::RefreshReserve {
                 lending_program: self.solend_program.clone(),
                 reserve: self.solend_reserve.to_account_info(),
                 pyth_reserve_liquidity_oracle: self.solend_pyth.clone(),
@@ -170,7 +171,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     msg!("Refreshing");
 
     // Refresh lending market reserves
-    solend_cpi::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
+    solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
     port_anchor_adaptor::refresh_port_reserve(
         ctx.accounts.port_refresh_reserve_context(),
         port_anchor_adaptor::Cluster::Devnet,
