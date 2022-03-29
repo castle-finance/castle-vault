@@ -29,6 +29,8 @@
   "scripts": {
     "build": "tsc",
     "lint": "tslint -c tslint.json src/**/*.ts",
+    "prettify": "prettier -w ./src",
+    "pre-commit": "yarn prettify && yarn lint",
     "prepublish": "npm run build",
     "test": "ts-mocha test/*.test.ts -t 100000"
   },
