@@ -26,17 +26,15 @@ describe("castle-vault", () => {
   const pythPrice = new PublicKey("H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG");
   const switchboardFeed = new PublicKey("AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL");
 
+  const slotsPerYear = 63072000;
   const initialReserveAmount = 100;
-  const depositAmount = 1000000000;
-  const withdrawAmount = 500000000;
+  const depositAmount = 1 * 10 ** 9;
+  const withdrawAmount = 0.5 * 10 ** 9;
   const initialCollateralRatio = 1.0;
-  const feeMgmtBps = 8000;
-  const feeCarryBps = 8000;
+  const feeMgmtBps = 10000;
+  const feeCarryBps = 10000;
   const referralFeeShare = 20;
   const referralFeeOwner = Keypair.generate().publicKey;
-
-  // TODO auto calculate from above vars
-  const feeAmount = 8;
 
   let reserveToken: Token;
 
@@ -46,7 +44,74 @@ describe("castle-vault", () => {
 
   let vaultClient: VaultClient;
 
+  let expectedWithdrawAmount: anchor.BN;
+  let lastUpdatedVaultBalance: anchor.BN;
+  let totalFees: { primary: anchor.BN; referral: anchor.BN };
+  let lastUpdatedSlot: number;
+
+  async function sleep(t: number) {
+    return new Promise((res) => setTimeout(res, t));
+  }
+
+  async function fetchSlots(txs: string[]): Promise<number[]> {
+    const slots = (
+      await Promise.all(
+        txs.map((tx) => {
+          return provider.connection.getParsedConfirmedTransaction(tx, "confirmed");
+        })
+      )
+    ).map((res) => res.slot);
+
+    return slots;
+  }
+
+  async function calculateFees(
+    vaultBalance: anchor.BN,
+    lpMintSupply: anchor.BN,
+    currentSlot: number,
+    slots: number[]
+  ) {
+    const bpsWhole = new anchor.BN(10_000);
+
+    let primFees = new anchor.BN(0);
+    let refFees = new anchor.BN(0);
+
+    for (const newSlot of slots) {
+      const carryFees = vaultBalance
+        .sub(vaultBalance)
+        .mul(new anchor.BN(feeCarryBps))
+        .div(bpsWhole);
+
+      const mgmtFees = vaultBalance
+        .mul(new anchor.BN(feeMgmtBps))
+        .div(bpsWhole)
+        .div(new anchor.BN(slotsPerYear))
+        .div(new anchor.BN(newSlot - currentSlot));
+
+      const tFees = carryFees.add(mgmtFees);
+      const tLpFees = lpMintSupply.mul(tFees).div(vaultBalance);
+
+      primFees = primFees.add(
+        tLpFees.mul(new anchor.BN(100 - referralFeeShare)).div(new anchor.BN(100))
+      );
+
+      refFees = refFees.add(
+        tLpFees.mul(new anchor.BN(referralFeeShare)).div(new anchor.BN(100))
+      );
+
+      lpMintSupply = tFees.add(lpMintSupply);
+      currentSlot = newSlot;
+    }
+
+    return { primary: primFees, referral: refFees };
+  }
+
   async function initLendingMarkets() {
+    lastUpdatedVaultBalance = new anchor.BN(0);
+    expectedWithdrawAmount = new anchor.BN(0);
+    totalFees = { primary: new anchor.BN(0), referral: new anchor.BN(0) };
+    lastUpdatedSlot = 0;
+
     const sig = await provider.connection.requestAirdrop(owner.publicKey, 1000000000);
 
     const supplSig = await provider.connection.requestAirdrop(
@@ -139,7 +204,13 @@ describe("castle-vault", () => {
       const userReserveTokenAccount = await reserveToken.createAccount(wallet.publicKey);
       await reserveToken.mintTo(userReserveTokenAccount, owner, [], depositAmount);
 
-      await vaultClient.deposit(wallet, depositAmount, userReserveTokenAccount);
+      const txs = await vaultClient.deposit(
+        wallet,
+        depositAmount,
+        userReserveTokenAccount
+      );
+      await sleep(1000);
+      const depositTxSlots = await fetchSlots(txs);
 
       const userTokenAccountInfo = await reserveToken.getAccountInfo(
         userReserveTokenAccount
@@ -167,15 +238,44 @@ describe("castle-vault", () => {
         lpTokenMintInfo.supply.toNumber(),
         depositAmount * initialCollateralRatio
       );
+
+      lastUpdatedSlot = depositTxSlots[depositTxSlots.length - 1];
     };
   }
 
-  function testWithdraw(
-    expectUserLp: number,
-    expectUserReserve: number
-  ): () => Promise<void> {
+  function testWithdraw(expectUserLp: number): () => Promise<void> {
     return async function () {
-      await vaultClient.withdraw(wallet, withdrawAmount);
+      lastUpdatedVaultBalance = new anchor.BN(
+        (await vaultClient.getTotalValue()).toNumber()
+      );
+
+      const beforeWithdrawLpSupply = (await vaultClient.getLpTokenMintInfo()).supply;
+
+      const txs = await vaultClient.withdraw(wallet, withdrawAmount);
+      await sleep(1000);
+
+      const withdrawTxSlots = await fetchSlots(txs);
+
+      const lastUpdatedMintSupply = (await vaultClient.getLpTokenMintInfo()).supply.add(
+        new anchor.BN(withdrawAmount)
+      );
+
+      const feeAmount = await calculateFees(
+        lastUpdatedVaultBalance,
+        beforeWithdrawLpSupply,
+        lastUpdatedSlot,
+        withdrawTxSlots
+      );
+
+      totalFees = {
+        primary: totalFees.primary.add(feeAmount.primary),
+        referral: totalFees.referral.add(feeAmount.referral),
+      };
+
+      expectedWithdrawAmount = new anchor.BN(withdrawAmount)
+        .mul(lastUpdatedVaultBalance)
+        .div(lastUpdatedMintSupply)
+        .add(expectedWithdrawAmount);
 
       const userReserveTokenAccount = await vaultClient.getUserReserveTokenAccount(
         wallet.publicKey
@@ -192,18 +292,22 @@ describe("castle-vault", () => {
       );
 
       const feeReceiverAccountInfo = await vaultClient.getFeeReceiverAccountInfo();
-      const supplFeeReceiverAccountInfo =
+      const referralFeeAccountInfo =
         await vaultClient.getReferralFeeReceiverAccountInfo();
 
-      const supplFeesReceived = supplFeeReceiverAccountInfo.amount.toNumber();
+      const referralFeesReceived = referralFeeAccountInfo.amount.toNumber();
       const feesReceived = feeReceiverAccountInfo.amount.toNumber();
 
-      console.log(feesReceived, supplFeesReceived);
-
       assert.equal(userLpTokenAccountInfo.amount.toNumber(), expectUserLp);
-      assert.equal(userReserveTokenAccountInfo.amount.toNumber(), expectUserReserve);
-      assert.notEqual(supplFeesReceived, 0);
-      assert.notEqual(feesReceived, 0);
+      assert.equal(
+        userReserveTokenAccountInfo.amount.toNumber(),
+        expectedWithdrawAmount.toNumber()
+      );
+
+      assert.equal(feesReceived, totalFees.primary.toNumber());
+      assert.equal(referralFeesReceived, totalFees.referral.toNumber());
+
+      lastUpdatedSlot = withdrawTxSlots[withdrawTxSlots.length - 1];
     };
   }
 
@@ -213,15 +317,32 @@ describe("castle-vault", () => {
     expectedJetAllocation: number
   ): () => Promise<void> {
     return async function () {
-      await vaultClient.rebalance();
+      const beforeRebalanceMintSupply = (await vaultClient.getLpTokenMintInfo()).supply;
+
+      const txs = await vaultClient.rebalance();
+      await sleep(1000);
+
+      const rebalanceTxSlots = await fetchSlots(txs);
+
+      const vaultValue = (await vaultClient.getTotalValue()).toNumber();
+
+      const feeAmount = await calculateFees(
+        new anchor.BN(vaultValue),
+        beforeRebalanceMintSupply,
+        lastUpdatedSlot,
+        rebalanceTxSlots
+      );
+
+      totalFees = {
+        primary: totalFees.primary.add(feeAmount.primary),
+        referral: totalFees.referral.add(feeAmount.referral),
+      };
 
       const vaultReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
         vaultClient.vaultState.vaultReserveToken
       );
       const vaultReserveTokens = vaultReserveTokenAccountInfo.amount.toNumber();
       assert(vaultReserveTokens <= 3);
-
-      const vaultValue = depositAmount - (withdrawAmount - feeAmount);
 
       const solendCollateralRatio = 1;
       const expectedSolendValue = Math.floor(vaultValue * expectedSolendAllocation);
@@ -277,6 +398,8 @@ describe("castle-vault", () => {
         jetLiquiditySupplyAccountInfo.amount.toNumber(),
         expectedJetValue + initialReserveAmount
       );
+
+      lastUpdatedSlot = rebalanceTxSlots[rebalanceTxSlots.length - 1];
     };
   }
 
@@ -289,18 +412,12 @@ describe("castle-vault", () => {
 
     it(
       "Withdraws from vault reserves",
-      testWithdraw(
-        depositAmount * initialCollateralRatio - withdrawAmount,
-        withdrawAmount - feeAmount
-      )
+      testWithdraw(depositAmount * initialCollateralRatio - withdrawAmount)
     );
 
     it("Forwards deposits to lending markets", testRebalance(1 / 3, 1 / 3, 1 / 3));
 
-    // This fee amount is higher since it takes longer to execute than the other strategy
-    // TODO auto-calculate these based on which slots the txs are confirmed in
-    const finalFeeAmount = feeAmount + 55;
-    it("Withdraws from lending markets", testWithdraw(0, depositAmount - finalFeeAmount));
+    it("Withdraws from lending markets", testWithdraw(0));
   });
 
   describe("max yield strategy", () => {
@@ -312,10 +429,7 @@ describe("castle-vault", () => {
 
     it(
       "Withdraws from vault reserves",
-      testWithdraw(
-        depositAmount * initialCollateralRatio - withdrawAmount,
-        withdrawAmount - feeAmount
-      )
+      testWithdraw(depositAmount * initialCollateralRatio - withdrawAmount)
     );
 
     it("Forwards deposits to lending markets", async () => {
@@ -325,8 +439,6 @@ describe("castle-vault", () => {
       // TODO borrow from port to increase apy and ensure it switches to that
     });
 
-    // TODO auto-calculate these based on which slots the txs are confirmed in
-    const finalFeeAmount = feeAmount + 43;
-    it("Withdraws from lending markets", testWithdraw(0, depositAmount - finalFeeAmount));
+    it("Withdraws from lending markets", testWithdraw(0));
   });
 });
