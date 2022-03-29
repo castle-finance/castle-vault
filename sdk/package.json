@@ -30,7 +30,7 @@
     },
     "scripts": {
         "build": "tsc",
-        "lint": "tslint -c tslint.json src/**/*.ts",
+        "lint": "eslint -c .eslintrc.js src/**/*.ts",
         "prettify": "prettier -w ./src",
         "precommit": "yarn prettify && yarn lint",
         "prepublish": "npm run build",
