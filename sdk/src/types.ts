@@ -2,8 +2,7 @@ import { BN } from "@project-serum/anchor";
 import { PublicKey } from "@solana/web3.js";
 
 /**
- * Enum of supported strategies
- * Canonical single-source-of-truth for valid StrategyRegistry
+ * Canonical source-of-truth of supported strategies
  */
 export enum StrategyTypes {
     maxYield = "maxYield",
