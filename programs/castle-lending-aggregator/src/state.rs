@@ -121,7 +121,7 @@ pub struct VaultFees {
     pub fee_mgmt_bps: u32,
 
     /// Referral fee share for fee splitting
-    pub referral_fee_share: u8,
+    pub referral_fee_pct: u8,
 
     /// Account that primary fees from this vault are sent to
     pub fee_receiver: Pubkey,

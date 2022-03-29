@@ -74,7 +74,7 @@ export class VaultClient {
     owner: PublicKey,
     feeData: FeeArgs
   ): Promise<VaultClient> {
-    const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeeShare } = feeData;
+    const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } = feeData;
     const vaultId = Keypair.generate();
 
     const [vaultAuthority, authorityBump] = await PublicKey.findProgramAddress(
@@ -134,7 +134,7 @@ export class VaultClient {
       {
         feeCarryBps: new anchor.BN(feeCarryBps),
         feeMgmtBps: new anchor.BN(feeMgmtBps),
-        referralFeeShare: new anchor.BN(referralFeeShare),
+        referralFeePct: new anchor.BN(referralFeePct),
       },
       {
         accounts: {

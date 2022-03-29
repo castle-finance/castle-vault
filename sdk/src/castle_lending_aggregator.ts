@@ -1,5 +1,5 @@
 export type CastleLendingAggregator = {
-  version: "1.3.0";
+  version: "1.3.1";
   name: "castle_lending_aggregator";
   instructions: [
     {
@@ -761,14 +761,14 @@ export type CastleLendingAggregator = {
         fields: [
           {
             name: "feeCarryBps";
-            type: "u16";
+            type: "u32";
           },
           {
             name: "feeMgmtBps";
-            type: "u16";
+            type: "u32";
           },
           {
-            name: "referralFeeShare";
+            name: "referralFeePct";
             type: "u8";
           }
         ];
@@ -781,14 +781,14 @@ export type CastleLendingAggregator = {
         fields: [
           {
             name: "feeCarryBps";
-            type: "u16";
+            type: "u32";
           },
           {
             name: "feeMgmtBps";
-            type: "u16";
+            type: "u32";
           },
           {
-            name: "referralFeeShare";
+            name: "referralFeePct";
             type: "u8";
           },
           {
@@ -949,14 +949,29 @@ export type CastleLendingAggregator = {
     },
     {
       code: 306;
-      name: "FeeError";
+      name: "ReferralFeeError";
       msg: "Failed to set referral fee share which is greater than 50%";
+    },
+    {
+      code: 307;
+      name: "FeeBpsError";
+      msg: "Failed to set fee BPS which is greater than 10000";
+    },
+    {
+      code: 308;
+      name: "InvalidFeeReceiver";
+      msg: "Failed to set fee receiver account";
+    },
+    {
+      code: 309;
+      name: "InvalidReferralFeeReceiver";
+      msg: "Failed to set referral fee receiver account";
     }
   ];
 };
 
 export const IDL: CastleLendingAggregator = {
-  version: "1.3.0",
+  version: "1.3.1",
   name: "castle_lending_aggregator",
   instructions: [
     {
@@ -1718,14 +1733,14 @@ export const IDL: CastleLendingAggregator = {
         fields: [
           {
             name: "feeCarryBps",
-            type: "u16",
+            type: "u32",
           },
           {
             name: "feeMgmtBps",
-            type: "u16",
+            type: "u32",
           },
           {
-            name: "referralFeeShare",
+            name: "referralFeePct",
             type: "u8",
           },
         ],
@@ -1738,14 +1753,14 @@ export const IDL: CastleLendingAggregator = {
         fields: [
           {
             name: "feeCarryBps",
-            type: "u16",
+            type: "u32",
           },
           {
             name: "feeMgmtBps",
-            type: "u16",
+            type: "u32",
           },
           {
-            name: "referralFeeShare",
+            name: "referralFeePct",
             type: "u8",
           },
           {
@@ -1906,8 +1921,23 @@ export const IDL: CastleLendingAggregator = {
     },
     {
       code: 306,
-      name: "FeeError",
+      name: "ReferralFeeError",
       msg: "Failed to set referral fee share which is greater than 50%",
+    },
+    {
+      code: 307,
+      name: "FeeBpsError",
+      msg: "Failed to set fee BPS which is greater than 10000",
+    },
+    {
+      code: 308,
+      name: "InvalidFeeReceiver",
+      msg: "Failed to set fee receiver account",
+    },
+    {
+      code: 309,
+      name: "InvalidReferralFeeReceiver",
+      msg: "Failed to set referral fee receiver account",
     },
   ],
 };

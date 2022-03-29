@@ -33,7 +33,7 @@ describe("castle-vault", () => {
   const initialCollateralRatio = 1.0;
   const feeMgmtBps = 10000;
   const feeCarryBps = 10000;
-  const referralFeeShare = 20;
+  const referralFeePct = 20;
   const referralFeeOwner = Keypair.generate().publicKey;
 
   let reserveToken: Token;
@@ -92,11 +92,11 @@ describe("castle-vault", () => {
       const tLpFees = lpMintSupply.mul(tFees).div(vaultBalance);
 
       primFees = primFees.add(
-        tLpFees.mul(new anchor.BN(100 - referralFeeShare)).div(new anchor.BN(100))
+        tLpFees.mul(new anchor.BN(100 - referralFeePct)).div(new anchor.BN(100))
       );
 
       refFees = refFees.add(
-        tLpFees.mul(new anchor.BN(referralFeeShare)).div(new anchor.BN(100))
+        tLpFees.mul(new anchor.BN(referralFeePct)).div(new anchor.BN(100))
       );
 
       lpMintSupply = tFees.add(lpMintSupply);
@@ -192,7 +192,7 @@ describe("castle-vault", () => {
         jet,
         strategyType,
         owner.publicKey,
-        { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeeShare }
+        { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct }
       );
       // TODO add more checks
       assert.notEqual(vaultClient.vaultState, null);

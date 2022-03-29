@@ -14,6 +14,8 @@ pub struct Refresh<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
+        constraint = vault.fees.fee_receiver.eq(&fee_receiver.key()) @ ErrorCode::InvalidFeeReceiver,
+        constraint = vault.fees.referral_fee_receiver.eq(&referral_fee_receiver.key()) @ ErrorCode::InvalidReferralFeeReceiver,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
@@ -108,24 +110,6 @@ pub struct Refresh<'info> {
 
 // TODO refactor refresh cpi calls into adapter pattern
 impl<'info> Refresh<'info> {
-    /// Validation to check if right fee_receivers are passed
-    pub fn validate_fee_receivers(
-        &self,
-        fee_receiver: &Pubkey,
-        referral_fee_receiver: &Pubkey,
-    ) -> ProgramResult {
-        match self.vault.fees.fee_receiver.eq(fee_receiver)
-            && self
-                .vault
-                .fees
-                .referral_fee_receiver
-                .eq(referral_fee_receiver)
-        {
-            true => Ok(()),
-            false => Err(ProgramError::InvalidAccountData),
-        }
-    }
-
     /// CpiContext for refreshing solend reserve
     pub fn solend_refresh_reserve_context(
         &self,
@@ -195,12 +179,6 @@ impl<'info> Refresh<'info> {
 pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     msg!("Refreshing");
 
-    // Fee receiver Validation
-    ctx.accounts.validate_fee_receivers(
-        &ctx.accounts.fee_receiver.key(),
-        &ctx.accounts.referral_fee_receiver.key(),
-    )?;
-
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
     port_anchor_adaptor::refresh_port_reserve(
@@ -247,33 +225,37 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     // Calculate fees
     let total_fees = vault.calculate_fees(vault_value, ctx.accounts.clock.slot)?;
 
-    msg!("Total fees accrued: {}", total_fees);
+    let total_fees_converted =
+        crate::math::calc_reserve_to_lp(total_fees, ctx.accounts.lp_token_mint.supply, vault_value)
+            .ok_or(ErrorCode::MathError)?;
+
+    msg!(
+        "Total fees: {} reserve tokens, {} lp tokens",
+        total_fees,
+        total_fees_converted
+    );
 
     let primary_fees = total_fees
-        .checked_mul(100 - ctx.accounts.vault.fees.referral_fee_share as u64)
+        .checked_mul(100 - ctx.accounts.vault.fees.referral_fee_pct as u64)
         .ok_or(ErrorCode::MathError)?
         .checked_div(100)
         .ok_or(ErrorCode::MathError)?;
 
-    let primary_fees_converted = crate::math::calc_reserve_to_lp(
-        primary_fees,
-        ctx.accounts.lp_token_mint.supply,
-        vault_value,
-    )
-    .ok_or(ErrorCode::MathError)?;
+    let primary_fees_converted = total_fees_converted
+        .checked_mul(100 - ctx.accounts.vault.fees.referral_fee_pct as u64)
+        .and_then(|val| val.checked_div(100))
+        .ok_or(ErrorCode::MathError)?;
 
     let referral_fees = total_fees
-        .checked_mul(ctx.accounts.vault.fees.referral_fee_share as u64)
+        .checked_mul(ctx.accounts.vault.fees.referral_fee_pct as u64)
         .ok_or(ErrorCode::MathError)?
         .checked_div(100)
         .ok_or(ErrorCode::MathError)?;
 
-    let referral_fees_converted = crate::math::calc_reserve_to_lp(
-        referral_fees,
-        ctx.accounts.lp_token_mint.supply,
-        vault_value,
-    )
-    .ok_or(ErrorCode::MathError)?;
+    let referral_fees_converted = total_fees_converted
+        .checked_mul(ctx.accounts.vault.fees.referral_fee_pct as u64)
+        .and_then(|val| val.checked_div(100))
+        .ok_or(ErrorCode::MathError)?;
 
     // Mint new LP tokens to fee_receiver
     msg!(

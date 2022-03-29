@@ -24,7 +24,7 @@ pub struct InitBumpSeeds {
 pub struct FeeArgs {
     pub fee_carry_bps: u32,
     pub fee_mgmt_bps: u32,
-    pub referral_fee_share: u8,
+    pub referral_fee_pct: u8,
 }
 
 #[derive(Accounts)]
@@ -194,10 +194,19 @@ impl<'info> Initialize<'info> {
         Ok(())
     }
 
-    fn validate_referral_fees(&self, fee_share: u8) -> ProgramResult {
-        if fee_share > 50 {
-            return Err(ErrorCode::FeeError.into());
+    fn validate_fees(&self, fees: &FeeArgs) -> ProgramResult {
+        if fees.fee_carry_bps > 10000 {
+            return Err(ErrorCode::FeeBpsError.into());
         }
+
+        if fees.fee_mgmt_bps > 10000 {
+            return Err(ErrorCode::FeeBpsError.into());
+        }
+
+        if fees.referral_fee_pct > 50 {
+            return Err(ErrorCode::ReferralFeeError.into());
+        }
+
         Ok(())
     }
 }
@@ -221,8 +230,7 @@ pub fn handler(
     ctx.accounts.validate_referral_token()?;
 
     // Validating referral token account's mint
-    ctx.accounts
-        .validate_referral_fees(fees.referral_fee_share)?;
+    ctx.accounts.validate_fees(&fees)?;
 
     let vault = &mut ctx.accounts.vault;
     vault.vault_authority = ctx.accounts.vault_authority.key();
@@ -247,7 +255,7 @@ pub fn handler(
         referral_fee_receiver: ctx.accounts.referral_fee_receiver.key(),
         fee_carry_bps: fees.fee_carry_bps,
         fee_mgmt_bps: fees.fee_mgmt_bps,
-        referral_fee_share: fees.referral_fee_share,
+        referral_fee_pct: fees.referral_fee_pct,
     };
 
     // Initialize fee receiver account

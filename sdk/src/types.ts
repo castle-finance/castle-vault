@@ -43,13 +43,13 @@ export interface VaultFees {
   referralFeeReceiver: PublicKey;
   feeCarryBps: number;
   feeMgmtBps: number;
-  referralFeeShare: number;
+  referralFeePct: number;
 }
 
 export interface FeeArgs {
   feeCarryBps: number;
   feeMgmtBps: number;
-  referralFeeShare: number;
+  referralFeePct: number;
   referralFeeOwner: PublicKey;
 }
 
