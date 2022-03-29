@@ -1,6 +1,15 @@
 import { BN } from "@project-serum/anchor";
 import { PublicKey } from "@solana/web3.js";
 
+/**
+ * Enum of supported strategies
+ * Canonical single-source-of-truth for valid StrategyRegistry
+ */
+export enum StrategyTypes {
+    maxYield = "maxYield",
+    equalAllocation = "equalAllocation",
+}
+
 // TODO change to enum or mapping
 export type StrategyType = { equalAllocation: {} } | { maxYield: {} };
 
