@@ -1,13 +1,12 @@
 use std::convert::TryFrom;
 
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program;
 use jet::state::Reserve as JetReserve;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Rate, TryMul};
 use strum_macros::EnumIter;
 
-use crate::cpi::SolendReserve;
+use crate::adapters::SolendReserve;
 
 #[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
 pub enum Provider {
@@ -17,6 +16,7 @@ pub enum Provider {
 }
 
 pub trait Asset {
+    // TODO remove solana-specific error types
     fn expected_return(&self) -> Result<Rate, ProgramError>;
     fn provider(&self) -> Provider;
 }
@@ -37,8 +37,9 @@ impl Asset for LendingMarket {
     }
 }
 
+// TODO move these implementations and Provider out of this module
 impl TryFrom<&SolendReserve> for LendingMarket {
-    type Error = solana_program::program_error::ProgramError;
+    type Error = ProgramError;
 
     fn try_from(value: &SolendReserve) -> Result<Self, Self::Error> {
         let utilization_rate = value.liquidity.utilization_rate()?;
@@ -60,7 +61,7 @@ impl TryFrom<&SolendReserve> for LendingMarket {
 }
 
 impl TryFrom<&PortReserve> for LendingMarket {
-    type Error = solana_program::program_error::ProgramError;
+    type Error = ProgramError;
 
     fn try_from(value: &PortReserve) -> Result<Self, Self::Error> {
         let utilization_rate = value.liquidity.utilization_rate()?;

@@ -4,9 +4,8 @@ use std::ops::Deref;
 use anchor_lang::prelude::*;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Decimal, Rate, TryMul};
-use solend_cpi::SolendReserve;
 
-use crate::cpi::solend_cpi;
+use crate::adapters::SolendReserve;
 use crate::errors::ErrorCode;
 use crate::events::RebalanceEvent;
 use crate::rebalance::assets::{LendingMarket, Provider};
@@ -49,15 +48,16 @@ impl RateUpdate {
         vault_value: u64,
         vault_allocations: &mut Allocations,
     ) -> Result<(), ProgramError> {
-        let rate = self
+        let allocation = self
             .rate
             .try_mul(vault_value)
             .and_then(|product| Decimal::from(product).try_floor_u64())?;
+        //msg!("Setting allocation: {}", allocation);
 
         match self.provider {
-            Provider::Solend => vault_allocations.solend.update(rate, clock.slot),
-            Provider::Port => vault_allocations.port.update(rate, clock.slot),
-            Provider::Jet => vault_allocations.jet.update(rate, clock.slot),
+            Provider::Solend => vault_allocations.solend.update(allocation, clock.slot),
+            Provider::Port => vault_allocations.port.update(allocation, clock.slot),
+            Provider::Jet => vault_allocations.jet.update(allocation, clock.slot),
         }
         Ok(())
     }

@@ -2,7 +2,10 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
 use port_anchor_adaptor::PortReserve;
 
-use crate::{reconcile::LendingMarket, state::Vault};
+use crate::{
+    reconcile::LendingMarket,
+    state::{Allocation, Vault},
+};
 
 #[derive(Accounts)]
 pub struct PortAccounts<'info> {
@@ -112,6 +115,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
         let exchange_rate = self.port_reserve.collateral_exchange_rate()?;
         exchange_rate.collateral_to_liquidity(amount)
     }
+
     fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64, ProgramError> {
         let exchange_rate = self.port_reserve.collateral_exchange_rate()?;
         exchange_rate.liquidity_to_collateral(amount)
@@ -125,11 +129,11 @@ impl<'info> LendingMarket for PortAccounts<'info> {
         self.vault_port_lp_token.amount
     }
 
-    fn get_allocation(&self) -> u64 {
-        self.vault.allocations.port.value
+    fn get_allocation(&self) -> Allocation {
+        self.vault.allocations.port
     }
 
-    fn reset_allocations(&mut self) {
+    fn reset_allocation(&mut self) {
         self.vault.allocations.port.reset();
     }
 }

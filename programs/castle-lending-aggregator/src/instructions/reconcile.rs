@@ -2,8 +2,9 @@ use std::cmp;
 
 use anchor_lang::prelude::*;
 
-use crate::errors::ErrorCode;
+use crate::{errors::ErrorCode, state::Allocation};
 
+// move this somewhere else?
 // Split into CPI, Data, Vault traits?
 pub trait LendingMarket {
     fn deposit(&self, amount: u64) -> ProgramResult;
@@ -16,23 +17,30 @@ pub trait LendingMarket {
 
     fn reserve_tokens_in_vault(&self) -> u64;
     fn lp_tokens_in_vault(&self) -> u64;
-    fn get_allocation(&self) -> u64;
-    fn reset_allocations(&mut self);
+
+    fn get_allocation(&self) -> Allocation;
+    fn reset_allocation(&mut self);
 }
 
 pub fn handler(ctx: Context<impl LendingMarket>, withdraw_option: u64) -> ProgramResult {
     match withdraw_option {
         // Normal case where reconcile is being called after rebalance
         0 => {
-            // TODO check stale allocation
-
             let lp_tokens_in_vault = ctx.accounts.lp_tokens_in_vault();
-            let current_solend_value = ctx
+            let current_value = ctx
                 .accounts
                 .convert_amount_lp_to_reserve(lp_tokens_in_vault)?;
             let allocation = ctx.accounts.get_allocation();
+            //msg!("Desired allocation: {}", allocation.value);
+            //msg!("Current allocation: {}", current_value);
 
-            match allocation.checked_sub(current_solend_value) {
+            // Make sure that rebalance was called recently
+            let clock = Clock::get()?;
+            if allocation.last_update.slots_elapsed(clock.slot)? > 10 {
+                return Err(ErrorCode::AllocationIsNotUpdated.into());
+            }
+
+            match allocation.value.checked_sub(current_value) {
                 Some(tokens_to_deposit) => {
                     // Make sure that the amount deposited is not more than the vault has in reserves
                     let tokens_to_deposit_checked =
@@ -45,7 +53,10 @@ pub fn handler(ctx: Context<impl LendingMarket>, withdraw_option: u64) -> Progra
                     let tokens_to_redeem = ctx
                         .accounts
                         .lp_tokens_in_vault()
-                        .checked_sub(ctx.accounts.convert_amount_reserve_to_lp(allocation)?)
+                        .checked_sub(
+                            ctx.accounts
+                                .convert_amount_reserve_to_lp(allocation.value)?,
+                        )
                         .ok_or(ErrorCode::MathError)?;
 
                     msg!("Redeeming {}", tokens_to_redeem);
@@ -53,7 +64,7 @@ pub fn handler(ctx: Context<impl LendingMarket>, withdraw_option: u64) -> Progra
                     ctx.accounts.redeem(tokens_to_redeem)?;
                 }
             }
-            ctx.accounts.reset_allocations();
+            ctx.accounts.reset_allocation();
         }
         // Extra case where reconcile is being called in same tx as a withdraw or by vault owner to emergency brake
         _ => {
