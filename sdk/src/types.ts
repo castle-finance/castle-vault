@@ -10,7 +10,7 @@ export enum StrategyTypes {
     equalAllocation = "equalAllocation",
 }
 
-// TODO change to enum or mapping
+// ENHANCEMENT - change to be a type-safe mapping of { [key in StrategyTypes]: { ... } }
 export type StrategyType = { equalAllocation: {} } | { maxYield: {} };
 
 export interface LastUpdate {
