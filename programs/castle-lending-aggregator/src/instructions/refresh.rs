@@ -161,7 +161,7 @@ impl<'info> Refresh<'info> {
     /// CpiContext for collecting fees by minting new vault lp tokens
     fn mint_to_context(
         &self,
-        fee_receiver: &Box<Account<'info, TokenAccount>>,
+        fee_receiver: &Account<'info, TokenAccount>,
     ) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
             self.token_program.to_account_info(),
@@ -235,21 +235,9 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         total_fees_converted
     );
 
-    let primary_fees = total_fees
-        .checked_mul(100 - ctx.accounts.vault.fees.referral_fee_pct as u64)
-        .ok_or(ErrorCode::MathError)?
-        .checked_div(100)
-        .ok_or(ErrorCode::MathError)?;
-
     let primary_fees_converted = total_fees_converted
         .checked_mul(100 - ctx.accounts.vault.fees.referral_fee_pct as u64)
         .and_then(|val| val.checked_div(100))
-        .ok_or(ErrorCode::MathError)?;
-
-    let referral_fees = total_fees
-        .checked_mul(ctx.accounts.vault.fees.referral_fee_pct as u64)
-        .ok_or(ErrorCode::MathError)?
-        .checked_div(100)
         .ok_or(ErrorCode::MathError)?;
 
     let referral_fees_converted = total_fees_converted
@@ -259,8 +247,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
 
     // Mint new LP tokens to fee_receiver
     msg!(
-        "Collecting primary fees: {} reserve tokens, {} lp tokens",
-        primary_fees,
+        "Collecting primary fees: {} lp tokens",
         primary_fees_converted
     );
 
@@ -273,8 +260,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
 
     // Mint new LP tokens to referral_fee_receiver
     msg!(
-        "Collecting referral fees: {} reserve tokens, {} lp tokens",
-        referral_fees,
+        "Collecting referral fees: {} lp tokens",
         referral_fees_converted
     );
 
