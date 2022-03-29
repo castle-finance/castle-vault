@@ -22,9 +22,15 @@ describe("castle-vault", () => {
 
   const owner = Keypair.generate();
 
-  const pythProduct = new PublicKey("ALP8SdU9oARYVLgLR7LrqMNCYBnhtnQz1cj6bwgwQmgj");
-  const pythPrice = new PublicKey("H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG");
-  const switchboardFeed = new PublicKey("AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL");
+  const pythProduct = new PublicKey(
+    "ALP8SdU9oARYVLgLR7LrqMNCYBnhtnQz1cj6bwgwQmgj"
+  );
+  const pythPrice = new PublicKey(
+    "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"
+  );
+  const switchboardFeed = new PublicKey(
+    "AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL"
+  );
 
   const initialReserveAmount = 100;
   const depositAmount = 1000000000;
@@ -45,7 +51,10 @@ describe("castle-vault", () => {
   let vaultClient: VaultClient;
 
   async function initLendingMarkets() {
-    const sig = await provider.connection.requestAirdrop(owner.publicKey, 1000000000);
+    const sig = await provider.connection.requestAirdrop(
+      owner.publicKey,
+      1000000000
+    );
     await provider.connection.confirmTransaction(sig, "singleGossip");
 
     reserveToken = await Token.createMint(
@@ -57,7 +66,9 @@ describe("castle-vault", () => {
       TOKEN_PROGRAM_ID
     );
 
-    const ownerReserveTokenAccount = await reserveToken.createAccount(owner.publicKey);
+    const ownerReserveTokenAccount = await reserveToken.createAccount(
+      owner.publicKey
+    );
     await reserveToken.mintTo(
       ownerReserveTokenAccount,
       owner,
@@ -65,7 +76,9 @@ describe("castle-vault", () => {
       3 * initialReserveAmount
     );
 
-    const pythProgram = new PublicKey("FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH");
+    const pythProgram = new PublicKey(
+      "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH"
+    );
     const switchboardProgram = new PublicKey(
       "DtmE9D2CSB4L5D6A15mraeEjrGMm6auWVzgaD8hK2tZM"
     );
@@ -130,7 +143,12 @@ describe("castle-vault", () => {
       const userReserveTokenAccount = await reserveToken.createAccount(
         wallet.publicKey
       );
-      await reserveToken.mintTo(userReserveTokenAccount, owner, [], depositAmount);
+      await reserveToken.mintTo(
+        userReserveTokenAccount,
+        owner,
+        [],
+        depositAmount
+      );
 
       await vaultClient.deposit(wallet, depositAmount, userReserveTokenAccount);
 
@@ -170,13 +188,14 @@ describe("castle-vault", () => {
     return async function () {
       await vaultClient.withdraw(wallet, withdrawAmount);
 
-      const userReserveTokenAccount = await vaultClient.getUserReserveTokenAccount(
-        wallet.publicKey
+      const userReserveTokenAccount =
+        await vaultClient.getUserReserveTokenAccount(wallet.publicKey);
+      const userReserveTokenAccountInfo =
+        await vaultClient.getReserveTokenAccountInfo(userReserveTokenAccount);
+      assert.equal(
+        userReserveTokenAccountInfo.amount.toNumber(),
+        expectUserReserve
       );
-      const userReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
-        userReserveTokenAccount
-      );
-      assert.equal(userReserveTokenAccountInfo.amount.toNumber(), expectUserReserve);
 
       const userLpTokenAccount = await vaultClient.getUserLpTokenAccount(
         wallet.publicKey
@@ -186,7 +205,8 @@ describe("castle-vault", () => {
       );
       assert.equal(userLpTokenAccountInfo.amount.toNumber(), expectUserLp);
 
-      const feeReceiverAccountInfo = await vaultClient.getFeeReceiverAccountInfo();
+      const feeReceiverAccountInfo =
+        await vaultClient.getFeeReceiverAccountInfo();
       const feesReceived = feeReceiverAccountInfo.amount.toNumber();
       assert.notEqual(feesReceived, 0);
     };
@@ -200,16 +220,19 @@ describe("castle-vault", () => {
     return async function () {
       await vaultClient.rebalance();
 
-      const vaultReserveTokenAccountInfo = await vaultClient.getReserveTokenAccountInfo(
-        vaultClient.vaultState.vaultReserveToken
-      );
+      const vaultReserveTokenAccountInfo =
+        await vaultClient.getReserveTokenAccountInfo(
+          vaultClient.vaultState.vaultReserveToken
+        );
       const vaultReserveTokens = vaultReserveTokenAccountInfo.amount.toNumber();
       assert(vaultReserveTokens <= 3);
 
       const vaultValue = depositAmount - (withdrawAmount - feeAmount);
 
       const solendCollateralRatio = 1;
-      const expectedSolendValue = Math.floor(vaultValue * expectedSolendAllocation);
+      const expectedSolendValue = Math.floor(
+        vaultValue * expectedSolendAllocation
+      );
       assert.equal(
         (
           await vaultClient.solend.getLpTokenAccountValue(
@@ -218,9 +241,10 @@ describe("castle-vault", () => {
         ).toNumber(),
         expectedSolendValue * solendCollateralRatio
       );
-      const solendLiquiditySupplyAccountInfo = await reserveToken.getAccountInfo(
-        vaultClient.solend.accounts.liquiditySupply
-      );
+      const solendLiquiditySupplyAccountInfo =
+        await reserveToken.getAccountInfo(
+          vaultClient.solend.accounts.liquiditySupply
+        );
       assert.equal(
         solendLiquiditySupplyAccountInfo.amount.toNumber(),
         expectedSolendValue + initialReserveAmount
@@ -280,7 +304,10 @@ describe("castle-vault", () => {
       )
     );
 
-    it("Forwards deposits to lending markets", testRebalance(1 / 3, 1 / 3, 1 / 3));
+    it(
+      "Forwards deposits to lending markets",
+      testRebalance(1 / 3, 1 / 3, 1 / 3)
+    );
 
     // This fee amount is higher since it takes longer to execute than the other strategy
     // TODO auto-calculate these based on which slots the txs are confirmed in
