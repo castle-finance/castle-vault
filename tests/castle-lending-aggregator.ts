@@ -65,7 +65,7 @@ describe("castle-vault", () => {
     return slots;
   }
 
-  function calc_reserve_to_lp(
+  function calcReserveToLp(
     amount: anchor.BN,
     lpSupply: anchor.BN,
     vaultValue: anchor.BN
@@ -73,7 +73,7 @@ describe("castle-vault", () => {
     return lpSupply.mul(amount).div(vaultValue);
   }
 
-  function split_fees(
+  function splitFees(
     total: anchor.BN,
     splitPercentage: number
   ): [anchor.BN, anchor.BN] {
@@ -111,9 +111,9 @@ describe("castle-vault", () => {
         .div(new anchor.BN(newSlot - currentSlot));
 
       const tFees = mgmtFees;
-      const tLpFees = calc_reserve_to_lp(tFees, lpMintSupply, vaultBalance);
+      const tLpFees = calcReserveToLp(tFees, lpMintSupply, vaultBalance);
 
-      const [primFee, refFee] = split_fees(tLpFees, referralFeePct);
+      const [primFee, refFee] = splitFees(tLpFees, referralFeePct);
 
       primFees = primFees.add(primFee);
       refFees = refFees.add(refFee);
