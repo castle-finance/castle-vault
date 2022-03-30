@@ -65,6 +65,27 @@ describe("castle-vault", () => {
     return slots;
   }
 
+  function calc_reserve_to_lp(
+    amount: anchor.BN,
+    lpSupply: anchor.BN,
+    vaultValue: anchor.BN
+  ): anchor.BN {
+    return lpSupply.mul(amount).div(vaultValue);
+  }
+
+  function split_fees(
+    total: anchor.BN,
+    splitPercentage: number
+  ): [anchor.BN, anchor.BN] {
+    const primFees = total
+      .mul(new anchor.BN(100 - splitPercentage))
+      .div(new anchor.BN(100));
+
+    const refFees = total.mul(new anchor.BN(splitPercentage)).div(new anchor.BN(100));
+
+    return [primFees, refFees];
+  }
+
   async function calculateFees(
     vaultBalance: anchor.BN,
     lpMintSupply: anchor.BN,
@@ -77,10 +98,11 @@ describe("castle-vault", () => {
     let refFees = new anchor.BN(0);
 
     for (const newSlot of slots) {
-      const carryFees = vaultBalance
-        .sub(vaultBalance)
-        .mul(new anchor.BN(feeCarryBps))
-        .div(bpsWhole);
+      // TODO add carry fee calculation
+      //const carryFees = newVaultBalance
+      //  .sub(vaultBalance)
+      //  .mul(new anchor.BN(feeCarryBps))
+      //  .div(bpsWhole);
 
       const mgmtFees = vaultBalance
         .mul(new anchor.BN(feeMgmtBps))
@@ -88,18 +110,15 @@ describe("castle-vault", () => {
         .div(new anchor.BN(slotsPerYear))
         .div(new anchor.BN(newSlot - currentSlot));
 
-      const tFees = carryFees.add(mgmtFees);
-      const tLpFees = lpMintSupply.mul(tFees).div(vaultBalance);
+      const tFees = mgmtFees;
+      const tLpFees = calc_reserve_to_lp(tFees, lpMintSupply, vaultBalance);
 
-      primFees = primFees.add(
-        tLpFees.mul(new anchor.BN(100 - referralFeePct)).div(new anchor.BN(100))
-      );
+      const [primFee, refFee] = split_fees(tLpFees, referralFeePct);
 
-      refFees = refFees.add(
-        tLpFees.mul(new anchor.BN(referralFeePct)).div(new anchor.BN(100))
-      );
+      primFees = primFees.add(primFee);
+      refFees = refFees.add(refFee);
 
-      lpMintSupply = tFees.add(lpMintSupply);
+      lpMintSupply = lpMintSupply.add(tLpFees);
       currentSlot = newSlot;
     }
 
@@ -201,7 +220,9 @@ describe("castle-vault", () => {
 
   function testDeposit(): () => Promise<void> {
     return async function () {
-      const userReserveTokenAccount = await reserveToken.createAccount(wallet.publicKey);
+      const userReserveTokenAccount = await reserveToken.createAccount(
+        wallet.publicKey
+      );
       await reserveToken.mintTo(userReserveTokenAccount, owner, [], depositAmount);
 
       const txs = await vaultClient.deposit(
