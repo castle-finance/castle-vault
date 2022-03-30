@@ -833,6 +833,16 @@ export class VaultClient {
         return lpToken.getAccountInfo(this.vaultState.fees.feeReceiver);
     }
 
+    async getReferralFeeReceiverAccountInfo(): Promise<AccountInfo> {
+        const lpToken = new Token(
+            this.program.provider.connection,
+            this.vaultState.lpTokenMint,
+            TOKEN_PROGRAM_ID,
+            Keypair.generate() // dummy since we don't need to send txs
+        );
+        return lpToken.getAccountInfo(this.vaultState.fees.referralFeeReceiver);
+    }
+
     async debug_log() {
         console.log(
             "solend value: ",
