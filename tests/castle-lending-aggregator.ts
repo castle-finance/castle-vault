@@ -99,7 +99,7 @@ describe("castle-vault", () => {
         tLpFees.mul(new anchor.BN(referralFeePct)).div(new anchor.BN(100))
       );
 
-      lpMintSupply = tFees.add(lpMintSupply);
+      lpMintSupply = tLpFees.add(lpMintSupply);
       currentSlot = newSlot;
     }
 
