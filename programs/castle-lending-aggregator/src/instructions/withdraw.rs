@@ -100,7 +100,13 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
         reserve_tokens_to_transfer,
     )?;
 
-    ctx.accounts.vault.total_value -= reserve_tokens_to_transfer;
+    // This is so that the SDK can read an up-to-date total value without calling refresh
+    ctx.accounts.vault.total_value = ctx
+        .accounts
+        .vault
+        .total_value
+        .checked_sub(reserve_tokens_to_transfer)
+        .ok_or(ErrorCode::MathError)?;
 
     Ok(())
 }

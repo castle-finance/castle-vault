@@ -5,13 +5,15 @@ use std::convert::TryFrom;
 pub const INITIAL_COLLATERAL_RATIO: u64 = 1;
 
 // TODO move to state.rs as a Calculator?
+// TODO return Results
+
 pub fn calc_reserve_to_lp(
     reserve_token_amount: u64,
     lp_token_supply: u64,
     reserve_tokens_in_vault: u64,
 ) -> Option<u64> {
     match reserve_tokens_in_vault {
-        0 => Some(INITIAL_COLLATERAL_RATIO * reserve_token_amount),
+        0 => Some(INITIAL_COLLATERAL_RATIO.checked_mul(reserve_token_amount)?),
         _ => {
             let reserve_token_amount = PreciseNumber::new(reserve_token_amount as u128)?;
             let lp_token_supply = PreciseNumber::new(lp_token_supply as u128)?;
