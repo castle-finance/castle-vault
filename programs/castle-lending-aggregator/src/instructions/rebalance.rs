@@ -2,15 +2,13 @@ use std::convert::TryFrom;
 use std::ops::Deref;
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::TokenAccount;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Decimal, Rate, TryMul};
-use solend::SolendReserve;
 
-use crate::cpi::solend;
+use crate::adapters::SolendReserve;
 use crate::errors::ErrorCode;
 use crate::events::RebalanceEvent;
-use crate::rebalance::assets::{Asset, LendingMarket};
+use crate::rebalance::assets::{LendingMarket, Provider};
 use crate::rebalance::strategies::*;
 use crate::state::*;
 
@@ -22,27 +20,11 @@ pub struct Rebalance<'info> {
     #[account(
         mut,
         constraint = !vault.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
-        has_one = vault_reserve_token,
-        has_one = vault_solend_lp_token,
-        has_one = vault_port_lp_token,
-        has_one = vault_jet_lp_token,
         has_one = solend_reserve,
         has_one = port_reserve,
         has_one = jet_reserve,
     )]
     pub vault: Box<Account<'info, Vault>>,
-
-    /// Token account for the vault's reserve tokens
-    pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
-
-    /// Token account for the vault's solend lp tokens
-    pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
-
-    /// Token account for the vault's port lp tokens
-    pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
-
-    /// Token account for the vault's jet lp tokens
-    pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
@@ -53,59 +35,63 @@ pub struct Rebalance<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
+#[derive(Debug, Clone)]
+pub struct RateUpdate {
+    pub provider: Provider,
+    pub rate: Rate,
+}
+
+impl RateUpdate {
+    pub fn try_apply(
+        &self,
+        clock: &Clock,
+        vault_value: u64,
+        vault_allocations: &mut Allocations,
+    ) -> Result<(), ProgramError> {
+        let allocation = self
+            .rate
+            .try_mul(vault_value)
+            .and_then(|product| Decimal::from(product).try_floor_u64())?;
+        //msg!("Setting allocation: {}", allocation);
+
+        match self.provider {
+            Provider::Solend => vault_allocations.solend.update(allocation, clock.slot),
+            Provider::Port => vault_allocations.port.update(allocation, clock.slot),
+            Provider::Jet => vault_allocations.jet.update(allocation, clock.slot),
+        }
+        Ok(())
+    }
+}
+
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
     msg!("Rebalancing");
-
-    // Convert reserve states to assets
-    let assets: Vec<Box<dyn Asset>> = vec![
-        Box::new(LendingMarket::try_from(
-            ctx.accounts.solend_reserve.clone().into_inner(),
-        )?),
-        Box::new(LendingMarket::try_from(
-            ctx.accounts.port_reserve.clone().into_inner(),
-        )?),
-        Box::new(LendingMarket::try_from(
-            *ctx.accounts.jet_reserve.load()?.deref(),
-        )?),
+    let assets = [
+        LendingMarket::try_from(ctx.accounts.solend_reserve.as_ref().deref())?,
+        LendingMarket::try_from(ctx.accounts.port_reserve.as_ref().deref())?,
+        LendingMarket::try_from(&*ctx.accounts.jet_reserve.load()?)?,
     ];
 
-    // Run strategy to get allocations
     let strategy_allocations = match ctx.accounts.vault.strategy_type {
-        StrategyType::MaxYield => MaxYieldStrategy.calculate_allocations(assets),
-        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_allocations(assets),
-    }
-    .ok_or(ErrorCode::StrategyError)?;
+        StrategyType::MaxYield => MaxYieldStrategy.calculate_allocations(&assets),
+        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_allocations(&assets),
+    }?;
 
     msg!("Strategy allocations: {:?}", strategy_allocations);
 
-    let new_vault_allocations = strategy_allocations
-        .iter()
-        .map(|a| calc_vault_allocation(*a, ctx.accounts.vault.total_value))
-        .collect::<Result<Vec<_>, _>>()?;
-
-    // TODO use https://doc.rust-lang.org/std/ops/trait.Index.html to make this less bad
-    let clock = Clock::get()?;
+    let vault_value = ctx.accounts.vault.total_value;
     let vault_allocations = &mut ctx.accounts.vault.allocations;
-    vault_allocations
-        .solend
-        .update(new_vault_allocations[0], clock.slot);
-    vault_allocations
-        .port
-        .update(new_vault_allocations[1], clock.slot);
-    vault_allocations
-        .jet
-        .update(new_vault_allocations[2], clock.slot);
+    let clock = Clock::get()?;
+
+    strategy_allocations
+        .iter()
+        .try_for_each(|s| s.try_apply(&clock, vault_value, vault_allocations))?;
 
     emit!(RebalanceEvent {
-        solend: new_vault_allocations[0],
-        port: new_vault_allocations[1],
-        jet: new_vault_allocations[2],
+        solend: vault_allocations.solend.value,
+        port: vault_allocations.port.value,
+        jet: vault_allocations.jet.value,
     });
 
     Ok(())
-}
-
-fn calc_vault_allocation(strategy_allocation: Rate, vault_value: u64) -> Result<u64, ProgramError> {
-    Decimal::from(strategy_allocation.try_mul(vault_value)?).try_floor_u64()
 }

@@ -34,6 +34,7 @@ pub struct Deposit<'info> {
 
     /// Token account from which reserve tokens are transferred
     #[account(mut)]
+    //#[soteria(ignore)]
     pub user_reserve_token: Box<Account<'info, TokenAccount>>,
 
     /// Account where vault LP tokens are minted to
@@ -92,6 +93,8 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
 
     token::transfer(ctx.accounts.transfer_context(), reserve_token_amount)?;
 
+    msg!("Minting {} LP tokens", lp_tokens_to_mint);
+
     token::mint_to(
         ctx.accounts
             .mint_to_context()
@@ -99,7 +102,13 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
         lp_tokens_to_mint,
     )?;
 
-    ctx.accounts.vault.total_value += reserve_token_amount;
+    // This is so that the SDK can read an up-to-date total value without calling refresh
+    ctx.accounts.vault.total_value = ctx
+        .accounts
+        .vault
+        .total_value
+        .checked_add(reserve_token_amount)
+        .ok_or(ErrorCode::MathError)?;
 
     Ok(())
 }

@@ -4,7 +4,7 @@ use port_anchor_adaptor::PortReserve;
 
 use std::convert::Into;
 
-use crate::{cpi::SolendReserve, state::*};
+use crate::{adapters::SolendReserve, state::*};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct InitBumpSeeds {

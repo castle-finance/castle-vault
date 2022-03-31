@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-pub mod cpi;
+pub mod adapters;
 pub mod errors;
 pub mod events;
 pub mod instructions;
@@ -8,8 +8,9 @@ pub mod math;
 pub mod rebalance;
 pub mod state;
 
-use crate::state::StrategyType;
+use adapters::*;
 use instructions::*;
+use state::StrategyType;
 
 declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 
@@ -43,30 +44,15 @@ pub mod castle_lending_aggregator {
         instructions::refresh::handler(ctx)
     }
 
-    pub fn reconcile_solend(ctx: Context<ReconcileSolend>, withdraw_option: u64) -> ProgramResult {
-        let option = if withdraw_option == 0 {
-            None
-        } else {
-            Some(withdraw_option)
-        };
-        instructions::reconcile_solend::handler(ctx, option)
+    pub fn reconcile_solend(ctx: Context<SolendAccounts>, withdraw_option: u64) -> ProgramResult {
+        instructions::reconcile::handler(ctx, withdraw_option)
     }
 
-    pub fn reconcile_port(ctx: Context<ReconcilePort>, withdraw_option: u64) -> ProgramResult {
-        let option = if withdraw_option == 0 {
-            None
-        } else {
-            Some(withdraw_option)
-        };
-        instructions::reconcile_port::handler(ctx, option)
+    pub fn reconcile_port(ctx: Context<PortAccounts>, withdraw_option: u64) -> ProgramResult {
+        instructions::reconcile::handler(ctx, withdraw_option)
     }
 
-    pub fn reconcile_jet(ctx: Context<ReconcileJet>, withdraw_option: u64) -> ProgramResult {
-        let option = if withdraw_option == 0 {
-            None
-        } else {
-            Some(withdraw_option)
-        };
-        instructions::reconcile_jet::handler(ctx, option)
+    pub fn reconcile_jet(ctx: Context<JetAccounts>, withdraw_option: u64) -> ProgramResult {
+        instructions::reconcile::handler(ctx, withdraw_option)
     }
 }

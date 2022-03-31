@@ -37,6 +37,7 @@ pub struct Withdraw<'info> {
 
     /// Account where vault LP tokens are transferred to
     #[account(mut)]
+    //#[soteria(ignore)]
     pub user_reserve_token: Box<Account<'info, TokenAccount>>,
 
     /// Authority of the user_lp_token account
@@ -66,8 +67,8 @@ impl<'info> Withdraw<'info> {
         CpiContext::new(
             self.token_program.to_account_info(),
             Transfer {
-                from: self.vault_reserve_token.to_account_info().clone(),
-                to: self.user_reserve_token.to_account_info().clone(),
+                from: self.vault_reserve_token.to_account_info(),
+                to: self.user_reserve_token.to_account_info(),
                 authority: self.vault_authority.clone(),
             },
         )
@@ -100,7 +101,13 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
         reserve_tokens_to_transfer,
     )?;
 
-    ctx.accounts.vault.total_value -= reserve_tokens_to_transfer;
+    // This is so that the SDK can read an up-to-date total value without calling refresh
+    ctx.accounts.vault.total_value = ctx
+        .accounts
+        .vault
+        .total_value
+        .checked_sub(reserve_tokens_to_transfer)
+        .ok_or(ErrorCode::MathError)?;
 
     Ok(())
 }

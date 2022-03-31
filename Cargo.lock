@@ -85,7 +85,7 @@ checksum = "f514a6502a0ad56f321df492f1c699ee8ad3912c6354acd087f3d28431a0fac4"
 dependencies = [
  "anchor-syn",
  "anyhow",
- "heck",
+ "heck 0.3.3",
  "proc-macro2",
  "quote",
  "syn",
@@ -172,7 +172,7 @@ checksum = "77faec86e3bf8e15568d026bd586e381910610544aa0b2642b942b37698029e5"
 dependencies = [
  "anyhow",
  "bs58 0.3.1",
- "heck",
+ "heck 0.3.3",
  "proc-macro2",
  "proc-macro2-diagnostics",
  "quote",
@@ -283,6 +283,12 @@ name = "block-padding"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
+
+[[package]]
+name = "boolinator"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfa8873f51c92e232f9bac4065cddef41b714152812bfc5f7672ba16d6ef8cd9"
 
 [[package]]
 name = "borsh"
@@ -467,6 +473,7 @@ version = "1.4.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "boolinator",
  "jet",
  "jet-proto-math",
  "port-anchor-adaptor",
@@ -474,6 +481,8 @@ dependencies = [
  "solana-maths",
  "spl-math",
  "spl-token-lending",
+ "strum",
+ "strum_macros",
 ]
 
 [[package]]
@@ -678,6 +687,12 @@ checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
 dependencies = [
  "unicode-segmentation",
 ]
+
+[[package]]
+name = "heck"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
 
 [[package]]
 name = "hermit-abi"
@@ -1552,6 +1567,25 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "strum"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e96acfc1b70604b8b2f1ffa4c57e59176c7dbb05d556c71ecd2f5498a1dee7f8"
+
+[[package]]
+name = "strum_macros"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6878079b17446e4d3eba6192bb0a2950d5b14f0ed8424b852310e5a94345d0ef"
+dependencies = [
+ "heck 0.4.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
 
 [[package]]
 name = "subtle"
