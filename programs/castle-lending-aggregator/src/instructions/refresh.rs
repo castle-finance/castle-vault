@@ -14,8 +14,6 @@ pub struct Refresh<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
-        constraint = vault.fees.fee_receiver.eq(&fee_receiver.key()) @ ErrorCode::InvalidFeeReceiver,
-        constraint = vault.fees.referral_fee_receiver.eq(&referral_fee_receiver.key()) @ ErrorCode::InvalidReferralFeeReceiver,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
@@ -104,12 +102,12 @@ pub struct Refresh<'info> {
 
     /// Token account that collects primary fees from the vault
     /// denominated in vault lp tokens
-    #[account(mut)]
+    #[account(mut, address = vault.fees.fee_receiver)]
     pub fee_receiver: Box<Account<'info, TokenAccount>>,
 
     /// Token account that collects referral fees from the vault
     /// denominated in vault lp tokens
-    #[account(mut)]
+    #[account(mut, address = vault.fees.referral_fee_receiver)]
     pub referral_fee_receiver: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
