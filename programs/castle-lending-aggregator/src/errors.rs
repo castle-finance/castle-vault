@@ -19,4 +19,16 @@ pub enum ErrorCode {
 
     #[msg("Failed to perform a math operation without an overflow")]
     OverflowError,
+
+    #[msg("Failed to set referral fee share which is greater than 50%")]
+    ReferralFeeError,
+
+    #[msg("Failed to set fee BPS which is greater than 10000")]
+    FeeBpsError,
+
+    #[msg("Failed to set fee receiver account")]
+    InvalidFeeReceiver,
+
+    #[msg("Failed to set referral fee receiver account")]
+    InvalidReferralFeeReceiver,
 }

@@ -29,7 +29,7 @@ import {
     SolendReserveAsset,
     JetReserveAsset,
 } from "./adapters";
-import { StrategyType, RebalanceEvent, Vault } from "./types";
+import { StrategyType, RebalanceEvent, Vault, FeeArgs } from "./types";
 
 export class VaultClient {
     private constructor(
@@ -84,9 +84,11 @@ export class VaultClient {
         jet: JetReserveAsset,
         strategyType: StrategyType,
         owner: PublicKey,
-        feeCarryBps: number = 0,
-        feeMgmtBps: number = 0
+        feeData: FeeArgs
     ): Promise<VaultClient> {
+        const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
+            feeData;
+
         const vaultId = Keypair.generate();
 
         const [vaultAuthority, authorityBump] =
@@ -149,6 +151,14 @@ export class VaultClient {
                 program.programId
             );
 
+        const referralFeeReceiver = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            lpTokenMint,
+            referralFeeOwner,
+            true
+        );
+
         await program.rpc.initialize(
             {
                 authority: authorityBump,
@@ -160,8 +170,11 @@ export class VaultClient {
                 jetLp: jetLpBump,
             },
             strategyType,
-            new anchor.BN(feeCarryBps),
-            new anchor.BN(feeMgmtBps),
+            {
+                feeCarryBps: new anchor.BN(feeCarryBps),
+                feeMgmtBps: new anchor.BN(feeMgmtBps),
+                referralFeePct: new anchor.BN(referralFeePct),
+            },
             {
                 accounts: {
                     vault: vaultId.publicKey,
@@ -179,10 +192,13 @@ export class VaultClient {
                     portReserve: port.accounts.reserve,
                     jetReserve: jet.accounts.reserve,
                     feeReceiver: feeReceiver,
+                    referralFeeReceiver: referralFeeReceiver,
+                    referralFeeOwner: referralFeeOwner,
                     payer: wallet.payer.publicKey,
                     owner: owner,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID,
+                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
                     rent: SYSVAR_RENT_PUBKEY,
                 },
                 signers: [vaultId, wallet.payer],
@@ -227,7 +243,8 @@ export class VaultClient {
                 jetFeeNoteVault: this.jet.accounts.feeNoteVault,
                 jetDepositNoteMint: this.jet.accounts.depositNoteMint,
                 jetPyth: this.jet.accounts.pythPrice,
-                feeReceiver: this.vaultState.feeReceiver,
+                feeReceiver: this.vaultState.fees.feeReceiver,
+                referralFeeReceiver: this.vaultState.fees.referralFeeReceiver,
                 tokenProgram: TOKEN_PROGRAM_ID,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
@@ -497,10 +514,6 @@ export class VaultClient {
             this.program.instruction.rebalance({
                 accounts: {
                     vault: this.vaultId,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-                    vaultPortLpToken: this.vaultState.vaultPortLpToken,
-                    vaultJetLpToken: this.vaultState.vaultJetLpToken,
                     solendReserve: this.solend.accounts.reserve,
                     portReserve: this.port.accounts.reserve,
                     jetReserve: this.jet.accounts.reserve,
@@ -553,10 +566,6 @@ export class VaultClient {
             await this.program.simulate.rebalance({
                 accounts: {
                     vault: this.vaultId,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-                    vaultPortLpToken: this.vaultState.vaultPortLpToken,
-                    vaultJetLpToken: this.vaultState.vaultJetLpToken,
                     solendReserve: this.solend.accounts.reserve,
                     portReserve: this.port.accounts.reserve,
                     jetReserve: this.jet.accounts.reserve,
@@ -821,7 +830,17 @@ export class VaultClient {
             TOKEN_PROGRAM_ID,
             Keypair.generate() // dummy since we don't need to send txs
         );
-        return lpToken.getAccountInfo(this.vaultState.feeReceiver);
+        return lpToken.getAccountInfo(this.vaultState.fees.feeReceiver);
+    }
+
+    async getReferralFeeReceiverAccountInfo(): Promise<AccountInfo> {
+        const lpToken = new Token(
+            this.program.provider.connection,
+            this.vaultState.lpTokenMint,
+            TOKEN_PROGRAM_ID,
+            Keypair.generate() // dummy since we don't need to send txs
+        );
+        return lpToken.getAccountInfo(this.vaultState.fees.referralFeeReceiver);
     }
 
     async debug_log() {

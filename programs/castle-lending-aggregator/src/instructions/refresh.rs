@@ -14,6 +14,8 @@ pub struct Refresh<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
+        constraint = vault.fees.fee_receiver.eq(&fee_receiver.key()) @ ErrorCode::InvalidFeeReceiver,
+        constraint = vault.fees.referral_fee_receiver.eq(&referral_fee_receiver.key()) @ ErrorCode::InvalidReferralFeeReceiver,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
@@ -22,7 +24,6 @@ pub struct Refresh<'info> {
         has_one = solend_reserve,
         has_one = port_reserve,
         has_one = jet_reserve,
-        has_one = fee_receiver,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -101,10 +102,15 @@ pub struct Refresh<'info> {
     //#[soteria(ignore)]
     pub jet_pyth: AccountInfo<'info>,
 
-    /// Token account that collects fees from the vault
+    /// Token account that collects primary fees from the vault
     /// denominated in vault lp tokens
     #[account(mut)]
     pub fee_receiver: Box<Account<'info, TokenAccount>>,
+
+    /// Token account that collects referral fees from the vault
+    /// denominated in vault lp tokens
+    #[account(mut)]
+    pub referral_fee_receiver: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
 
@@ -162,12 +168,15 @@ impl<'info> Refresh<'info> {
     }
 
     /// CpiContext for collecting fees by minting new vault lp tokens
-    fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+    fn mint_to_context(
+        &self,
+        fee_receiver: &Account<'info, TokenAccount>,
+    ) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
             self.token_program.to_account_info(),
             MintTo {
                 mint: self.lp_token_mint.to_account_info(),
-                to: self.fee_receiver.to_account_info(),
+                to: fee_receiver.to_account_info(),
                 authority: self.vault_authority.clone(),
             },
         )
@@ -223,22 +232,52 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
     let vault = &ctx.accounts.vault;
 
     // Calculate fees
-    let fees = vault.calculate_fees(vault_value, ctx.accounts.clock.slot)?;
-    let fees_converted =
-        crate::math::calc_reserve_to_lp(fees, ctx.accounts.lp_token_mint.supply, vault_value)
+    let total_fees = vault.calculate_fees(vault_value, ctx.accounts.clock.slot)?;
+
+    let total_fees_converted =
+        crate::math::calc_reserve_to_lp(total_fees, ctx.accounts.lp_token_mint.supply, vault_value)
             .ok_or(ErrorCode::MathError)?;
+
+    msg!(
+        "Total fees: {} reserve tokens, {} lp tokens",
+        total_fees,
+        total_fees_converted
+    );
+
+    let primary_fees_converted = total_fees_converted
+        .checked_mul(100 - ctx.accounts.vault.fees.referral_fee_pct as u64)
+        .and_then(|val| val.checked_div(100))
+        .ok_or(ErrorCode::MathError)?;
+
+    let referral_fees_converted = total_fees_converted
+        .checked_mul(ctx.accounts.vault.fees.referral_fee_pct as u64)
+        .and_then(|val| val.checked_div(100))
+        .ok_or(ErrorCode::MathError)?;
 
     // Mint new LP tokens to fee_receiver
     msg!(
-        "Collecting fees: {} reserve tokens, {} lp tokens",
-        fees,
-        fees_converted
+        "Collecting primary fees: {} lp tokens",
+        primary_fees_converted
     );
+
     token::mint_to(
         ctx.accounts
-            .mint_to_context()
+            .mint_to_context(&ctx.accounts.fee_receiver)
             .with_signer(&[&vault.authority_seeds()]),
-        fees_converted,
+        primary_fees_converted,
+    )?;
+
+    // Mint new LP tokens to referral_fee_receiver
+    msg!(
+        "Collecting referral fees: {} lp tokens",
+        referral_fees_converted
+    );
+
+    token::mint_to(
+        ctx.accounts
+            .mint_to_context(&ctx.accounts.referral_fee_receiver)
+            .with_signer(&[&vault.authority_seeds()]),
+        referral_fees_converted,
     )?;
 
     // Update vault total value

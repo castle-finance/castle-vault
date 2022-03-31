@@ -51,14 +51,7 @@ pub struct Vault {
     /// Mint address of the tokens that are stored in vault
     pub reserve_token_mint: Pubkey,
 
-    /// Account that fees from this vault are sent to
-    pub fee_receiver: Pubkey,
-
-    /// Basis points of the accrued interest that gets sent to the fee_receiver
-    pub fee_carry_bps: u16,
-
-    /// Basis points of the AUM that gets sent to the fee_receiver
-    pub fee_mgmt_bps: u16,
+    pub fees: VaultFees,
 
     /// Last slot when vault was refreshed
     pub last_update: LastUpdate,
@@ -87,12 +80,12 @@ impl Vault {
         //msg!("Old vault value: {}", self.total_value);
 
         let carry = vault_value_diff
-            .checked_mul(self.fee_carry_bps as u64)
+            .checked_mul(self.fees.fee_carry_bps as u64)
             .ok_or(ErrorCode::OverflowError)?
             / ONE_AS_BPS;
 
         let mgmt = new_vault_value
-            .checked_mul(self.fee_carry_bps as u64)
+            .checked_mul(self.fees.fee_mgmt_bps as u64)
             .ok_or(ErrorCode::OverflowError)?
             / ONE_AS_BPS
             / SLOTS_PER_YEAR
@@ -117,6 +110,24 @@ impl Vault {
             &self.authority_bump,
         ]
     }
+}
+
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
+pub struct VaultFees {
+    /// Basis points of the accrued interest that gets sent to the fee_receiver
+    pub fee_carry_bps: u32,
+
+    /// Basis points of the AUM that gets sent to the fee_receiver
+    pub fee_mgmt_bps: u32,
+
+    /// Referral fee share for fee splitting
+    pub referral_fee_pct: u8,
+
+    /// Account that primary fees from this vault are sent to
+    pub fee_receiver: Pubkey,
+
+    /// Account that referral fees from this vault are sent to
+    pub referral_fee_receiver: Pubkey,
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
