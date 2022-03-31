@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
-use port_anchor_adaptor::PortReserve;
+use port_anchor_adaptor::{get_lending_program_id, Cluster, PortReserve};
 
 use crate::{
     reconcile::LendingMarket,
@@ -35,22 +35,25 @@ pub struct PortAccounts<'info> {
     // ID in devnet than they do in mainnet
     #[account(
         executable,
-        //address = port_variable_rate_lending_instructions::ID,
+        address = get_lending_program_id(Cluster::Devnet)
     )]
     pub port_program: AccountInfo<'info>,
 
+    //#[soteria(ignore)]
     pub port_market_authority: AccountInfo<'info>,
 
-    #[account(owner = port_program.key())]
+    //#[soteria(ignore)]
     pub port_market: AccountInfo<'info>,
 
     #[account(mut)]
     pub port_reserve: Box<Account<'info, PortReserve>>,
 
     #[account(mut)]
+    //#[soteria(ignore)]
     pub port_lp_mint: AccountInfo<'info>,
 
     #[account(mut)]
+    //#[soteria(ignore)]
     pub port_reserve_token: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,

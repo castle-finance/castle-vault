@@ -37,29 +37,27 @@ pub struct JetAccounts<'info> {
     )]
     pub jet_program: AccountInfo<'info>,
 
-    /// The relevant market this deposit is for
+    //#[soteria(ignore)]
     pub jet_market: AccountLoader<'info, jet::state::Market>,
 
-    /// The market's authority account
+    //#[soteria(ignore)]
     pub jet_market_authority: AccountInfo<'info>,
 
-    /// The reserve being deposited into
     #[account(mut)]
     pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
-    /// The reserve's vault where the deposited tokens will be transferred to
     #[account(mut)]
+    //#[soteria(ignore)]
     pub jet_reserve_token: AccountInfo<'info>,
 
-    /// The mint for the deposit notes
     #[account(mut)]
+    //#[soteria(ignore)]
     pub jet_lp_mint: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
 }
 
 impl<'info> JetAccounts<'info> {
-    // TODO should this return a reference?
     fn get_reserve_info(&self) -> Result<CachedReserveInfo, ProgramError> {
         let market = self.jet_market.load()?;
         let reserve = self.jet_reserve.load()?;

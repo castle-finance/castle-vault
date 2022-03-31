@@ -40,18 +40,21 @@ pub struct SolendAccounts<'info> {
     )]
     pub solend_program: AccountInfo<'info>,
 
+    //#[soteria(ignore)]
     pub solend_market_authority: AccountInfo<'info>,
 
-    #[account(owner = solend_program.key())]
+    //#[soteria(ignore)]
     pub solend_market: AccountInfo<'info>,
 
     #[account(mut)]
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
     #[account(mut)]
+    //#[soteria(ignore)]
     pub solend_lp_mint: AccountInfo<'info>,
 
     #[account(mut)]
+    //#[soteria(ignore)]
     pub solend_reserve_token: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,

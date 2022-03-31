@@ -37,6 +37,7 @@ pub struct Withdraw<'info> {
 
     /// Account where vault LP tokens are transferred to
     #[account(mut)]
+    //#[soteria(ignore)]
     pub user_reserve_token: Box<Account<'info, TokenAccount>>,
 
     /// Authority of the user_lp_token account

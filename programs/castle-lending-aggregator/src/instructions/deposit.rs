@@ -34,6 +34,7 @@ pub struct Deposit<'info> {
 
     /// Token account from which reserve tokens are transferred
     #[account(mut)]
+    //#[soteria(ignore)]
     pub user_reserve_token: Box<Account<'info, TokenAccount>>,
 
     /// Account where vault LP tokens are minted to

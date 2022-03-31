@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
-use port_anchor_adaptor::PortReserve;
+use port_anchor_adaptor::{get_lending_program_id, Cluster, PortReserve};
 
 use crate::adapters::{solend, SolendReserve};
 use crate::errors::ErrorCode;
@@ -18,6 +18,7 @@ pub struct Refresh<'info> {
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
         has_one = vault_jet_lp_token,
+        has_one = lp_token_mint,
         has_one = solend_reserve,
         has_one = port_reserve,
         has_one = jet_reserve,
@@ -53,21 +54,24 @@ pub struct Refresh<'info> {
     #[account(mut)]
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
+    //#[soteria(ignore)]
     pub solend_pyth: AccountInfo<'info>,
 
+    //#[soteria(ignore)]
     pub solend_switchboard: AccountInfo<'info>,
 
     // NOTE address check is commented out because port has a different
     // ID in devnet than they do in mainnet
     #[account(
         executable,
-        //address = port_variable_rate_lending_instructions::ID,
+        address = get_lending_program_id(Cluster::Devnet)
     )]
     pub port_program: AccountInfo<'info>,
 
     #[account(mut)]
     pub port_reserve: Box<Account<'info, PortReserve>>,
 
+    //#[soteria(ignore)]
     pub port_oracle: AccountInfo<'info>,
 
     #[account(
@@ -77,19 +81,24 @@ pub struct Refresh<'info> {
     pub jet_program: AccountInfo<'info>,
 
     #[account(mut)]
+    //#[soteria(ignore)]
     pub jet_market: AccountInfo<'info>,
 
+    //#[soteria(ignore)]
     pub jet_market_authority: AccountInfo<'info>,
 
     #[account(mut)]
     pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
     #[account(mut)]
+    //#[soteria(ignore)]
     pub jet_fee_note_vault: AccountInfo<'info>,
 
     #[account(mut)]
+    //#[soteria(ignore)]
     pub jet_deposit_note_mint: AccountInfo<'info>,
 
+    //#[soteria(ignore)]
     pub jet_pyth: AccountInfo<'info>,
 
     /// Token account that collects fees from the vault
