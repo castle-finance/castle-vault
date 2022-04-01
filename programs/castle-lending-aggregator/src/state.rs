@@ -137,9 +137,8 @@ pub enum StrategyType {
     EqualAllocation,
 }
 
-#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default, EnumIter, PartialEq)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, EnumIter, PartialEq)]
 pub enum Provider {
-    #[default]
     Solend,
     Port,
     Jet,
@@ -177,13 +176,13 @@ impl IndexMut<Provider> for Allocations {
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocation {
     pub value: u64,
-    pub provider: Provider,
     pub last_update: LastUpdate,
 }
 
 impl Allocation {
     pub fn update(&mut self, value: u64, slot: u64) {
         self.value = value;
+        self.last_update.update_slot(slot);
     }
 
     pub fn reset(&mut self) {
