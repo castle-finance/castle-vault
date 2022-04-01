@@ -90,8 +90,7 @@ pub fn handler<T: LendingMarket + HasVault>(
                     ctx.accounts.redeem(tokens_to_redeem)?;
                 }
             }
-            ctx.accounts.vault_mut().allocations[provider] =
-                ctx.accounts.vault().allocations[provider].reset();
+            ctx.accounts.vault_mut().allocations[provider].reset();
         }
         // Extra case where reconcile is being called in same tx as a withdraw or by vault owner to emergency brake
         _ => {

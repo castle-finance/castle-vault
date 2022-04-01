@@ -54,8 +54,7 @@ impl RateUpdate {
             .and_then(|product| Decimal::from(product).try_floor_u64())?;
         //msg!("Setting allocation: {}", allocation);
 
-        vault_allocations[self.provider] =
-            vault_allocations[self.provider].update(allocation, clock.slot);
+        vault_allocations[self.provider].update(allocation, clock.slot);
         Ok(())
     }
 }

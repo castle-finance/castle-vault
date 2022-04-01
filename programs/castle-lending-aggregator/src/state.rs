@@ -101,7 +101,7 @@ impl Vault {
 
     pub fn update_value(&mut self, new_value: u64, slot: u64) {
         self.total_value = new_value;
-        self.last_update = self.last_update.update_slot(slot);
+        self.last_update.update_slot(slot);
     }
 
     pub fn authority_seeds(&self) -> [&[u8]; 3] {
@@ -182,20 +182,13 @@ pub struct Allocation {
 }
 
 impl Allocation {
-    pub fn update(&self, value: u64, slot: u64) -> Self {
-        Self {
-            value,
-            last_update: self.last_update.update_slot(slot),
-            provider: self.provider,
-        }
+    pub fn update(&mut self, value: u64, slot: u64) {
+        self.value = value;
     }
 
-    pub fn reset(&self) -> Self {
-        Self {
-            value: 0,
-            last_update: LastUpdate::default(),
-            provider: self.provider,
-        }
+    pub fn reset(&mut self) {
+        self.value = 0;
+        self.last_update.mark_stale();
     }
 }
 
@@ -221,16 +214,14 @@ impl LastUpdate {
     }
 
     /// Set last update slot
-    pub fn update_slot(&self, slot: u64) -> Self {
-        Self { slot, stale: false }
+    pub fn update_slot(&mut self, slot: u64) {
+        self.slot = slot;
+        self.stale = false;
     }
 
     /// Set stale to true
-    pub fn mark_stale(&self) -> Self {
-        Self {
-            slot: self.slot,
-            stale: true,
-        }
+    pub fn mark_stale(&mut self) {
+        self.stale = true;
     }
 
     /// Check if marked stale or last update slot is too long ago
