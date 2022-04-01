@@ -736,10 +736,6 @@ export type CastleLendingAggregator = {
                         type: "u8";
                     },
                     {
-                        name: "feeReceiver";
-                        type: "u8";
-                    },
-                    {
                         name: "solendLp";
                         type: "u8";
                     },
@@ -956,16 +952,6 @@ export type CastleLendingAggregator = {
             code: 307;
             name: "FeeBpsError";
             msg: "Failed to set fee BPS which is greater than 10000";
-        },
-        {
-            code: 308;
-            name: "InvalidFeeReceiver";
-            msg: "Failed to set fee receiver account";
-        },
-        {
-            code: 309;
-            name: "InvalidReferralFeeReceiver";
-            msg: "Failed to set referral fee receiver account";
         }
     ];
 };
@@ -1708,10 +1694,6 @@ export const IDL: CastleLendingAggregator = {
                         type: "u8",
                     },
                     {
-                        name: "feeReceiver",
-                        type: "u8",
-                    },
-                    {
                         name: "solendLp",
                         type: "u8",
                     },
@@ -1928,16 +1910,6 @@ export const IDL: CastleLendingAggregator = {
             code: 307,
             name: "FeeBpsError",
             msg: "Failed to set fee BPS which is greater than 10000",
-        },
-        {
-            code: 308,
-            name: "InvalidFeeReceiver",
-            msg: "Failed to set fee receiver account",
-        },
-        {
-            code: 309,
-            name: "InvalidReferralFeeReceiver",
-            msg: "Failed to set referral fee receiver account",
         },
     ],
 };

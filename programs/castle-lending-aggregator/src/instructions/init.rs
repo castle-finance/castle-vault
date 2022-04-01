@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::{self, AssociatedToken, Create},
-    token::{self, InitializeAccount, Mint, Token, TokenAccount},
+    token::{Mint, Token, TokenAccount},
 };
 use port_anchor_adaptor::PortReserve;
 
@@ -14,7 +14,6 @@ pub struct InitBumpSeeds {
     authority: u8,
     reserve: u8,
     lp_mint: u8,
-    fee_receiver: u8,
     solend_lp: u8,
     port_lp: u8,
     jet_lp: u8,
@@ -117,14 +116,7 @@ pub struct Initialize<'info> {
 
     /// Token account that receives the primary ratio of fees from the vault
     /// denominated in vault lp tokens
-    #[account(
-        init,
-        payer = payer,
-        seeds = [vault.key().as_ref(), b"fee_receiver".as_ref()],
-        bump = bumps.fee_receiver,
-        owner = token::ID,
-        space = TokenAccount::LEN
-    )]
+    #[account(mut)]
     pub fee_receiver: AccountInfo<'info>,
 
     /// Token account that receives the secondary ratio of fees from the vault
@@ -154,25 +146,17 @@ pub struct Initialize<'info> {
 }
 
 impl<'info> Initialize<'info> {
-    fn init_fee_receiver_context(&self) -> CpiContext<'_, '_, '_, 'info, InitializeAccount<'info>> {
+    fn init_fee_receiver_create_context(
+        &self,
+        fee_token_account: AccountInfo<'info>,
+        token_authority: AccountInfo<'info>,
+    ) -> CpiContext<'_, '_, '_, 'info, Create<'info>> {
         CpiContext::new(
             self.token_program.to_account_info(),
-            InitializeAccount {
-                account: self.fee_receiver.clone(),
-                authority: self.owner.to_account_info(),
-                mint: self.lp_token_mint.to_account_info(),
-                rent: self.rent.to_account_info(),
-            },
-        )
-    }
-
-    fn init_referral_fee_receiver_context(&self) -> CpiContext<'_, '_, '_, 'info, Create<'info>> {
-        CpiContext::new(
-            self.associated_token_program.to_account_info(),
             Create {
                 payer: self.payer.to_account_info(),
-                associated_token: self.referral_fee_receiver.to_account_info(),
-                authority: self.referral_fee_owner.to_account_info(),
+                associated_token: fee_token_account,
+                authority: token_authority,
                 mint: self.lp_token_mint.to_account_info(),
                 system_program: self.system_program.to_account_info(),
                 token_program: self.token_program.to_account_info(),
@@ -259,11 +243,16 @@ pub fn handler(
     };
 
     // Initialize fee receiver account
-    // Needs to be manually done here instead of with anchor because the mint is initialized with anchor
-    token::initialize_account(ctx.accounts.init_fee_receiver_context())?;
+    associated_token::create(ctx.accounts.init_fee_receiver_create_context(
+        ctx.accounts.fee_receiver.to_account_info(),
+        ctx.accounts.owner.to_account_info(),
+    ))?;
 
     // Initialize referral fee receiver account
-    associated_token::create(ctx.accounts.init_referral_fee_receiver_context())?;
+    associated_token::create(ctx.accounts.init_fee_receiver_create_context(
+        ctx.accounts.referral_fee_receiver.to_account_info(),
+        ctx.accounts.referral_fee_owner.to_account_info(),
+    ))?;
 
     Ok(())
 }
