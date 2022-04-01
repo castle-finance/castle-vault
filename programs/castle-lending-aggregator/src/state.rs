@@ -2,8 +2,9 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock::{
     DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
 };
-
 use std::cmp::Ordering;
+use std::ops::{Index, IndexMut};
+use strum_macros::EnumIter;
 
 use crate::errors::ErrorCode;
 
@@ -136,12 +137,40 @@ pub enum StrategyType {
     EqualAllocation,
 }
 
-// How can we connect this with Provider?
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, EnumIter, PartialEq)]
+pub enum Provider {
+    Solend,
+    Port,
+    Jet,
+}
+
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: Allocation,
     pub port: Allocation,
     pub jet: Allocation,
+}
+
+impl Index<Provider> for Allocations {
+    type Output = Allocation;
+
+    fn index(&self, provider: Provider) -> &Self::Output {
+        match provider {
+            Provider::Solend => &self.solend,
+            Provider::Port => &self.port,
+            Provider::Jet => &self.jet,
+        }
+    }
+}
+
+impl IndexMut<Provider> for Allocations {
+    fn index_mut(&mut self, provider: Provider) -> &mut Self::Output {
+        match provider {
+            Provider::Solend => &mut self.solend,
+            Provider::Port => &mut self.port,
+            Provider::Jet => &mut self.jet,
+        }
+    }
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]

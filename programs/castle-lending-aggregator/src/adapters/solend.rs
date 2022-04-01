@@ -1,13 +1,14 @@
-use std::io::Write;
 use std::ops::Deref;
+use std::{io::Write, ops::DerefMut};
 
 use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token::{Token, TokenAccount};
 use spl_token_lending::state::Reserve;
 
+use crate::impl_has_vault;
 use crate::{
     reconcile::LendingMarket,
-    state::{Allocation, Vault},
+    state::{Provider, Vault},
 };
 
 #[derive(Accounts)]
@@ -61,6 +62,8 @@ pub struct SolendAccounts<'info> {
 
     pub token_program: Program<'info, Token>,
 }
+
+impl_has_vault!(SolendAccounts<'_>);
 
 impl<'info> LendingMarket for SolendAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
@@ -130,12 +133,8 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
         self.vault_solend_lp_token.amount
     }
 
-    fn get_allocation(&self) -> Allocation {
-        self.vault.allocations.solend
-    }
-
-    fn reset_allocation(&mut self) {
-        self.vault.allocations.solend.reset();
+    fn provider(&self) -> Provider {
+        Provider::Solend
     }
 }
 

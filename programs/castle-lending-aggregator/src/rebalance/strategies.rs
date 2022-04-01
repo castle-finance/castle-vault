@@ -6,9 +6,9 @@ use solana_maths::{Rate, TryDiv, TryMul};
 use strum::IntoEnumIterator;
 
 // TODO refactor so we don't need to depend on higher-level modules
-use crate::{errors::ErrorCode, instructions::RateUpdate};
+use crate::{errors::ErrorCode, instructions::RateUpdate, state::Provider};
 
-use super::assets::{Asset, Provider};
+use super::assets::Asset;
 
 pub trait Strategy {
     fn calculate_allocations(&self, assets: &[impl Asset])

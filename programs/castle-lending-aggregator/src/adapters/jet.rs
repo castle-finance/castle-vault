@@ -1,10 +1,13 @@
+use std::ops::{Deref, DerefMut};
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
 use jet::{state::CachedReserveInfo, Amount, Rounding};
 
 use crate::{
+    impl_has_vault,
     reconcile::LendingMarket,
-    state::{Allocation, Vault},
+    state::{Provider, Vault},
 };
 
 #[derive(Accounts)]
@@ -65,6 +68,8 @@ impl<'info> JetAccounts<'info> {
         Ok(*market.reserves().get_cached(reserve.index, clock.slot))
     }
 }
+
+impl_has_vault!(JetAccounts<'_>);
 
 impl<'info> LendingMarket for JetAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
@@ -134,11 +139,7 @@ impl<'info> LendingMarket for JetAccounts<'info> {
         self.vault_jet_lp_token.amount
     }
 
-    fn get_allocation(&self) -> Allocation {
-        self.vault.allocations.jet
-    }
-
-    fn reset_allocation(&mut self) {
-        self.vault.allocations.jet.reset();
+    fn provider(&self) -> Provider {
+        Provider::Jet
     }
 }

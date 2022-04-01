@@ -1,10 +1,13 @@
+use std::ops::{Deref, DerefMut};
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
 use port_anchor_adaptor::{get_lending_program_id, Cluster, PortReserve};
 
 use crate::{
+    impl_has_vault,
     reconcile::LendingMarket,
-    state::{Allocation, Vault},
+    state::{Provider, Vault},
 };
 
 #[derive(Accounts)]
@@ -60,6 +63,8 @@ pub struct PortAccounts<'info> {
 
     pub token_program: Program<'info, Token>,
 }
+
+impl_has_vault!(PortAccounts<'_>);
 
 impl<'info> LendingMarket for PortAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
@@ -132,11 +137,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
         self.vault_port_lp_token.amount
     }
 
-    fn get_allocation(&self) -> Allocation {
-        self.vault.allocations.port
-    }
-
-    fn reset_allocation(&mut self) {
-        self.vault.allocations.port.reset();
+    fn provider(&self) -> Provider {
+        Provider::Port
     }
 }
