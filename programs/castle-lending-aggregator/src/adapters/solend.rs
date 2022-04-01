@@ -5,6 +5,7 @@ use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token::{Token, TokenAccount};
 use spl_token_lending::state::Reserve;
 
+use crate::impl_has_vault;
 use crate::{
     reconcile::LendingMarket,
     state::{Provider, Vault},
@@ -61,6 +62,8 @@ pub struct SolendAccounts<'info> {
 
     pub token_program: Program<'info, Token>,
 }
+
+impl_has_vault!(SolendAccounts<'_>);
 
 impl<'info> LendingMarket for SolendAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
@@ -132,14 +135,6 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
 
     fn provider(&self) -> Provider {
         Provider::Solend
-    }
-
-    fn vault(&self) -> &Vault {
-        self.vault.deref()
-    }
-
-    fn vault_mut(&mut self) -> &mut Vault {
-        self.vault.deref_mut()
     }
 }
 

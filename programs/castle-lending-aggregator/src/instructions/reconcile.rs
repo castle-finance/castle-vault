@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     errors::ErrorCode,
-    state::{Allocation, Provider, Vault},
+    state::{Provider, Vault},
 };
 
 // move this somewhere else?
@@ -22,20 +22,33 @@ pub trait LendingMarket {
     fn lp_tokens_in_vault(&self) -> u64;
 
     fn provider(&self) -> Provider;
-    fn vault(&self) -> &Vault;
-    fn vault_mut(&mut self) -> &mut Vault;
-
-    fn get_allocation(&self) -> Allocation {
-        self.vault().allocations[self.provider()]
-    }
-
-    fn reset_allocation(&mut self) {
-        let provider = self.provider();
-        self.vault_mut().allocations[provider] = self.vault().allocations[provider].reset();
-    }
 }
 
-pub fn handler(ctx: Context<impl LendingMarket>, withdraw_option: u64) -> ProgramResult {
+pub trait HasVault {
+    fn vault(&self) -> &Vault;
+    fn vault_mut(&mut self) -> &mut Vault;
+}
+
+#[macro_export]
+macro_rules! impl_has_vault {
+    ($($t:ty),+ $(,)?) => ($(
+        impl crate::instructions::reconcile::HasVault for $t {
+            fn vault(&self) -> &Vault {
+                self.vault.deref()
+            }
+
+            fn vault_mut(&mut self) -> &mut Vault {
+                self.vault.deref_mut()
+            }
+        }
+    )+)
+}
+
+pub fn handler<T: LendingMarket + HasVault>(
+    ctx: Context<T>,
+    withdraw_option: u64,
+) -> ProgramResult {
+    let provider = ctx.accounts.provider();
     match withdraw_option {
         // Normal case where reconcile is being called after rebalance
         0 => {
@@ -43,7 +56,7 @@ pub fn handler(ctx: Context<impl LendingMarket>, withdraw_option: u64) -> Progra
             let current_value = ctx
                 .accounts
                 .convert_amount_lp_to_reserve(lp_tokens_in_vault)?;
-            let allocation = ctx.accounts.get_allocation();
+            let allocation = ctx.accounts.vault().allocations[provider];
             //msg!("Desired allocation: {}", allocation.value);
             //msg!("Current allocation: {}", current_value);
 
@@ -77,7 +90,8 @@ pub fn handler(ctx: Context<impl LendingMarket>, withdraw_option: u64) -> Progra
                     ctx.accounts.redeem(tokens_to_redeem)?;
                 }
             }
-            ctx.accounts.reset_allocation();
+            ctx.accounts.vault_mut().allocations[provider] =
+                ctx.accounts.vault().allocations[provider].reset();
         }
         // Extra case where reconcile is being called in same tx as a withdraw or by vault owner to emergency brake
         _ => {

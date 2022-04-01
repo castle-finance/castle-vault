@@ -5,6 +5,7 @@ use anchor_spl::token::{Token, TokenAccount};
 use port_anchor_adaptor::{get_lending_program_id, Cluster, PortReserve};
 
 use crate::{
+    impl_has_vault,
     reconcile::LendingMarket,
     state::{Provider, Vault},
 };
@@ -62,6 +63,8 @@ pub struct PortAccounts<'info> {
 
     pub token_program: Program<'info, Token>,
 }
+
+impl_has_vault!(PortAccounts<'_>);
 
 impl<'info> LendingMarket for PortAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
@@ -136,13 +139,5 @@ impl<'info> LendingMarket for PortAccounts<'info> {
 
     fn provider(&self) -> Provider {
         Provider::Port
-    }
-
-    fn vault(&self) -> &Vault {
-        self.vault.deref()
-    }
-
-    fn vault_mut(&mut self) -> &mut Vault {
-        self.vault.deref_mut()
     }
 }

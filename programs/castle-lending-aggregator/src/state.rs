@@ -184,7 +184,7 @@ pub struct Allocation {
 impl Allocation {
     pub fn update(&self, value: u64, slot: u64) -> Self {
         Self {
-            value: value,
+            value,
             last_update: self.last_update.update_slot(slot),
             provider: self.provider,
         }

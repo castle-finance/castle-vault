@@ -5,6 +5,7 @@ use anchor_spl::token::{Token, TokenAccount};
 use jet::{state::CachedReserveInfo, Amount, Rounding};
 
 use crate::{
+    impl_has_vault,
     reconcile::LendingMarket,
     state::{Provider, Vault},
 };
@@ -67,6 +68,8 @@ impl<'info> JetAccounts<'info> {
         Ok(*market.reserves().get_cached(reserve.index, clock.slot))
     }
 }
+
+impl_has_vault!(JetAccounts<'_>);
 
 impl<'info> LendingMarket for JetAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
@@ -138,13 +141,5 @@ impl<'info> LendingMarket for JetAccounts<'info> {
 
     fn provider(&self) -> Provider {
         Provider::Jet
-    }
-
-    fn vault(&self) -> &Vault {
-        self.vault.deref()
-    }
-
-    fn vault_mut(&mut self) -> &mut Vault {
-        self.vault.deref_mut()
     }
 }
