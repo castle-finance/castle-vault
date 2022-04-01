@@ -221,12 +221,12 @@ impl LastUpdate {
     }
 
     /// Set last update slot
-    pub fn update_slot(self, slot: u64) -> Self {
+    pub fn update_slot(&self, slot: u64) -> Self {
         Self { slot, stale: false }
     }
 
     /// Set stale to true
-    pub fn mark_stale(self) -> Self {
+    pub fn mark_stale(&self) -> Self {
         Self {
             slot: self.slot,
             stale: true,
