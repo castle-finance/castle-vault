@@ -27,6 +27,7 @@ export interface Vault {
     lpTokenMint: PublicKey;
     reserveTokenMint: PublicKey;
     totalValue: BN;
+    poolSizeLimit: BN;
     vaultAuthority: PublicKey;
     vaultJetLpToken: PublicKey;
     vaultPortLpToken: PublicKey;

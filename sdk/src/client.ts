@@ -84,7 +84,8 @@ export class VaultClient {
         jet: JetReserveAsset,
         strategyType: StrategyType,
         owner: PublicKey,
-        feeData: FeeArgs
+        feeData: FeeArgs,
+        poolSizeLimit: number = 10000000000
     ): Promise<VaultClient> {
         const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
             feeData;
@@ -175,6 +176,7 @@ export class VaultClient {
                 feeMgmtBps: new anchor.BN(feeMgmtBps),
                 referralFeePct: new anchor.BN(referralFeePct),
             },
+            new anchor.BN(poolSizeLimit),
             {
                 accounts: {
                     vault: vaultId.publicKey,

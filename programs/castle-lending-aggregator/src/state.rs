@@ -59,6 +59,9 @@ pub struct Vault {
     /// Total value of vault denominated in the reserve token
     pub total_value: u64,
 
+    /// Max num of reserve tokens. If total_value grows higher than this, will stop accepting deposits.
+    pub pool_size_limit: u64,
+
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 

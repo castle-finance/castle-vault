@@ -223,6 +223,7 @@ pub fn handler(
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
     fees: FeeArgs,
+    pool_size_limit: u64
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
@@ -249,6 +250,7 @@ pub fn handler(
     vault.last_update = LastUpdate::new(clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;
+    vault.pool_size_limit = pool_size_limit;
 
     vault.fees = VaultFees {
         fee_receiver: ctx.accounts.fee_receiver.key(),

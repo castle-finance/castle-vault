@@ -80,7 +80,6 @@ impl<'info> Deposit<'info> {
 ///
 /// Transfers reserve tokens from user to vault and mints their share of lp tokens
 pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
-    msg!("Depositing {} reserve tokens", reserve_token_amount);
 
     let vault = &ctx.accounts.vault;
 
@@ -90,6 +89,14 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
         vault.total_value,
     )
     .ok_or(ErrorCode::MathError)?;
+
+    let total_value = ctx.accounts.vault.total_value + reserve_token_amount;
+    if total_value > ctx.accounts.vault.pool_size_limit {
+        msg!("Deposit cap reached");
+        return Ok(());
+    }
+
+    msg!("Depositing {} reserve tokens", reserve_token_amount);
 
     token::transfer(ctx.accounts.transfer_context(), reserve_token_amount)?;
 
