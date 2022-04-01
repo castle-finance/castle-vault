@@ -259,7 +259,7 @@ export class VaultClient {
      */
     private async getWrappedSolIxs(
         wallet: anchor.Wallet,
-        lamports: number = 0
+        lamports = 0
     ): Promise<WrapSolIxResponse> {
         const userReserveKeypair = Keypair.generate();
         const userReserveTokenAccount = userReserveKeypair.publicKey;
@@ -354,7 +354,7 @@ export class VaultClient {
             })
         );
 
-        let txs: SendTxRequest[] = [];
+        const txs: SendTxRequest[] = [];
         if (createLpAcctTx != null) {
             txs.push({ tx: createLpAcctTx, signers: [] });
         }
@@ -386,7 +386,7 @@ export class VaultClient {
             wallet.publicKey
         );
 
-        let txs: SendTxRequest[] = [];
+        const txs: SendTxRequest[] = [];
 
         // Withdraw from lending markets if not enough reserves in vault
         const vaultReserveTokenAccountInfo =
@@ -423,7 +423,7 @@ export class VaultClient {
             let withdrawnAmount = 0;
             let n = 0;
             while (withdrawnAmount < toWithdrawAmount) {
-                const [_, oldAlloc, ix] = reconcileIxs[n];
+                const [, oldAlloc, ix] = reconcileIxs[n];
                 const reconcileAmount = Math.min(
                     oldAlloc.toNumber(),
                     toWithdrawAmount
@@ -505,7 +505,7 @@ export class VaultClient {
      * @param threshold
      * @returns
      */
-    async rebalance(threshold: number = 0): Promise<TransactionSignature[]> {
+    async rebalance(threshold = 0): Promise<TransactionSignature[]> {
         const txs: SendTxRequest[] = [];
 
         const rebalanceTx = new Transaction();
@@ -528,16 +528,16 @@ export class VaultClient {
             await this.newAndOldallocationsWithReconcileIxs();
 
         const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
-            oldAndNewallocationsWithReconcileIxs.map((e, _) => [
+            oldAndNewallocationsWithReconcileIxs.map((e) => [
                 e[0].sub(e[1]),
                 e[2](),
             ]);
 
         const reconcileIxs = allocationDiffsWithReconcileIxs
             .sort((a, b) => a[0].sub(b[0]).toNumber())
-            .map((e, _) => e[1]);
+            .map((e) => e[1]);
 
-        for (let ix of reconcileIxs) {
+        for (const ix of reconcileIxs) {
             const reconcileTx = new Transaction();
             reconcileTx.add(this.getRefreshIx());
             reconcileTx.add(ix);
@@ -546,7 +546,7 @@ export class VaultClient {
 
         const vaultValue = await this.getTotalValue();
         const maxAllocationChange = Math.max(
-            ...allocationDiffsWithReconcileIxs.map((e, _) =>
+            ...allocationDiffsWithReconcileIxs.map((e) =>
                 vaultValue.eq(0) ? 100 : e[0].abs().div(vaultValue).toNumber()
             )
         );
