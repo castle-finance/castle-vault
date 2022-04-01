@@ -146,37 +146,22 @@ pub struct Initialize<'info> {
 }
 
 impl<'info> Initialize<'info> {
-    fn init_fee_receivers_context(
+    fn init_fee_receiver_create_context(
         &self,
-    ) -> (
-        CpiContext<'_, '_, '_, 'info, Create<'info>>,
-        CpiContext<'_, '_, '_, 'info, Create<'info>>,
-    ) {
-        (
-            CpiContext::new(
-                self.token_program.to_account_info(),
-                Create {
-                    payer: self.payer.to_account_info(),
-                    associated_token: self.fee_receiver.to_account_info(),
-                    authority: self.owner.to_account_info(),
-                    mint: self.lp_token_mint.to_account_info(),
-                    system_program: self.system_program.to_account_info(),
-                    token_program: self.token_program.to_account_info(),
-                    rent: self.rent.to_account_info(),
-                },
-            ),
-            CpiContext::new(
-                self.associated_token_program.to_account_info(),
-                Create {
-                    payer: self.payer.to_account_info(),
-                    associated_token: self.referral_fee_receiver.to_account_info(),
-                    authority: self.referral_fee_owner.to_account_info(),
-                    mint: self.lp_token_mint.to_account_info(),
-                    system_program: self.system_program.to_account_info(),
-                    token_program: self.token_program.to_account_info(),
-                    rent: self.rent.to_account_info(),
-                },
-            ),
+        fee_token_account: AccountInfo<'info>,
+        token_authority: AccountInfo<'info>,
+    ) -> CpiContext<'_, '_, '_, 'info, Create<'info>> {
+        CpiContext::new(
+            self.token_program.to_account_info(),
+            Create {
+                payer: self.payer.to_account_info(),
+                associated_token: fee_token_account,
+                authority: token_authority,
+                mint: self.lp_token_mint.to_account_info(),
+                system_program: self.system_program.to_account_info(),
+                token_program: self.token_program.to_account_info(),
+                rent: self.rent.to_account_info(),
+            },
         )
     }
 
@@ -257,13 +242,17 @@ pub fn handler(
         referral_fee_pct: fees.referral_fee_pct,
     };
 
-    let (fee_receiver_ctx, referral_fee_receiver_ctx) = ctx.accounts.init_fee_receivers_context();
-
     // Initialize fee receiver account
-    associated_token::create(fee_receiver_ctx)?;
+    associated_token::create(ctx.accounts.init_fee_receiver_create_context(
+        ctx.accounts.fee_receiver.to_account_info(),
+        ctx.accounts.owner.to_account_info(),
+    ))?;
 
     // Initialize referral fee receiver account
-    associated_token::create(referral_fee_receiver_ctx)?;
+    associated_token::create(ctx.accounts.init_fee_receiver_create_context(
+        ctx.accounts.referral_fee_receiver.to_account_info(),
+        ctx.accounts.referral_fee_owner.to_account_info(),
+    ))?;
 
     Ok(())
 }
