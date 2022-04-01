@@ -142,21 +142,18 @@ export class VaultClient {
                 program.programId
             );
 
-        const [feeReceiver, feeReceiverBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    vaultId.publicKey.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("fee_receiver"),
-                ],
-                program.programId
-            );
+        const feeReceiver = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            lpTokenMint,
+            owner
+        );
 
         const referralFeeReceiver = await Token.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             lpTokenMint,
-            referralFeeOwner,
-            true
+            referralFeeOwner
         );
 
         await program.rpc.initialize(
@@ -164,7 +161,6 @@ export class VaultClient {
                 authority: authorityBump,
                 reserve: reserveBump,
                 lpMint: lpTokenMintBump,
-                feeReceiver: feeReceiverBump,
                 solendLp: solendLpBump,
                 portLp: portLpBump,
                 jetLp: jetLpBump,
