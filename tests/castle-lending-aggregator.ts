@@ -212,11 +212,11 @@ describe("castle-vault", () => {
         strategyType,
         owner.publicKey,
         { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct },
-        10000000000
+        poolSizeLimit
       );
       // TODO add more checks
       assert.notEqual(vaultClient.vaultState, null);
-      assert.equal(vaultClient.vaultState.poolSizeLimit, 10000000000);
+      assert.equal(vaultClient.vaultState.poolSizeLimit, poolSizeLimit);
     };
   }
 
