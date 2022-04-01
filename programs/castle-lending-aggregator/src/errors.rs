@@ -25,4 +25,7 @@ pub enum ErrorCode {
 
     #[msg("Failed to set fee BPS which is greater than 10000")]
     FeeBpsError,
+
+    #[msg("Staking pool size limit is reached")]
+    DepositCapError,
 }

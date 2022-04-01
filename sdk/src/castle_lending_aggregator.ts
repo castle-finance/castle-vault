@@ -967,6 +967,11 @@ export type CastleLendingAggregator = {
       "code": 6007,
       "name": "FeeBpsError",
       "msg": "Failed to set fee BPS which is greater than 10000"
+    },
+    {
+      "code": 6008,
+      "name": "DepositCapError",
+      "msg": "Staking pool size limit is reached"
     }
   ]
 };
@@ -1940,6 +1945,11 @@ export const IDL: CastleLendingAggregator = {
       "code": 6007,
       "name": "FeeBpsError",
       "msg": "Failed to set fee BPS which is greater than 10000"
+    },
+    {
+      "code": 6008,
+      "name": "DepositCapError",
+      "msg": "Staking pool size limit is reached"
     }
   ]
 };
