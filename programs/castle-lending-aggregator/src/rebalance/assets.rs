@@ -4,16 +4,8 @@ use anchor_lang::prelude::*;
 use jet::state::Reserve as JetReserve;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Rate, TryMul};
-use strum_macros::EnumIter;
 
-use crate::adapters::SolendReserve;
-
-#[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
-pub enum Provider {
-    Solend,
-    Port,
-    Jet,
-}
+use crate::{adapters::SolendReserve, state::Provider};
 
 pub trait Asset {
     // TODO remove solana-specific error types

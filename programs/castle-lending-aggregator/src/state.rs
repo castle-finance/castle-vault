@@ -2,8 +2,9 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock::{
     DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
 };
-
 use std::cmp::Ordering;
+use std::ops::{Index, IndexMut};
+use strum_macros::EnumIter;
 
 use crate::errors::ErrorCode;
 
@@ -100,7 +101,7 @@ impl Vault {
 
     pub fn update_value(&mut self, new_value: u64, slot: u64) {
         self.total_value = new_value;
-        self.last_update.update_slot(slot);
+        self.last_update = self.last_update.update_slot(slot);
     }
 
     pub fn authority_seeds(&self) -> [&[u8]; 3] {
@@ -136,7 +137,14 @@ pub enum StrategyType {
     EqualAllocation,
 }
 
-// How can we connect this with Provider?
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default, EnumIter, PartialEq)]
+pub enum Provider {
+    #[default]
+    Solend,
+    Port,
+    Jet,
+}
+
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: Allocation,
@@ -144,21 +152,50 @@ pub struct Allocations {
     pub jet: Allocation,
 }
 
+impl Index<Provider> for Allocations {
+    type Output = Allocation;
+
+    fn index(&self, provider: Provider) -> &Self::Output {
+        match provider {
+            Provider::Solend => &self.solend,
+            Provider::Port => &self.port,
+            Provider::Jet => &self.jet,
+        }
+    }
+}
+
+impl IndexMut<Provider> for Allocations {
+    fn index_mut(&mut self, provider: Provider) -> &mut Self::Output {
+        match provider {
+            Provider::Solend => &mut self.solend,
+            Provider::Port => &mut self.port,
+            Provider::Jet => &mut self.jet,
+        }
+    }
+}
+
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocation {
     pub value: u64,
+    pub provider: Provider,
     pub last_update: LastUpdate,
 }
 
 impl Allocation {
-    pub fn update(&mut self, value: u64, slot: u64) {
-        self.value = value;
-        self.last_update.update_slot(slot);
+    pub fn update(&self, value: u64, slot: u64) -> Self {
+        Self {
+            value: value,
+            last_update: self.last_update.update_slot(slot),
+            provider: self.provider,
+        }
     }
 
-    pub fn reset(&mut self) {
-        self.value = 0;
-        self.last_update.mark_stale();
+    pub fn reset(&self) -> Self {
+        Self {
+            value: 0,
+            last_update: LastUpdate::default(),
+            provider: self.provider,
+        }
     }
 }
 
@@ -184,14 +221,16 @@ impl LastUpdate {
     }
 
     /// Set last update slot
-    pub fn update_slot(&mut self, slot: u64) {
-        self.slot = slot;
-        self.stale = false;
+    pub fn update_slot(self, slot: u64) -> Self {
+        Self { slot, stale: false }
     }
 
     /// Set stale to true
-    pub fn mark_stale(&mut self) {
-        self.stale = true;
+    pub fn mark_stale(self) -> Self {
+        Self {
+            slot: self.slot,
+            stale: true,
+        }
     }
 
     /// Check if marked stale or last update slot is too long ago

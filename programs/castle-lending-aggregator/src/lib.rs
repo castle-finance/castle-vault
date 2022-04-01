@@ -1,3 +1,5 @@
+#![feature(derive_default_enum)]
+
 use anchor_lang::prelude::*;
 
 pub mod adapters;

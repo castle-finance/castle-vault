@@ -2,7 +2,10 @@ use std::cmp;
 
 use anchor_lang::prelude::*;
 
-use crate::{errors::ErrorCode, state::Allocation};
+use crate::{
+    errors::ErrorCode,
+    state::{Allocation, Provider, Vault},
+};
 
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?
@@ -18,8 +21,18 @@ pub trait LendingMarket {
     fn reserve_tokens_in_vault(&self) -> u64;
     fn lp_tokens_in_vault(&self) -> u64;
 
-    fn get_allocation(&self) -> Allocation;
-    fn reset_allocation(&mut self);
+    fn provider(&self) -> Provider;
+    fn vault(&self) -> &Vault;
+    fn vault_mut(&mut self) -> &mut Vault;
+
+    fn get_allocation(&self) -> Allocation {
+        self.vault().allocations[self.provider()]
+    }
+
+    fn reset_allocation(&mut self) {
+        let provider = self.provider();
+        self.vault_mut().allocations[provider] = self.vault().allocations[provider].reset();
+    }
 }
 
 pub fn handler(ctx: Context<impl LendingMarket>, withdraw_option: u64) -> ProgramResult {
