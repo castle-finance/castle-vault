@@ -9,7 +9,7 @@ use strum::IntoEnumIterator;
 use crate::adapters::SolendReserve;
 use crate::errors::ErrorCode;
 use crate::events::RebalanceEvent;
-use crate::rebalance::assets::{Asset, LendingMarket};
+use crate::rebalance::assets::{Asset, Assets, LendingMarket};
 use crate::rebalance::strategies::*;
 use crate::{impl_provider_index, state::*};
 
@@ -54,13 +54,6 @@ impl From<StrategyWeightsArg> for StrategyWeights {
     }
 }
 
-pub struct Assets {
-    solend: LendingMarket,
-    port: LendingMarket,
-    jet: LendingMarket,
-}
-impl_provider_index!(Assets, LendingMarket);
-
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
     let vault_value = ctx.accounts.vault.total_value;
@@ -72,15 +65,10 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
         jet: LendingMarket::try_from(&*ctx.accounts.jet_reserve.load()?)?,
     };
 
-    // TODO make this an into trait impl?
-    let assets_arr = Provider::iter()
-        .map(|p| assets[p])
-        .collect::<Vec<LendingMarket>>();
-
     // TODO reduce the duplication between the Enum and Struct
     let strategy_weights = match ctx.accounts.vault.strategy_type {
-        StrategyType::MaxYield => MaxYieldStrategy.calculate_weights(&assets_arr),
-        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets_arr),
+        StrategyType::MaxYield => MaxYieldStrategy.calculate_weights(&assets),
+        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets),
     }?;
 
     // Convert weights to allocations

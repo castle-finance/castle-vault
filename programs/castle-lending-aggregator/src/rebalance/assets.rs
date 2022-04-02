@@ -4,8 +4,23 @@ use anchor_lang::prelude::*;
 use jet::state::Reserve as JetReserve;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Rate, TryMul};
+use strum::IntoEnumIterator;
 
-use crate::{adapters::SolendReserve, state::Provider};
+use crate::{adapters::SolendReserve, impl_provider_index, state::Provider};
+
+#[derive(Debug, Clone, Copy)]
+pub struct Assets {
+    pub solend: LendingMarket,
+    pub port: LendingMarket,
+    pub jet: LendingMarket,
+}
+impl_provider_index!(Assets, LendingMarket);
+
+impl Assets {
+    pub fn len(&self) -> usize {
+        Provider::iter().len()
+    }
+}
 
 pub trait Asset {
     // TODO remove solana-specific error types

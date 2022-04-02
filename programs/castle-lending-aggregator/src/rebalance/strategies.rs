@@ -8,7 +8,7 @@ use strum::IntoEnumIterator;
 // TODO refactor so we don't need to depend on higher-level modules
 use crate::{errors::ErrorCode, impl_provider_index, state::Provider};
 
-use super::assets::Asset;
+use super::assets::{Asset, Assets};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct StrategyWeights {
@@ -19,7 +19,7 @@ pub struct StrategyWeights {
 impl_provider_index!(StrategyWeights, Rate);
 
 pub trait Strategy {
-    fn calculate_weights(&self, assets: &[impl Asset]) -> Result<StrategyWeights, ProgramError>;
+    fn calculate_weights(&self, assets: &Assets) -> Result<StrategyWeights, ProgramError>;
 
     // TODO split this into separate trait?
     /// Fails if the proposed weights don't meet the constraints of the strategy
@@ -39,7 +39,7 @@ pub trait Strategy {
 #[derive(Clone, Copy, Debug)]
 pub struct EqualAllocationStrategy;
 impl Strategy for EqualAllocationStrategy {
-    fn calculate_weights(&self, assets: &[impl Asset]) -> Result<StrategyWeights, ProgramError> {
+    fn calculate_weights(&self, assets: &Assets) -> Result<StrategyWeights, ProgramError> {
         // TODO make this error handling more granular and informative
         let num_assets = u8::try_from(assets.len()).map_err(|_| ErrorCode::StrategyError)?;
         let equal_allocation = Rate::one().try_div(Rate::from_percent(num_assets).try_mul(100)?)?;
@@ -61,10 +61,10 @@ impl MaxYieldStrategy {
 }
 
 impl Strategy for MaxYieldStrategy {
-    fn calculate_weights(&self, assets: &[impl Asset]) -> Result<StrategyWeights, ProgramError> {
-        let max_yielding_asset = assets
-            .iter()
-            .max_by(|x, y| self.compare(*x, *y).unwrap())
+    fn calculate_weights(&self, assets: &Assets) -> Result<StrategyWeights, ProgramError> {
+        let max_yielding_asset = Provider::iter()
+            .map(|p| assets[p])
+            .max_by(|x, y| self.compare(x, y).unwrap())
             // TODO make this error handling more granular and informative
             .ok_or(ErrorCode::StrategyError)?;
 
