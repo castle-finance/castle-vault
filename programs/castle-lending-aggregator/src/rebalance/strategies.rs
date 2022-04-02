@@ -62,15 +62,14 @@ impl MaxYieldStrategy {
 
 impl Strategy for MaxYieldStrategy {
     fn calculate_weights(&self, assets: &Assets) -> Result<StrategyWeights, ProgramError> {
-        let max_yielding_asset = Provider::iter()
-            .map(|p| assets[p])
-            .max_by(|x, y| self.compare(x, y).unwrap())
+        let max_yielding_provider = Provider::iter()
+            .max_by(|x, y| self.compare(&assets[*x], &assets[*y]).unwrap())
             // TODO make this error handling more granular and informative
             .ok_or(ErrorCode::StrategyError)?;
 
         let strategy_weights = &mut StrategyWeights::default();
         for p in Provider::iter() {
-            if p == max_yielding_asset.provider() {
+            if p == max_yielding_provider {
                 strategy_weights[p] = Rate::one();
             } else {
                 strategy_weights[p] = Rate::zero();

@@ -25,7 +25,6 @@ impl Assets {
 pub trait Asset {
     // TODO remove solana-specific error types
     fn expected_return(&self, allocation: u64) -> Result<Rate, ProgramError>;
-    fn provider(&self) -> Provider;
 }
 
 // TODO impl Asset for a reserve
@@ -34,16 +33,12 @@ pub trait Asset {
 pub struct LendingMarket {
     utilization_rate: Rate,
     borrow_rate: Rate,
-    provider: Provider,
 }
 
 impl Asset for LendingMarket {
     fn expected_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
         // TODO add liquidity mining rewards
         self.utilization_rate.try_mul(self.borrow_rate)
-    }
-    fn provider(&self) -> Provider {
-        self.provider
     }
 }
 
@@ -68,7 +63,6 @@ impl TryFrom<&SolendReserve> for LendingMarket {
         Ok(LendingMarket {
             utilization_rate: converted_utilization_rate,
             borrow_rate: converted_borrow_rate,
-            provider: Provider::Solend,
         })
     }
 }
@@ -93,7 +87,6 @@ impl TryFrom<&PortReserve> for LendingMarket {
         Ok(LendingMarket {
             utilization_rate: converted_utilization_rate,
             borrow_rate: converted_borrow_rate,
-            provider: Provider::Port,
         })
     }
 }
@@ -120,7 +113,6 @@ impl TryFrom<&JetReserve> for LendingMarket {
         Ok(LendingMarket {
             utilization_rate: converted_util,
             borrow_rate: converted_borrow,
-            provider: Provider::Jet,
         })
     }
 }
