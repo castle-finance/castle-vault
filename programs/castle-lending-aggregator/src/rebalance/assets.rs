@@ -9,9 +9,11 @@ use crate::{adapters::SolendReserve, state::Provider};
 
 pub trait Asset {
     // TODO remove solana-specific error types
-    fn expected_return(&self) -> Result<Rate, ProgramError>;
+    fn expected_return(&self, allocation: u64) -> Result<Rate, ProgramError>;
     fn provider(&self) -> Provider;
 }
+
+// TODO impl Asset for a reserve
 
 pub struct LendingMarket {
     utilization_rate: Rate,
@@ -20,7 +22,7 @@ pub struct LendingMarket {
 }
 
 impl Asset for LendingMarket {
-    fn expected_return(&self) -> Result<Rate, ProgramError> {
+    fn expected_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
         // TODO add liquidity mining rewards
         self.utilization_rate.try_mul(self.borrow_rate)
     }

@@ -2,10 +2,13 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock::{
     DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
 };
+use solana_maths::{Decimal, TryMul};
 use std::cmp::Ordering;
+use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 use crate::errors::ErrorCode;
+use crate::rebalance::strategies::StrategyWeights;
 
 /// Number of slots per year
 pub const SLOTS_PER_YEAR: u64 =
@@ -180,8 +183,24 @@ pub struct Allocations {
     pub port: Allocation,
     pub jet: Allocation,
 }
-
 impl_provider_index!(Allocations, Allocation);
+
+impl Allocations {
+    pub fn try_from_weights(
+        weights: StrategyWeights,
+        total_value: u64,
+        slot: u64,
+    ) -> Result<Self, ProgramError> {
+        let allocations = &mut Self::default();
+        for p in Provider::iter() {
+            let allocation = weights[p]
+                .try_mul(total_value)
+                .and_then(|product| Decimal::from(product).try_floor_u64())?;
+            allocations[p].update(allocation, slot);
+        }
+        Ok(*allocations)
+    }
+}
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocation {

@@ -3,7 +3,7 @@ use std::ops::Deref;
 
 use anchor_lang::prelude::*;
 use port_anchor_adaptor::PortReserve;
-use solana_maths::{Decimal, Rate, TryMul};
+use solana_maths::Rate;
 use strum::IntoEnumIterator;
 
 use crate::adapters::SolendReserve;
@@ -36,44 +36,30 @@ pub struct Rebalance<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-#[derive(Debug, Clone)]
-pub struct RateUpdate {
-    pub provider: Provider,
-    pub rate: Rate,
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
+pub struct StrategyWeightsArg {
+    solend: u16,
+    port: u16,
+    jet: u16,
 }
+impl_provider_index!(StrategyWeightsArg, u16);
 
-impl RateUpdate {
-    pub fn try_apply(
-        &self,
-        clock: &Clock,
-        vault_value: u64,
-        vault_allocations: &mut Allocations,
-    ) -> Result<(), ProgramError> {
-        let allocation = self
-            .rate
-            .try_mul(vault_value)
-            .and_then(|product| Decimal::from(product).try_floor_u64())?;
-        //msg!("Setting allocation: {}", allocation);
-
-        vault_allocations[self.provider].update(allocation, clock.slot);
-        Ok(())
+impl From<StrategyWeightsArg> for StrategyWeights {
+    fn from(value: StrategyWeightsArg) -> Self {
+        let strategy_weights = &mut Self::default();
+        for p in Provider::iter() {
+            strategy_weights[p] = Rate::from_bips(value[p] as u64);
+        }
+        *strategy_weights
     }
 }
 
-#[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]
-pub struct ProposedWeightsBps {
-    pub solend: u16,
-    pub port: u16,
-    pub jet: u16,
-}
-
-impl_provider_index!(ProposedWeightsBps, u16);
-
 /// Calculate and store optimal allocations to downstream lending markets
-pub fn handler(ctx: Context<Rebalance>, proposed_weights: ProposedWeightsBps) -> ProgramResult {
+pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
     msg!("Rebalancing");
 
     let vault_value = ctx.accounts.vault.total_value;
+    let clock = Clock::get()?;
 
     let assets = [
         LendingMarket::try_from(ctx.accounts.solend_reserve.as_ref().deref())?,
@@ -82,12 +68,20 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights: ProposedWeightsBps) ->
     ];
 
     // TODO reduce the duplication between the Enum and Struct
-    let strategy_allocations = match ctx.accounts.vault.strategy_type {
-        StrategyType::MaxYield => MaxYieldStrategy.calculate_allocations(&assets),
-        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_allocations(&assets),
+    let strategy_weights = match ctx.accounts.vault.strategy_type {
+        StrategyType::MaxYield => MaxYieldStrategy.calculate_weights(&assets),
+        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets),
     }?;
 
+    // Convert weights to allocations
+    let strategy_allocations =
+        Allocations::try_from_weights(strategy_weights, vault_value, clock.slot)?;
+
     let final_allocations = if ctx.accounts.vault.proof_checker != 0 {
+        let proposed_weights: StrategyWeights = proposed_weights_arg.into();
+        let proposed_allocations =
+            Allocations::try_from_weights(proposed_weights, vault_value, clock.slot)?;
+
         msg!(
             "Running as proof checker with proposed weights: {:?}",
             proposed_weights
@@ -108,29 +102,16 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights: ProposedWeightsBps) ->
         if proposed_apy_bps < proof_apy_bps {
             return Err(ErrorCode::RebalanceProofCheckFailed.into());
         }
-
-        // Convert proposed_weights to Vec<RateUpdate>
-        Provider::iter()
-            .map(|p| RateUpdate {
-                provider: p,
-                rate: Rate::from_bips(proposed_weights[p] as u64),
-            })
-            .collect::<Vec<RateUpdate>>()
+        proposed_allocations
     } else {
         msg!("Running as calculator");
         strategy_allocations
     };
 
     msg!("Final allocations: {:?}", final_allocations);
+    emit!(RebalanceEvent::from(&final_allocations));
 
-    let vault_allocations = &mut ctx.accounts.vault.allocations;
-    let clock = Clock::get()?;
-
-    final_allocations
-        .iter()
-        .try_for_each(|s| s.try_apply(&clock, vault_value, vault_allocations))?;
-
-    emit!(RebalanceEvent::from(&*vault_allocations));
+    ctx.accounts.vault.allocations = final_allocations;
 
     Ok(())
 }
