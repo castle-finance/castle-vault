@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, convert::TryFrom};
 
 // TODO should ProgramError be used in this module?
-use anchor_lang::prelude::{ProgramError, ProgramResult};
+use anchor_lang::prelude::*;
 use solana_maths::{Rate, TryDiv, TryMul};
 use strum::IntoEnumIterator;
 
@@ -34,6 +34,7 @@ pub trait Strategy {
     }
 }
 
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
 pub struct EqualAllocationStrategy;
 impl Strategy for EqualAllocationStrategy {
     fn calculate_allocations(
@@ -52,6 +53,7 @@ impl Strategy for EqualAllocationStrategy {
     }
 }
 
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
 pub struct MaxYieldStrategy;
 impl MaxYieldStrategy {
     fn compare(&self, lhs: &impl Asset, rhs: &impl Asset) -> Result<Ordering, ProgramError> {

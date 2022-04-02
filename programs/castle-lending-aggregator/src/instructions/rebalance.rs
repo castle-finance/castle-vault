@@ -81,6 +81,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights: ProposedWeightsBps) ->
         LendingMarket::try_from(&*ctx.accounts.jet_reserve.load()?)?,
     ];
 
+    // TODO reduce the duplication between the Enum and Struct
     let strategy_allocations = match ctx.accounts.vault.strategy_type {
         StrategyType::MaxYield => MaxYieldStrategy.calculate_allocations(&assets),
         StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_allocations(&assets),
