@@ -15,6 +15,7 @@ pub trait Asset {
 
 // TODO impl Asset for a reserve
 
+#[derive(Debug, Clone, Copy)]
 pub struct LendingMarket {
     utilization_rate: Rate,
     borrow_rate: Rate,

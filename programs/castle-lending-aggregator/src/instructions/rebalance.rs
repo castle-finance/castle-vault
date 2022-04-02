@@ -3,13 +3,13 @@ use std::ops::Deref;
 
 use anchor_lang::prelude::*;
 use port_anchor_adaptor::PortReserve;
-use solana_maths::Rate;
+use solana_maths::{Rate, TryAdd, TryMul};
 use strum::IntoEnumIterator;
 
 use crate::adapters::SolendReserve;
 use crate::errors::ErrorCode;
 use crate::events::RebalanceEvent;
-use crate::rebalance::assets::LendingMarket;
+use crate::rebalance::assets::{Asset, LendingMarket};
 use crate::rebalance::strategies::*;
 use crate::{impl_provider_index, state::*};
 
@@ -54,21 +54,33 @@ impl From<StrategyWeightsArg> for StrategyWeights {
     }
 }
 
+pub struct Assets {
+    solend: LendingMarket,
+    port: LendingMarket,
+    jet: LendingMarket,
+}
+impl_provider_index!(Assets, LendingMarket);
+
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
     let vault_value = ctx.accounts.vault.total_value;
     let clock = Clock::get()?;
 
-    let assets = [
-        LendingMarket::try_from(ctx.accounts.solend_reserve.as_ref().deref())?,
-        LendingMarket::try_from(ctx.accounts.port_reserve.as_ref().deref())?,
-        LendingMarket::try_from(&*ctx.accounts.jet_reserve.load()?)?,
-    ];
+    let assets = Assets {
+        solend: LendingMarket::try_from(ctx.accounts.solend_reserve.as_ref().deref())?,
+        port: LendingMarket::try_from(ctx.accounts.port_reserve.as_ref().deref())?,
+        jet: LendingMarket::try_from(&*ctx.accounts.jet_reserve.load()?)?,
+    };
+
+    // TODO make this an into trait impl?
+    let assets_arr = Provider::iter()
+        .map(|p| assets[p])
+        .collect::<Vec<LendingMarket>>();
 
     // TODO reduce the duplication between the Enum and Struct
     let strategy_weights = match ctx.accounts.vault.strategy_type {
-        StrategyType::MaxYield => MaxYieldStrategy.calculate_weights(&assets),
-        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets),
+        StrategyType::MaxYield => MaxYieldStrategy.calculate_weights(&assets_arr),
+        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets_arr),
     }?;
 
     // Convert weights to allocations
@@ -85,20 +97,16 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
             "Running as proof checker with proposed weights: {:?}",
             proposed_weights
         );
-        // Validate inputs
+
         match ctx.accounts.vault.strategy_type {
             StrategyType::MaxYield => MaxYieldStrategy.verify(&proposed_weights),
             StrategyType::EqualAllocation => EqualAllocationStrategy.verify(&proposed_weights),
         }?;
 
-        // Get APY of proposed weights
-        let proposed_apy_bps = todo!();
+        let proposed_apy = get_apy(&proposed_weights, &proposed_allocations, &assets)?;
+        let proof_apy = get_apy(&strategy_weights, &strategy_allocations, &assets)?;
 
-        // Get APY of proof check
-        let proof_apy_bps = todo!();
-
-        // Fail if proposed APY < provable APY
-        if proposed_apy_bps < proof_apy_bps {
+        if proposed_apy < proof_apy {
             return Err(ErrorCode::RebalanceProofCheckFailed.into());
         }
         proposed_allocations
@@ -110,9 +118,22 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
 
     #[cfg(feature = "debug")]
     msg!("Final allocations: {:?}", final_allocations);
+
     emit!(RebalanceEvent::from(&final_allocations));
 
     ctx.accounts.vault.allocations = final_allocations;
 
     Ok(())
+}
+
+fn get_apy(
+    weights: &StrategyWeights,
+    allocations: &Allocations,
+    assets: &Assets,
+) -> Result<Rate, ProgramError> {
+    Provider::iter()
+        .map(|p| weights[p].try_mul(assets[p].expected_return(allocations[p].value)?))
+        .collect::<Result<Vec<_>, ProgramError>>()?
+        .iter()
+        .try_fold(Rate::zero(), |acc, r| acc.try_add(*r))
 }
