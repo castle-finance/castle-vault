@@ -25,4 +25,10 @@ pub enum ErrorCode {
 
     #[msg("Failed to set fee BPS which is greater than 10000")]
     FeeBpsError,
+
+    #[msg("Proposed weights don't add up to 100%")]
+    InvalidProposedWeights,
+
+    #[msg("Proposed weights failed proof check")]
+    RebalanceProofCheckFailed,
 }

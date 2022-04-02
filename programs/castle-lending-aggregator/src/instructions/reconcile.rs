@@ -29,6 +29,7 @@ pub trait HasVault {
     fn vault_mut(&mut self) -> &mut Vault;
 }
 
+// TODO make this a custom derive procmacro
 #[macro_export]
 macro_rules! impl_has_vault {
     ($($t:ty),+ $(,)?) => ($(

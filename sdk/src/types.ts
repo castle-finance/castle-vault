@@ -34,6 +34,7 @@ export interface Vault {
     vaultSolendLpToken: PublicKey;
     allocations: Allocations;
     strategyType: any;
+    proofChecker: number;
     owner: PublicKey;
     fees: VaultFees;
 }
@@ -51,6 +52,12 @@ export interface FeeArgs {
     feeMgmtBps: number;
     referralFeePct: number;
     referralFeeOwner: PublicKey;
+}
+
+export interface ProposedWeightsBps {
+    solend: number;
+    port: number;
+    jet: number;
 }
 
 export interface RebalanceEvent {

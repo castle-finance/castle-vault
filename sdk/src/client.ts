@@ -29,7 +29,13 @@ import {
     SolendReserveAsset,
     JetReserveAsset,
 } from "./adapters";
-import { StrategyType, RebalanceEvent, Vault, FeeArgs } from "./types";
+import {
+    StrategyType,
+    RebalanceEvent,
+    Vault,
+    FeeArgs,
+    ProposedWeightsBps,
+} from "./types";
 
 export class VaultClient {
     private constructor(
@@ -83,6 +89,7 @@ export class VaultClient {
         port: PortReserveAsset,
         jet: JetReserveAsset,
         strategyType: StrategyType,
+        proofChecker: boolean,
         owner: PublicKey,
         feeData: FeeArgs
     ): Promise<VaultClient> {
@@ -166,6 +173,7 @@ export class VaultClient {
                 jetLp: jetLpBump,
             },
             strategyType,
+            proofChecker,
             {
                 feeCarryBps: new anchor.BN(feeCarryBps),
                 feeMgmtBps: new anchor.BN(feeMgmtBps),
@@ -502,12 +510,18 @@ export class VaultClient {
      * @returns
      */
     async rebalance(threshold = 0): Promise<TransactionSignature[]> {
+        // TODO replace with actual weights
+        const emptyProposedWeights: ProposedWeightsBps = {
+            solend: 0,
+            port: 0,
+            jet: 0,
+        };
         const txs: SendTxRequest[] = [];
 
         const rebalanceTx = new Transaction();
         rebalanceTx.add(this.getRefreshIx());
         rebalanceTx.add(
-            this.program.instruction.rebalance({
+            this.program.instruction.rebalance(emptyProposedWeights, {
                 accounts: {
                     vault: this.vaultId,
                     solendReserve: this.solend.accounts.reserve,
@@ -558,8 +572,13 @@ export class VaultClient {
     private async newAndOldallocationsWithReconcileIxs(): Promise<
         [Big, Big, (withdrawOption?: anchor.BN) => TransactionInstruction][]
     > {
+        const emptyProposedWeights: ProposedWeightsBps = {
+            solend: 0,
+            port: 0,
+            jet: 0,
+        };
         const newAllocations = (
-            await this.program.simulate.rebalance({
+            await this.program.simulate.rebalance(emptyProposedWeights, {
                 accounts: {
                     vault: this.vaultId,
                     solendReserve: this.solend.accounts.reserve,

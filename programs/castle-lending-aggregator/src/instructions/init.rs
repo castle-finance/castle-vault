@@ -9,7 +9,7 @@ use std::convert::Into;
 
 use crate::{adapters::SolendReserve, errors::ErrorCode, state::*};
 
-#[derive(AnchorDeserialize, AnchorSerialize)]
+#[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]
 pub struct InitBumpSeeds {
     authority: u8,
     reserve: u8,
@@ -19,7 +19,7 @@ pub struct InitBumpSeeds {
     jet_lp: u8,
 }
 
-#[derive(AnchorDeserialize, AnchorSerialize)]
+#[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]
 pub struct FeeArgs {
     pub fee_carry_bps: u32,
     pub fee_mgmt_bps: u32,
@@ -206,6 +206,7 @@ pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
+    proof_checker: bool,
     fees: FeeArgs,
 ) -> ProgramResult {
     let clock = Clock::get()?;
@@ -233,6 +234,7 @@ pub fn handler(
     vault.last_update = LastUpdate::new(clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;
+    vault.proof_checker = if proof_checker { 1 } else { 0 };
 
     vault.fees = VaultFees {
         fee_receiver: ctx.accounts.fee_receiver.key(),

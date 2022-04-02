@@ -210,6 +210,7 @@ describe("castle-vault", () => {
         port,
         jet,
         strategyType,
+        false,
         owner.publicKey,
         { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct }
       );

@@ -3,7 +3,6 @@ use anchor_lang::solana_program::clock::{
     DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
 };
 use std::cmp::Ordering;
-use std::ops::{Index, IndexMut};
 use strum_macros::EnumIter;
 
 use crate::errors::ErrorCode;
@@ -65,6 +64,10 @@ pub struct Vault {
 
     /// Strategy type that is executed during rebalance
     pub strategy_type: StrategyType,
+
+    /// Whether or not to run rebalance as a proof check instead of calculation
+    /// NOTE: this is actually a bool but represented as a u8 bc of anchor limitations
+    pub proof_checker: u8,
 }
 
 impl Vault {
@@ -144,6 +147,33 @@ pub enum Provider {
     Jet,
 }
 
+#[macro_export]
+macro_rules! impl_provider_index {
+    ($t:ty, $o:ty) => {
+        impl core::ops::Index<Provider> for $t {
+            type Output = $o;
+
+            fn index(&self, provider: Provider) -> &Self::Output {
+                match provider {
+                    Provider::Solend => &self.solend,
+                    Provider::Port => &self.port,
+                    Provider::Jet => &self.jet,
+                }
+            }
+        }
+
+        impl core::ops::IndexMut<Provider> for $t {
+            fn index_mut(&mut self, provider: Provider) -> &mut Self::Output {
+                match provider {
+                    Provider::Solend => &mut self.solend,
+                    Provider::Port => &mut self.port,
+                    Provider::Jet => &mut self.jet,
+                }
+            }
+        }
+    };
+}
+
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: Allocation,
@@ -151,27 +181,7 @@ pub struct Allocations {
     pub jet: Allocation,
 }
 
-impl Index<Provider> for Allocations {
-    type Output = Allocation;
-
-    fn index(&self, provider: Provider) -> &Self::Output {
-        match provider {
-            Provider::Solend => &self.solend,
-            Provider::Port => &self.port,
-            Provider::Jet => &self.jet,
-        }
-    }
-}
-
-impl IndexMut<Provider> for Allocations {
-    fn index_mut(&mut self, provider: Provider) -> &mut Self::Output {
-        match provider {
-            Provider::Solend => &mut self.solend,
-            Provider::Port => &mut self.port,
-            Provider::Jet => &mut self.jet,
-        }
-    }
-}
+impl_provider_index!(Allocations, Allocation);
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocation {

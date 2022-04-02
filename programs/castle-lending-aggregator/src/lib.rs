@@ -22,9 +22,10 @@ pub mod castle_lending_aggregator {
         ctx: Context<Initialize>,
         _bumps: InitBumpSeeds,
         strategy_type: StrategyType,
+        proof_checker: bool,
         fees: FeeArgs,
     ) -> ProgramResult {
-        instructions::init::handler(ctx, _bumps, strategy_type, fees)
+        instructions::init::handler(ctx, _bumps, strategy_type, proof_checker, fees)
     }
 
     pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
@@ -35,8 +36,11 @@ pub mod castle_lending_aggregator {
         instructions::withdraw::handler(ctx, lp_token_amount)
     }
 
-    pub fn rebalance(ctx: Context<Rebalance>) -> ProgramResult {
-        instructions::rebalance::handler(ctx)
+    pub fn rebalance(
+        ctx: Context<Rebalance>,
+        proposed_weights: ProposedWeightsBps,
+    ) -> ProgramResult {
+        instructions::rebalance::handler(ctx, proposed_weights)
     }
 
     pub fn refresh(ctx: Context<Refresh>) -> ProgramResult {
