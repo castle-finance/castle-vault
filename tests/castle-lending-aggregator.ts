@@ -49,10 +49,6 @@ describe("castle-vault", () => {
   let totalFees: { primary: anchor.BN; referral: anchor.BN };
   let lastUpdatedSlot: number;
 
-  async function sleep(t: number) {
-    return new Promise((res) => setTimeout(res, t));
-  }
-
   async function fetchSlots(txs: string[]): Promise<number[]> {
     const slots = (
       await Promise.all(
@@ -230,7 +226,7 @@ describe("castle-vault", () => {
         depositAmount,
         userReserveTokenAccount
       );
-      await sleep(1000);
+      await provider.connection.confirmTransaction(txs[txs.length - 1], "singleGossip");
       const depositTxSlots = await fetchSlots(txs);
 
       const userTokenAccountInfo = await reserveToken.getAccountInfo(
@@ -273,7 +269,7 @@ describe("castle-vault", () => {
       const beforeWithdrawLpSupply = (await vaultClient.getLpTokenMintInfo()).supply;
 
       const txs = await vaultClient.withdraw(wallet, withdrawAmount);
-      await sleep(1000);
+      await provider.connection.confirmTransaction(txs[txs.length - 1], "singleGossip");
 
       const withdrawTxSlots = await fetchSlots(txs);
 
@@ -341,7 +337,7 @@ describe("castle-vault", () => {
       const beforeRebalanceMintSupply = (await vaultClient.getLpTokenMintInfo()).supply;
 
       const txs = await vaultClient.rebalance();
-      await sleep(1000);
+      await provider.connection.confirmTransaction(txs[txs.length - 1], "singleGossip");
 
       const rebalanceTxSlots = await fetchSlots(txs);
 
