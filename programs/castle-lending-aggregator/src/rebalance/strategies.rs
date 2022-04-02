@@ -1,18 +1,37 @@
 use std::{cmp::Ordering, convert::TryFrom};
 
 // TODO should ProgramError be used in this module?
-use anchor_lang::prelude::ProgramError;
+use anchor_lang::prelude::{ProgramError, ProgramResult};
 use solana_maths::{Rate, TryDiv, TryMul};
 use strum::IntoEnumIterator;
 
 // TODO refactor so we don't need to depend on higher-level modules
-use crate::{errors::ErrorCode, instructions::RateUpdate, state::Provider};
+use crate::{
+    errors::ErrorCode,
+    instructions::{ProposedWeightsBps, RateUpdate},
+    state::Provider,
+};
 
 use super::assets::Asset;
 
 pub trait Strategy {
     fn calculate_allocations(&self, assets: &[impl Asset])
         -> Result<Vec<RateUpdate>, ProgramError>;
+
+    // TODO split this into separate trait?
+    /// Fails if the proposed weights don't meet the constraints of the strategy
+    /// Default impl is to check that weights add up to 100%
+    fn verify(&self, proposed_weights: &ProposedWeightsBps) -> ProgramResult {
+        let sum = Provider::iter()
+            .map(|p| proposed_weights[p])
+            .try_fold(0, |acc: u16, x| acc.checked_add(x))
+            .ok_or(ErrorCode::OverflowError)?;
+
+        if sum != 10000 {
+            return Err(ErrorCode::InvalidProposedWeights.into());
+        }
+        Ok(())
+    }
 }
 
 pub struct EqualAllocationStrategy;

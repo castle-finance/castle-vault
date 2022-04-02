@@ -69,25 +69,11 @@ pub struct ProposedWeightsBps {
 
 impl_provider_index!(ProposedWeightsBps, u16);
 
-impl ProposedWeightsBps {
-    fn verify(&self) -> ProgramResult {
-        // Weights must add up to 10,000
-        let sum = [self.solend, self.port, self.jet]
-            .iter()
-            .try_fold(0, |acc: u16, &x| acc.checked_add(x))
-            .ok_or(ErrorCode::OverflowError)?;
-
-        if sum != 10000 {
-            return Err(ErrorCode::InvalidProposedWeights.into());
-        }
-
-        Ok(())
-    }
-}
-
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler(ctx: Context<Rebalance>, proposed_weights: ProposedWeightsBps) -> ProgramResult {
     msg!("Rebalancing");
+
+    let vault_value = ctx.accounts.vault.total_value;
 
     let assets = [
         LendingMarket::try_from(ctx.accounts.solend_reserve.as_ref().deref())?,
@@ -105,15 +91,24 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights: ProposedWeightsBps) ->
             "Running as proof checker with proposed weights: {:?}",
             proposed_weights
         );
-        proposed_weights.verify()?;
+        // Validate inputs
+        match ctx.accounts.vault.strategy_type {
+            StrategyType::MaxYield => MaxYieldStrategy.verify(&proposed_weights),
+            StrategyType::EqualAllocation => EqualAllocationStrategy.verify(&proposed_weights),
+        }?;
 
         // Get APY of proposed weights
+        let proposed_apy_bps = todo!();
 
         // Get APY of proof check
+        let proof_apy_bps = todo!();
 
         // Fail if proposed APY < provable APY
+        if proposed_apy_bps < proof_apy_bps {
+            return Err(ErrorCode::RebalanceProofCheckFailed.into());
+        }
 
-        // Convert proposed_weigts to Vec<RateUpdate> and return
+        // Convert proposed_weights to Vec<RateUpdate>
         Provider::iter()
             .map(|p| RateUpdate {
                 provider: p,
@@ -127,7 +122,6 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights: ProposedWeightsBps) ->
 
     msg!("Final allocations: {:?}", final_allocations);
 
-    let vault_value = ctx.accounts.vault.total_value;
     let vault_allocations = &mut ctx.accounts.vault.allocations;
     let clock = Clock::get()?;
 
