@@ -6,9 +6,9 @@ use solana_maths::{Rate, TryAdd, TryDiv, TryMul};
 use strum::IntoEnumIterator;
 
 // TODO refactor so we don't need to depend on higher-level modules
-use crate::{errors::ErrorCode, impl_provider_index, state::Provider};
+use crate::{errors::ErrorCode, impl_provider_index};
 
-use super::assets::{Asset, Assets};
+use super::assets::*;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct StrategyWeights {

@@ -4,11 +4,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
 use jet::{state::CachedReserveInfo, Amount, Rounding};
 
-use crate::{
-    impl_has_vault,
-    reconcile::LendingMarket,
-    state::{Provider, Vault},
-};
+use crate::{impl_has_vault, rebalance::assets::Provider, reconcile::LendingMarket, state::Vault};
 
 #[derive(Accounts)]
 pub struct JetAccounts<'info> {

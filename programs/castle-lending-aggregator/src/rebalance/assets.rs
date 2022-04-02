@@ -5,8 +5,43 @@ use jet::state::Reserve as JetReserve;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Rate, TryMul};
 use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 
-use crate::{adapters::SolendReserve, impl_provider_index, state::Provider};
+use crate::adapters::SolendReserve;
+
+#[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
+pub enum Provider {
+    Solend,
+    Port,
+    Jet,
+}
+
+#[macro_export]
+macro_rules! impl_provider_index {
+    ($t:ty, $o:ty) => {
+        impl core::ops::Index<Provider> for $t {
+            type Output = $o;
+
+            fn index(&self, provider: Provider) -> &Self::Output {
+                match provider {
+                    Provider::Solend => &self.solend,
+                    Provider::Port => &self.port,
+                    Provider::Jet => &self.jet,
+                }
+            }
+        }
+
+        impl core::ops::IndexMut<Provider> for $t {
+            fn index_mut(&mut self, provider: Provider) -> &mut Self::Output {
+                match provider {
+                    Provider::Solend => &mut self.solend,
+                    Provider::Port => &mut self.port,
+                    Provider::Jet => &mut self.jet,
+                }
+            }
+        }
+    };
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Assets {
@@ -27,8 +62,6 @@ pub trait Asset {
     fn expected_return(&self, allocation: u64) -> Result<Rate, ProgramError>;
 }
 
-// TODO impl Asset for a reserve
-
 #[derive(Debug, Clone, Copy)]
 pub struct LendingMarket {
     utilization_rate: Rate,
@@ -37,7 +70,6 @@ pub struct LendingMarket {
 
 impl Asset for LendingMarket {
     fn expected_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
-        // TODO add liquidity mining rewards
         self.utilization_rate.try_mul(self.borrow_rate)
     }
 }

@@ -2,10 +2,7 @@ use std::cmp;
 
 use anchor_lang::prelude::*;
 
-use crate::{
-    errors::ErrorCode,
-    state::{Provider, Vault},
-};
+use crate::{errors::ErrorCode, rebalance::assets::Provider, state::Vault};
 
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?

@@ -9,7 +9,7 @@ use strum::IntoEnumIterator;
 use crate::adapters::SolendReserve;
 use crate::errors::ErrorCode;
 use crate::events::RebalanceEvent;
-use crate::rebalance::assets::{Asset, Assets, LendingMarket};
+use crate::rebalance::assets::*;
 use crate::rebalance::strategies::*;
 use crate::{impl_provider_index, state::*};
 

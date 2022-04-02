@@ -5,11 +5,7 @@ use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token::{Token, TokenAccount};
 use spl_token_lending::state::Reserve;
 
-use crate::impl_has_vault;
-use crate::{
-    reconcile::LendingMarket,
-    state::{Provider, Vault},
-};
+use crate::{impl_has_vault, rebalance::assets::Provider, reconcile::LendingMarket, state::Vault};
 
 #[derive(Accounts)]
 pub struct SolendAccounts<'info> {
