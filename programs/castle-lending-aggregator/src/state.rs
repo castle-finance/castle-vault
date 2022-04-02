@@ -82,9 +82,6 @@ impl Vault {
         if slots_elapsed == 0 {
             return Ok(0);
         }
-        //msg!("Slots elapsed: {}", slots_elapsed);
-        //msg!("New vault value: {}", new_vault_value);
-        //msg!("Old vault value: {}", self.total_value);
 
         let carry = vault_value_diff
             .checked_mul(self.fees.fee_carry_bps as u64)
@@ -98,8 +95,14 @@ impl Vault {
             / SLOTS_PER_YEAR
             / slots_elapsed;
 
-        //msg!("Carry: {}", carry);
-        //msg!("Mgmt: {}", mgmt);
+        #[cfg(feature = "debug")]
+        {
+            msg!("Slots elapsed: {}", slots_elapsed);
+            msg!("New vault value: {}", new_vault_value);
+            msg!("Old vault value: {}", self.total_value);
+            msg!("Carry fee: {}", carry);
+            msg!("Mgmt fee: {}", mgmt);
+        }
 
         let fees = carry.checked_add(mgmt).ok_or(ErrorCode::OverflowError)?;
         Ok(fees)

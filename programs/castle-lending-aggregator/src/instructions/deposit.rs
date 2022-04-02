@@ -80,6 +80,7 @@ impl<'info> Deposit<'info> {
 ///
 /// Transfers reserve tokens from user to vault and mints their share of lp tokens
 pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
+    #[cfg(feature = "debug")]
     msg!("Depositing {} reserve tokens", reserve_token_amount);
 
     let vault = &ctx.accounts.vault;
@@ -93,6 +94,7 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
 
     token::transfer(ctx.accounts.transfer_context(), reserve_token_amount)?;
 
+    #[cfg(feature = "debug")]
     msg!("Minting {} LP tokens", lp_tokens_to_mint);
 
     token::mint_to(

@@ -43,8 +43,11 @@ impl TryFrom<&SolendReserve> for LendingMarket {
             Rate::from_scaled_val(utilization_rate.to_scaled_val() as u64);
         let converted_borrow_rate = Rate::from_scaled_val(borrow_rate.to_scaled_val() as u64);
 
-        //msg!("solend util {:?}", converted_utilization_rate);
-        //msg!("solend port borrow {:?}", converted_borrow_rate);
+        #[cfg(feature = "debug")]
+        {
+            msg!("solend util {:?}", converted_utilization_rate);
+            msg!("solend port borrow {:?}", converted_borrow_rate);
+        }
 
         Ok(LendingMarket {
             utilization_rate: converted_utilization_rate,
@@ -65,8 +68,11 @@ impl TryFrom<&PortReserve> for LendingMarket {
             Rate::from_scaled_val(utilization_rate.to_scaled_val() as u64);
         let converted_borrow_rate = Rate::from_scaled_val(borrow_rate.to_scaled_val() as u64);
 
-        //msg!("port util {:?}", converted_utilization_rate);
-        //msg!("port borrow {:?}", converted_borrow_rate);
+        #[cfg(feature = "debug")]
+        {
+            msg!("port util {:?}", converted_utilization_rate);
+            msg!("port borrow {:?}", converted_borrow_rate);
+        }
 
         Ok(LendingMarket {
             utilization_rate: converted_utilization_rate,
@@ -89,8 +95,11 @@ impl TryFrom<&JetReserve> for LendingMarket {
         let converted_util = Rate::from_bips(utilization_rate.as_u64(-4));
         let converted_borrow = Rate::from_bips(borrow_rate.as_u64(-4));
 
-        //msg!("jet util {:?}", converted_util);
-        //msg!("jet borrow {:?}", converted_borrow);
+        #[cfg(feature = "debug")]
+        {
+            msg!("jet util {:?}", converted_util);
+            msg!("jet borrow {:?}", converted_borrow);
+        }
 
         Ok(LendingMarket {
             utilization_rate: converted_util,

@@ -184,8 +184,6 @@ impl<'info> Refresh<'info> {
 /// Refreshes the reserves of downstream lending markets,
 /// updates the vault total value, and collects fees
 pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
-    msg!("Refreshing");
-
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
     port_anchor_adaptor::refresh_port_reserve(
@@ -221,11 +219,14 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         .try_fold(vault_reserve_token_amount, |acc, &x| acc.checked_add(x))
         .ok_or(ErrorCode::OverflowError)?;
 
-    msg!("Tokens value: {}", vault_reserve_token_amount);
-    msg!("Solend value: {}", solend_value);
-    msg!("Port value: {}", port_value);
-    msg!("Jet value: {}", jet_value);
-    msg!("Vault value: {}", vault_value);
+    #[cfg(feature = "debug")]
+    {
+        msg!("Tokens value: {}", vault_reserve_token_amount);
+        msg!("Solend value: {}", solend_value);
+        msg!("Port value: {}", port_value);
+        msg!("Jet value: {}", jet_value);
+        msg!("Vault value: {}", vault_value);
+    }
 
     let vault = &ctx.accounts.vault;
 
@@ -236,6 +237,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         crate::math::calc_reserve_to_lp(total_fees, ctx.accounts.lp_token_mint.supply, vault_value)
             .ok_or(ErrorCode::MathError)?;
 
+    #[cfg(feature = "debug")]
     msg!(
         "Total fees: {} reserve tokens, {} lp tokens",
         total_fees,
@@ -252,7 +254,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         .and_then(|val| val.checked_div(100))
         .ok_or(ErrorCode::MathError)?;
 
-    // Mint new LP tokens to fee_receiver
+    #[cfg(feature = "debug")]
     msg!(
         "Collecting primary fees: {} lp tokens",
         primary_fees_converted
@@ -265,7 +267,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         primary_fees_converted,
     )?;
 
-    // Mint new LP tokens to referral_fee_receiver
+    #[cfg(feature = "debug")]
     msg!(
         "Collecting referral fees: {} lp tokens",
         referral_fees_converted

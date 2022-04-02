@@ -10,7 +10,8 @@ name = "castle_lending_aggregator"
 
 [features]
 cpi = ["no-entrypoint"]
-default = []
+debug = ["anchor-lang/anchor-debug"]
+default = ["debug"]
 no-entrypoint = []
 no-idl = []
 
