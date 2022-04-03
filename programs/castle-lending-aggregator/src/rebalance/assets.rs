@@ -1,13 +1,12 @@
-use std::convert::TryFrom;
-
 use anchor_lang::prelude::*;
 use jet::state::Reserve as JetReserve;
-use port_anchor_adaptor::PortReserve;
+use port_variable_rate_lending_instructions::state::Reserve as PortReserve;
 use solana_maths::{Rate, TryMul};
+use spl_token_lending::state::Reserve as SolendReserve;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-use crate::adapters::SolendReserve;
+use crate::errors::ErrorCode;
 
 #[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
 pub enum Provider {
@@ -43,7 +42,6 @@ macro_rules! impl_provider_index {
     };
 }
 
-#[derive(Debug, Clone, Copy)]
 pub struct Assets {
     pub solend: LendingMarket,
     pub port: LendingMarket,
@@ -57,94 +55,64 @@ impl Assets {
     }
 }
 
-pub trait Asset {
+pub struct LendingMarket(pub Box<dyn ReturnCalculator>);
+
+impl ReturnCalculator for LendingMarket {
+    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
+        self.0.calculate_return(allocation)
+    }
+}
+
+pub trait ReturnCalculator {
     // TODO remove solana-specific error types
-    fn expected_return(&self, allocation: u64) -> Result<Rate, ProgramError>;
+    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError>;
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct LendingMarket {
-    utilization_rate: Rate,
-    borrow_rate: Rate,
-}
+impl ReturnCalculator for SolendReserve {
+    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
+        let mut reserve = self.clone();
+        reserve.liquidity.deposit(allocation)?;
 
-impl Asset for LendingMarket {
-    fn expected_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
-        self.utilization_rate.try_mul(self.borrow_rate)
+        let utilization_rate =
+            Rate::from_scaled_val(reserve.liquidity.utilization_rate()?.to_scaled_val() as u64);
+        let borrow_rate =
+            Rate::from_scaled_val(reserve.current_borrow_rate()?.to_scaled_val() as u64);
+
+        utilization_rate.try_mul(borrow_rate)
     }
 }
 
-// TODO move these implementations and Provider out of this module
-impl TryFrom<&SolendReserve> for LendingMarket {
-    type Error = ProgramError;
+impl ReturnCalculator for PortReserve {
+    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
+        let mut reserve = self.clone();
+        reserve.liquidity.available_amount = reserve
+            .liquidity
+            .available_amount
+            .checked_add(allocation)
+            .ok_or(ErrorCode::OverflowError)?;
 
-    fn try_from(value: &SolendReserve) -> Result<Self, Self::Error> {
-        let utilization_rate = value.liquidity.utilization_rate()?;
-        let borrow_rate = value.current_borrow_rate()?;
+        let utilization_rate =
+            Rate::from_scaled_val(reserve.liquidity.utilization_rate()?.to_scaled_val() as u64);
+        let borrow_rate =
+            Rate::from_scaled_val(reserve.current_borrow_rate()?.to_scaled_val() as u64);
 
-        let converted_utilization_rate =
-            Rate::from_scaled_val(utilization_rate.to_scaled_val() as u64);
-        let converted_borrow_rate = Rate::from_scaled_val(borrow_rate.to_scaled_val() as u64);
-
-        #[cfg(feature = "debug")]
-        {
-            msg!("solend util {:?}", converted_utilization_rate);
-            msg!("solend port borrow {:?}", converted_borrow_rate);
-        }
-
-        Ok(LendingMarket {
-            utilization_rate: converted_utilization_rate,
-            borrow_rate: converted_borrow_rate,
-        })
+        utilization_rate.try_mul(borrow_rate)
     }
 }
 
-impl TryFrom<&PortReserve> for LendingMarket {
-    type Error = ProgramError;
+impl ReturnCalculator for JetReserve {
+    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
+        let vault_total = self
+            .total_deposits()
+            .checked_add(allocation)
+            .ok_or(ErrorCode::OverflowError)?;
+        let outstanding_debt = *self.unwrap_outstanding_debt(Clock::get()?.slot);
 
-    fn try_from(value: &PortReserve) -> Result<Self, Self::Error> {
-        let utilization_rate = value.liquidity.utilization_rate()?;
-        let borrow_rate = value.current_borrow_rate()?;
+        let utilization_rate =
+            Rate::from_bips(jet::state::utilization_rate(outstanding_debt, vault_total).as_u64(-4));
+        let borrow_rate =
+            Rate::from_bips(self.interest_rate(outstanding_debt, vault_total).as_u64(-4));
 
-        let converted_utilization_rate =
-            Rate::from_scaled_val(utilization_rate.to_scaled_val() as u64);
-        let converted_borrow_rate = Rate::from_scaled_val(borrow_rate.to_scaled_val() as u64);
-
-        #[cfg(feature = "debug")]
-        {
-            msg!("port util {:?}", converted_utilization_rate);
-            msg!("port borrow {:?}", converted_borrow_rate);
-        }
-
-        Ok(LendingMarket {
-            utilization_rate: converted_utilization_rate,
-            borrow_rate: converted_borrow_rate,
-        })
-    }
-}
-
-impl TryFrom<&JetReserve> for LendingMarket {
-    type Error = ProgramError;
-
-    fn try_from(value: &JetReserve) -> Result<Self, Self::Error> {
-        let vault_total = value.total_deposits();
-        let outstanding_debt = *value.unwrap_outstanding_debt(Clock::get()?.slot);
-
-        let utilization_rate = jet::state::utilization_rate(outstanding_debt, vault_total);
-        let borrow_rate = value.interest_rate(outstanding_debt, vault_total);
-
-        let converted_util = Rate::from_bips(utilization_rate.as_u64(-4));
-        let converted_borrow = Rate::from_bips(borrow_rate.as_u64(-4));
-
-        #[cfg(feature = "debug")]
-        {
-            msg!("jet util {:?}", converted_util);
-            msg!("jet borrow {:?}", converted_borrow);
-        }
-
-        Ok(LendingMarket {
-            utilization_rate: converted_util,
-            borrow_rate: converted_borrow,
-        })
+        utilization_rate.try_mul(borrow_rate)
     }
 }

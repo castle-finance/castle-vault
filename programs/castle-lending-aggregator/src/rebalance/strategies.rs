@@ -10,6 +10,7 @@ use crate::{errors::ErrorCode, impl_provider_index};
 
 use super::assets::*;
 
+// TODO rename to PortfolioWeights?
 #[derive(Debug, Default, Clone, Copy)]
 pub struct StrategyWeights {
     pub solend: Rate,
@@ -55,8 +56,12 @@ impl Strategy for EqualAllocationStrategy {
 #[derive(Clone, Copy, Debug)]
 pub struct MaxYieldStrategy;
 impl MaxYieldStrategy {
-    fn compare(&self, lhs: &impl Asset, rhs: &impl Asset) -> Result<Ordering, ProgramError> {
-        Ok(lhs.expected_return(0)?.cmp(&rhs.expected_return(0)?))
+    fn compare(
+        &self,
+        lhs: &impl ReturnCalculator,
+        rhs: &impl ReturnCalculator,
+    ) -> Result<Ordering, ProgramError> {
+        Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
     }
 }
 

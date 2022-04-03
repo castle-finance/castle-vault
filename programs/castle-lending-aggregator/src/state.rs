@@ -5,7 +5,6 @@ use anchor_lang::solana_program::clock::{
 use solana_maths::{Decimal, TryMul};
 use std::cmp::Ordering;
 use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
 
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;

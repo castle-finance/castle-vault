@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use std::ops::Deref;
 
 use anchor_lang::prelude::*;
@@ -60,9 +59,13 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     let clock = Clock::get()?;
 
     let assets = Assets {
-        solend: LendingMarket::try_from(ctx.accounts.solend_reserve.as_ref().deref())?,
-        port: LendingMarket::try_from(ctx.accounts.port_reserve.as_ref().deref())?,
-        jet: LendingMarket::try_from(&*ctx.accounts.jet_reserve.load()?)?,
+        solend: LendingMarket(Box::new(
+            ctx.accounts.solend_reserve.as_ref().deref().deref().clone(),
+        )),
+        port: LendingMarket(Box::new(
+            ctx.accounts.port_reserve.as_ref().deref().deref().clone(),
+        )),
+        jet: LendingMarket(Box::new(ctx.accounts.jet_reserve.load()?.clone())),
     };
 
     // TODO reduce the duplication between the Enum and Struct
@@ -120,7 +123,7 @@ fn get_apy(
     assets: &Assets,
 ) -> Result<Rate, ProgramError> {
     Provider::iter()
-        .map(|p| weights[p].try_mul(assets[p].expected_return(allocations[p].value)?))
+        .map(|p| weights[p].try_mul(assets[p].calculate_return(allocations[p].value)?))
         .collect::<Result<Vec<_>, ProgramError>>()?
         .iter()
         .try_fold(Rate::zero(), |acc, r| acc.try_add(*r))
