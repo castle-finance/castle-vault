@@ -69,9 +69,8 @@ pub struct Vault {
     /// Strategy type that is executed during rebalance
     pub strategy_type: StrategyType,
 
-    /// Whether or not to run rebalance as a proof check instead of calculation
-    /// NOTE: this is actually a bool but represented as a u8 bc of anchor limitations
-    pub proof_checker: u8,
+    /// Whether to run rebalance as a proof check or a calculation
+    pub rebalance_mode: RebalanceMode,
 }
 
 impl Vault {
@@ -121,6 +120,12 @@ impl Vault {
             &self.authority_bump,
         ]
     }
+}
+
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
+pub enum RebalanceMode {
+    Calculator,
+    ProofChecker,
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]

@@ -78,33 +78,36 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     let strategy_allocations =
         Allocations::try_from_weights(strategy_weights, vault_value, clock.slot)?;
 
-    let final_allocations = if ctx.accounts.vault.proof_checker != 0 {
-        let proposed_weights: StrategyWeights = proposed_weights_arg.into();
-        let proposed_allocations =
-            Allocations::try_from_weights(proposed_weights, vault_value, clock.slot)?;
+    let final_allocations = match ctx.accounts.vault.rebalance_mode {
+        RebalanceMode::ProofChecker => {
+            let proposed_weights: StrategyWeights = proposed_weights_arg.into();
+            let proposed_allocations =
+                Allocations::try_from_weights(proposed_weights, vault_value, clock.slot)?;
 
-        #[cfg(feature = "debug")]
-        msg!(
-            "Running as proof checker with proposed weights: {:?}",
-            proposed_weights
-        );
+            #[cfg(feature = "debug")]
+            msg!(
+                "Running as proof checker with proposed weights: {:?}",
+                proposed_weights
+            );
 
-        match ctx.accounts.vault.strategy_type {
-            StrategyType::MaxYield => MaxYieldStrategy.verify(&proposed_weights),
-            StrategyType::EqualAllocation => EqualAllocationStrategy.verify(&proposed_weights),
-        }?;
+            match ctx.accounts.vault.strategy_type {
+                StrategyType::MaxYield => MaxYieldStrategy.verify(&proposed_weights),
+                StrategyType::EqualAllocation => EqualAllocationStrategy.verify(&proposed_weights),
+            }?;
 
-        let proposed_apy = get_apy(&proposed_weights, &proposed_allocations, &assets)?;
-        let proof_apy = get_apy(&strategy_weights, &strategy_allocations, &assets)?;
+            let proposed_apy = get_apy(&proposed_weights, &proposed_allocations, &assets)?;
+            let proof_apy = get_apy(&strategy_weights, &strategy_allocations, &assets)?;
 
-        if proposed_apy < proof_apy {
-            return Err(ErrorCode::RebalanceProofCheckFailed.into());
+            if proposed_apy < proof_apy {
+                return Err(ErrorCode::RebalanceProofCheckFailed.into());
+            }
+            proposed_allocations
         }
-        proposed_allocations
-    } else {
-        #[cfg(feature = "debug")]
-        msg!("Running as calculator");
-        strategy_allocations
+        RebalanceMode::Calculator => {
+            #[cfg(feature = "debug")]
+            msg!("Running as calculator");
+            strategy_allocations
+        }
     };
 
     #[cfg(feature = "debug")]

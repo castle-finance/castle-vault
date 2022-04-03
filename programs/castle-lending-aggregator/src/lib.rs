@@ -8,7 +8,7 @@ pub mod math;
 pub mod rebalance;
 pub mod state;
 
-use crate::{init::FeeArgs, state::StrategyType};
+use crate::state::{RebalanceMode, StrategyType};
 use adapters::*;
 use instructions::*;
 
@@ -22,10 +22,10 @@ pub mod castle_lending_aggregator {
         ctx: Context<Initialize>,
         _bumps: InitBumpSeeds,
         strategy_type: StrategyType,
-        proof_checker: bool,
+        rebalance_mode: RebalanceMode,
         fees: FeeArgs,
     ) -> ProgramResult {
-        instructions::init::handler(ctx, _bumps, strategy_type, proof_checker, fees)
+        instructions::init::handler(ctx, _bumps, strategy_type, rebalance_mode, fees)
     }
 
     pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {

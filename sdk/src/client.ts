@@ -35,6 +35,7 @@ import {
     Vault,
     FeeArgs,
     ProposedWeightsBps,
+    RebalanceMode,
 } from "./types";
 
 export class VaultClient {
@@ -89,7 +90,7 @@ export class VaultClient {
         port: PortReserveAsset,
         jet: JetReserveAsset,
         strategyType: StrategyType,
-        proofChecker: boolean,
+        rebalanceMode: RebalanceMode,
         owner: PublicKey,
         feeData: FeeArgs
     ): Promise<VaultClient> {
@@ -173,7 +174,7 @@ export class VaultClient {
                 jetLp: jetLpBump,
             },
             strategyType,
-            proofChecker,
+            rebalanceMode,
             {
                 feeCarryBps: new anchor.BN(feeCarryBps),
                 feeMgmtBps: new anchor.BN(feeMgmtBps),

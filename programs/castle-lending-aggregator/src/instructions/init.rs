@@ -206,7 +206,7 @@ pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
-    proof_checker: bool,
+    rebalance_mode: RebalanceMode,
     fees: FeeArgs,
 ) -> ProgramResult {
     let clock = Clock::get()?;
@@ -234,7 +234,7 @@ pub fn handler(
     vault.last_update = LastUpdate::new(clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;
-    vault.proof_checker = if proof_checker { 1 } else { 0 };
+    vault.rebalance_mode = rebalance_mode;
 
     vault.fees = VaultFees {
         fee_receiver: ctx.accounts.fee_receiver.key(),

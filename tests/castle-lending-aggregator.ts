@@ -10,6 +10,7 @@ import {
   VaultClient,
   CastleLendingAggregator,
   StrategyType,
+  RebalanceMode,
 } from "../sdk/src/index";
 
 describe("castle-vault", () => {
@@ -196,7 +197,10 @@ describe("castle-vault", () => {
     );
   }
 
-  function testInit(strategyType: StrategyType): () => Promise<void> {
+  function testInit(
+    strategyType: StrategyType,
+    rebalanceMode: RebalanceMode
+  ): () => Promise<void> {
     return async function () {
       vaultClient = await VaultClient.initialize(
         program,
@@ -206,7 +210,7 @@ describe("castle-vault", () => {
         port,
         jet,
         strategyType,
-        false,
+        rebalanceMode,
         owner.publicKey,
         { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct }
       );
@@ -424,7 +428,7 @@ describe("castle-vault", () => {
   describe("equal allocation strategy", () => {
     before(initLendingMarkets);
 
-    it("Creates vault", testInit({ equalAllocation: {} }));
+    it("Creates vault", testInit({ equalAllocation: {} }, { calculator: {} }));
 
     it("Deposits to vault reserves", testDeposit());
 
@@ -441,7 +445,7 @@ describe("castle-vault", () => {
   describe("max yield strategy", () => {
     before(initLendingMarkets);
 
-    it("Creates vault", testInit({ maxYield: {} }));
+    it("Creates vault", testInit({ maxYield: {} }, { calculator: {} }));
 
     it("Deposits to vault reserves", testDeposit());
 

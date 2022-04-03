@@ -135,8 +135,10 @@ export type CastleLendingAggregator = {
                     };
                 },
                 {
-                    name: "proofChecker";
-                    type: "bool";
+                    name: "rebalanceMode";
+                    type: {
+                        defined: "RebalanceMode";
+                    };
                 },
                 {
                     name: "fees";
@@ -291,7 +293,7 @@ export type CastleLendingAggregator = {
                 {
                     name: "proposedWeights";
                     type: {
-                        defined: "ProposedWeightsBps";
+                        defined: "StrategyWeightsArg";
                     };
                 }
             ];
@@ -725,8 +727,10 @@ export type CastleLendingAggregator = {
                         };
                     },
                     {
-                        name: "proofChecker";
-                        type: "u8";
+                        name: "rebalanceMode";
+                        type: {
+                            defined: "RebalanceMode";
+                        };
                     }
                 ];
             };
@@ -786,7 +790,7 @@ export type CastleLendingAggregator = {
             };
         },
         {
-            name: "ProposedWeightsBps";
+            name: "StrategyWeightsArg";
             type: {
                 kind: "struct";
                 fields: [
@@ -894,20 +898,6 @@ export type CastleLendingAggregator = {
             };
         },
         {
-            name: "StrategyType";
-            type: {
-                kind: "enum";
-                variants: [
-                    {
-                        name: "MaxYield";
-                    },
-                    {
-                        name: "EqualAllocation";
-                    }
-                ];
-            };
-        },
-        {
             name: "Provider";
             type: {
                 kind: "enum";
@@ -920,6 +910,34 @@ export type CastleLendingAggregator = {
                     },
                     {
                         name: "Jet";
+                    }
+                ];
+            };
+        },
+        {
+            name: "RebalanceMode";
+            type: {
+                kind: "enum";
+                variants: [
+                    {
+                        name: "Calculator";
+                    },
+                    {
+                        name: "ProofChecker";
+                    }
+                ];
+            };
+        },
+        {
+            name: "StrategyType";
+            type: {
+                kind: "enum";
+                variants: [
+                    {
+                        name: "MaxYield";
+                    },
+                    {
+                        name: "EqualAllocation";
                     }
                 ];
             };
@@ -1138,8 +1156,10 @@ export const IDL: CastleLendingAggregator = {
                     },
                 },
                 {
-                    name: "proofChecker",
-                    type: "bool",
+                    name: "rebalanceMode",
+                    type: {
+                        defined: "RebalanceMode",
+                    },
                 },
                 {
                     name: "fees",
@@ -1294,7 +1314,7 @@ export const IDL: CastleLendingAggregator = {
                 {
                     name: "proposedWeights",
                     type: {
-                        defined: "ProposedWeightsBps",
+                        defined: "StrategyWeightsArg",
                     },
                 },
             ],
@@ -1728,8 +1748,10 @@ export const IDL: CastleLendingAggregator = {
                         },
                     },
                     {
-                        name: "proofChecker",
-                        type: "u8",
+                        name: "rebalanceMode",
+                        type: {
+                            defined: "RebalanceMode",
+                        },
                     },
                 ],
             },
@@ -1789,7 +1811,7 @@ export const IDL: CastleLendingAggregator = {
             },
         },
         {
-            name: "ProposedWeightsBps",
+            name: "StrategyWeightsArg",
             type: {
                 kind: "struct",
                 fields: [
@@ -1897,20 +1919,6 @@ export const IDL: CastleLendingAggregator = {
             },
         },
         {
-            name: "StrategyType",
-            type: {
-                kind: "enum",
-                variants: [
-                    {
-                        name: "MaxYield",
-                    },
-                    {
-                        name: "EqualAllocation",
-                    },
-                ],
-            },
-        },
-        {
             name: "Provider",
             type: {
                 kind: "enum",
@@ -1923,6 +1931,34 @@ export const IDL: CastleLendingAggregator = {
                     },
                     {
                         name: "Jet",
+                    },
+                ],
+            },
+        },
+        {
+            name: "RebalanceMode",
+            type: {
+                kind: "enum",
+                variants: [
+                    {
+                        name: "Calculator",
+                    },
+                    {
+                        name: "ProofChecker",
+                    },
+                ],
+            },
+        },
+        {
+            name: "StrategyType",
+            type: {
+                kind: "enum",
+                variants: [
+                    {
+                        name: "MaxYield",
+                    },
+                    {
+                        name: "EqualAllocation",
                     },
                 ],
             },
