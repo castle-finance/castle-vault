@@ -8,7 +8,7 @@ use solana_maths::{Decimal, Rate, TryMul};
 use crate::adapters::SolendReserve;
 use crate::errors::ErrorCode;
 use crate::events::RebalanceEvent;
-use crate::rebalance::assets::{LendingMarket, Provider};
+use crate::rebalance::assets::LendingMarket;
 use crate::rebalance::strategies::*;
 use crate::state::*;
 
@@ -54,11 +54,7 @@ impl RateUpdate {
             .and_then(|product| Decimal::from(product).try_floor_u64())?;
         //msg!("Setting allocation: {}", allocation);
 
-        match self.provider {
-            Provider::Solend => vault_allocations.solend.update(allocation, clock.slot),
-            Provider::Port => vault_allocations.port.update(allocation, clock.slot),
-            Provider::Jet => vault_allocations.jet.update(allocation, clock.slot),
-        }
+        vault_allocations[self.provider].update(allocation, clock.slot);
         Ok(())
     }
 }
@@ -87,11 +83,7 @@ pub fn handler(ctx: Context<Rebalance>) -> ProgramResult {
         .iter()
         .try_for_each(|s| s.try_apply(&clock, vault_value, vault_allocations))?;
 
-    emit!(RebalanceEvent {
-        solend: vault_allocations.solend.value,
-        port: vault_allocations.port.value,
-        jet: vault_allocations.jet.value,
-    });
+    emit!(RebalanceEvent::from(&*vault_allocations));
 
     Ok(())
 }
