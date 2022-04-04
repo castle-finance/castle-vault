@@ -166,14 +166,14 @@ impl Allocations {
         total_value: u64,
         slot: u64,
     ) -> Result<Self, ProgramError> {
-        let allocations = &mut Self::default();
+        let mut allocations = Self::default();
         for p in Provider::iter() {
             let allocation = weights[p]
                 .try_mul(total_value)
                 .and_then(|product| Decimal::from(product).try_floor_u64())?;
             allocations[p].update(allocation, slot);
         }
-        Ok(*allocations)
+        Ok(allocations)
     }
 }
 

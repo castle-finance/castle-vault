@@ -45,11 +45,11 @@ impl Strategy for EqualAllocationStrategy {
         let num_assets = u8::try_from(assets.len()).map_err(|_| ErrorCode::StrategyError)?;
         let equal_allocation = Rate::one().try_div(Rate::from_percent(num_assets).try_mul(100)?)?;
 
-        let strategy_weights = &mut StrategyWeights::default();
+        let mut strategy_weights = StrategyWeights::default();
         for p in Provider::iter() {
             strategy_weights[p] = equal_allocation;
         }
-        Ok(*strategy_weights)
+        Ok(strategy_weights)
     }
 }
 
@@ -72,7 +72,7 @@ impl Strategy for MaxYieldStrategy {
             // TODO make this error handling more granular and informative
             .ok_or(ErrorCode::StrategyError)?;
 
-        let strategy_weights = &mut StrategyWeights::default();
+        let mut strategy_weights = StrategyWeights::default();
         for p in Provider::iter() {
             if p == max_yielding_provider {
                 strategy_weights[p] = Rate::one();
@@ -80,6 +80,6 @@ impl Strategy for MaxYieldStrategy {
                 strategy_weights[p] = Rate::zero();
             }
         }
-        Ok(*strategy_weights)
+        Ok(strategy_weights)
     }
 }
