@@ -35,6 +35,7 @@ describe("castle-vault", () => {
   const feeCarryBps = 10000;
   const referralFeePct = 20;
   const referralFeeOwner = Keypair.generate().publicKey;
+  const poolSizeLimit = 10 * 10 ** 9;
 
   let reserveToken: Token;
 
