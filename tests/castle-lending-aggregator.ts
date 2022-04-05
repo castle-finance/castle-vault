@@ -29,7 +29,6 @@ describe("castle-vault", () => {
   const slotsPerYear = 63072000;
   const initialReserveAmount = 100;
   const initialCollateralRatio = 1.0;
-  const referralFeePct = 20;
   const referralFeeOwner = Keypair.generate().publicKey;
   const poolSizeLimit = 10 * 10 ** 9;
 
@@ -85,8 +84,9 @@ describe("castle-vault", () => {
     lpMintSupply: anchor.BN,
     currentSlot: number,
     slots: number[],
-    feeCarryBps: number = 0,
-    feeMgmtBps: number = 0
+    feeCarryBps: number,
+    feeMgmtBps: number,
+    referralFeePct: number
   ) {
     const bpsWhole = new anchor.BN(10_000);
 
@@ -199,7 +199,8 @@ describe("castle-vault", () => {
   async function initializeVault(
       strategyType: StrategyType,
       feeCarryBps: number = 0,
-      feeMgmtBps: number = 0
+      feeMgmtBps: number = 0,
+      referralFeePct: number = 0
       ) {
       vaultClient = await VaultClient.initialize(
         program,
@@ -260,23 +261,26 @@ describe("castle-vault", () => {
       await reserveToken.mintTo(userReserveTokenAccount, owner, [], qty);
   }
 
-  async function depositeToVault(qty: number) {
+  async function depositeToVault(qty: number): Promise<string[]> {
       const txs = await vaultClient.deposit(
         wallet,
         qty,
         userReserveTokenAccount
       );
       await provider.connection.confirmTransaction(txs[txs.length - 1], "singleGossip");
+      return txs;
   }
 
-  async function withdrawFromVault(qty: number) {
+  async function withdrawFromVault(qty: number): Promise<string[]> {
       const txs = await vaultClient.withdraw(wallet, qty);
       await provider.connection.confirmTransaction(txs[txs.length - 1], "singleGossip");
+      return txs;
   }
 
-  async function performRebalance() {
+  async function performRebalance(): Promise<string[]> {
       const txs = await vaultClient.rebalance();
       await provider.connection.confirmTransaction(txs[txs.length - 1], "singleGossip");
+      return txs;
   }
 
   function testDepositAndWithdrawal() {
@@ -404,8 +408,54 @@ describe("castle-vault", () => {
       });
   }
 
-  function testFeeComputation() {
+  async function sleep(t: number) {
+    return new Promise((res) => setTimeout(res, t));
+  }
 
+  function testFeeComputation(
+        feeCarryBps: number = 0,
+        feeMgmtBps: number = 0,
+        referalPct: number = 0
+      ) {
+      it("Collect fees", async function() {
+
+          const qty1 = 5.47 * 10 ** 9;
+          await airdropReserveToken(qty1);
+          let txs = await depositeToVault(qty1);
+          const slots0 = await fetchSlots(txs);
+
+          const vaultTotalValue = new anchor.BN(await getVaultTotalValue());
+          const lpTokenSupply = new anchor.BN(await getLpTokenSupply());
+
+          await sleep(1000);
+
+          // This is needed to trigger refresh and fee collection
+          // Consider adding an API to client library to trigger refresh
+          const qty2 = 10;
+          await airdropReserveToken(qty2);
+          txs = await depositeToVault(qty2);
+          const slots1 = await fetchSlots(txs);
+
+          const expectedFees = await calculateFees(
+            vaultTotalValue,
+            lpTokenSupply,
+            slots0[slots0.length-1],
+            slots1,
+            feeCarryBps,
+            feeMgmtBps,
+            referalPct,
+          );
+
+          const referralAccountInfo =
+            await vaultClient.getReferralFeeReceiverAccountInfo();
+          const feeAccountInfo = await vaultClient.getFeeReceiverAccountInfo();
+
+          const actualReferralFees = referralAccountInfo.amount.toNumber();
+          const actualMgmtFees = feeAccountInfo.amount.toNumber();
+
+          assert.equal(actualMgmtFees, expectedFees.primary);
+          assert.equal(actualReferralFees, expectedFees.referral);
+      });
   }
 
   describe("Equal allocation strategy", () => {
@@ -413,7 +463,7 @@ describe("castle-vault", () => {
       describe("Deposit and withdrawal", () => {
           before(initLendingMarkets);
           before(async function() {
-              await initializeVault({ equalAllocation: {} })
+              await initializeVault({equalAllocation: {}})
           });
           testDepositAndWithdrawal();
       });
@@ -421,7 +471,7 @@ describe("castle-vault", () => {
       describe("Deposit cap", () => {
           before(initLendingMarkets);
           before(async function() {
-              await initializeVault({ equalAllocation: {} })
+              await initializeVault({equalAllocation: {}})
           });
           testDepositCap();
       });
@@ -429,17 +479,22 @@ describe("castle-vault", () => {
       describe("Rebalance", () => {
           before(initLendingMarkets);
           before(async function() {
-              await initializeVault({ equalAllocation: {} })
+              await initializeVault({equalAllocation: {}})
           });
           testRebalance();
       });
 
       describe("Fee computation", () => {
+
+          const feeMgmtBps = 10000;
+          const feeCarryBps = 10000;
+          const referralFeePct = 20;
+
           before(initLendingMarkets);
           before(async function() {
-              await initializeVault({ equalAllocation: {} })
+              await initializeVault({equalAllocation: {}}, feeCarryBps, feeMgmtBps, referralFeePct)
           });
-          testFeeComputation();
+          testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
       });
 
       // TODO borrow from solend to increase apy and ensure it switches to that
@@ -451,7 +506,7 @@ describe("castle-vault", () => {
       describe("Deposit and withdrawal", () => {
           before(initLendingMarkets);
           before(async function() {
-              await initializeVault({ maxYield: {} })
+              await initializeVault({maxYield: {}})
           });
           testDepositAndWithdrawal();
       });
@@ -459,7 +514,7 @@ describe("castle-vault", () => {
       describe("Deposit cap", () => {
           before(initLendingMarkets);
           before(async function() {
-              await initializeVault({ maxYield: {} })
+              await initializeVault({maxYield: {}})
           });
           testDepositCap();
       });
@@ -467,18 +522,23 @@ describe("castle-vault", () => {
       describe("Rebalance", () => {
           before(initLendingMarkets);
           before(async function() {
-              await initializeVault({ maxYield: {} })
+              await initializeVault({maxYield: {}})
           });
           testRebalance(0, 0, 1);
       });
 
       describe("Fee computation", () => {
+
+          const feeMgmtBps = 10000;
+          const feeCarryBps = 10000;
+          const referralFeePct = 20;
+
           before(initLendingMarkets);
           before(async function() {
-              await initializeVault({ maxYield: {} })
+              await initializeVault({maxYield: {}}, feeCarryBps, feeMgmtBps, referralFeePct)
           });
-          testFeeComputation();
+          testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
       });
-
   });
+
 });
