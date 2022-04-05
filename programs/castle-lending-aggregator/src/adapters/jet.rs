@@ -2,9 +2,18 @@ use std::ops::{Deref, DerefMut};
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
-use jet::{state::CachedReserveInfo, Amount, Rounding};
+use jet::{
+    state::{CachedReserveInfo, Reserve},
+    Amount, Rounding,
+};
+use solana_maths::Rate;
 
-use crate::{impl_has_vault, rebalance::assets::Provider, reconcile::LendingMarket, state::Vault};
+use crate::{
+    impl_has_vault,
+    rebalance::assets::{Provider, ReserveAccessor},
+    reconcile::LendingMarket,
+    state::Vault,
+};
 
 #[derive(Accounts)]
 pub struct JetAccounts<'info> {
@@ -137,5 +146,37 @@ impl<'info> LendingMarket for JetAccounts<'info> {
 
     fn provider(&self) -> Provider {
         Provider::Jet
+    }
+}
+
+impl ReserveAccessor for Reserve {
+    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+        let vault_amount = self.total_deposits();
+        let outstanding_debt = *self.unwrap_outstanding_debt(Clock::get()?.slot);
+
+        Ok(Rate::from_bips(
+            jet::state::utilization_rate(outstanding_debt, vault_amount).as_u64(-4),
+        ))
+    }
+
+    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+        let vault_amount = self.total_deposits();
+        let outstanding_debt = *self.unwrap_outstanding_debt(Clock::get()?.slot);
+
+        Ok(Rate::from_bips(
+            self.interest_rate(outstanding_debt, vault_amount)
+                .as_u64(-4),
+        ))
+    }
+
+    fn reserve_with_deposit(
+        &self,
+        allocation: u64,
+    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+        let mut reserve = Box::new(self.clone());
+        // We only care about the token amount here
+        reserve.deposit(allocation, 0);
+
+        Ok(reserve)
     }
 }
