@@ -262,8 +262,8 @@ describe("castle-vault", () => {
     return info.supply.toNumber();
   }
 
-  async function airdropReserveToken(qty: number) {
-    await reserveToken.mintTo(userReserveTokenAccount, owner, [], qty);
+  async function mintReserveToken(receiver: Keypair, qty: number) {
+    await reserveToken.mintTo(receiver, owner, [], qty);
   }
 
   async function depositeToVault(qty: number): Promise<string[]> {
@@ -302,7 +302,7 @@ describe("castle-vault", () => {
     it("Deposits to vault reserves", async function () {
       const qty = 100;
 
-      await airdropReserveToken(qty);
+      await mintReserveToken(userReserveTokenAccount, qty);
       await depositeToVault(qty);
 
       const userReserveBalance = await getReserveTokenBalance(
@@ -347,7 +347,7 @@ describe("castle-vault", () => {
   }
 
   function testDepositCap() {
-    it("Vault correctly initialized", async function () {
+    it("Initialize vault correctly", async function () {
       assert.notEqual(vaultClient.vaultState, null);
       assert.equal(vaultClient.vaultState.poolSizeLimit, poolSizeLimit);
     });
@@ -355,7 +355,7 @@ describe("castle-vault", () => {
     it("Reject transaction if deposit cap is reached", async function () {
       const qty = poolSizeLimit + 100;
 
-      await airdropReserveToken(qty);
+      await mintReserveToken(userReserveTokenAccount, qty);
       try {
         await depositeToVault(qty);
         assert.ok(false);
@@ -384,7 +384,7 @@ describe("castle-vault", () => {
   ) {
     it("Perform rebalance", async function () {
       const qty = 1024503;
-      await airdropReserveToken(qty);
+      await mintReserveToken(userReserveTokenAccount, qty);
       await depositeToVault(qty);
 
       await performRebalance();
@@ -450,7 +450,7 @@ describe("castle-vault", () => {
   ) {
     it("Collect fees", async function () {
       const qty1 = 5.47 * 10 ** 9;
-      await airdropReserveToken(qty1);
+      await mintReserveToken(userReserveTokenAccount, qty1);
       let txs = await depositeToVault(qty1);
       const slots0 = await fetchSlots(txs);
 
@@ -462,7 +462,7 @@ describe("castle-vault", () => {
       // This is needed to trigger refresh and fee collection
       // Consider adding an API to client library to trigger refresh
       const qty2 = 10;
-      await airdropReserveToken(qty2);
+      await mintReserveToken(userReserveTokenAccount, qty2);
       txs = await depositeToVault(qty2);
       const slots1 = await fetchSlots(txs);
 
