@@ -43,11 +43,11 @@ macro_rules! impl_provider_index {
 }
 
 pub struct Assets {
-    pub solend: LendingMarket,
-    pub port: LendingMarket,
-    pub jet: LendingMarket,
+    pub solend: LendingMarketAsset,
+    pub port: LendingMarketAsset,
+    pub jet: LendingMarketAsset,
 }
-impl_provider_index!(Assets, LendingMarket);
+impl_provider_index!(Assets, LendingMarketAsset);
 
 impl Assets {
     pub fn len(&self) -> usize {
@@ -55,64 +55,106 @@ impl Assets {
     }
 }
 
-pub struct LendingMarket(pub Box<dyn ReturnCalculator>);
-
-impl ReturnCalculator for LendingMarket {
-    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
-        self.0.calculate_return(allocation)
-    }
-}
-
 pub trait ReturnCalculator {
-    // TODO remove solana-specific error types
     fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError>;
 }
+pub struct LendingMarketAsset(pub Box<dyn ReserveAccessor>);
 
-impl ReturnCalculator for SolendReserve {
+impl ReturnCalculator for LendingMarketAsset {
     fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
-        let mut reserve = self.clone();
-        reserve.liquidity.deposit(allocation)?;
-
-        let utilization_rate =
-            Rate::from_scaled_val(reserve.liquidity.utilization_rate()?.to_scaled_val() as u64);
-        let borrow_rate =
-            Rate::from_scaled_val(reserve.current_borrow_rate()?.to_scaled_val() as u64);
-
-        utilization_rate.try_mul(borrow_rate)
+        let reserve = self.0.reserve_with_deposit(allocation)?;
+        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
     }
 }
 
-impl ReturnCalculator for PortReserve {
-    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
-        let mut reserve = self.clone();
+pub trait ReserveAccessor {
+    fn utilization_rate(&self) -> Result<Rate, ProgramError>;
+    fn borrow_rate(&self) -> Result<Rate, ProgramError>;
+
+    fn reserve_with_deposit(
+        &self,
+        allocation: u64,
+    ) -> Result<Box<dyn ReserveAccessor>, ProgramError>;
+}
+
+impl ReserveAccessor for SolendReserve {
+    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+        Ok(Rate::from_scaled_val(
+            self.liquidity.utilization_rate()?.to_scaled_val() as u64,
+        ))
+    }
+
+    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+        Ok(Rate::from_scaled_val(
+            self.current_borrow_rate()?.to_scaled_val() as u64,
+        ))
+    }
+
+    fn reserve_with_deposit(
+        &self,
+        allocation: u64,
+    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+        let mut reserve = Box::new(self.clone());
+        reserve.liquidity.deposit(allocation)?;
+        Ok(reserve)
+    }
+}
+
+impl ReserveAccessor for PortReserve {
+    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+        Ok(Rate::from_scaled_val(
+            self.liquidity.utilization_rate()?.to_scaled_val() as u64,
+        ))
+    }
+
+    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+        Ok(Rate::from_scaled_val(
+            self.current_borrow_rate()?.to_scaled_val() as u64,
+        ))
+    }
+
+    fn reserve_with_deposit(
+        &self,
+        allocation: u64,
+    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+        let mut reserve = Box::new(self.clone());
         reserve.liquidity.available_amount = reserve
             .liquidity
             .available_amount
             .checked_add(allocation)
             .ok_or(ErrorCode::OverflowError)?;
-
-        let utilization_rate =
-            Rate::from_scaled_val(reserve.liquidity.utilization_rate()?.to_scaled_val() as u64);
-        let borrow_rate =
-            Rate::from_scaled_val(reserve.current_borrow_rate()?.to_scaled_val() as u64);
-
-        utilization_rate.try_mul(borrow_rate)
+        Ok(reserve)
     }
 }
 
-impl ReturnCalculator for JetReserve {
-    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
-        let vault_total = self
-            .total_deposits()
-            .checked_add(allocation)
-            .ok_or(ErrorCode::OverflowError)?;
+impl ReserveAccessor for JetReserve {
+    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+        let vault_amount = self.total_deposits();
         let outstanding_debt = *self.unwrap_outstanding_debt(Clock::get()?.slot);
 
-        let utilization_rate =
-            Rate::from_bips(jet::state::utilization_rate(outstanding_debt, vault_total).as_u64(-4));
-        let borrow_rate =
-            Rate::from_bips(self.interest_rate(outstanding_debt, vault_total).as_u64(-4));
+        Ok(Rate::from_bips(
+            jet::state::utilization_rate(outstanding_debt, vault_amount).as_u64(-4),
+        ))
+    }
 
-        utilization_rate.try_mul(borrow_rate)
+    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+        let vault_amount = self.total_deposits();
+        let outstanding_debt = *self.unwrap_outstanding_debt(Clock::get()?.slot);
+
+        Ok(Rate::from_bips(
+            self.interest_rate(outstanding_debt, vault_amount)
+                .as_u64(-4),
+        ))
+    }
+
+    fn reserve_with_deposit(
+        &self,
+        allocation: u64,
+    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+        let mut reserve = Box::new(self.clone());
+        // We only care about the token amount here
+        reserve.deposit(allocation, 0);
+
+        Ok(reserve)
     }
 }
