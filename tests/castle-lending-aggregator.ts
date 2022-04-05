@@ -83,42 +83,33 @@ describe("castle-vault", () => {
     vaultBalance: anchor.BN,
     lpMintSupply: anchor.BN,
     currentSlot: number,
-    slots: number[],
+    nextSlot: number,
     feeCarryBps: number,
     feeMgmtBps: number,
     referralFeePct: number
   ) {
     const bpsWhole = new anchor.BN(10_000);
 
-    let primFees = new anchor.BN(0);
-    let refFees = new anchor.BN(0);
+    let dt = nextSlot - currentSlot;
 
-    for (const newSlot of slots) {
-      // TODO add carry fee calculation
-      //const carryFees = newVaultBalance
-      //  .sub(vaultBalance)
-      //  .mul(new anchor.BN(feeCarryBps))
-      //  .div(bpsWhole);
+    // TODO add carry fee calculation
+    //const carryFees = newVaultBalance
+    //  .sub(vaultBalance)
+    //  .mul(new anchor.BN(feeCarryBps))
+    //  .div(bpsWhole);
 
-      const mgmtFees = vaultBalance
+    const mgmtFees = vaultBalance
         .mul(new anchor.BN(feeMgmtBps))
         .div(bpsWhole)
         .div(new anchor.BN(slotsPerYear))
-        .div(new anchor.BN(newSlot - currentSlot));
+        .mul(new anchor.BN(dt));
 
-      const tFees = mgmtFees;
-      const tLpFees = calcReserveToLp(tFees, lpMintSupply, vaultBalance);
+    const tFees = mgmtFees;
+    const tLpFees = calcReserveToLp(tFees, lpMintSupply, vaultBalance);
 
-      const [primFee, refFee] = splitFees(tLpFees, referralFeePct);
+    const [primFee, refFee] = splitFees(tLpFees, referralFeePct);
 
-      primFees = primFees.add(primFee);
-      refFees = refFees.add(refFee);
-
-      lpMintSupply = lpMintSupply.add(tLpFees);
-      currentSlot = newSlot;
-    }
-
-    return { primary: primFees, referral: refFees };
+    return { primary: primFee, referral: refFee };
   }
 
   async function initLendingMarkets() {
@@ -394,6 +385,9 @@ describe("castle-vault", () => {
             )).toNumber();
 
         assert.equal(totalValue, qty);
+
+        // Use isAtMost because on-chain rust program handles rounding differently than TypeScript.
+        // However the difference should not exceet 1 token.
         assert.isAtMost(Math.abs(solendValue - Math.floor(qty * expectedSolendRatio)), 1);
         assert.isAtMost(Math.abs(portValue - Math.floor(qty * expectedPortRatio)), 1);
         assert.isAtMost(Math.abs(jetValue - Math.floor(qty * expectedJetRatio)), 1);
@@ -439,8 +433,8 @@ describe("castle-vault", () => {
           const expectedFees = await calculateFees(
             vaultTotalValue,
             lpTokenSupply,
-            slots0[slots0.length-1],
-            slots1,
+            slots0[slots0.length - 1],
+            slots1[slots1.length - 1],
             feeCarryBps,
             feeMgmtBps,
             referalPct,
@@ -453,8 +447,8 @@ describe("castle-vault", () => {
           const actualReferralFees = referralAccountInfo.amount.toNumber();
           const actualMgmtFees = feeAccountInfo.amount.toNumber();
 
-          assert.equal(actualMgmtFees, expectedFees.primary);
-          assert.equal(actualReferralFees, expectedFees.referral);
+          assert.isAtMost(Math.abs(actualMgmtFees - expectedFees.primary.toNumber()), 1);
+          assert.isAtMost(Math.abs(actualReferralFees - expectedFees.referral.toNumber()), 1);
       });
   }
 

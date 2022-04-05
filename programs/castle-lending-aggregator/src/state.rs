@@ -91,9 +91,10 @@ impl Vault {
         let mgmt = new_vault_value
             .checked_mul(self.fees.fee_mgmt_bps as u64)
             .ok_or(ErrorCode::OverflowError)?
+            .checked_mul(slots_elapsed as u64)
+            .ok_or(ErrorCode::OverflowError)?
             / ONE_AS_BPS
-            / SLOTS_PER_YEAR
-            / slots_elapsed;
+            / SLOTS_PER_YEAR;
 
         //msg!("Carry: {}", carry);
         //msg!("Mgmt: {}", mgmt);
