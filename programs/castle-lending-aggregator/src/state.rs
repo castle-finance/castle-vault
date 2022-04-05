@@ -75,10 +75,7 @@ impl Vault {
     pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
         let vault_value_diff = new_vault_value.saturating_sub(self.total_value);
         let slots_elapsed = self.last_update.slots_elapsed(slot)?;
-        // Return early to avoid divide by zero
-        if slots_elapsed == 0 {
-            return Ok(0);
-        }
+
         //msg!("Slots elapsed: {}", slots_elapsed);
         //msg!("New vault value: {}", new_vault_value);
         //msg!("Old vault value: {}", self.total_value);
@@ -88,10 +85,9 @@ impl Vault {
             .ok_or(ErrorCode::OverflowError)?
             / ONE_AS_BPS;
 
-        let mgmt = new_vault_value
-            .checked_mul(self.fees.fee_mgmt_bps as u64)
-            .ok_or(ErrorCode::OverflowError)?
-            .checked_mul(slots_elapsed as u64)
+        let mgmt = [self.fees.fee_mgmt_bps as u64, slots_elapsed]
+            .iter()
+            .try_fold(new_vault_value, |acc, r| acc.checked_mul(*r))
             .ok_or(ErrorCode::OverflowError)?
             / ONE_AS_BPS
             / SLOTS_PER_YEAR;

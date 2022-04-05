@@ -88,7 +88,10 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
     )
     .ok_or(ErrorCode::MathError)?;
 
-    let total_value = ctx.accounts.vault.total_value + reserve_token_amount;
+    let total_value = ctx.accounts.vault.total_value
+        .checked_add(reserve_token_amount)
+        .ok_or(ErrorCode::OverflowError)?;
+
     if total_value > ctx.accounts.vault.pool_size_limit {
         msg!("Deposit cap reached");
         return Err(ErrorCode::DepositCapError.into());
