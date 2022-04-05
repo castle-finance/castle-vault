@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
-use port_anchor_adaptor::{get_lending_program_id, Cluster, PortReserve};
+use port_anchor_adaptor::{port_lending_id, PortReserve};
 
 use crate::{
     impl_has_vault,
@@ -38,7 +38,7 @@ pub struct PortAccounts<'info> {
     // ID in devnet than they do in mainnet
     #[account(
         executable,
-        address = get_lending_program_id(Cluster::Devnet)
+        address = port_lending_id(),
     )]
     pub port_program: AccountInfo<'info>,
 
@@ -87,7 +87,6 @@ impl<'info> LendingMarket for PortAccounts<'info> {
             0 => Ok(()),
             _ => port_anchor_adaptor::deposit_reserve(
                 context.with_signer(&[&self.vault.authority_seeds()]),
-                port_anchor_adaptor::Cluster::Devnet,
                 amount,
             ),
         }
@@ -113,7 +112,6 @@ impl<'info> LendingMarket for PortAccounts<'info> {
             0 => Ok(()),
             _ => port_anchor_adaptor::redeem(
                 context.with_signer(&[&self.vault.authority_seeds()]),
-                port_anchor_adaptor::Cluster::Devnet,
                 amount,
             ),
         }

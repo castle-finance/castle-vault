@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
-use port_anchor_adaptor::{get_lending_program_id, Cluster, PortReserve};
+use port_anchor_adaptor::{port_lending_id, PortReserve};
 
 use crate::adapters::{solend, SolendReserve};
 use crate::errors::ErrorCode;
@@ -63,7 +63,7 @@ pub struct Refresh<'info> {
     // ID in devnet than they do in mainnet
     #[account(
         executable,
-        address = get_lending_program_id(Cluster::Devnet)
+        address = port_lending_id(),
     )]
     pub port_program: AccountInfo<'info>,
 
@@ -188,10 +188,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
 
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
-    port_anchor_adaptor::refresh_port_reserve(
-        ctx.accounts.port_refresh_reserve_context(),
-        port_anchor_adaptor::Cluster::Devnet,
-    )?;
+    port_anchor_adaptor::refresh_port_reserve(ctx.accounts.port_refresh_reserve_context())?;
     jet::cpi::refresh_reserve(ctx.accounts.jet_refresh_reserve_context())?;
 
     // Calculate value of solend position
