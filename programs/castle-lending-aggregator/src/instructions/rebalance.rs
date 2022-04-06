@@ -95,8 +95,8 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                 StrategyType::EqualAllocation => EqualAllocationStrategy.verify(&proposed_weights),
             }?;
 
-            let proposed_apy = get_apy(&proposed_weights, &proposed_allocations, &assets)?;
-            let proof_apy = get_apy(&strategy_weights, &strategy_allocations, &assets)?;
+            let proposed_apy = get_apr(&proposed_weights, &proposed_allocations, &assets)?;
+            let proof_apy = get_apr(&strategy_weights, &strategy_allocations, &assets)?;
 
             if proposed_apy < proof_apy {
                 return Err(ErrorCode::RebalanceProofCheckFailed.into());
@@ -120,8 +120,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     Ok(())
 }
 
-// TODO rename to get_apr?
-fn get_apy(
+fn get_apr(
     weights: &StrategyWeights,
     allocations: &Allocations,
     assets: &Assets,
