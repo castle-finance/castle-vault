@@ -3,9 +3,7 @@ use anchor_spl::token::Token;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 
 use std::convert::Into;
-
-use crate::errors::ErrorCode;
-use crate::state::Vault;
+use crate::{state::Vault, errors::ErrorCode};
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -80,7 +78,6 @@ impl<'info> Deposit<'info> {
 ///
 /// Transfers reserve tokens from user to vault and mints their share of lp tokens
 pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
-    msg!("Depositing {} reserve tokens", reserve_token_amount);
 
     let vault = &ctx.accounts.vault;
 
@@ -90,6 +87,17 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
         vault.total_value,
     )
     .ok_or(ErrorCode::MathError)?;
+
+    let total_value = ctx.accounts.vault.total_value
+        .checked_add(reserve_token_amount)
+        .ok_or(ErrorCode::OverflowError)?;
+
+    if total_value > ctx.accounts.vault.pool_size_limit {
+        msg!("Deposit cap reached");
+        return Err(ErrorCode::DepositCapError.into());
+    }
+
+    msg!("Depositing {} reserve tokens", reserve_token_amount);
 
     token::transfer(ctx.accounts.transfer_context(), reserve_token_amount)?;
 
