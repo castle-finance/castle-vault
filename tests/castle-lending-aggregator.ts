@@ -266,7 +266,7 @@ describe("castle-vault", () => {
     await reserveToken.mintTo(receiver, owner, [], qty);
   }
 
-  async function depositeToVault(qty: number): Promise<string[]> {
+  async function depositToVault(qty: number): Promise<string[]> {
     const txs = await vaultClient.deposit(wallet, qty, userReserveTokenAccount);
     await provider.connection.confirmTransaction(
       txs[txs.length - 1],
@@ -303,7 +303,7 @@ describe("castle-vault", () => {
       const qty = 100;
 
       await mintReserveToken(userReserveTokenAccount, qty);
-      await depositeToVault(qty);
+      await depositToVault(qty);
 
       const userReserveBalance = await getReserveTokenBalance(
         userReserveTokenAccount
@@ -357,7 +357,7 @@ describe("castle-vault", () => {
 
       await mintReserveToken(userReserveTokenAccount, qty);
       try {
-        await depositeToVault(qty);
+        await depositToVault(qty);
         assert.ok(false);
       } catch (err) {
         // TODO check err
@@ -385,7 +385,7 @@ describe("castle-vault", () => {
     it("Perform rebalance", async function () {
       const qty = 1024503;
       await mintReserveToken(userReserveTokenAccount, qty);
-      await depositeToVault(qty);
+      await depositToVault(qty);
 
       await performRebalance();
 
@@ -451,7 +451,7 @@ describe("castle-vault", () => {
     it("Collect fees", async function () {
       const qty1 = 5.47 * 10 ** 9;
       await mintReserveToken(userReserveTokenAccount, qty1);
-      let txs = await depositeToVault(qty1);
+      let txs = await depositToVault(qty1);
       const slots0 = await fetchSlots(txs);
 
       const vaultTotalValue = new anchor.BN(await getVaultTotalValue());
@@ -463,7 +463,7 @@ describe("castle-vault", () => {
       // Consider adding an API to client library to trigger refresh
       const qty2 = 10;
       await mintReserveToken(userReserveTokenAccount, qty2);
-      txs = await depositeToVault(qty2);
+      txs = await depositToVault(qty2);
       const slots1 = await fetchSlots(txs);
 
       const expectedFees = await calculateFees(
