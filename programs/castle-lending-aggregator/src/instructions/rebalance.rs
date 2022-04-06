@@ -120,6 +120,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     Ok(())
 }
 
+// TODO rename to get_apr?
 fn get_apy(
     weights: &StrategyWeights,
     allocations: &Allocations,

@@ -28,6 +28,7 @@ export interface Vault {
     lpTokenMint: PublicKey;
     reserveTokenMint: PublicKey;
     totalValue: BN;
+    depositCap: BN;
     vaultAuthority: PublicKey;
     vaultJetLpToken: PublicKey;
     vaultPortLpToken: PublicKey;

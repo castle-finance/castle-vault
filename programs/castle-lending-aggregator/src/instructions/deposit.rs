@@ -2,10 +2,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 
+use crate::{errors::ErrorCode, state::Vault};
 use std::convert::Into;
-
-use crate::errors::ErrorCode;
-use crate::state::Vault;
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -91,6 +89,20 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
         vault.total_value,
     )
     .ok_or(ErrorCode::MathError)?;
+
+    let total_value = ctx
+        .accounts
+        .vault
+        .total_value
+        .checked_add(reserve_token_amount)
+        .ok_or(ErrorCode::OverflowError)?;
+
+    if total_value > ctx.accounts.vault.deposit_cap {
+        msg!("Deposit cap reached");
+        return Err(ErrorCode::DepositCapError.into());
+    }
+
+    msg!("Depositing {} reserve tokens", reserve_token_amount);
 
     token::transfer(ctx.accounts.transfer_context(), reserve_token_amount)?;
 

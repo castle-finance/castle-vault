@@ -31,4 +31,7 @@ pub enum ErrorCode {
 
     #[msg("Proposed weights failed proof check")]
     RebalanceProofCheckFailed,
+
+    #[msg("Vault size limit is reached")]
+    DepositCapError,
 }

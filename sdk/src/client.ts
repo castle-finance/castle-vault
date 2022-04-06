@@ -42,10 +42,10 @@ export class VaultClient {
     private constructor(
         public program: anchor.Program<CastleLendingAggregator>,
         public vaultId: PublicKey,
-        public vaultState: Vault,
-        public solend: SolendReserveAsset,
-        public port: PortReserveAsset,
-        public jet: JetReserveAsset
+        private vaultState: Vault,
+        private solend: SolendReserveAsset,
+        private port: PortReserveAsset,
+        private jet: JetReserveAsset
     ) {}
 
     // TODO add function to change wallet
@@ -92,7 +92,8 @@ export class VaultClient {
         strategyType: StrategyType,
         rebalanceMode: RebalanceMode,
         owner: PublicKey,
-        feeData: FeeArgs
+        feeData: FeeArgs,
+        poolSizeLimit: number = 10000000000
     ): Promise<VaultClient> {
         const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
             feeData;
@@ -180,6 +181,7 @@ export class VaultClient {
                 feeMgmtBps: new anchor.BN(feeMgmtBps),
                 referralFeePct: new anchor.BN(referralFeePct),
             },
+            new anchor.BN(poolSizeLimit),
             {
                 accounts: {
                     vault: vaultId.publicKey,
@@ -791,6 +793,43 @@ export class VaultClient {
         }
     }
 
+    getDepositCap(): Big {
+        return new Big(this.vaultState.depositCap.toString());
+    }
+
+    getVaultReserveTokenAccount(): PublicKey {
+        return this.vaultState.vaultReserveToken;
+    }
+
+    getVaultSolendLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultSolendLpToken;
+    }
+
+    getVaultPortLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultPortLpToken;
+    }
+
+    getVaultJetLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultJetLpToken;
+    }
+
+    async getVaultSolendLpTokenAccountValue(): Promise<Big> {
+        return this.solend.getLpTokenAccountValue(
+            this.getVaultSolendLpTokenAccount()
+        );
+    }
+
+    async getVaultPortLpTokenAccountValue(): Promise<Big> {
+        return this.port.getLpTokenAccountValue(
+            this.getVaultPortLpTokenAccount()
+        );
+    }
+
+    async getVaultJetLpTokenAccountValue(): Promise<Big> {
+        return this.jet.getLpTokenAccountValue(
+            this.getVaultJetLpTokenAccount()
+        );
+    }
     async getUserReserveTokenAccount(address: PublicKey): Promise<PublicKey> {
         return await Token.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -884,6 +923,20 @@ export class VaultClient {
                 )
             ).toNumber()
         );
+    }
+
+    // NOTE: These should really only be used for testing
+
+    getSolend(): SolendReserveAsset {
+        return this.solend;
+    }
+
+    getPort(): PortReserveAsset {
+        return this.port;
+    }
+
+    getJet(): JetReserveAsset {
+        return this.jet;
     }
 }
 

@@ -12,6 +12,10 @@ use crate::state::{RebalanceMode, StrategyType};
 use adapters::*;
 use instructions::*;
 
+#[cfg(not(feature = "devnet-castle-addr"))]
+declare_id!("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn");
+
+#[cfg(feature = "devnet-castle-addr")]
 declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 
 #[program]
@@ -24,8 +28,16 @@ pub mod castle_lending_aggregator {
         strategy_type: StrategyType,
         rebalance_mode: RebalanceMode,
         fees: FeeArgs,
+        vault_deposit_cap: u64,
     ) -> ProgramResult {
-        instructions::init::handler(ctx, _bumps, strategy_type, rebalance_mode, fees)
+        instructions::init::handler(
+            ctx,
+            _bumps,
+            strategy_type,
+            rebalance_mode,
+            fees,
+            vault_deposit_cap,
+        )
     }
 
     pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {

@@ -208,6 +208,7 @@ pub fn handler(
     strategy_type: StrategyType,
     rebalance_mode: RebalanceMode,
     fees: FeeArgs,
+    vault_deposit_cap: u64,
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
@@ -235,6 +236,7 @@ pub fn handler(
     vault.total_value = 0;
     vault.strategy_type = strategy_type;
     vault.rebalance_mode = rebalance_mode;
+    vault.deposit_cap = vault_deposit_cap;
 
     vault.fees = VaultFees {
         fee_receiver: ctx.accounts.fee_receiver.key(),

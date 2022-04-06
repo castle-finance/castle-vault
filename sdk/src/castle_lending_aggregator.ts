@@ -145,6 +145,10 @@ export type CastleLendingAggregator = {
                     type: {
                         defined: "FeeArgs";
                     };
+                },
+                {
+                    name: "vaultDepositCap";
+                    type: "u64";
                 }
             ];
         },
@@ -715,6 +719,10 @@ export type CastleLendingAggregator = {
                         type: "u64";
                     },
                     {
+                        name: "depositCap";
+                        type: "u64";
+                    },
+                    {
                         name: "allocations";
                         type: {
                             defined: "Allocations";
@@ -1015,6 +1023,11 @@ export type CastleLendingAggregator = {
             code: 309;
             name: "RebalanceProofCheckFailed";
             msg: "Proposed weights failed proof check";
+        },
+        {
+            code: 310;
+            name: "DepositCapError";
+            msg: "Vault size limit is reached";
         }
     ];
 };
@@ -1166,6 +1179,10 @@ export const IDL: CastleLendingAggregator = {
                     type: {
                         defined: "FeeArgs",
                     },
+                },
+                {
+                    name: "vaultDepositCap",
+                    type: "u64",
                 },
             ],
         },
@@ -1736,6 +1753,10 @@ export const IDL: CastleLendingAggregator = {
                         type: "u64",
                     },
                     {
+                        name: "depositCap",
+                        type: "u64",
+                    },
+                    {
                         name: "allocations",
                         type: {
                             defined: "Allocations",
@@ -2036,6 +2057,11 @@ export const IDL: CastleLendingAggregator = {
             code: 309,
             name: "RebalanceProofCheckFailed",
             msg: "Proposed weights failed proof check",
+        },
+        {
+            code: 310,
+            name: "DepositCapError",
+            msg: "Vault size limit is reached",
         },
     ],
 };
