@@ -12,6 +12,10 @@ use crate::{init::FeeArgs, state::StrategyType};
 use adapters::*;
 use instructions::*;
 
+#[cfg(not(feature = "devnet-castle-addr"))]
+declare_id!("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn");
+
+#[cfg(feature = "devnet-castle-addr")]
 declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
 
 #[program]
