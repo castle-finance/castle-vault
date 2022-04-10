@@ -147,7 +147,7 @@ export type CastleLendingAggregator = {
             ];
         },
         {
-            name: "updateCap";
+            name: "updateDepositCap";
             accounts: [
                 {
                     name: "vault";
@@ -1134,7 +1134,7 @@ export const IDL: CastleLendingAggregator = {
             ],
         },
         {
-            name: "updateCap",
+            name: "updateDepositCap",
             accounts: [
                 {
                     name: "vault",

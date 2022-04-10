@@ -4,14 +4,14 @@ use std::convert::Into;
 use crate::state::Vault;
 
 #[derive(Accounts)]
-pub struct UpdateCap<'info> {
+pub struct UpdateDepositCap<'info> {
     #[account(
         mut,
     )]
     pub vault: Box<Account<'info, Vault>>,
 }
 
-pub fn handler(ctx: Context<UpdateCap>, deposit_cap_new_value: u64) -> ProgramResult {
+pub fn handler(ctx: Context<UpdateDepositCap>, deposit_cap_new_value: u64) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("New deposit cap value: {}", deposit_cap_new_value);
 

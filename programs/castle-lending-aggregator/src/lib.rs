@@ -32,8 +32,8 @@ pub mod castle_lending_aggregator {
         instructions::init::handler(ctx, _bumps, strategy_type, fees, pool_size_limit)
     }
 
-    pub fn update_cap(ctx: Context<UpdateCap>, deposit_cap_new_value: u64) -> ProgramResult {
-        instructions::update_cap::handler(ctx, deposit_cap_new_value)
+    pub fn update_deposit_cap(ctx: Context<UpdateDepositCap>, deposit_cap_new_value: u64) -> ProgramResult {
+        instructions::update_deposit_cap::handler(ctx, deposit_cap_new_value)
     }
 
     pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {

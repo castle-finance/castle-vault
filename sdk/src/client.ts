@@ -299,11 +299,14 @@ export class VaultClient {
     async updateDepositCap(new_value: number): Promise<TransactionSignature[]> {
         const updateCommand = new Transaction();
         updateCommand.add(
-            this.program.instruction.updateCap(new anchor.BN(new_value), {
-                accounts: {
-                    vault: this.vaultId,
-                },
-            })
+            this.program.instruction.updateDepositCap(
+                new anchor.BN(new_value),
+                {
+                    accounts: {
+                        vault: this.vaultId,
+                    },
+                }
+            )
         );
 
         const txs: SendTxRequest[] = [];
