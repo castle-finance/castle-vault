@@ -147,6 +147,22 @@ export type CastleLendingAggregator = {
             ];
         },
         {
+            name: "updateCap";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "depositCapNewValue";
+                    type: "u64";
+                }
+            ];
+        },
+        {
             name: "deposit";
             accounts: [
                 {
@@ -1113,6 +1129,22 @@ export const IDL: CastleLendingAggregator = {
                 },
                 {
                     name: "poolSizeLimit",
+                    type: "u64",
+                },
+            ],
+        },
+        {
+            name: "updateCap",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "depositCapNewValue",
                     type: "u64",
                 },
             ],

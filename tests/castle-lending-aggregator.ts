@@ -387,6 +387,20 @@ describe("castle-vault", () => {
             assert.equal(userLpBalance, 0);
             assert.equal(lpTokenSupply, 0);
         });
+
+        it("Update deposit cap", async function () {
+            const newDepositCap = poolSizeLimit * 0.24;
+            const txs = await vaultClient.updateDepositCap(newDepositCap);
+            await provider.connection.confirmTransaction(
+                txs[txs.length - 1],
+                "singleGossip"
+            );
+            await vaultClient.reload();
+            assert.equal(
+                newDepositCap,
+                vaultClient.vaultState.poolSizeLimit.toNumber()
+            );
+        });
     }
 
     function testRebalance(
