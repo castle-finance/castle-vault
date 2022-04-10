@@ -16,7 +16,7 @@ use instructions::*;
 declare_id!("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn");
 
 #[cfg(feature = "devnet-castle-addr")]
-declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
+declare_id!("4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK");
 
 #[program]
 pub mod castle_lending_aggregator {
@@ -27,7 +27,7 @@ pub mod castle_lending_aggregator {
         _bumps: InitBumpSeeds,
         strategy_type: StrategyType,
         fees: FeeArgs,
-        pool_size_limit: u64
+        pool_size_limit: u64,
     ) -> ProgramResult {
         instructions::init::handler(ctx, _bumps, strategy_type, fees, pool_size_limit)
     }
