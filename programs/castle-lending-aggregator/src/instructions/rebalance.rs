@@ -95,10 +95,14 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                 StrategyType::EqualAllocation => EqualAllocationStrategy.verify(&proposed_weights),
             }?;
 
-            let proposed_apy = get_apr(&proposed_weights, &proposed_allocations, &assets)?;
-            let proof_apy = get_apr(&strategy_weights, &strategy_allocations, &assets)?;
+            let proposed_apr = get_apr(&proposed_weights, &proposed_allocations, &assets)?;
+            let proof_apr = get_apr(&strategy_weights, &strategy_allocations, &assets)?;
 
-            if proposed_apy < proof_apy {
+            #[cfg(feature = "debug")]
+            msg!("Proposed APR: {:?}", proposed_apr);
+            msg!("Proof APR: {:?}", proof_apr);
+
+            if proposed_apr < proof_apr {
                 return Err(ErrorCode::RebalanceProofCheckFailed.into());
             }
             proposed_allocations
