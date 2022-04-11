@@ -7,8 +7,11 @@ use crate::state::Vault;
 pub struct UpdateDepositCap<'info> {
     #[account(
         mut,
+        has_one = vault_authority,
     )]
     pub vault: Box<Account<'info, Vault>>,
+
+    pub vault_authority: AccountInfo<'info>,
 }
 
 pub fn handler(ctx: Context<UpdateDepositCap>, deposit_cap_new_value: u64) -> ProgramResult {

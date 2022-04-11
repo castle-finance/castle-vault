@@ -304,6 +304,7 @@ export class VaultClient {
                 {
                     accounts: {
                         vault: this.vaultId,
+                        vaultAuthority: this.vaultState.vaultAuthority,
                     },
                 }
             )
