@@ -309,11 +309,7 @@ export class VaultClient {
                 }
             )
         );
-
-        const txs: SendTxRequest[] = [];
-        txs.push({ tx: updateCommand, signers: [] });
-
-        return await this.program.provider.sendAll(txs);
+        return [await this.program.provider.send(updateCommand)];
     }
 
     /**
