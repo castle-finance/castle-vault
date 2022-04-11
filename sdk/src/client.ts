@@ -296,7 +296,10 @@ export class VaultClient {
      * @param new_value
      * @returns
      */
-    async updateDepositCap(new_value: number): Promise<TransactionSignature[]> {
+    async updateDepositCap(
+        owner: Keypair,
+        new_value: number
+    ): Promise<TransactionSignature[]> {
         const updateCommand = new Transaction();
         updateCommand.add(
             this.program.instruction.updateDepositCap(
@@ -304,12 +307,12 @@ export class VaultClient {
                 {
                     accounts: {
                         vault: this.vaultId,
-                        vaultAuthority: this.vaultState.vaultAuthority,
+                        owner: owner.publicKey,
                     },
                 }
             )
         );
-        return [await this.program.provider.send(updateCommand)];
+        return [await this.program.provider.send(updateCommand, [owner])];
     }
 
     /**

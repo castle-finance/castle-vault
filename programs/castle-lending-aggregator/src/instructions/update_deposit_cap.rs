@@ -7,11 +7,11 @@ use std::convert::Into;
 pub struct UpdateDepositCap<'info> {
     #[account(
         mut,
-        has_one = vault_authority,
+        has_one = owner,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    pub vault_authority: AccountInfo<'info>,
+    pub owner: Signer<'info>,
 }
 
 pub fn handler(ctx: Context<UpdateDepositCap>, deposit_cap_new_value: u64) -> ProgramResult {

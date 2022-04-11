@@ -390,7 +390,10 @@ describe("castle-vault", () => {
 
         it("Update deposit cap", async function () {
             const newDepositCap = poolSizeLimit * 0.24;
-            const txs = await vaultClient.updateDepositCap(newDepositCap);
+            const txs = await vaultClient.updateDepositCap(
+                owner,
+                newDepositCap
+            );
             await provider.connection.confirmTransaction(
                 txs[txs.length - 1],
                 "singleGossip"

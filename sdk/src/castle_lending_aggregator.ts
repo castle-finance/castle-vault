@@ -155,9 +155,9 @@ export type CastleLendingAggregator = {
                     isSigner: false;
                 },
                 {
-                    name: "vaultAuthority";
+                    name: "owner";
                     isMut: false;
-                    isSigner: false;
+                    isSigner: true;
                 }
             ];
             args: [
@@ -1147,9 +1147,9 @@ export const IDL: CastleLendingAggregator = {
                     isSigner: false,
                 },
                 {
-                    name: "vaultAuthority",
+                    name: "owner",
                     isMut: false,
-                    isSigner: false,
+                    isSigner: true,
                 },
             ],
             args: [
