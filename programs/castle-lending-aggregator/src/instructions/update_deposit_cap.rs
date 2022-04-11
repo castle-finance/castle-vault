@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
-use std::convert::Into;
 use crate::state::Vault;
+use std::convert::Into;
 
 #[derive(Accounts)]
 pub struct UpdateDepositCap<'info> {

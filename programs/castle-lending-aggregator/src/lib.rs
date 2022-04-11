@@ -27,12 +27,15 @@ pub mod castle_lending_aggregator {
         _bumps: InitBumpSeeds,
         strategy_type: StrategyType,
         fees: FeeArgs,
-        pool_size_limit: u64
+        pool_size_limit: u64,
     ) -> ProgramResult {
         instructions::init::handler(ctx, _bumps, strategy_type, fees, pool_size_limit)
     }
 
-    pub fn update_deposit_cap(ctx: Context<UpdateDepositCap>, deposit_cap_new_value: u64) -> ProgramResult {
+    pub fn update_deposit_cap(
+        ctx: Context<UpdateDepositCap>,
+        deposit_cap_new_value: u64,
+    ) -> ProgramResult {
         instructions::update_deposit_cap::handler(ctx, deposit_cap_new_value)
     }
 
