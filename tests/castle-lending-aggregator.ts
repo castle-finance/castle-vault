@@ -370,7 +370,7 @@ describe("castle-vault", () => {
             await mintReserveToken(userReserveTokenAccount, qty);
             try {
                 await depositToVault(qty);
-                assert.ok(false);
+                assert.fail("Deposit should be rejected but was not.");
             } catch (err) {
                 // TODO check err
             }
@@ -421,7 +421,7 @@ describe("castle-vault", () => {
                     txs[txs.length - 1],
                     "singleGossip"
                 );
-                assert.ok(false);
+                assert.fail("Transaction should be rejected but was not.");
             } catch (err) {
                 // TODO check err
             }
