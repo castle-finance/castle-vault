@@ -556,13 +556,13 @@ describe("castle-vault", () => {
     }
 
     describe("Equal allocation strategy", () => {
-        // describe("Deposit and withdrawal", () => {
-        //     before(initLendingMarkets);
-        //     before(async function () {
-        //         await initializeVault({ equalAllocation: {} });
-        //     });
-        //     testDepositAndWithdrawal();
-        // });
+        describe("Deposit and withdrawal", () => {
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault({ equalAllocation: {} });
+            });
+            testDepositAndWithdrawal();
+        });
 
         describe("Deposit cap", () => {
             before(initLendingMarkets);
@@ -572,75 +572,75 @@ describe("castle-vault", () => {
             testDepositCap();
         });
 
-        // describe("Rebalance", () => {
-        //     before(initLendingMarkets);
-        //     before(async function () {
-        //         await initializeVault({ equalAllocation: {} });
-        //     });
-        //     testRebalance();
-        // });
+        describe("Rebalance", () => {
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault({ equalAllocation: {} });
+            });
+            testRebalance();
+        });
 
-        // describe("Fee computation", () => {
-        //     const feeMgmtBps = 10000;
-        //     const feeCarryBps = 10000;
-        //     const referralFeePct = 20;
-        //
-        //     before(initLendingMarkets);
-        //     before(async function () {
-        //         await initializeVault(
-        //             { equalAllocation: {} },
-        //             feeCarryBps,
-        //             feeMgmtBps,
-        //             referralFeePct
-        //         );
-        //     });
-        //     testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
-        // });
+        describe("Fee computation", () => {
+            const feeMgmtBps = 10000;
+            const feeCarryBps = 10000;
+            const referralFeePct = 20;
+
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault(
+                    { equalAllocation: {} },
+                    feeCarryBps,
+                    feeMgmtBps,
+                    referralFeePct
+                );
+            });
+            testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
+        });
 
         // TODO borrow from solend to increase apy and ensure it switches to that
         // TODO borrow from port to increase apy and ensure it switches to that
     });
 
-    // describe("Max yield strategy", () => {
-    //     describe("Deposit and withdrawal", () => {
-    //         before(initLendingMarkets);
-    //         before(async function () {
-    //             await initializeVault({ maxYield: {} });
-    //         });
-    //         testDepositAndWithdrawal();
-    //     });
-    //
-    //     describe("Deposit cap", () => {
-    //         before(initLendingMarkets);
-    //         before(async function () {
-    //             await initializeVault({ maxYield: {} });
-    //         });
-    //         testDepositCap();
-    //     });
-    //
-    //     describe("Rebalance", () => {
-    //         before(initLendingMarkets);
-    //         before(async function () {
-    //             await initializeVault({ maxYield: {} });
-    //         });
-    //         testRebalance(0, 0, 1);
-    //     });
-    //
-    //     describe("Fee computation", () => {
-    //         const feeMgmtBps = 10000;
-    //         const feeCarryBps = 10000;
-    //         const referralFeePct = 20;
-    //
-    //         before(initLendingMarkets);
-    //         before(async function () {
-    //             await initializeVault(
-    //                 { maxYield: {} },
-    //                 feeCarryBps,
-    //                 feeMgmtBps,
-    //                 referralFeePct
-    //             );
-    //         });
-    //         testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
-    //     });
-    // });
+    describe("Max yield strategy", () => {
+        describe("Deposit and withdrawal", () => {
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault({ maxYield: {} });
+            });
+            testDepositAndWithdrawal();
+        });
+
+        describe("Deposit cap", () => {
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault({ maxYield: {} });
+            });
+            testDepositCap();
+        });
+
+        describe("Rebalance", () => {
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault({ maxYield: {} });
+            });
+            testRebalance(0, 0, 1);
+        });
+
+        describe("Fee computation", () => {
+            const feeMgmtBps = 10000;
+            const feeCarryBps = 10000;
+            const referralFeePct = 20;
+
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault(
+                    { maxYield: {} },
+                    feeCarryBps,
+                    feeMgmtBps,
+                    referralFeePct
+                );
+            });
+            testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
+        });
+    });
 });
