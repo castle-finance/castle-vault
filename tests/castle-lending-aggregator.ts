@@ -370,7 +370,7 @@ describe("castle-vault", () => {
             await mintReserveToken(userReserveTokenAccount, qty);
             try {
                 await depositToVault(qty);
-                assert.ok(false);
+                assert.fail("Deposit should be rejected but was not.");
             } catch (err) {
                 // TODO check err
             }
@@ -386,6 +386,51 @@ describe("castle-vault", () => {
             assert.equal(vaultReserveBalance, 0);
             assert.equal(userLpBalance, 0);
             assert.equal(lpTokenSupply, 0);
+        });
+
+        it("Update deposit cap", async function () {
+            const newDepositCap = poolSizeLimit * 0.24;
+            const txs = await vaultClient.updateDepositCap(
+                owner,
+                newDepositCap
+            );
+            await provider.connection.confirmTransaction(
+                txs[txs.length - 1],
+                "singleGossip"
+            );
+            await vaultClient.reload();
+            assert.equal(
+                newDepositCap,
+                vaultClient.vaultState.poolSizeLimit.toNumber()
+            );
+        });
+
+        it("Reject unauthorized deposit cap update", async function () {
+            const noPermissionUser = Keypair.generate();
+
+            const prevDepositCap =
+                vaultClient.vaultState.poolSizeLimit.toNumber();
+            const newDepositCap = prevDepositCap * 0.24;
+
+            try {
+                const txs = await vaultClient.updateDepositCap(
+                    noPermissionUser,
+                    newDepositCap
+                );
+                await provider.connection.confirmTransaction(
+                    txs[txs.length - 1],
+                    "singleGossip"
+                );
+                assert.fail("Transaction should be rejected but was not.");
+            } catch (err) {
+                // TODO check err
+            }
+
+            await vaultClient.reload();
+            assert.equal(
+                prevDepositCap,
+                vaultClient.vaultState.poolSizeLimit.toNumber()
+            );
         });
     }
 

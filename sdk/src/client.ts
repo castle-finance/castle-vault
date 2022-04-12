@@ -70,7 +70,7 @@ export class VaultClient {
         return new VaultClient(program, vaultId, vaultState, solend, port, jet);
     }
 
-    private async reload() {
+    async reload() {
         this.vaultState = await this.program.account.vault.fetch(this.vaultId);
         // TODO reload underlying asset data also?
     }
@@ -290,6 +290,29 @@ export class VaultClient {
             ),
             keyPair: userReserveKeypair,
         };
+    }
+
+    /**
+     * @param new_value
+     * @returns
+     */
+    async updateDepositCap(
+        owner: Keypair,
+        new_value: number
+    ): Promise<TransactionSignature[]> {
+        const updateCommand = new Transaction();
+        updateCommand.add(
+            this.program.instruction.updateDepositCap(
+                new anchor.BN(new_value),
+                {
+                    accounts: {
+                        vault: this.vaultId,
+                        owner: owner.publicKey,
+                    },
+                }
+            )
+        );
+        return [await this.program.provider.send(updateCommand, [owner])];
     }
 
     /**
