@@ -553,6 +553,77 @@ describe("castle-vault", () => {
                 1
             );
         });
+
+        it("Update fee rates", async function () {
+            const prevFees = vaultClient.vaultState.fees;
+            const newFees = {
+                feeCarryBps: prevFees.feeCarryBps / 2,
+                feeMgmtBps: prevFees.feeMgmtBps / 2,
+                referralFeePct: prevFees.referralFeePct / 2,
+                feeReceiver: prevFees.feeReceiver,
+                referralFeeReceiver: prevFees.referralFeeReceiver,
+            };
+
+            const txs = await vaultClient.updateFees(owner, newFees);
+            await provider.connection.confirmTransaction(
+                txs[txs.length - 1],
+                "singleGossip"
+            );
+            await vaultClient.reload();
+            assert.equal(
+                newFees.feeCarryBps,
+                vaultClient.vaultState.fees.feeCarryBps
+            );
+            assert.equal(
+                newFees.feeMgmtBps,
+                vaultClient.vaultState.fees.feeMgmtBps
+            );
+            assert.equal(
+                newFees.referralFeePct,
+                vaultClient.vaultState.fees.referralFeePct
+            );
+        });
+
+        it("Reject unauthorized fee rate update", async function () {
+            const prevFees = vaultClient.vaultState.fees;
+            const newFees = {
+                feeCarryBps: prevFees.feeCarryBps / 2,
+                feeMgmtBps: prevFees.feeMgmtBps / 2,
+                referralFeePct: prevFees.referralFeePct / 2,
+                feeReceiver: prevFees.feeReceiver,
+                referralFeeReceiver: prevFees.referralFeeReceiver,
+            };
+
+            const noPermissionUser = Keypair.generate();
+
+            try {
+                const txs = await vaultClient.updateFees(
+                    noPermissionUser,
+                    newFees
+                );
+                await provider.connection.confirmTransaction(
+                    txs[txs.length - 1],
+                    "singleGossip"
+                );
+                assert.fail("Transaction should be rejected but was not.");
+            } catch (err) {
+                // TODO check err
+            }
+
+            await vaultClient.reload();
+            assert.equal(
+                prevFees.feeCarryBps,
+                vaultClient.vaultState.fees.feeCarryBps
+            );
+            assert.equal(
+                prevFees.feeMgmtBps,
+                vaultClient.vaultState.fees.feeMgmtBps
+            );
+            assert.equal(
+                prevFees.referralFeePct,
+                vaultClient.vaultState.fees.referralFeePct
+            );
+        });
     }
 
     describe("Equal allocation strategy", () => {
@@ -580,7 +651,7 @@ describe("castle-vault", () => {
             testRebalance();
         });
 
-        describe("Fee computation", () => {
+        describe("Fees", () => {
             const feeMgmtBps = 10000;
             const feeCarryBps = 10000;
             const referralFeePct = 20;
@@ -626,7 +697,7 @@ describe("castle-vault", () => {
             testRebalance(0, 0, 1);
         });
 
-        describe("Fee computation", () => {
+        describe("Fees", () => {
             const feeMgmtBps = 10000;
             const feeCarryBps = 10000;
             const referralFeePct = 20;

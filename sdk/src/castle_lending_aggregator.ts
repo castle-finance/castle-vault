@@ -168,6 +168,29 @@ export type CastleLendingAggregator = {
             ];
         },
         {
+            name: "updateFees";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                }
+            ];
+            args: [
+                {
+                    name: "newFees";
+                    type: {
+                        defined: "FeeArgs";
+                    };
+                }
+            ];
+        },
+        {
             name: "deposit";
             accounts: [
                 {
@@ -1156,6 +1179,29 @@ export const IDL: CastleLendingAggregator = {
                 {
                     name: "depositCapNewValue",
                     type: "u64",
+                },
+            ],
+        },
+        {
+            name: "updateFees",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+            ],
+            args: [
+                {
+                    name: "newFees",
+                    type: {
+                        defined: "FeeArgs",
+                    },
                 },
             ],
         },

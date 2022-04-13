@@ -316,6 +316,33 @@ export class VaultClient {
     }
 
     /**
+     * @param new_value
+     * @returns
+     */
+    async updateFees(
+        owner: Keypair,
+        newFees: FeeArgs
+    ): Promise<TransactionSignature[]> {
+        const updateCommand = new Transaction();
+        updateCommand.add(
+            this.program.instruction.updateFees(
+                {
+                    feeCarryBps: new anchor.BN(newFees.feeCarryBps),
+                    feeMgmtBps: new anchor.BN(newFees.feeMgmtBps),
+                    referralFeePct: new anchor.BN(newFees.referralFeePct),
+                },
+                {
+                    accounts: {
+                        vault: this.vaultId,
+                        owner: owner.publicKey,
+                    },
+                }
+            )
+        );
+        return [await this.program.provider.send(updateCommand, [owner])];
+    }
+
+    /**
      *
      * TODO refactor to be more clear
      *
