@@ -555,7 +555,7 @@ describe("castle-vault", () => {
         });
 
         it("Update fee rates", async function () {
-            const prevFees = vaultClient.vaultState.fees;
+            const prevFees = vaultClient.getFees();
             const newFeeCarryBps = prevFees.feeCarryBps / 2;
             const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
             const newReferralFeePct = prevFees.referralFeePct / 2;
@@ -571,19 +571,14 @@ describe("castle-vault", () => {
                 "singleGossip"
             );
             await vaultClient.reload();
-            assert.equal(
-                newFeeCarryBps,
-                vaultClient.vaultState.fees.feeCarryBps
-            );
-            assert.equal(newFeeMgmtBps, vaultClient.vaultState.fees.feeMgmtBps);
-            assert.equal(
-                newReferralFeePct,
-                vaultClient.vaultState.fees.referralFeePct
-            );
+            const actualFees = vaultClient.getFees();
+            assert.equal(newFeeCarryBps, actualFees.feeCarryBps);
+            assert.equal(newFeeMgmtBps, actualFees.feeMgmtBps);
+            assert.equal(newReferralFeePct, actualFees.referralFeePct);
         });
 
         it("Reject unauthorized fee rate update", async function () {
-            const prevFees = vaultClient.vaultState.fees;
+            const prevFees = vaultClient.getFees();
             const newFeeCarryBps = prevFees.feeCarryBps / 2;
             const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
             const newReferralFeePct = prevFees.referralFeePct / 2;
@@ -607,23 +602,10 @@ describe("castle-vault", () => {
             }
 
             await vaultClient.reload();
-            console.log(
-                prevFees.feeCarryBps,
-                vaultClient.vaultState.fees.feeCarryBps
-            );
-
-            assert.equal(
-                prevFees.feeCarryBps,
-                vaultClient.vaultState.fees.feeCarryBps
-            );
-            assert.equal(
-                prevFees.feeMgmtBps,
-                vaultClient.vaultState.fees.feeMgmtBps
-            );
-            assert.equal(
-                prevFees.referralFeePct,
-                vaultClient.vaultState.fees.referralFeePct
-            );
+            const actualFees = vaultClient.getFees();
+            assert.equal(prevFees.feeCarryBps, actualFees.feeCarryBps);
+            assert.equal(prevFees.feeMgmtBps, actualFees.feeMgmtBps);
+            assert.equal(prevFees.referralFeePct, actualFees.referralFeePct);
         });
     }
 

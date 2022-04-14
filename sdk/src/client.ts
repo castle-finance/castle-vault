@@ -919,6 +919,10 @@ export class VaultClient {
             ).toNumber()
         );
     }
+
+    getFees(): VaultFees {
+        return this.vaultState.fees;
+    }
 }
 
 const createAta = (
