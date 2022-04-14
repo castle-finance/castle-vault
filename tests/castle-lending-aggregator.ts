@@ -553,6 +553,88 @@ describe("castle-vault", () => {
                 1
             );
         });
+
+        it("Update fee rates", async function () {
+            const prevFees = vaultClient.getFees();
+            const newFeeCarryBps = prevFees.feeCarryBps / 2;
+            const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
+            const newReferralFeePct = prevFees.referralFeePct / 2;
+
+            const txs = await vaultClient.updateFees(
+                owner,
+                newFeeCarryBps,
+                newFeeMgmtBps,
+                newReferralFeePct
+            );
+            await provider.connection.confirmTransaction(
+                txs[txs.length - 1],
+                "singleGossip"
+            );
+            await vaultClient.reload();
+            const actualFees = vaultClient.getFees();
+            assert.equal(newFeeCarryBps, actualFees.feeCarryBps);
+            assert.equal(newFeeMgmtBps, actualFees.feeMgmtBps);
+            assert.equal(newReferralFeePct, actualFees.referralFeePct);
+        });
+
+        it("Reject unauthorized fee rate update", async function () {
+            const prevFees = vaultClient.getFees();
+            const newFeeCarryBps = prevFees.feeCarryBps / 2;
+            const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
+            const newReferralFeePct = prevFees.referralFeePct / 2;
+
+            const noPermissionUser = Keypair.generate();
+
+            try {
+                const txs = await vaultClient.updateFees(
+                    noPermissionUser,
+                    newFeeCarryBps,
+                    newFeeMgmtBps,
+                    newReferralFeePct
+                );
+                await provider.connection.confirmTransaction(
+                    txs[txs.length - 1],
+                    "singleGossip"
+                );
+                assert.fail("Transaction should be rejected but was not.");
+            } catch (err) {
+                // TODO check err
+            }
+
+            await vaultClient.reload();
+            const actualFees = vaultClient.getFees();
+            assert.equal(prevFees.feeCarryBps, actualFees.feeCarryBps);
+            assert.equal(prevFees.feeMgmtBps, actualFees.feeMgmtBps);
+            assert.equal(prevFees.referralFeePct, actualFees.referralFeePct);
+        });
+
+        it("Reject invalid fee rates", async function () {
+            const prevFees = vaultClient.getFees();
+            const newFeeCarryBps = prevFees.feeCarryBps / 2;
+            const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
+            const newReferralFeePct = 80;
+            try {
+                const txs = await vaultClient.updateFees(
+                    owner,
+                    newFeeCarryBps,
+                    newFeeMgmtBps,
+                    newReferralFeePct
+                );
+                await provider.connection.confirmTransaction(
+                    txs[txs.length - 1],
+                    "singleGossip"
+                );
+                assert.fail("Transaction should be rejected but was not.");
+            } catch (err) {
+                // TODO check err
+            }
+
+            await vaultClient.reload();
+            const actualFees = vaultClient.getFees();
+            assert.equal(prevFees.feeCarryBps, actualFees.feeCarryBps);
+            assert.equal(prevFees.feeMgmtBps, actualFees.feeMgmtBps);
+            assert.equal(prevFees.referralFeePct, actualFees.referralFeePct);
+        });
     }
 
     describe("Equal allocation strategy", () => {
@@ -580,7 +662,7 @@ describe("castle-vault", () => {
             testRebalance();
         });
 
-        describe("Fee computation", () => {
+        describe("Fees", () => {
             const feeMgmtBps = 10000;
             const feeCarryBps = 10000;
             const referralFeePct = 20;
@@ -626,7 +708,7 @@ describe("castle-vault", () => {
             testRebalance(0, 0, 1);
         });
 
-        describe("Fee computation", () => {
+        describe("Fees", () => {
             const feeMgmtBps = 10000;
             const feeCarryBps = 10000;
             const referralFeePct = 20;

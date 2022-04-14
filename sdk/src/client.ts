@@ -316,6 +316,35 @@ export class VaultClient {
     }
 
     /**
+     * @param new_value
+     * @returns
+     */
+    async updateFees(
+        owner: Keypair,
+        feeCarryBps: number,
+        feeMgmtBps: number,
+        referralFeePct: number
+    ): Promise<TransactionSignature[]> {
+        const updateCommand = new Transaction();
+        updateCommand.add(
+            this.program.instruction.updateFees(
+                {
+                    feeCarryBps: new anchor.BN(feeCarryBps),
+                    feeMgmtBps: new anchor.BN(feeMgmtBps),
+                    referralFeePct: new anchor.BN(referralFeePct),
+                },
+                {
+                    accounts: {
+                        vault: this.vaultId,
+                        owner: owner.publicKey,
+                    },
+                }
+            )
+        );
+        return [await this.program.provider.send(updateCommand, [owner])];
+    }
+
+    /**
      *
      * TODO refactor to be more clear
      *
@@ -889,6 +918,10 @@ export class VaultClient {
                 )
             ).toNumber()
         );
+    }
+
+    getFees(): VaultFees {
+        return this.vaultState.fees;
     }
 }
 

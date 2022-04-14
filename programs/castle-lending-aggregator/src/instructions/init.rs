@@ -177,22 +177,22 @@ impl<'info> Initialize<'info> {
 
         Ok(())
     }
+}
 
-    fn validate_fees(&self, fees: &FeeArgs) -> ProgramResult {
-        if fees.fee_carry_bps > 10000 {
-            return Err(ErrorCode::FeeBpsError.into());
-        }
-
-        if fees.fee_mgmt_bps > 10000 {
-            return Err(ErrorCode::FeeBpsError.into());
-        }
-
-        if fees.referral_fee_pct > 50 {
-            return Err(ErrorCode::ReferralFeeError.into());
-        }
-
-        Ok(())
+pub fn validate_fees(fees: &FeeArgs) -> ProgramResult {
+    if fees.fee_carry_bps > 10000 {
+        return Err(ErrorCode::FeeBpsError.into());
     }
+
+    if fees.fee_mgmt_bps > 10000 {
+        return Err(ErrorCode::FeeBpsError.into());
+    }
+
+    if fees.referral_fee_pct > 50 {
+        return Err(ErrorCode::ReferralFeeError.into());
+    }
+
+    Ok(())
 }
 
 /// Creates a new vault
@@ -207,7 +207,7 @@ pub fn handler(
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
     fees: FeeArgs,
-    pool_size_limit: u64
+    pool_size_limit: u64,
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
@@ -215,7 +215,7 @@ pub fn handler(
     ctx.accounts.validate_referral_token()?;
 
     // Validating referral token account's mint
-    ctx.accounts.validate_fees(&fees)?;
+    validate_fees(&fees)?;
 
     let vault = &mut ctx.accounts.vault;
     vault.vault_authority = ctx.accounts.vault_authority.key();

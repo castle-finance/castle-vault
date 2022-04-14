@@ -39,6 +39,10 @@ pub mod castle_lending_aggregator {
         instructions::update_deposit_cap::handler(ctx, deposit_cap_new_value)
     }
 
+    pub fn update_fees(ctx: Context<UpdateFees>, new_fees: FeeArgs) -> ProgramResult {
+        instructions::update_fees::handler(ctx, new_fees)
+    }
+
     pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
         instructions::deposit::handler(ctx, reserve_token_amount)
     }
