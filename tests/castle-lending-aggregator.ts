@@ -556,50 +556,46 @@ describe("castle-vault", () => {
 
         it("Update fee rates", async function () {
             const prevFees = vaultClient.vaultState.fees;
-            const newFees = {
-                feeCarryBps: prevFees.feeCarryBps / 2,
-                feeMgmtBps: prevFees.feeMgmtBps / 2,
-                referralFeePct: prevFees.referralFeePct / 2,
-                feeReceiver: prevFees.feeReceiver,
-                referralFeeReceiver: prevFees.referralFeeReceiver,
-            };
+            const newFeeCarryBps = prevFees.feeCarryBps / 2;
+            const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
+            const newReferralFeePct = prevFees.referralFeePct / 2;
 
-            const txs = await vaultClient.updateFees(owner, newFees);
+            const txs = await vaultClient.updateFees(
+                owner,
+                newFeeCarryBps,
+                newFeeMgmtBps,
+                newReferralFeePct
+            );
             await provider.connection.confirmTransaction(
                 txs[txs.length - 1],
                 "singleGossip"
             );
             await vaultClient.reload();
             assert.equal(
-                newFees.feeCarryBps,
+                newFeeCarryBps,
                 vaultClient.vaultState.fees.feeCarryBps
             );
+            assert.equal(newFeeMgmtBps, vaultClient.vaultState.fees.feeMgmtBps);
             assert.equal(
-                newFees.feeMgmtBps,
-                vaultClient.vaultState.fees.feeMgmtBps
-            );
-            assert.equal(
-                newFees.referralFeePct,
+                newReferralFeePct,
                 vaultClient.vaultState.fees.referralFeePct
             );
         });
 
         it("Reject unauthorized fee rate update", async function () {
             const prevFees = vaultClient.vaultState.fees;
-            const newFees = {
-                feeCarryBps: prevFees.feeCarryBps / 2,
-                feeMgmtBps: prevFees.feeMgmtBps / 2,
-                referralFeePct: prevFees.referralFeePct / 2,
-                feeReceiver: prevFees.feeReceiver,
-                referralFeeReceiver: prevFees.referralFeeReceiver,
-            };
+            const newFeeCarryBps = prevFees.feeCarryBps / 2;
+            const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
+            const newReferralFeePct = prevFees.referralFeePct / 2;
 
             const noPermissionUser = Keypair.generate();
 
             try {
                 const txs = await vaultClient.updateFees(
                     noPermissionUser,
-                    newFees
+                    newFeeCarryBps,
+                    newFeeMgmtBps,
+                    newReferralFeePct
                 );
                 await provider.connection.confirmTransaction(
                     txs[txs.length - 1],
@@ -611,6 +607,11 @@ describe("castle-vault", () => {
             }
 
             await vaultClient.reload();
+            console.log(
+                prevFees.feeCarryBps,
+                vaultClient.vaultState.fees.feeCarryBps
+            );
+
             assert.equal(
                 prevFees.feeCarryBps,
                 vaultClient.vaultState.fees.feeCarryBps

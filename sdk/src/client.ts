@@ -321,15 +321,17 @@ export class VaultClient {
      */
     async updateFees(
         owner: Keypair,
-        newFees: FeeArgs
+        feeCarryBps: number,
+        feeMgmtBps: number,
+        referralFeePct: number
     ): Promise<TransactionSignature[]> {
         const updateCommand = new Transaction();
         updateCommand.add(
             this.program.instruction.updateFees(
                 {
-                    feeCarryBps: new anchor.BN(newFees.feeCarryBps),
-                    feeMgmtBps: new anchor.BN(newFees.feeMgmtBps),
-                    referralFeePct: new anchor.BN(newFees.referralFeePct),
+                    feeCarryBps: new anchor.BN(feeCarryBps),
+                    feeMgmtBps: new anchor.BN(feeMgmtBps),
+                    referralFeePct: new anchor.BN(referralFeePct),
                 },
                 {
                     accounts: {
