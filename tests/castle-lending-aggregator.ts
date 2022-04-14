@@ -607,6 +607,34 @@ describe("castle-vault", () => {
             assert.equal(prevFees.feeMgmtBps, actualFees.feeMgmtBps);
             assert.equal(prevFees.referralFeePct, actualFees.referralFeePct);
         });
+
+        it("Reject invalid fee rates", async function () {
+            const prevFees = vaultClient.getFees();
+            const newFeeCarryBps = prevFees.feeCarryBps / 2;
+            const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
+            const newReferralFeePct = 80;
+            try {
+                const txs = await vaultClient.updateFees(
+                    owner,
+                    newFeeCarryBps,
+                    newFeeMgmtBps,
+                    newReferralFeePct
+                );
+                await provider.connection.confirmTransaction(
+                    txs[txs.length - 1],
+                    "singleGossip"
+                );
+                assert.fail("Transaction should be rejected but was not.");
+            } catch (err) {
+                // TODO check err
+            }
+
+            await vaultClient.reload();
+            const actualFees = vaultClient.getFees();
+            assert.equal(prevFees.feeCarryBps, actualFees.feeCarryBps);
+            assert.equal(prevFees.feeMgmtBps, actualFees.feeMgmtBps);
+            assert.equal(prevFees.referralFeePct, actualFees.referralFeePct);
+        });
     }
 
     describe("Equal allocation strategy", () => {
