@@ -206,10 +206,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         jet_reserve.total_deposits(),
         jet_reserve.total_deposit_notes(),
     );
-    let jet_value = jet_exchange_rate
-        .as_u64(0)
-        .checked_mul(ctx.accounts.vault_jet_lp_token.amount)
-        .ok_or(ErrorCode::OverflowError)?;
+    let jet_value = (jet_exchange_rate * ctx.accounts.vault_jet_lp_token.amount).as_u64(0);
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
