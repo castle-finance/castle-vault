@@ -1,4 +1,4 @@
-import { Cluster, clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
+import { Cluster, Connection, PublicKey } from "@solana/web3.js";
 import { Program, Provider, Wallet } from "@project-serum/anchor";
 import { NATIVE_MINT } from "@solana/spl-token";
 
@@ -13,7 +13,9 @@ import {
 
 const main = async () => {
     const cluster: Cluster = "devnet";
-    const connection = new Connection(clusterApiUrl(cluster));
+    const connection = new Connection(
+        "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+    );
     const wallet = Wallet.local();
     const provider = new Provider(connection, wallet, {
         commitment: "confirmed",
@@ -52,9 +54,6 @@ const main = async () => {
         }
     );
     console.log(vaultClient.vaultId);
-
-    //const vaultId = new PublicKey("81krfC8ptDbjwY5bkur1SqHYKLPxGQLYBQEUv5zhojUW");
-    //const vaultClient = await VaultClient.load(provider, cluster, reserveMint, vaultId);
     console.log(vaultClient.vaultState);
 };
 
