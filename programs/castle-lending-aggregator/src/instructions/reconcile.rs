@@ -7,6 +7,8 @@ use crate::{
     state::{Provider, Vault},
 };
 
+const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 20;
+
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?
 pub trait LendingMarket {
@@ -62,7 +64,7 @@ pub fn handler<T: LendingMarket + HasVault>(
 
             // Make sure that rebalance was called recently
             let clock = Clock::get()?;
-            if allocation.last_update.slots_elapsed(clock.slot)? > 10 {
+            if allocation.last_update.slots_elapsed(clock.slot)? > MAX_SLOTS_SINCE_ALLOC_UPDATE {
                 return Err(ErrorCode::AllocationIsNotUpdated.into());
             }
 
