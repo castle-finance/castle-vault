@@ -34,8 +34,6 @@ pub struct PortAccounts<'info> {
     #[account(mut)]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
-    // NOTE address check is commented out because port has a different
-    // ID in devnet than they do in mainnet
     #[account(
         executable,
         address = port_lending_id(),

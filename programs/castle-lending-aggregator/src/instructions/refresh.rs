@@ -14,6 +14,7 @@ pub struct Refresh<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
+        has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
@@ -59,8 +60,6 @@ pub struct Refresh<'info> {
     //#[soteria(ignore)]
     pub solend_switchboard: AccountInfo<'info>,
 
-    // NOTE address check is commented out because port has a different
-    // ID in devnet than they do in mainnet
     #[account(
         executable,
         address = port_lending_id(),
