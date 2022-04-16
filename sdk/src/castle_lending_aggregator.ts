@@ -147,8 +147,52 @@ export type CastleLendingAggregator = {
                     };
                 },
                 {
-                    name: "vaultDepositCap";
+                    name: "depositCap";
                     type: "u64";
+                }
+            ];
+        },
+        {
+            name: "updateDepositCap";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                }
+            ];
+            args: [
+                {
+                    name: "depositCapNewValue";
+                    type: "u64";
+                }
+            ];
+        },
+        {
+            name: "updateFees";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                }
+            ];
+            args: [
+                {
+                    name: "newFees";
+                    type: {
+                        defined: "FeeArgs";
+                    };
                 }
             ];
         },
@@ -1181,8 +1225,52 @@ export const IDL: CastleLendingAggregator = {
                     },
                 },
                 {
-                    name: "vaultDepositCap",
+                    name: "depositCap",
                     type: "u64",
+                },
+            ],
+        },
+        {
+            name: "updateDepositCap",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+            ],
+            args: [
+                {
+                    name: "depositCapNewValue",
+                    type: "u64",
+                },
+            ],
+        },
+        {
+            name: "updateFees",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+            ],
+            args: [
+                {
+                    name: "newFees",
+                    type: {
+                        defined: "FeeArgs",
+                    },
                 },
             ],
         },

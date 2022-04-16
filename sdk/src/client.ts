@@ -36,6 +36,7 @@ import {
     FeeArgs,
     ProposedWeightsBps,
     RebalanceMode,
+    VaultFees,
 } from "./types";
 
 export class VaultClient {
@@ -77,7 +78,7 @@ export class VaultClient {
         return new VaultClient(program, vaultId, vaultState, solend, port, jet);
     }
 
-    private async reload() {
+    async reload() {
         this.vaultState = await this.program.account.vault.fetch(this.vaultId);
         // TODO reload underlying asset data also?
     }
@@ -299,6 +300,58 @@ export class VaultClient {
             ),
             keyPair: userReserveKeypair,
         };
+    }
+
+    /**
+     * @param new_value
+     * @returns
+     */
+    async updateDepositCap(
+        owner: Keypair,
+        new_value: number
+    ): Promise<TransactionSignature[]> {
+        const updateCommand = new Transaction();
+        updateCommand.add(
+            this.program.instruction.updateDepositCap(
+                new anchor.BN(new_value),
+                {
+                    accounts: {
+                        vault: this.vaultId,
+                        owner: owner.publicKey,
+                    },
+                }
+            )
+        );
+        return [await this.program.provider.send(updateCommand, [owner])];
+    }
+
+    /**
+     * @param new_value
+     * @returns
+     */
+    async updateFees(
+        owner: Keypair,
+        feeCarryBps: number,
+        feeMgmtBps: number,
+        referralFeePct: number
+    ): Promise<TransactionSignature[]> {
+        const updateCommand = new Transaction();
+        updateCommand.add(
+            this.program.instruction.updateFees(
+                {
+                    feeCarryBps: feeCarryBps,
+                    feeMgmtBps: feeMgmtBps,
+                    referralFeePct: referralFeePct,
+                },
+                {
+                    accounts: {
+                        vault: this.vaultId,
+                        owner: owner.publicKey,
+                    },
+                }
+            )
+        );
+        return [await this.program.provider.send(updateCommand, [owner])];
     }
 
     /**
@@ -937,6 +990,10 @@ export class VaultClient {
 
     getJet(): JetReserveAsset {
         return this.jet;
+    }
+
+    getFees(): VaultFees {
+        return this.vaultState.fees;
     }
 }
 
