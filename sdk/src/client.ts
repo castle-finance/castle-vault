@@ -507,24 +507,11 @@ export class VaultClient {
         return this.program.provider.sendAll(txs);
     }
 
-    /**
-     *
-     * @param threshold
-     * @returns
-     */
-    async rebalance(threshold = 0): Promise<TransactionSignature[]> {
-        // TODO replace with actual weights
-        const emptyProposedWeights: ProposedWeightsBps = {
-            solend: 0,
-            port: 0,
-            jet: 0,
-        };
-        const txs: SendTxRequest[] = [];
-
+    getRebalanceTx(proposedWeights: ProposedWeightsBps): Transaction {
         const rebalanceTx = new Transaction();
         rebalanceTx.add(this.getRefreshIx());
         rebalanceTx.add(
-            this.program.instruction.rebalance(emptyProposedWeights, {
+            this.program.instruction.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
                     solendReserve: this.solend.accounts.reserve,
@@ -534,11 +521,33 @@ export class VaultClient {
                 },
             })
         );
-        txs.push({ tx: rebalanceTx, signers: [] });
+        return rebalanceTx;
+    }
+
+    /**
+     *
+     * @param proposedWeights
+     * @returns
+     */
+    async rebalance(
+        proposedWeights?: ProposedWeightsBps
+    ): Promise<TransactionSignature[]> {
+        if (
+            this.vaultState.rebalanceMode == { proofChecker: {} } &&
+            proposedWeights == null
+        ) {
+            throw new Error(
+                "Proposed weights must be passed in for a vault running in proofChecker mode"
+            );
+        }
+
+        const txs: SendTxRequest[] = [
+            { tx: this.getRebalanceTx(proposedWeights), signers: [] },
+        ];
 
         // Sort ixs in ascending order of outflows
         const oldAndNewallocationsWithReconcileIxs =
-            await this.newAndOldallocationsWithReconcileIxs();
+            await this.newAndOldallocationsWithReconcileIxs(proposedWeights);
 
         const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
             oldAndNewallocationsWithReconcileIxs.map((e) => [
@@ -556,32 +565,24 @@ export class VaultClient {
             reconcileTx.add(ix);
             txs.push({ tx: reconcileTx, signers: [] });
         }
-
-        const vaultValue = await this.getTotalValue();
-        const maxAllocationChange = Math.max(
-            ...allocationDiffsWithReconcileIxs.map((e) =>
-                vaultValue.eq(0) ? 100 : e[0].abs().div(vaultValue).toNumber()
-            )
-        );
-
-        if (vaultValue.gt(0) && maxAllocationChange > threshold) {
-            return this.program.provider.sendAll(txs);
-        } else {
-            return Promise.resolve([]);
-        }
+        return this.program.provider.sendAll(txs);
     }
 
     // TODO this is probably not the best way to do this?
-    private async newAndOldallocationsWithReconcileIxs(): Promise<
+    private async newAndOldallocationsWithReconcileIxs(
+        proposedWeights?: ProposedWeightsBps
+    ): Promise<
         [Big, Big, (withdrawOption?: anchor.BN) => TransactionInstruction][]
     > {
-        const emptyProposedWeights: ProposedWeightsBps = {
-            solend: 0,
-            port: 0,
-            jet: 0,
-        };
+        if (proposedWeights == null) {
+            proposedWeights = {
+                solend: 0,
+                port: 0,
+                jet: 0,
+            };
+        }
         const newAllocations = (
-            await this.program.simulate.rebalance(emptyProposedWeights, {
+            await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
                     solendReserve: this.solend.accounts.reserve,
@@ -771,7 +772,6 @@ export class VaultClient {
                 ).amount.toString()
             ),
         ];
-
         const valueSum = values.reduce((a, b) => a.add(b), new Big(0));
 
         return valueSum;

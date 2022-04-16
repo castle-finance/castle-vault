@@ -102,8 +102,6 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
         return Err(ErrorCode::DepositCapError.into());
     }
 
-    msg!("Depositing {} reserve tokens", reserve_token_amount);
-
     token::transfer(ctx.accounts.transfer_context(), reserve_token_amount)?;
 
     #[cfg(feature = "debug")]

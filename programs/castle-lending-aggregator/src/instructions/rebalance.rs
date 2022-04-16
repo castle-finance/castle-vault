@@ -91,16 +91,21 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
             );
 
             match ctx.accounts.vault.strategy_type {
-                StrategyType::MaxYield => MaxYieldStrategy.verify(&proposed_weights),
-                StrategyType::EqualAllocation => EqualAllocationStrategy.verify(&proposed_weights),
+                StrategyType::MaxYield => MaxYieldStrategy.verify_weights(&proposed_weights),
+                StrategyType::EqualAllocation => {
+                    EqualAllocationStrategy.verify_weights(&proposed_weights)
+                }
             }?;
 
             let proposed_apr = get_apr(&proposed_weights, &proposed_allocations, &assets)?;
             let proof_apr = get_apr(&strategy_weights, &strategy_allocations, &assets)?;
 
             #[cfg(feature = "debug")]
-            msg!("Proposed APR: {:?}", proposed_apr);
-            msg!("Proof APR: {:?}", proof_apr);
+            msg!(
+                "Proposed APR: {:?}\nProof APR: {:?}",
+                proposed_apr,
+                proof_apr
+            );
 
             if proposed_apr < proof_apr {
                 return Err(ErrorCode::RebalanceProofCheckFailed.into());
