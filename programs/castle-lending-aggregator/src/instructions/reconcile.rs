@@ -2,10 +2,7 @@ use std::cmp;
 
 use anchor_lang::prelude::*;
 
-use crate::{
-    errors::ErrorCode,
-    state::{Provider, Vault},
-};
+use crate::{errors::ErrorCode, rebalance::assets::Provider, state::Vault};
 
 const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 20;
 
@@ -31,6 +28,7 @@ pub trait HasVault {
     fn vault_mut(&mut self) -> &mut Vault;
 }
 
+// TODO make this a custom derive procmacro
 #[macro_export]
 macro_rules! impl_has_vault {
     ($($t:ty),+ $(,)?) => ($(
@@ -59,8 +57,12 @@ pub fn handler<T: LendingMarket + HasVault>(
                 .accounts
                 .convert_amount_lp_to_reserve(lp_tokens_in_vault)?;
             let allocation = ctx.accounts.vault().allocations[provider];
-            //msg!("Desired allocation: {}", allocation.value);
-            //msg!("Current allocation: {}", current_value);
+
+            #[cfg(feature = "debug")]
+            {
+                msg!("Desired allocation: {}", allocation.value);
+                msg!("Current allocation: {}", current_value);
+            }
 
             // Make sure that rebalance was called recently
             let clock = Clock::get()?;
@@ -74,7 +76,9 @@ pub fn handler<T: LendingMarket + HasVault>(
                     let tokens_to_deposit_checked =
                         cmp::min(tokens_to_deposit, ctx.accounts.reserve_tokens_in_vault());
 
+                    #[cfg(feature = "debug")]
                     msg!("Depositing {}", tokens_to_deposit_checked);
+
                     ctx.accounts.deposit(tokens_to_deposit_checked)?;
                 }
                 None => {
@@ -87,6 +91,7 @@ pub fn handler<T: LendingMarket + HasVault>(
                         )
                         .ok_or(ErrorCode::MathError)?;
 
+                    #[cfg(feature = "debug")]
                     msg!("Redeeming {}", tokens_to_redeem);
 
                     ctx.accounts.redeem(tokens_to_redeem)?;
@@ -99,7 +104,10 @@ pub fn handler<T: LendingMarket + HasVault>(
             // TODO check that tx is signed by owner OR there is a withdraw tx later with the withdraw_option <= withdraw_amount
 
             let tokens_to_redeem = ctx.accounts.convert_amount_lp_to_reserve(withdraw_option)?;
+
+            #[cfg(feature = "debug")]
             msg!("Redeeming {}", tokens_to_redeem);
+
             ctx.accounts.redeem(tokens_to_redeem)?;
         }
     }

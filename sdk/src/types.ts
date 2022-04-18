@@ -3,6 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 
 // TODO change to enum or mapping
 export type StrategyType = { equalAllocation: {} } | { maxYield: {} };
+export type RebalanceMode = { calculator: {} } | { proofChecker: {} };
 
 export interface LastUpdate {
     slot: BN;
@@ -27,7 +28,7 @@ export interface Vault {
     lpTokenMint: PublicKey;
     reserveTokenMint: PublicKey;
     totalValue: BN;
-    poolSizeLimit: BN;
+    depositCap: BN;
     vaultAuthority: PublicKey;
     vaultJetLpToken: PublicKey;
     vaultPortLpToken: PublicKey;
@@ -35,6 +36,7 @@ export interface Vault {
     vaultSolendLpToken: PublicKey;
     allocations: Allocations;
     strategyType: any;
+    rebalanceMode: any;
     owner: PublicKey;
     fees: VaultFees;
 }
@@ -52,6 +54,12 @@ export interface FeeArgs {
     feeMgmtBps: number;
     referralFeePct: number;
     referralFeeOwner: PublicKey;
+}
+
+export interface ProposedWeightsBps {
+    solend: number;
+    port: number;
+    jet: number;
 }
 
 export interface RebalanceEvent {

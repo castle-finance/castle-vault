@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::state::{Allocations, Provider};
+use crate::{rebalance::assets::Provider, state::Allocations};
 
-// TODO might be able to delete since sim isn't done anymore 
+// TODO might be able to delete since sim isn't done anymore
 #[event]
 pub struct RebalanceEvent {
     pub solend: u64,

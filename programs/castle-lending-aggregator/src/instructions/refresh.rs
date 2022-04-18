@@ -173,7 +173,8 @@ impl<'info> Refresh<'info> {
 /// Refreshes the reserves of downstream lending markets,
 /// updates the vault total value, and collects fees
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> ProgramResult {
-    msg!("Refreshing");
+    #[cfg(feature = "debug")]
+    msg!("Refreshing vault");
 
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
@@ -204,11 +205,14 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> Progra
         .try_fold(vault_reserve_token_amount, |acc, &x| acc.checked_add(x))
         .ok_or(ErrorCode::OverflowError)?;
 
-    msg!("Tokens value: {}", vault_reserve_token_amount);
-    msg!("Solend value: {}", solend_value);
-    msg!("Port value: {}", port_value);
-    msg!("Jet value: {}", jet_value);
-    msg!("Vault value: {}", vault_value);
+    #[cfg(feature = "debug")]
+    {
+        msg!("Tokens value: {}", vault_reserve_token_amount);
+        msg!("Solend value: {}", solend_value);
+        msg!("Port value: {}", port_value);
+        msg!("Jet value: {}", jet_value);
+        msg!("Vault value: {}", vault_value);
+    }
 
     #[cfg(not(feature = "fees"))]
     if ctx.accounts.vault.fees.fee_carry_bps > 0 || ctx.accounts.vault.fees.fee_mgmt_bps > 0 {
@@ -229,6 +233,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> Progra
         )
         .ok_or(ErrorCode::MathError)?;
 
+        #[cfg(feature = "debug")]
         msg!(
             "Total fees: {} reserve tokens, {} lp tokens",
             total_fees,
@@ -245,6 +250,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> Progra
             .and_then(|val| val.checked_div(100))
             .ok_or(ErrorCode::MathError)?;
 
+        #[cfg(feature = "debug")]
         msg!(
             "Collecting primary fees: {} lp tokens",
             primary_fees_converted
@@ -262,6 +268,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> Progra
             primary_fees_converted,
         )?;
 
+        #[cfg(feature = "debug")]
         msg!(
             "Collecting referral fees: {} lp tokens",
             referral_fees_converted
