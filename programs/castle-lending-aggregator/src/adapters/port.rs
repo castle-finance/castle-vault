@@ -3,11 +3,15 @@ use std::ops::{Deref, DerefMut};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
 use port_anchor_adaptor::{port_lending_id, PortReserve};
+use port_variable_rate_lending_instructions::state::Reserve;
+use solana_maths::Rate;
 
 use crate::{
+    errors::ErrorCode,
     impl_has_vault,
+    rebalance::assets::{Provider, ReserveAccessor},
     reconcile::LendingMarket,
-    state::{Provider, Vault},
+    state::Vault,
 };
 
 #[derive(Accounts)]
@@ -137,5 +141,32 @@ impl<'info> LendingMarket for PortAccounts<'info> {
 
     fn provider(&self) -> Provider {
         Provider::Port
+    }
+}
+
+impl ReserveAccessor for Reserve {
+    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+        Ok(Rate::from_scaled_val(
+            self.liquidity.utilization_rate()?.to_scaled_val() as u64,
+        ))
+    }
+
+    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+        Ok(Rate::from_scaled_val(
+            self.current_borrow_rate()?.to_scaled_val() as u64,
+        ))
+    }
+
+    fn reserve_with_deposit(
+        &self,
+        allocation: u64,
+    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+        let mut reserve = Box::new(self.clone());
+        reserve.liquidity.available_amount = reserve
+            .liquidity
+            .available_amount
+            .checked_add(allocation)
+            .ok_or(ErrorCode::OverflowError)?;
+        Ok(reserve)
     }
 }
