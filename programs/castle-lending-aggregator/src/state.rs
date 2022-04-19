@@ -2,11 +2,14 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock::{
     DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
 };
+use solana_maths::{Decimal, TryMul};
 use std::cmp::Ordering;
-use std::ops::{Index, IndexMut};
-use strum_macros::EnumIter;
+use strum::IntoEnumIterator;
 
 use crate::errors::ErrorCode;
+use crate::impl_provider_index;
+use crate::rebalance::assets::Provider;
+use crate::rebalance::strategies::StrategyWeights;
 
 /// Number of slots per year
 pub const SLOTS_PER_YEAR: u64 =
@@ -61,13 +64,16 @@ pub struct Vault {
     pub total_value: u64,
 
     /// Max num of reserve tokens. If total_value grows higher than this, will stop accepting deposits.
-    pub pool_size_limit: u64,
+    pub deposit_cap: u64,
 
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
     /// Strategy type that is executed during rebalance
     pub strategy_type: StrategyType,
+
+    /// Whether to run rebalance as a proof check or a calculation
+    pub rebalance_mode: RebalanceMode,
 }
 
 impl Vault {
@@ -75,10 +81,6 @@ impl Vault {
     pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
         let vault_value_diff = new_vault_value.saturating_sub(self.total_value);
         let slots_elapsed = self.last_update.slots_elapsed(slot)?;
-
-        //msg!("Slots elapsed: {}", slots_elapsed);
-        //msg!("New vault value: {}", new_vault_value);
-        //msg!("Old vault value: {}", self.total_value);
 
         let carry = vault_value_diff
             .checked_mul(self.fees.fee_carry_bps as u64)
@@ -92,8 +94,14 @@ impl Vault {
             / ONE_AS_BPS
             / SLOTS_PER_YEAR;
 
-        //msg!("Carry: {}", carry);
-        //msg!("Mgmt: {}", mgmt);
+        #[cfg(feature = "debug")]
+        {
+            msg!("Slots elapsed: {}", slots_elapsed);
+            msg!("New vault value: {}", new_vault_value);
+            msg!("Old vault value: {}", self.total_value);
+            msg!("Carry fee: {}", carry);
+            msg!("Mgmt fee: {}", mgmt);
+        }
 
         let fees = carry.checked_add(mgmt).ok_or(ErrorCode::OverflowError)?;
         Ok(fees)
@@ -111,6 +119,12 @@ impl Vault {
             &self.authority_bump,
         ]
     }
+}
+
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
+pub enum RebalanceMode {
+    Calculator,
+    ProofChecker,
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
@@ -137,39 +151,28 @@ pub enum StrategyType {
     EqualAllocation,
 }
 
-#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, EnumIter, PartialEq)]
-pub enum Provider {
-    Solend,
-    Port,
-    Jet,
-}
-
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: Allocation,
     pub port: Allocation,
     pub jet: Allocation,
 }
+impl_provider_index!(Allocations, Allocation);
 
-impl Index<Provider> for Allocations {
-    type Output = Allocation;
-
-    fn index(&self, provider: Provider) -> &Self::Output {
-        match provider {
-            Provider::Solend => &self.solend,
-            Provider::Port => &self.port,
-            Provider::Jet => &self.jet,
+impl Allocations {
+    pub fn try_from_weights(
+        weights: StrategyWeights,
+        total_value: u64,
+        slot: u64,
+    ) -> Result<Self, ProgramError> {
+        let mut allocations = Self::default();
+        for p in Provider::iter() {
+            let allocation = weights[p]
+                .try_mul(total_value)
+                .and_then(|product| Decimal::from(product).try_floor_u64())?;
+            allocations[p].update(allocation, slot);
         }
-    }
-}
-
-impl IndexMut<Provider> for Allocations {
-    fn index_mut(&mut self, provider: Provider) -> &mut Self::Output {
-        match provider {
-            Provider::Solend => &mut self.solend,
-            Provider::Port => &mut self.port,
-            Provider::Jet => &mut self.jet,
-        }
+        Ok(allocations)
     }
 }
 

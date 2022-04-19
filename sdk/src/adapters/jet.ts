@@ -143,6 +143,32 @@ export class JetReserveAsset extends Asset {
         return new JetReserveAsset(provider, accounts, market, reserve);
     }
 
+    async borrow(
+        owner: Signer,
+        reserveTokenAccount: PublicKey,
+        amount: number
+    ): Promise<string[]> {
+        const jetUser = await JetUser.load(
+            await JetClient.connect(this.provider, true),
+            this.market,
+            [this.reserve],
+            owner.publicKey
+        );
+        const depositCollateralTx = await jetUser.makeDepositCollateralTx(
+            this.reserve,
+            Amount.tokens(amount * 1.5)
+        );
+        const borrowTx = await jetUser.makeBorrowTx(
+            this.reserve,
+            reserveTokenAccount,
+            Amount.tokens(amount)
+        );
+        return await this.provider.sendAll([
+            { tx: depositCollateralTx, signers: [owner] },
+            { tx: borrowTx, signers: [owner] },
+        ]);
+    }
+
     async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
         await this.market.refresh();
 

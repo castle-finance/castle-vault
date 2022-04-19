@@ -79,6 +79,7 @@ impl<'info> Withdraw<'info> {
 ///
 /// Burns the user's lp tokens and transfers their share of reserve tokens
 pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
+    #[cfg(feature = "debug")]
     msg!("Withdrawing {} lp tokens", lp_token_amount);
 
     let vault = &ctx.accounts.vault;
@@ -92,6 +93,7 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
 
     token::burn(ctx.accounts.burn_context(), lp_token_amount)?;
 
+    #[cfg(feature = "debug")]
     msg!("Transferring {} reserve tokens", reserve_tokens_to_transfer);
 
     token::transfer(

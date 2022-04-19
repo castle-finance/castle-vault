@@ -8,7 +8,7 @@ pub mod math;
 pub mod rebalance;
 pub mod state;
 
-use crate::{init::FeeArgs, state::StrategyType};
+use crate::state::{RebalanceMode, StrategyType};
 use adapters::*;
 use instructions::*;
 
@@ -16,7 +16,7 @@ use instructions::*;
 declare_id!("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn");
 
 #[cfg(feature = "devnet-castle-addr")]
-declare_id!("6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb");
+declare_id!("4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK");
 
 #[program]
 pub mod castle_lending_aggregator {
@@ -26,10 +26,29 @@ pub mod castle_lending_aggregator {
         ctx: Context<Initialize>,
         _bumps: InitBumpSeeds,
         strategy_type: StrategyType,
+        rebalance_mode: RebalanceMode,
         fees: FeeArgs,
-        pool_size_limit: u64
+        deposit_cap: u64,
     ) -> ProgramResult {
-        instructions::init::handler(ctx, _bumps, strategy_type, fees, pool_size_limit)
+        instructions::init::handler(
+            ctx,
+            _bumps,
+            strategy_type,
+            rebalance_mode,
+            fees,
+            deposit_cap,
+        )
+    }
+
+    pub fn update_deposit_cap(
+        ctx: Context<UpdateDepositCap>,
+        deposit_cap_new_value: u64,
+    ) -> ProgramResult {
+        instructions::update_deposit_cap::handler(ctx, deposit_cap_new_value)
+    }
+
+    pub fn update_fees(ctx: Context<UpdateFees>, new_fees: FeeArgs) -> ProgramResult {
+        instructions::update_fees::handler(ctx, new_fees)
     }
 
     pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
@@ -40,8 +59,11 @@ pub mod castle_lending_aggregator {
         instructions::withdraw::handler(ctx, lp_token_amount)
     }
 
-    pub fn rebalance(ctx: Context<Rebalance>) -> ProgramResult {
-        instructions::rebalance::handler(ctx)
+    pub fn rebalance(
+        ctx: Context<Rebalance>,
+        proposed_weights: StrategyWeightsArg,
+    ) -> ProgramResult {
+        instructions::rebalance::handler(ctx, proposed_weights)
     }
 
     pub fn refresh(ctx: Context<Refresh>) -> ProgramResult {
