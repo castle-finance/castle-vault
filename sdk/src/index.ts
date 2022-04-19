@@ -7,6 +7,7 @@ export * from "./adapters";
 export { CastleLendingAggregator } from "./castle_lending_aggregator";
 
 export const PROGRAM_ID = new PublicKey(
-    "6hSKFKsZvksTb4M7828LqWsquWnyatoRwgZbcpeyfWRb"
+    "Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn"
+    // "4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK"
     //"E5xEvrNhrknmgGbRv8iDDqHsgqG1xeMEdfPjL8i4YEVo"
 );
