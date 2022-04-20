@@ -257,10 +257,11 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> Progra
         );
 
         let primary_fee_receiver = &ctx.remaining_accounts[0];
-        assert_eq!(
-            primary_fee_receiver.key(),
-            ctx.accounts.vault.fees.fee_receiver
-        );
+        if primary_fee_receiver.key() != ctx.accounts.vault.fees.fee_receiver {
+            msg!("Fee receivers do not match");
+            return Err(ErrorCode::InvalidAccount.into());
+        }
+
         token::mint_to(
             ctx.accounts
                 .mint_to_context(primary_fee_receiver)
@@ -275,10 +276,11 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> Progra
         );
 
         let referral_fee_receiver = &ctx.remaining_accounts[1];
-        assert_eq!(
-            referral_fee_receiver.key(),
-            ctx.accounts.vault.fees.referral_fee_receiver
-        );
+        if referral_fee_receiver.key() != ctx.accounts.vault.fees.referral_fee_receiver {
+            msg!("Referral fee receivers do not match");
+            return Err(ErrorCode::InvalidAccount.into());
+        }
+
         token::mint_to(
             ctx.accounts
                 .mint_to_context(referral_fee_receiver)
