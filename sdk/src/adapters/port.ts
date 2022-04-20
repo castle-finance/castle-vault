@@ -29,7 +29,6 @@ import {
 } from "@port.finance/port-sdk";
 
 import { Asset } from "./asset";
-import { bigIntToBn } from "@jet-lab/jet-engine";
 
 interface PortAccounts {
     program: PublicKey;
@@ -142,8 +141,6 @@ export class PortReserveAsset extends Asset {
         const client = new Port(provider.connection, env, market.publicKey);
         return new PortReserveAsset(provider, accounts, client);
     }
-
-    // Add get_cached methods to avoid redundant calls to getReserve?
 
     async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
         const reserve = await this.client.getReserve(this.accounts.reserve);

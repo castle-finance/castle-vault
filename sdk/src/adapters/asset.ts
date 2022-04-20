@@ -6,5 +6,4 @@ export abstract class Asset {
     abstract getLpTokenAccountValue(address: PublicKey): Promise<Big>;
     abstract getDepositedAmount(): Promise<Big>;
     abstract getBorrowedAmount(): Promise<Big>;
-    //abstract getInterestRateFn(): Promise<>;
 }
