@@ -78,6 +78,9 @@ impl<'info> Deposit<'info> {
 ///
 /// Transfers reserve tokens from user to vault and mints their share of lp tokens
 pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
+    #[cfg(feature = "debug")]
+    msg!("Depositing {} reserve tokens", reserve_token_amount);
+
     let vault = &ctx.accounts.vault;
 
     let lp_tokens_to_mint = crate::math::calc_reserve_to_lp(
