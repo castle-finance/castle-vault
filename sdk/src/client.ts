@@ -846,6 +846,10 @@ export class VaultClient {
         }
     }
 
+    getLpTokenMint(): PublicKey {
+        return this.vaultState.lpTokenMint;
+    }
+
     getDepositCap(): Big {
         return new Big(this.vaultState.depositCap.toString());
     }
