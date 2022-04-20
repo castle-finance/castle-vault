@@ -228,6 +228,28 @@ export class VaultClient {
     }
 
     private getRefreshIx(): TransactionInstruction {
+        let remainingAccounts = [
+            {
+                isSigner: false,
+                isWritable: true,
+                pubkey: this.vaultState.fees.feeReceiver,
+            },
+            {
+                isSigner: false,
+                isWritable: true,
+                pubkey: this.vaultState.fees.referralFeeReceiver,
+            },
+        ];
+
+        const portOracle = this.port.accounts.oracle;
+        if (portOracle != null) {
+            remainingAccounts.unshift({
+                isSigner: false,
+                isWritable: false,
+                pubkey: portOracle,
+            });
+        }
+
         return this.program.instruction.refresh({
             accounts: {
                 vault: this.vaultId,
@@ -243,7 +265,6 @@ export class VaultClient {
                 solendSwitchboard: this.solend.accounts.switchboardFeed,
                 portProgram: this.port.accounts.program,
                 portReserve: this.port.accounts.reserve,
-                portOracle: this.port.accounts.oracle,
                 jetProgram: this.jet.accounts.program,
                 jetMarket: this.jet.accounts.market,
                 jetMarketAuthority: this.jet.accounts.marketAuthority,
@@ -254,18 +275,7 @@ export class VaultClient {
                 tokenProgram: TOKEN_PROGRAM_ID,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
-            remainingAccounts: [
-                {
-                    isSigner: false,
-                    isWritable: true,
-                    pubkey: this.vaultState.fees.feeReceiver,
-                },
-                {
-                    isSigner: false,
-                    isWritable: true,
-                    pubkey: this.vaultState.fees.referralFeeReceiver,
-                },
-            ],
+            remainingAccounts: remainingAccounts,
         });
     }
 

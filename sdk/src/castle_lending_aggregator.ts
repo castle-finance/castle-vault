@@ -415,11 +415,6 @@ export type CastleLendingAggregator = {
                     isSigner: false;
                 },
                 {
-                    name: "portOracle";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
                     name: "jetProgram";
                     isMut: false;
                     isSigner: false;
@@ -1062,6 +1057,11 @@ export type CastleLendingAggregator = {
             code: 310;
             name: "DepositCapError";
             msg: "Vault size limit is reached";
+        },
+        {
+            code: 311;
+            name: "InvalidAccount";
+            msg: "Account passed in is not valid";
         }
     ];
 };
@@ -1480,11 +1480,6 @@ export const IDL: CastleLendingAggregator = {
                 {
                     name: "portReserve",
                     isMut: true,
-                    isSigner: false,
-                },
-                {
-                    name: "portOracle",
-                    isMut: false,
                     isSigner: false,
                 },
                 {
@@ -2130,6 +2125,11 @@ export const IDL: CastleLendingAggregator = {
             code: 310,
             name: "DepositCapError",
             msg: "Vault size limit is reached",
+        },
+        {
+            code: 311,
+            name: "InvalidAccount",
+            msg: "Account passed in is not valid",
         },
     ],
 };

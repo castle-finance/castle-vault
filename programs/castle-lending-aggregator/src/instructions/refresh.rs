@@ -69,9 +69,6 @@ pub struct Refresh<'info> {
     #[account(mut)]
     pub port_reserve: Box<Account<'info, PortReserve>>,
 
-    //#[soteria(ignore)]
-    pub port_oracle: AccountInfo<'info>,
-
     #[account(
         executable,
         address = jet::ID,
@@ -125,7 +122,12 @@ impl<'info> Refresh<'info> {
     /// CpiContext for refreshing port reserve
     pub fn port_refresh_reserve_context(
         &self,
+        oracle: Option<&AccountInfo<'info>>,
     ) -> CpiContext<'_, '_, '_, 'info, port_anchor_adaptor::RefreshReserve<'info>> {
+        let oracle_vec = match oracle {
+            Some(acct) => vec![acct.clone()],
+            None => vec![],
+        };
         CpiContext::new(
             self.port_program.clone(),
             port_anchor_adaptor::RefreshReserve {
@@ -133,7 +135,7 @@ impl<'info> Refresh<'info> {
                 clock: self.clock.to_account_info(),
             },
         )
-        .with_remaining_accounts(vec![self.port_oracle.clone()])
+        .with_remaining_accounts(oracle_vec)
     }
 
     /// CpiContext for refreshing jet reserve
@@ -178,8 +180,21 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> Progra
 
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
-    port_anchor_adaptor::refresh_port_reserve(ctx.accounts.port_refresh_reserve_context())?;
     jet::cpi::refresh_reserve(ctx.accounts.jet_refresh_reserve_context())?;
+
+    // Remaining accounts is between length 0 and 3. If fees are turned on, two accounts must be passed in here.
+    // Thus if the length is 1 or 3, an oracle must have been passed in as the first account.
+    // This is pretty hacky and will break if more accounts are packed into ctx.remaining_accounts
+    // TODO we should eventually fix this
+    let port_oracle = if ctx.remaining_accounts.len() % 2 == 0 {
+        None
+    } else {
+        // No checks needed since they will be done by port during CPI
+        Some(&ctx.remaining_accounts[0])
+    };
+    port_anchor_adaptor::refresh_port_reserve(
+        ctx.accounts.port_refresh_reserve_context(port_oracle),
+    )?;
 
     // Calculate value of solend position
     let solend_exchange_rate = ctx.accounts.solend_reserve.collateral_exchange_rate()?;
@@ -256,7 +271,12 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> Progra
             primary_fees_converted
         );
 
-        let primary_fee_receiver = &ctx.remaining_accounts[0];
+        if ctx.remaining_accounts.len() < 2 {
+            msg!("Not enough accounts passed in to collect fees");
+            return Err(ErrorCode::InsufficientAccounts.into());
+        }
+
+        let primary_fee_receiver = &ctx.remaining_accounts[ctx.remaining_accounts.len() - 2];
         if primary_fee_receiver.key() != ctx.accounts.vault.fees.fee_receiver {
             msg!("Fee receivers do not match");
             return Err(ErrorCode::InvalidAccount.into());
@@ -275,7 +295,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> Progra
             referral_fees_converted
         );
 
-        let referral_fee_receiver = &ctx.remaining_accounts[1];
+        let referral_fee_receiver = &ctx.remaining_accounts[ctx.remaining_accounts.len() - 1];
         if referral_fee_receiver.key() != ctx.accounts.vault.fees.referral_fee_receiver {
             msg!("Referral fee receivers do not match");
             return Err(ErrorCode::InvalidAccount.into());
