@@ -14,6 +14,7 @@ pub struct Refresh<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
+        has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_solend_lp_token,
         has_one = vault_port_lp_token,
@@ -59,8 +60,6 @@ pub struct Refresh<'info> {
     //#[soteria(ignore)]
     pub solend_switchboard: AccountInfo<'info>,
 
-    // NOTE address check is commented out because port has a different
-    // ID in devnet than they do in mainnet
     #[account(
         executable,
         address = port_lending_id(),
@@ -99,16 +98,6 @@ pub struct Refresh<'info> {
 
     //#[soteria(ignore)]
     pub jet_pyth: AccountInfo<'info>,
-
-    /// Token account that collects primary fees from the vault
-    /// denominated in vault lp tokens
-    #[account(mut, address = vault.fees.fee_receiver)]
-    pub fee_receiver: Box<Account<'info, TokenAccount>>,
-
-    /// Token account that collects referral fees from the vault
-    /// denominated in vault lp tokens
-    #[account(mut, address = vault.fees.referral_fee_receiver)]
-    pub referral_fee_receiver: Box<Account<'info, TokenAccount>>,
 
     pub token_program: Program<'info, Token>,
 
@@ -168,13 +157,13 @@ impl<'info> Refresh<'info> {
     /// CpiContext for collecting fees by minting new vault lp tokens
     fn mint_to_context(
         &self,
-        fee_receiver: &Account<'info, TokenAccount>,
+        fee_receiver: &AccountInfo<'info>,
     ) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
             self.token_program.to_account_info(),
             MintTo {
                 mint: self.lp_token_mint.to_account_info(),
-                to: fee_receiver.to_account_info(),
+                to: fee_receiver.clone(),
                 authority: self.vault_authority.clone(),
             },
         )
@@ -183,7 +172,10 @@ impl<'info> Refresh<'info> {
 
 /// Refreshes the reserves of downstream lending markets,
 /// updates the vault total value, and collects fees
-pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
+pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> ProgramResult {
+    #[cfg(feature = "debug")]
+    msg!("Refreshing vault");
+
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
     port_anchor_adaptor::refresh_port_reserve(ctx.accounts.port_refresh_reserve_context())?;
@@ -204,10 +196,7 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         jet_reserve.total_deposits(),
         jet_reserve.total_deposit_notes(),
     );
-    let jet_value = jet_exchange_rate
-        .as_u64(0)
-        .checked_mul(ctx.accounts.vault_jet_lp_token.amount)
-        .ok_or(ErrorCode::OverflowError)?;
+    let jet_value = (jet_exchange_rate * ctx.accounts.vault_jet_lp_token.amount).as_u64(0);
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
@@ -225,57 +214,80 @@ pub fn handler(ctx: Context<Refresh>) -> ProgramResult {
         msg!("Vault value: {}", vault_value);
     }
 
-    let vault = &ctx.accounts.vault;
+    #[cfg(not(feature = "fees"))]
+    if ctx.accounts.vault.fees.fee_carry_bps > 0 || ctx.accounts.vault.fees.fee_mgmt_bps > 0 {
+        msg!("WARNING: Fees are non-zero but the fee feature is deactivated");
+    }
 
-    // Calculate fees
-    let total_fees = vault.calculate_fees(vault_value, ctx.accounts.clock.slot)?;
+    #[cfg(feature = "fees")]
+    {
+        let vault = &ctx.accounts.vault;
 
-    let total_fees_converted =
-        crate::math::calc_reserve_to_lp(total_fees, ctx.accounts.lp_token_mint.supply, vault_value)
+        // Calculate fees
+        let total_fees = vault.calculate_fees(vault_value, ctx.accounts.clock.slot)?;
+
+        let total_fees_converted = crate::math::calc_reserve_to_lp(
+            total_fees,
+            ctx.accounts.lp_token_mint.supply,
+            vault_value,
+        )
+        .ok_or(ErrorCode::MathError)?;
+
+        #[cfg(feature = "debug")]
+        msg!(
+            "Total fees: {} reserve tokens, {} lp tokens",
+            total_fees,
+            total_fees_converted
+        );
+
+        let primary_fees_converted = total_fees_converted
+            .checked_mul(100 - ctx.accounts.vault.fees.referral_fee_pct as u64)
+            .and_then(|val| val.checked_div(100))
             .ok_or(ErrorCode::MathError)?;
 
-    #[cfg(feature = "debug")]
-    msg!(
-        "Total fees: {} reserve tokens, {} lp tokens",
-        total_fees,
-        total_fees_converted
-    );
+        let referral_fees_converted = total_fees_converted
+            .checked_mul(ctx.accounts.vault.fees.referral_fee_pct as u64)
+            .and_then(|val| val.checked_div(100))
+            .ok_or(ErrorCode::MathError)?;
 
-    let primary_fees_converted = total_fees_converted
-        .checked_mul(100 - ctx.accounts.vault.fees.referral_fee_pct as u64)
-        .and_then(|val| val.checked_div(100))
-        .ok_or(ErrorCode::MathError)?;
+        #[cfg(feature = "debug")]
+        msg!(
+            "Collecting primary fees: {} lp tokens",
+            primary_fees_converted
+        );
 
-    let referral_fees_converted = total_fees_converted
-        .checked_mul(ctx.accounts.vault.fees.referral_fee_pct as u64)
-        .and_then(|val| val.checked_div(100))
-        .ok_or(ErrorCode::MathError)?;
+        let primary_fee_receiver = &ctx.remaining_accounts[0];
+        if primary_fee_receiver.key() != ctx.accounts.vault.fees.fee_receiver {
+            msg!("Fee receivers do not match");
+            return Err(ErrorCode::InvalidAccount.into());
+        }
 
-    #[cfg(feature = "debug")]
-    msg!(
-        "Collecting primary fees: {} lp tokens",
-        primary_fees_converted
-    );
+        token::mint_to(
+            ctx.accounts
+                .mint_to_context(primary_fee_receiver)
+                .with_signer(&[&vault.authority_seeds()]),
+            primary_fees_converted,
+        )?;
 
-    token::mint_to(
-        ctx.accounts
-            .mint_to_context(&ctx.accounts.fee_receiver)
-            .with_signer(&[&vault.authority_seeds()]),
-        primary_fees_converted,
-    )?;
+        #[cfg(feature = "debug")]
+        msg!(
+            "Collecting referral fees: {} lp tokens",
+            referral_fees_converted
+        );
 
-    #[cfg(feature = "debug")]
-    msg!(
-        "Collecting referral fees: {} lp tokens",
-        referral_fees_converted
-    );
+        let referral_fee_receiver = &ctx.remaining_accounts[1];
+        if referral_fee_receiver.key() != ctx.accounts.vault.fees.referral_fee_receiver {
+            msg!("Referral fee receivers do not match");
+            return Err(ErrorCode::InvalidAccount.into());
+        }
 
-    token::mint_to(
-        ctx.accounts
-            .mint_to_context(&ctx.accounts.referral_fee_receiver)
-            .with_signer(&[&vault.authority_seeds()]),
-        referral_fees_converted,
-    )?;
+        token::mint_to(
+            ctx.accounts
+                .mint_to_context(referral_fee_receiver)
+                .with_signer(&[&vault.authority_seeds()]),
+            referral_fees_converted,
+        )?;
+    }
 
     // Update vault total value
     ctx.accounts

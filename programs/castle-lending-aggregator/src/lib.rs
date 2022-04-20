@@ -66,7 +66,7 @@ pub mod castle_lending_aggregator {
         instructions::rebalance::handler(ctx, proposed_weights)
     }
 
-    pub fn refresh(ctx: Context<Refresh>) -> ProgramResult {
+    pub fn refresh<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> ProgramResult {
         instructions::refresh::handler(ctx)
     }
 

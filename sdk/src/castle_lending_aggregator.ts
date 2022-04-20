@@ -455,16 +455,6 @@ export type CastleLendingAggregator = {
                     isSigner: false;
                 },
                 {
-                    name: "feeReceiver";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
-                    name: "referralFeeReceiver";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
                     name: "tokenProgram";
                     isMut: false;
                     isSigner: false;
@@ -1530,16 +1520,6 @@ export const IDL: CastleLendingAggregator = {
                 {
                     name: "jetPyth",
                     isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "feeReceiver",
-                    isMut: true,
-                    isSigner: false,
-                },
-                {
-                    name: "referralFeeReceiver",
-                    isMut: true,
                     isSigner: false,
                 },
                 {

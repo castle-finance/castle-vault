@@ -166,7 +166,7 @@ export class VaultClient {
             referralFeeOwner
         );
 
-        await program.rpc.initialize(
+        const txSig = await program.rpc.initialize(
             {
                 authority: authorityBump,
                 reserve: reserveBump,
@@ -251,11 +251,21 @@ export class VaultClient {
                 jetFeeNoteVault: this.jet.accounts.feeNoteVault,
                 jetDepositNoteMint: this.jet.accounts.depositNoteMint,
                 jetPyth: this.jet.accounts.pythPrice,
-                feeReceiver: this.vaultState.fees.feeReceiver,
-                referralFeeReceiver: this.vaultState.fees.referralFeeReceiver,
                 tokenProgram: TOKEN_PROGRAM_ID,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
+            remainingAccounts: [
+                {
+                    isSigner: false,
+                    isWritable: true,
+                    pubkey: this.vaultState.fees.feeReceiver,
+                },
+                {
+                    isSigner: false,
+                    isWritable: true,
+                    pubkey: this.vaultState.fees.referralFeeReceiver,
+                },
+            ],
         });
     }
 
@@ -456,8 +466,6 @@ export class VaultClient {
         const vaultReserveAmount = new Big(
             vaultReserveTokenAccountInfo.amount.toString()
         ).round(0, Big.roundDown);
-
-        // TODO sdk input should be in lp tokens, not reserve tokens
 
         // Convert from reserve tokens to LP tokens
         // NOTE: this rate is slightly lower than what it will be in the transaction

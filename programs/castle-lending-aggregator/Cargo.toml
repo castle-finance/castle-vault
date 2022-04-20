@@ -18,6 +18,8 @@ devnet-staging = ["devnet-castle-addr", "devnet-partner-addrs"]
 devnet-castle-addr = []
 devnet-partner-addrs = ["port-anchor-adaptor/devnet", "spl-token-lending/devnet"]
 
+fees = []
+
 cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
