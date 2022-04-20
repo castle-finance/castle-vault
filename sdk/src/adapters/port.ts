@@ -180,12 +180,16 @@ export class PortReserveAsset extends Asset {
     async getBorrowedAmount(): Promise<Big> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const borrowed = reserve.getBorrowedAsset();
+        // Need to round here because the SDK returns a non-int value
+        // and retaining that value might cause problems for the fn caller
         return borrowed.getRaw().round();
     }
 
     async getDepositedAmount(): Promise<Big> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const total = reserve.getTotalAsset();
+        // Need to round here because the SDK returns a non-int value
+        // and retaining that value might cause problems for the fn caller
         return total.getRaw().round();
     }
 }
