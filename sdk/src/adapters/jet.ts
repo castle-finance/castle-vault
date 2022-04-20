@@ -194,6 +194,19 @@ export class JetReserveAsset extends Asset {
         await this.reserve.refresh();
         return new Big(this.reserve.data.depositApy);
     }
+
+    async getDepositedAmount(): Promise<Big> {
+        await this.reserve.refresh();
+        return new Big(this.reserve.data.marketSize.lamports.toString());
+    }
+
+    async getBorrowedAmount(): Promise<Big> {
+        await this.reserve.refresh();
+        const borrowed = this.reserve.data.marketSize.sub(
+            this.reserve.data.availableLiquidity
+        );
+        return new Big(borrowed.lamports.toString());
+    }
 }
 
 async function createLendingMarket(

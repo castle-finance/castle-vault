@@ -29,6 +29,7 @@ import {
 } from "@port.finance/port-sdk";
 
 import { Asset } from "./asset";
+import { bigIntToBn } from "@jet-lab/jet-engine";
 
 interface PortAccounts {
     program: PublicKey;
@@ -142,6 +143,8 @@ export class PortReserveAsset extends Asset {
         return new PortReserveAsset(provider, accounts, client);
     }
 
+    // Add get_cached methods to avoid redundant calls to getReserve?
+
     async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const exchangeRate = reserve.getExchangeRatio();
@@ -175,6 +178,18 @@ export class PortReserveAsset extends Asset {
         const apy = Math.expm1(apr.toNumber());
 
         return new Big(apy);
+    }
+
+    async getBorrowedAmount(): Promise<Big> {
+        const reserve = await this.client.getReserve(this.accounts.reserve);
+        const borrowed = reserve.getBorrowedAsset();
+        return borrowed.getRaw().round();
+    }
+
+    async getDepositedAmount(): Promise<Big> {
+        const reserve = await this.client.getReserve(this.accounts.reserve);
+        const total = reserve.getTotalAsset();
+        return total.getRaw().round();
     }
 }
 
