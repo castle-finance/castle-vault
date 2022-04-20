@@ -2,7 +2,6 @@ import { assert } from "chai";
 import {
     Cluster,
     Connection,
-    clusterApiUrl,
     LAMPORTS_PER_SOL,
     PublicKey,
 } from "@solana/web3.js";

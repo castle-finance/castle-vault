@@ -870,6 +870,16 @@ export class VaultClient {
         return this.vaultState.vaultJetLpToken;
     }
 
+    async getVaultReserveTokenAccountValue(): Promise<Big> {
+        return Big(
+            (
+                await this.getReserveTokenAccountInfo(
+                    this.getVaultReserveTokenAccount()
+                )
+            ).amount.toString()
+        );
+    }
+
     async getVaultSolendLpTokenAccountValue(): Promise<Big> {
         return this.solend.getLpTokenAccountValue(
             this.getVaultSolendLpTokenAccount()
