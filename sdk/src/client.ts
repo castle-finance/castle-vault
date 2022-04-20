@@ -375,6 +375,15 @@ export class VaultClient {
         return [await this.program.provider.send(updateCommand, [owner])];
     }
 
+    /**
+     *
+     * TODO refactor to be more clear
+     *
+     * @param wallet
+     * @param amount
+     * @param userReserveTokenAccount
+     * @returns
+     */
     async deposit(
         wallet: anchor.Wallet,
         amount: number,
