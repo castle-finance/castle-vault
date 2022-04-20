@@ -23,6 +23,7 @@ import {
     LENDING_MARKET_SIZE,
     SolendReserve,
     SolendMarket,
+    SolendAction,
 } from "@solendprotocol/solend-sdk";
 
 import { Asset } from "./asset";
@@ -141,6 +142,14 @@ export class SolendReserveAsset extends Asset {
 
         return new SolendReserveAsset(provider, accounts, reserve);
     }
+
+    //async borrow(amount: number): Promise<TransactionSignature> {
+    //    const borrowTx = SolendAction.buildBorrowTxns(
+    //        this.provider.connection,
+    //        new anchor.BN(amount),
+    //
+    //    )
+    //}
 
     private async reload() {
         await this.reserve.load();

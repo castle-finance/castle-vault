@@ -13,6 +13,7 @@ import {
     PublicKey,
     SystemProgram,
     Transaction,
+    TransactionSignature,
 } from "@solana/web3.js";
 
 import {
@@ -23,7 +24,9 @@ import {
     CastleLendingAggregator,
     StrategyType,
     createTokenSyncNativeInstruction,
+    RebalanceMode,
 } from "../sdk/src/index";
+import { ProposedWeightsBps } from "sdk/lib";
 
 describe("castle-vault", () => {
     const provider = anchor.Provider.env();
@@ -49,8 +52,10 @@ describe("castle-vault", () => {
     const initialReserveAmount = 1_000_000_000;
     const initialCollateralRatio = 1.0;
     const referralFeeOwner = Keypair.generate().publicKey;
-    const poolSizeLimit = 100 * LAMPORTS_PER_SOL;
+    const vaultDepositCap = 100 * LAMPORTS_PER_SOL;
     let isNative = false;
+
+    let jetReserveAmount: number;
 
     let reserveToken: Token;
 
@@ -288,10 +293,23 @@ describe("castle-vault", () => {
             ownerReserveTokenAccount,
             initialReserveAmount
         );
+
+        const jetBorrowedAmt = initialReserveAmount / 2;
+        jetReserveAmount = initialReserveAmount - jetBorrowedAmt;
+        const jetBorrowTxs = await jet.borrow(
+            owner,
+            ownerReserveTokenAccount,
+            jetBorrowedAmt
+        );
+        await provider.connection.confirmTransaction(
+            jetBorrowTxs[jetBorrowTxs.length - 1],
+            "finalized"
+        );
     }
 
     async function initializeVault(
         strategyType: StrategyType,
+        rebalanceMode: RebalanceMode,
         feeCarryBps: number = 0,
         feeMgmtBps: number = 0,
         referralFeePct: number = 0
@@ -304,9 +322,10 @@ describe("castle-vault", () => {
             port,
             jet,
             strategyType,
+            rebalanceMode,
             owner.publicKey,
             { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct },
-            poolSizeLimit
+            vaultDepositCap
         );
 
         userReserveTokenAccount =
@@ -314,7 +333,7 @@ describe("castle-vault", () => {
     }
 
     async function getReserveTokenBalance(account: PublicKey): Promise<number> {
-        const info = await reserveToken.getAccountInfo(account);
+        const info = await vaultClient.getReserveTokenAccountInfo(account);
         return info.amount.toNumber();
     }
 
@@ -327,7 +346,7 @@ describe("castle-vault", () => {
 
     async function getVaultReserveTokenBalance(): Promise<number> {
         return await getReserveTokenBalance(
-            vaultClient.vaultState.vaultReserveToken
+            vaultClient.getVaultReserveTokenAccount()
         );
     }
 
@@ -380,7 +399,9 @@ describe("castle-vault", () => {
         await provider.connection.confirmTransaction(txHash, "singleGossip");
     }
 
-    async function depositToVault(qty: number): Promise<string[]> {
+    async function depositToVault(
+        qty: number
+    ): Promise<TransactionSignature[]> {
         const txs = await vaultClient.deposit(
             wallet,
             qty,
@@ -393,7 +414,9 @@ describe("castle-vault", () => {
         return txs;
     }
 
-    async function withdrawFromVault(qty: number): Promise<string[]> {
+    async function withdrawFromVault(
+        qty: number
+    ): Promise<TransactionSignature[]> {
         const txs = await vaultClient.withdraw(wallet, qty);
         await provider.connection.confirmTransaction(
             txs[txs.length - 1],
@@ -402,21 +425,41 @@ describe("castle-vault", () => {
         return txs;
     }
 
-    async function performRebalance(): Promise<string[]> {
-        const txs = await vaultClient.rebalance();
+    /**
+     *
+     * @param proposedWeights
+     * @param rebalanceOnly if true, skips initial simulation and reconciles
+     *                      used for testing errors since sim doesn't give a msg
+     * @returns
+     */
+    async function performRebalance(
+        proposedWeights?: ProposedWeightsBps,
+        rebalanceOnly: boolean = false
+    ): Promise<TransactionSignature[]> {
+        let txSigs = null;
+
+        if (rebalanceOnly) {
+            const tx = vaultClient.getRebalanceTx(proposedWeights);
+            txSigs = [await provider.send(tx)];
+        } else {
+            txSigs = await vaultClient.rebalance(proposedWeights);
+        }
         await provider.connection.confirmTransaction(
-            txs[txs.length - 1],
+            txSigs[txSigs.length - 1],
             "singleGossip"
         );
-        return txs;
+        return txSigs;
     }
 
     function testDepositAndWithdrawal() {
-        it("Vault correctly initialized", async function () {
-            assert.notEqual(vaultClient.vaultState, null);
+        it("Initializes a vault", async function () {
+            assert.isNotNull(vaultClient.getLpTokenMintInfo());
+            assert.isNotNull(vaultClient.getVaultReserveTokenAccount());
+            assert.isNotNull(vaultClient.getFeeReceiverAccountInfo());
+            assert.isNotNull(vaultClient.getReferralFeeReceiverAccountInfo());
             assert.equal(
-                vaultClient.vaultState.poolSizeLimit.toNumber(),
-                poolSizeLimit
+                vaultClient.getDepositCap().toNumber(),
+                vaultDepositCap
             );
         });
 
@@ -482,22 +525,32 @@ describe("castle-vault", () => {
 
     function testDepositCap() {
         it("Initialize vault correctly", async function () {
-            assert.notEqual(vaultClient.vaultState, null);
+            assert.isNotNull(vaultClient.getLpTokenMintInfo());
+            assert.isNotNull(vaultClient.getVaultReserveTokenAccount());
+            assert.isNotNull(vaultClient.getFeeReceiverAccountInfo());
+            assert.isNotNull(vaultClient.getReferralFeeReceiverAccountInfo());
             assert.equal(
-                vaultClient.vaultState.poolSizeLimit.toNumber(),
-                poolSizeLimit
+                vaultClient.getDepositCap().toNumber(),
+                vaultDepositCap
             );
         });
 
         it("Reject transaction if deposit cap is reached", async function () {
-            const qty = poolSizeLimit + 100;
+            const depositCapErrorCode = program.idl.errors
+                .find((e) => e.name == "DepositCapError")
+                .code.toString(16);
 
+            const qty = vaultDepositCap + 100;
             await mintReserveTokens(userReserveTokenAccount, qty);
+
             try {
                 await depositToVault(qty);
                 assert.fail("Deposit should be rejected but was not.");
             } catch (err) {
-                // TODO check err
+                assert.isTrue(
+                    err.message.includes(depositCapErrorCode),
+                    `Error code ${depositCapErrorCode} not included in error message: ${err}`
+                );
             }
 
             const userReserveBalance = await getReserveTokenBalance(
@@ -515,7 +568,7 @@ describe("castle-vault", () => {
         });
 
         it("Update deposit cap", async function () {
-            const newDepositCap = poolSizeLimit * 0.24;
+            const newDepositCap = vaultDepositCap * 0.24;
             const txs = await vaultClient.updateDepositCap(
                 owner,
                 newDepositCap
@@ -525,17 +578,13 @@ describe("castle-vault", () => {
                 "singleGossip"
             );
             await vaultClient.reload();
-            assert.equal(
-                newDepositCap,
-                vaultClient.vaultState.poolSizeLimit.toNumber()
-            );
+            assert.equal(newDepositCap, vaultClient.getDepositCap().toNumber());
         });
 
         it("Reject unauthorized deposit cap update", async function () {
             const noPermissionUser = Keypair.generate();
 
-            const prevDepositCap =
-                vaultClient.vaultState.poolSizeLimit.toNumber();
+            const prevDepositCap = vaultClient.getDepositCap().toNumber();
             const newDepositCap = prevDepositCap * 0.24;
 
             try {
@@ -555,73 +604,152 @@ describe("castle-vault", () => {
             await vaultClient.reload();
             assert.equal(
                 prevDepositCap,
-                vaultClient.vaultState.poolSizeLimit.toNumber()
+                vaultClient.getDepositCap().toNumber()
             );
         });
     }
 
     function testRebalance(
-        expectedSolendRatio: number = 1 / 3,
-        expectedPortRatio: number = 1 / 3,
-        expectedJetRatio: number = 1 / 3
+        expectedSolendRatio: number,
+        expectedPortRatio: number,
+        expectedJetRatio: number,
+        rebalanceMode: RebalanceMode = { calculator: {} }
     ) {
-        it("Perform rebalance", async function () {
-            const qty = 1024503;
+        // NOTE: should not be divisible by the number of markets, 3 in this case
+        // The TODO to correct this is below
+        const qty = 1024502;
+
+        before(async () => {
             await mintReserveTokens(userReserveTokenAccount, qty);
             await depositToVault(qty);
+        });
 
-            await performRebalance();
+        // JAVASCRIPT IS DUMB
+        if (
+            JSON.stringify(rebalanceMode) ==
+            JSON.stringify({ proofChecker: {} })
+        ) {
+            it("Rejects tx if weights don't equal 100%", async () => {
+                const errorCode = program.idl.errors
+                    .find((e) => e.name == "InvalidProposedWeights")
+                    .code.toString(16);
+                try {
+                    await performRebalance(
+                        {
+                            solend: 0,
+                            port: 0,
+                            jet: 0,
+                        },
+                        true
+                    );
+                    assert.fail("Rebalance did not fail");
+                } catch (err) {
+                    assert.isTrue(
+                        err.message.includes(errorCode),
+                        `Error code ${errorCode} not included in error message: ${err}`
+                    );
+                }
+
+                assert.equal(
+                    (
+                        await vaultClient.getVaultSolendLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+                assert.equal(
+                    (
+                        await vaultClient.getVaultPortLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+                assert.equal(
+                    (
+                        await vaultClient.getVaultJetLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+            });
+
+            it("Rejects tx if weights are suboptimal", async () => {
+                const errorCode = program.idl.errors
+                    .find((e) => e.name == "RebalanceProofCheckFailed")
+                    .code.toString(16);
+                try {
+                    await performRebalance(
+                        {
+                            solend: 10000,
+                            port: 0,
+                            jet: 0,
+                        },
+                        true
+                    );
+                    assert.fail("Rebalance did not fail");
+                } catch (err) {
+                    assert.isTrue(
+                        err.message.includes(errorCode),
+                        `Error code ${errorCode} not included in error message: ${err}`
+                    );
+                }
+
+                assert.equal(
+                    (
+                        await vaultClient.getVaultSolendLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+                assert.equal(
+                    (
+                        await vaultClient.getVaultPortLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+                assert.equal(
+                    (
+                        await vaultClient.getVaultJetLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+            });
+        }
+
+        it("Rebalances", async () => {
+            await performRebalance({
+                solend: expectedSolendRatio * 10000,
+                port: expectedPortRatio * 10000,
+                jet: expectedJetRatio * 10000,
+            });
 
             const totalValue = await getVaultTotalValue();
             const solendValue = (
-                await vaultClient.solend.getLpTokenAccountValue(
-                    vaultClient.vaultState.vaultSolendLpToken
-                )
-            ).toNumber();
-            const jetValue = (
-                await vaultClient.jet.getLpTokenAccountValue(
-                    vaultClient.vaultState.vaultJetLpToken
-                )
+                await vaultClient.getVaultSolendLpTokenAccountValue()
             ).toNumber();
             const portValue = (
-                await vaultClient.port.getLpTokenAccountValue(
-                    vaultClient.vaultState.vaultPortLpToken
-                )
+                await vaultClient.getVaultPortLpTokenAccountValue()
+            ).toNumber();
+            const jetValue = (
+                await vaultClient.getVaultJetLpTokenAccountValue()
             ).toNumber();
 
-            assert.equal(totalValue, qty);
-
+            // TODO Resolve the difference
             // Use isAtMost because on-chain rust program handles rounding differently than TypeScript.
             // However the difference should not exceet 1 token.
+            const maxDiffAllowed = 1;
+            assert.isAtMost(
+                Math.abs(totalValue - Math.floor(qty)),
+                maxDiffAllowed
+            );
             assert.isAtMost(
                 Math.abs(solendValue - Math.floor(qty * expectedSolendRatio)),
-                1
+                maxDiffAllowed
             );
             assert.isAtMost(
                 Math.abs(portValue - Math.floor(qty * expectedPortRatio)),
-                1
+                maxDiffAllowed
             );
             assert.isAtMost(
                 Math.abs(jetValue - Math.floor(qty * expectedJetRatio)),
-                1
+                maxDiffAllowed
             );
-
-            const solendReserveBalance = await getReserveTokenBalance(
-                vaultClient.solend.accounts.liquiditySupply
-            );
-            const portReserveBalance = await getReserveTokenBalance(
-                vaultClient.port.accounts.liquiditySupply
-            );
-            const jetReserveBalance = await getReserveTokenBalance(
-                vaultClient.jet.accounts.liquiditySupply
-            );
-
-            assert.equal(
-                solendReserveBalance,
-                solendValue + initialReserveAmount
-            );
-            assert.equal(portReserveBalance, portValue + initialReserveAmount);
-            assert.equal(jetReserveBalance, jetValue + initialReserveAmount);
         });
     }
 
@@ -637,8 +765,8 @@ describe("castle-vault", () => {
         it("Collect fees", async function () {
             const qty1 = 5.47 * 10 ** 9;
             await mintReserveTokens(userReserveTokenAccount, qty1);
-            let txs = await depositToVault(qty1);
-            const slots0 = await fetchSlots(txs);
+            const txs1 = await depositToVault(qty1);
+            const slots0 = await fetchSlots(txs1);
 
             const vaultTotalValue = new anchor.BN(await getVaultTotalValue());
             const lpTokenSupply = new anchor.BN(await getLpTokenSupply());
@@ -649,8 +777,8 @@ describe("castle-vault", () => {
             // Consider adding an API to client library to trigger refresh
             const qty2 = 10;
             await mintReserveTokens(userReserveTokenAccount, qty2);
-            txs = await depositToVault(qty2);
-            const slots1 = await fetchSlots(txs);
+            const txs2 = await depositToVault(qty2);
+            const slots1 = await fetchSlots(txs2);
 
             const expectedFees = await calculateFees(
                 vaultTotalValue,
@@ -764,19 +892,25 @@ describe("castle-vault", () => {
     }
 
     describe("Equal allocation strategy", () => {
-        describe("Deposit and withdrawal for WSOL", () => {
-            before(setNativeMode.bind(this));
-            before(initLendingMarkets.bind(this));
+        describe("Deposit and withdrawal", () => {
+            before(initLendingMarkets);
             before(async function () {
-                await initializeVault({ equalAllocation: {} });
+                await initializeVault(
+                    { equalAllocation: {} },
+                    { calculator: {} }
+                );
             });
             testDepositAndWithdrawal();
         });
 
-        describe("Deposit and withdrawal", () => {
+        describe("Deposit and withdrawal WSOL", () => {
+            before(setNativeMode.bind(this));
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault({ equalAllocation: {} });
+                await initializeVault(
+                    { equalAllocation: {} },
+                    { calculator: {} }
+                );
             });
             testDepositAndWithdrawal();
         });
@@ -784,7 +918,10 @@ describe("castle-vault", () => {
         describe("Deposit cap", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault({ equalAllocation: {} });
+                await initializeVault(
+                    { equalAllocation: {} },
+                    { calculator: {} }
+                );
             });
             testDepositCap();
         });
@@ -792,9 +929,12 @@ describe("castle-vault", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault({ equalAllocation: {} });
+                await initializeVault(
+                    { equalAllocation: {} },
+                    { calculator: {} }
+                );
             });
-            testRebalance();
+            testRebalance(1 / 3, 1 / 3, 1 / 3);
         });
 
         describe("Fees", () => {
@@ -806,6 +946,7 @@ describe("castle-vault", () => {
             before(async function () {
                 await initializeVault(
                     { equalAllocation: {} },
+                    { calculator: {} },
                     feeCarryBps,
                     feeMgmtBps,
                     referralFeePct
@@ -813,59 +954,29 @@ describe("castle-vault", () => {
             });
             testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
         });
-        // TODO borrow from solend to increase apy and ensure it switches to that
-        // TODO borrow from port to increase apy and ensure it switches to that
     });
 
-    describe("Max yield strategy", () => {
-        describe("Deposit and withdrawal", () => {
-            before(initLendingMarkets);
-            before(async function () {
-                await initializeVault({ maxYield: {} });
-            });
-            testDepositAndWithdrawal();
-        });
-
-        describe("Deposit and withdrawal for WSOL", () => {
-            before(setNativeMode.bind(this));
-            before(initLendingMarkets.bind(this));
-            before(async function () {
-                await initializeVault({ maxYield: {} });
-            });
-            testDepositAndWithdrawal();
-        });
-
-        describe("Deposit cap", () => {
-            before(initLendingMarkets);
-            before(async function () {
-                await initializeVault({ maxYield: {} });
-            });
-            testDepositCap();
-        });
-
+    describe("Max yield calculator", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault({ maxYield: {} });
+                await initializeVault({ maxYield: {} }, { calculator: {} });
             });
             testRebalance(0, 0, 1);
+
+            // TODO borrow from solend to increase apy and ensure it switches to that
+            // TODO borrow from port to increase apy and ensure it switches to that
         });
+    });
 
-        describe("Fees", () => {
-            const feeMgmtBps = 10000;
-            const feeCarryBps = 10000;
-            const referralFeePct = 20;
-
+    describe("Max yield proof checker", () => {
+        describe("Rebalance", () => {
+            const rebalanceMode = { proofChecker: {} };
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    { maxYield: {} },
-                    feeCarryBps,
-                    feeMgmtBps,
-                    referralFeePct
-                );
+                await initializeVault({ maxYield: {} }, rebalanceMode);
             });
-            testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
+            testRebalance(0, 0, 1, rebalanceMode);
         });
     });
 });

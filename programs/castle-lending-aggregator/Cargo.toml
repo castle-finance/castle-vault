@@ -9,7 +9,8 @@ crate-type = ["cdylib", "lib"]
 name = "castle_lending_aggregator"
 
 [features]
-default = ["devnet-staging"]
+debug = ["anchor-lang/anchor-debug"]
+default = ["debug", "devnet-staging"]
 
 devnet-parity = ["devnet-partner-addrs"]
 devnet-staging = ["devnet-castle-addr", "devnet-partner-addrs"]

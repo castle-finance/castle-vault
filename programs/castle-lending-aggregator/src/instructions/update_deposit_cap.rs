@@ -14,10 +14,10 @@ pub struct UpdateDepositCap<'info> {
     pub owner: Signer<'info>,
 }
 
-pub fn handler(ctx: Context<UpdateDepositCap>, deposit_cap_new_value: u64) -> ProgramResult {
+pub fn handler(ctx: Context<UpdateDepositCap>, new_deposit_cap: u64) -> ProgramResult {
     #[cfg(feature = "debug")]
-    msg!("New deposit cap value: {}", deposit_cap_new_value);
+    msg!("New deposit cap value: {}", new_deposit_cap);
 
-    ctx.accounts.vault.pool_size_limit = deposit_cap_new_value;
+    ctx.accounts.vault.deposit_cap = new_deposit_cap;
     Ok(())
 }

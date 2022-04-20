@@ -9,7 +9,7 @@ use std::convert::Into;
 
 use crate::{adapters::SolendReserve, errors::ErrorCode, state::*};
 
-#[derive(AnchorDeserialize, AnchorSerialize)]
+#[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]
 pub struct InitBumpSeeds {
     authority: u8,
     reserve: u8,
@@ -19,7 +19,7 @@ pub struct InitBumpSeeds {
     jet_lp: u8,
 }
 
-#[derive(AnchorDeserialize, AnchorSerialize)]
+#[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]
 pub struct FeeArgs {
     pub fee_carry_bps: u32,
     pub fee_mgmt_bps: u32,
@@ -206,8 +206,9 @@ pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
+    rebalance_mode: RebalanceMode,
     fees: FeeArgs,
-    pool_size_limit: u64,
+    vault_deposit_cap: u64,
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
@@ -234,7 +235,8 @@ pub fn handler(
     vault.last_update = LastUpdate::new(clock.slot);
     vault.total_value = 0;
     vault.strategy_type = strategy_type;
-    vault.pool_size_limit = pool_size_limit;
+    vault.rebalance_mode = rebalance_mode;
+    vault.deposit_cap = vault_deposit_cap;
 
     vault.fees = VaultFees {
         fee_receiver: ctx.accounts.fee_receiver.key(),

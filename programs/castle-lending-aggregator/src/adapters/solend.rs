@@ -3,13 +3,11 @@ use std::{io::Write, ops::DerefMut};
 
 use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token::{Token, TokenAccount};
+use solana_maths::Rate;
 use spl_token_lending::state::Reserve;
 
-use crate::impl_has_vault;
-use crate::{
-    reconcile::LendingMarket,
-    state::{Provider, Vault},
-};
+use crate::rebalance::assets::ReserveAccessor;
+use crate::{impl_has_vault, rebalance::assets::Provider, reconcile::LendingMarket, state::Vault};
 
 #[derive(Accounts)]
 pub struct SolendAccounts<'info> {
@@ -135,6 +133,29 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
 
     fn provider(&self) -> Provider {
         Provider::Solend
+    }
+}
+
+impl ReserveAccessor for Reserve {
+    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+        Ok(Rate::from_scaled_val(
+            self.liquidity.utilization_rate()?.to_scaled_val() as u64,
+        ))
+    }
+
+    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+        Ok(Rate::from_scaled_val(
+            self.current_borrow_rate()?.to_scaled_val() as u64,
+        ))
+    }
+
+    fn reserve_with_deposit(
+        &self,
+        allocation: u64,
+    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+        let mut reserve = Box::new(self.clone());
+        reserve.liquidity.deposit(allocation)?;
+        Ok(reserve)
     }
 }
 

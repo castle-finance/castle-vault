@@ -34,6 +34,8 @@ import {
     RebalanceEvent,
     Vault,
     FeeArgs,
+    ProposedWeightsBps,
+    RebalanceMode,
     VaultFees,
 } from "./types";
 
@@ -55,10 +57,10 @@ export class VaultClient {
     private constructor(
         public program: anchor.Program<CastleLendingAggregator>,
         public vaultId: PublicKey,
-        public vaultState: Vault,
-        public solend: SolendReserveAsset,
-        public port: PortReserveAsset,
-        public jet: JetReserveAsset
+        private vaultState: Vault,
+        private solend: SolendReserveAsset,
+        private port: PortReserveAsset,
+        private jet: JetReserveAsset
     ) {}
 
     // TODO add function to change wallet
@@ -103,6 +105,7 @@ export class VaultClient {
         port: PortReserveAsset,
         jet: JetReserveAsset,
         strategyType: StrategyType,
+        rebalanceMode: RebalanceMode,
         owner: PublicKey,
         feeData: FeeArgs,
         poolSizeLimit = 10000000000
@@ -187,6 +190,7 @@ export class VaultClient {
                 jetLp: jetLpBump,
             },
             strategyType,
+            rebalanceMode,
             {
                 feeCarryBps: new anchor.BN(feeCarryBps),
                 feeMgmtBps: new anchor.BN(feeMgmtBps),
@@ -356,9 +360,9 @@ export class VaultClient {
         updateCommand.add(
             this.program.instruction.updateFees(
                 {
-                    feeCarryBps,
-                    feeMgmtBps,
-                    referralFeePct,
+                    feeCarryBps: feeCarryBps,
+                    feeMgmtBps: feeMgmtBps,
+                    referralFeePct: referralFeePct,
                 },
                 {
                     accounts: {
@@ -589,18 +593,11 @@ export class VaultClient {
         return this.program.provider.sendAll(txs);
     }
 
-    /**
-     *
-     * @param threshold
-     * @returns
-     */
-    async rebalance(threshold = 0): Promise<TransactionSignature[]> {
-        const txs: SendTxRequest[] = [];
-
+    getRebalanceTx(proposedWeights: ProposedWeightsBps): Transaction {
         const rebalanceTx = new Transaction();
         rebalanceTx.add(this.getRefreshIx());
         rebalanceTx.add(
-            this.program.instruction.rebalance({
+            this.program.instruction.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
                     solendReserve: this.solend.accounts.reserve,
@@ -610,11 +607,33 @@ export class VaultClient {
                 },
             })
         );
-        txs.push({ tx: rebalanceTx, signers: [] });
+        return rebalanceTx;
+    }
+
+    /**
+     *
+     * @param proposedWeights
+     * @returns
+     */
+    async rebalance(
+        proposedWeights?: ProposedWeightsBps
+    ): Promise<TransactionSignature[]> {
+        if (
+            this.vaultState.rebalanceMode == { proofChecker: {} } &&
+            proposedWeights == null
+        ) {
+            throw new Error(
+                "Proposed weights must be passed in for a vault running in proofChecker mode"
+            );
+        }
+
+        const txs: SendTxRequest[] = [
+            { tx: this.getRebalanceTx(proposedWeights), signers: [] },
+        ];
 
         // Sort ixs in ascending order of outflows
         const oldAndNewallocationsWithReconcileIxs =
-            await this.newAndOldallocationsWithReconcileIxs();
+            await this.newAndOldallocationsWithReconcileIxs(proposedWeights);
 
         const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
             oldAndNewallocationsWithReconcileIxs.map((e) => [
@@ -632,27 +651,24 @@ export class VaultClient {
             reconcileTx.add(ix);
             txs.push({ tx: reconcileTx, signers: [] });
         }
-
-        const vaultValue = await this.getTotalValue();
-        const maxAllocationChange = Math.max(
-            ...allocationDiffsWithReconcileIxs.map((e) =>
-                vaultValue.eq(0) ? 100 : e[0].abs().div(vaultValue).toNumber()
-            )
-        );
-
-        if (vaultValue.gt(0) && maxAllocationChange > threshold) {
-            return this.program.provider.sendAll(txs);
-        } else {
-            return Promise.resolve([]);
-        }
+        return this.program.provider.sendAll(txs);
     }
 
     // TODO this is probably not the best way to do this?
-    private async newAndOldallocationsWithReconcileIxs(): Promise<
+    private async newAndOldallocationsWithReconcileIxs(
+        proposedWeights?: ProposedWeightsBps
+    ): Promise<
         [Big, Big, (withdrawOption?: anchor.BN) => TransactionInstruction][]
     > {
+        if (proposedWeights == null) {
+            proposedWeights = {
+                solend: 0,
+                port: 0,
+                jet: 0,
+            };
+        }
         const newAllocations = (
-            await this.program.simulate.rebalance({
+            await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
                     solendReserve: this.solend.accounts.reserve,
@@ -842,7 +858,6 @@ export class VaultClient {
                 ).amount.toString()
             ),
         ];
-
         const valueSum = values.reduce((a, b) => a.add(b), new Big(0));
 
         return valueSum;
@@ -864,6 +879,43 @@ export class VaultClient {
         }
     }
 
+    getDepositCap(): Big {
+        return new Big(this.vaultState.depositCap.toString());
+    }
+
+    getVaultReserveTokenAccount(): PublicKey {
+        return this.vaultState.vaultReserveToken;
+    }
+
+    getVaultSolendLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultSolendLpToken;
+    }
+
+    getVaultPortLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultPortLpToken;
+    }
+
+    getVaultJetLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultJetLpToken;
+    }
+
+    async getVaultSolendLpTokenAccountValue(): Promise<Big> {
+        return this.solend.getLpTokenAccountValue(
+            this.getVaultSolendLpTokenAccount()
+        );
+    }
+
+    async getVaultPortLpTokenAccountValue(): Promise<Big> {
+        return this.port.getLpTokenAccountValue(
+            this.getVaultPortLpTokenAccount()
+        );
+    }
+
+    async getVaultJetLpTokenAccountValue(): Promise<Big> {
+        return this.jet.getLpTokenAccountValue(
+            this.getVaultJetLpTokenAccount()
+        );
+    }
     async getUserReserveTokenAccount(address: PublicKey): Promise<PublicKey> {
         return await Token.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -957,6 +1009,20 @@ export class VaultClient {
                 )
             ).toNumber()
         );
+    }
+
+    // NOTE: These should really only be used for testing
+
+    getSolend(): SolendReserveAsset {
+        return this.solend;
+    }
+
+    getPort(): PortReserveAsset {
+        return this.port;
+    }
+
+    getJet(): JetReserveAsset {
+        return this.jet;
     }
 
     getFees(): VaultFees {

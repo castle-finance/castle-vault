@@ -94,15 +94,14 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
         .checked_add(reserve_token_amount)
         .ok_or(ErrorCode::OverflowError)?;
 
-    if total_value > ctx.accounts.vault.pool_size_limit {
+    if total_value > ctx.accounts.vault.deposit_cap {
         msg!("Deposit cap reached");
         return Err(ErrorCode::DepositCapError.into());
     }
 
-    msg!("Depositing {} reserve tokens", reserve_token_amount);
-
     token::transfer(ctx.accounts.transfer_context(), reserve_token_amount)?;
 
+    #[cfg(feature = "debug")]
     msg!("Minting {} LP tokens", lp_tokens_to_mint);
 
     token::mint_to(
