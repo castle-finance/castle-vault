@@ -29,7 +29,27 @@ import {
     SolendReserveAsset,
     JetReserveAsset,
 } from "./adapters";
-import { StrategyType, RebalanceEvent, Vault, FeeArgs } from "./types";
+import {
+    StrategyType,
+    RebalanceEvent,
+    Vault,
+    FeeArgs,
+    VaultFees,
+} from "./types";
+
+export function createTokenSyncNativeInstruction(nativeMintToken: PublicKey) {
+    return new TransactionInstruction({
+        programId: TOKEN_PROGRAM_ID,
+        keys: [
+            {
+                pubkey: nativeMintToken,
+                isSigner: false,
+                isWritable: true,
+            },
+        ],
+        data: Buffer.from(Uint8Array.of(17)),
+    });
+}
 
 export class VaultClient {
     private constructor(
@@ -85,7 +105,7 @@ export class VaultClient {
         strategyType: StrategyType,
         owner: PublicKey,
         feeData: FeeArgs,
-        poolSizeLimit: number = 10000000000
+        poolSizeLimit = 10000000000
     ): Promise<VaultClient> {
         const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
             feeData;
@@ -257,10 +277,17 @@ export class VaultClient {
      */
     private async getWrappedSolIxs(
         wallet: anchor.Wallet,
-        lamports = 0
+        lamports = 0,
+        tokenAccount?: PublicKey
     ): Promise<WrapSolIxResponse> {
-        const userReserveKeypair = Keypair.generate();
-        const userReserveTokenAccount = userReserveKeypair.publicKey;
+        const userReserveTokenAccount =
+            tokenAccount ||
+            (await Token.getAssociatedTokenAddress(
+                ASSOCIATED_TOKEN_PROGRAM_ID,
+                TOKEN_PROGRAM_ID,
+                NATIVE_MINT,
+                wallet.publicKey
+            ));
 
         const rent = await Token.getMinBalanceRentForExemptAccount(
             this.program.provider.connection
@@ -288,7 +315,7 @@ export class VaultClient {
                 wallet.publicKey,
                 []
             ),
-            keyPair: userReserveKeypair,
+            tokenAccount: userReserveTokenAccount,
         };
     }
 
@@ -329,9 +356,9 @@ export class VaultClient {
         updateCommand.add(
             this.program.instruction.updateFees(
                 {
-                    feeCarryBps: new anchor.BN(feeCarryBps),
-                    feeMgmtBps: new anchor.BN(feeMgmtBps),
-                    referralFeePct: new anchor.BN(referralFeePct),
+                    feeCarryBps,
+                    feeMgmtBps,
+                    referralFeePct,
                 },
                 {
                     accounts: {
@@ -344,27 +371,37 @@ export class VaultClient {
         return [await this.program.provider.send(updateCommand, [owner])];
     }
 
-    /**
-     *
-     * TODO refactor to be more clear
-     *
-     * @param wallet
-     * @param amount
-     * @param userReserveTokenAccount
-     * @returns
-     */
     async deposit(
         wallet: anchor.Wallet,
         amount: number,
         userReserveTokenAccount: PublicKey
     ): Promise<TransactionSignature[]> {
+        const txs: SendTxRequest[] = [];
+
         const depositTx = new Transaction();
 
         let wrappedSolIxResponse: WrapSolIxResponse;
-        if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
+        if (
+            this.vaultState.reserveTokenMint.equals(NATIVE_MINT) &&
+            !(await this.program.provider.connection.getAccountInfo(
+                userReserveTokenAccount
+            ))
+        ) {
+            const createWSOLTx = new Transaction({
+                recentBlockhash: (
+                    await this.program.provider.connection.getRecentBlockhash()
+                ).blockhash,
+                feePayer: wallet.publicKey,
+            });
+
             wrappedSolIxResponse = await this.getWrappedSolIxs(wallet, amount);
-            depositTx.add(...wrappedSolIxResponse.openIxs);
-            userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
+            createWSOLTx.add(...wrappedSolIxResponse.openIxs);
+            userReserveTokenAccount = wrappedSolIxResponse.tokenAccount;
+
+            txs.push({
+                tx: createWSOLTx,
+                signers: [wallet.payer],
+            });
         }
 
         const userLpTokenAccount = await this.getUserLpTokenAccount(
@@ -376,9 +413,8 @@ export class VaultClient {
             );
 
         // Create account if it does not exist
-        let createLpAcctTx: Transaction;
         if (userLpTokenAccountInfo == null) {
-            createLpAcctTx = new Transaction().add(
+            depositTx.add(
                 createAta(
                     wallet,
                     this.vaultState.lpTokenMint,
@@ -404,20 +440,11 @@ export class VaultClient {
             })
         );
 
-        const txs: SendTxRequest[] = [];
-        if (createLpAcctTx != null) {
-            txs.push({ tx: createLpAcctTx, signers: [] });
-        }
-
         if (wrappedSolIxResponse != null) {
             depositTx.add(wrappedSolIxResponse.closeIx);
-            txs.push({
-                tx: depositTx,
-                signers: [wrappedSolIxResponse.keyPair],
-            });
-        } else {
-            txs.push({ tx: depositTx, signers: [] });
         }
+
+        txs.push({ tx: depositTx, signers: [] });
 
         return await this.program.provider.sendAll(txs);
     }
@@ -492,22 +519,38 @@ export class VaultClient {
         }
 
         const withdrawTx = new Transaction();
-        let userReserveTokenAccount: PublicKey;
+        // let userReserveTokenAccount: PublicKey;
         let wrappedSolIxResponse: WrapSolIxResponse;
-        if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
-            wrappedSolIxResponse = await this.getWrappedSolIxs(wallet);
-            withdrawTx.add(...wrappedSolIxResponse.openIxs);
-            userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
-        } else {
-            userReserveTokenAccount = await this.getUserReserveTokenAccount(
-                wallet.publicKey
+
+        const userReserveTokenAccount = await this.getUserReserveTokenAccount(
+            wallet.publicKey
+        );
+        // Create reserve token account to withdraw into if it does not exist
+        const userReserveTokenAccountInfo =
+            await this.program.provider.connection.getAccountInfo(
+                userReserveTokenAccount
             );
-            // Create reserve token account to withdraw into if it does not exist
-            const userReserveTokenAccountInfo =
-                await this.program.provider.connection.getAccountInfo(
+
+        if (userReserveTokenAccountInfo == null) {
+            if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
+                const createWSOLTx = new Transaction({
+                    recentBlockhash: (
+                        await this.program.provider.connection.getRecentBlockhash()
+                    ).blockhash,
+                    feePayer: wallet.publicKey,
+                });
+                wrappedSolIxResponse = await this.getWrappedSolIxs(
+                    wallet,
+                    0,
                     userReserveTokenAccount
                 );
-            if (userReserveTokenAccountInfo == null) {
+                createWSOLTx.add(...wrappedSolIxResponse.openIxs);
+
+                txs.push({
+                    tx: createWSOLTx,
+                    signers: [wallet.payer],
+                });
+            } else {
                 withdrawTx.add(
                     createAta(
                         wallet,
@@ -540,13 +583,9 @@ export class VaultClient {
 
         if (wrappedSolIxResponse != null) {
             withdrawTx.add(wrappedSolIxResponse.closeIx);
-            txs.push({
-                tx: withdrawTx,
-                signers: [wrappedSolIxResponse.keyPair],
-            });
-        } else {
-            txs.push({ tx: withdrawTx, signers: [] });
         }
+
+        txs.push({ tx: withdrawTx, signers: [] });
         return this.program.provider.sendAll(txs);
     }
 
@@ -943,5 +982,5 @@ const createAta = (
 interface WrapSolIxResponse {
     openIxs: [TransactionInstruction, TransactionInstruction];
     closeIx: TransactionInstruction;
-    keyPair: Keypair;
+    tokenAccount: PublicKey;
 }

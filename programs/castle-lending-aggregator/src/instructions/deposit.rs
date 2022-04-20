@@ -2,8 +2,8 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 
+use crate::{errors::ErrorCode, state::Vault};
 use std::convert::Into;
-use crate::{state::Vault, errors::ErrorCode};
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -78,7 +78,6 @@ impl<'info> Deposit<'info> {
 ///
 /// Transfers reserve tokens from user to vault and mints their share of lp tokens
 pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
-
     let vault = &ctx.accounts.vault;
 
     let lp_tokens_to_mint = crate::math::calc_reserve_to_lp(
@@ -88,7 +87,10 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
     )
     .ok_or(ErrorCode::MathError)?;
 
-    let total_value = ctx.accounts.vault.total_value
+    let total_value = ctx
+        .accounts
+        .vault
+        .total_value
         .checked_add(reserve_token_amount)
         .ok_or(ErrorCode::OverflowError)?;
 

@@ -1,7 +1,19 @@
 import { assert } from "chai";
 import * as anchor from "@project-serum/anchor";
-import { TOKEN_PROGRAM_ID, Token, NATIVE_MINT } from "@solana/spl-token";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import {
+    TOKEN_PROGRAM_ID,
+    Token,
+    NATIVE_MINT,
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    AccountLayout,
+} from "@solana/spl-token";
+import {
+    Keypair,
+    LAMPORTS_PER_SOL,
+    PublicKey,
+    SystemProgram,
+    Transaction,
+} from "@solana/web3.js";
 
 import {
     SolendReserveAsset,
@@ -10,6 +22,7 @@ import {
     VaultClient,
     CastleLendingAggregator,
     StrategyType,
+    createTokenSyncNativeInstruction,
 } from "../sdk/src/index";
 
 describe("castle-vault", () => {
@@ -33,10 +46,11 @@ describe("castle-vault", () => {
     );
 
     const slotsPerYear = 63072000;
-    const initialReserveAmount = 100;
+    const initialReserveAmount = 1_000_000_000;
     const initialCollateralRatio = 1.0;
     const referralFeeOwner = Keypair.generate().publicKey;
-    const poolSizeLimit = 10 * 10 ** 9;
+    const poolSizeLimit = 100 * LAMPORTS_PER_SOL;
+    let isNative = false;
 
     let reserveToken: Token;
 
@@ -46,6 +60,7 @@ describe("castle-vault", () => {
 
     let vaultClient: VaultClient;
     let userReserveTokenAccount: PublicKey;
+    let ownerReserveTokenAccount: PublicKey;
 
     let expectedWithdrawAmount: anchor.BN;
     let lastUpdatedVaultBalance: anchor.BN;
@@ -65,6 +80,10 @@ describe("castle-vault", () => {
         ).map((res) => res.slot);
 
         return slots;
+    }
+
+    function setNativeMode(mode: boolean = true) {
+        isNative = mode;
     }
 
     function calcReserveToLp(
@@ -123,6 +142,68 @@ describe("castle-vault", () => {
         return { primary: primFee, referral: refFee };
     }
 
+    async function createAndMintReserveTokens(
+        recipient: PublicKey,
+        reserveToken: Token,
+        mintAmount: number
+    ) {
+        const ownerReserveTokenAccount = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            reserveToken.publicKey,
+            recipient
+        );
+
+        const createTokenAccountIx =
+            Token.createAssociatedTokenAccountInstruction(
+                ASSOCIATED_TOKEN_PROGRAM_ID,
+                TOKEN_PROGRAM_ID,
+                reserveToken.publicKey,
+                ownerReserveTokenAccount,
+                recipient,
+                reserveToken.payer.publicKey
+            );
+
+        const mintTokensIx = isNative
+            ? [
+                  SystemProgram.transfer({
+                      fromPubkey: reserveToken.payer.publicKey,
+                      toPubkey: ownerReserveTokenAccount,
+                      lamports:
+                          mintAmount +
+                          (await provider.connection.getMinimumBalanceForRentExemption(
+                              AccountLayout.span
+                          )),
+                  }),
+                  createTokenAccountIx,
+              ]
+            : [
+                  createTokenAccountIx,
+                  Token.createMintToInstruction(
+                      TOKEN_PROGRAM_ID,
+                      reserveToken.publicKey,
+                      ownerReserveTokenAccount,
+                      reserveToken.payer.publicKey,
+                      [],
+                      mintAmount
+                  ),
+              ];
+
+        const tx = new Transaction({
+            feePayer: reserveToken.payer.publicKey,
+            recentBlockhash: (await provider.connection.getRecentBlockhash())
+                .blockhash,
+        }).add(...mintTokensIx);
+
+        const txHash = await provider.connection.sendTransaction(tx, [
+            reserveToken.payer,
+        ]);
+
+        await provider.connection.confirmTransaction(txHash, "singleGossip");
+
+        return { ownerReserveTokenAccount };
+    }
+
     async function initLendingMarkets() {
         lastUpdatedVaultBalance = new anchor.BN(0);
         expectedWithdrawAmount = new anchor.BN(0);
@@ -131,36 +212,40 @@ describe("castle-vault", () => {
 
         const sig = await provider.connection.requestAirdrop(
             owner.publicKey,
-            1000000000
+            10 * initialReserveAmount
         );
 
         const supplSig = await provider.connection.requestAirdrop(
             referralFeeOwner,
-            1000000000
+            1 * initialReserveAmount
         );
 
         await provider.connection.confirmTransaction(sig, "singleGossip");
         await provider.connection.confirmTransaction(supplSig, "singleGossip");
 
-        reserveToken = await Token.createMint(
-            provider.connection,
-            owner,
-            owner.publicKey,
-            null,
-            2,
-            TOKEN_PROGRAM_ID
-        );
+        reserveToken = isNative
+            ? new Token(
+                  provider.connection,
+                  NATIVE_MINT,
+                  TOKEN_PROGRAM_ID,
+                  owner
+              )
+            : await Token.createMint(
+                  provider.connection,
+                  owner,
+                  owner.publicKey,
+                  null,
+                  2,
+                  TOKEN_PROGRAM_ID
+              );
 
-        const ownerReserveTokenAccount = await reserveToken.createAccount(
-            owner.publicKey
-        );
-
-        await reserveToken.mintTo(
-            ownerReserveTokenAccount,
-            owner,
-            [],
-            3 * initialReserveAmount
-        );
+        ownerReserveTokenAccount = (
+            await createAndMintReserveTokens(
+                owner.publicKey,
+                reserveToken,
+                3 * initialReserveAmount
+            )
+        ).ownerReserveTokenAccount;
 
         const pythProgram = new PublicKey(
             "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWpe4975bi2epH"
@@ -224,9 +309,8 @@ describe("castle-vault", () => {
             poolSizeLimit
         );
 
-        userReserveTokenAccount = await reserveToken.createAccount(
-            wallet.publicKey
-        );
+        userReserveTokenAccount =
+            await reserveToken.createAssociatedTokenAccount(wallet.publicKey);
     }
 
     async function getReserveTokenBalance(account: PublicKey): Promise<number> {
@@ -255,8 +339,13 @@ describe("castle-vault", () => {
         const account = await vaultClient.getUserLpTokenAccount(
             wallet.publicKey
         );
-        const info = await vaultClient.getLpTokenAccountInfo(account);
-        return info.amount.toNumber();
+        // Adding this check because the lptoken creation is inside deposit tx and not a standalone tx
+        try {
+            const info = await vaultClient.getLpTokenAccountInfo(account);
+            return info.amount.toNumber();
+        } catch (err) {
+            return 0;
+        }
     }
 
     async function getLpTokenSupply(): Promise<number> {
@@ -264,8 +353,31 @@ describe("castle-vault", () => {
         return info.supply.toNumber();
     }
 
-    async function mintReserveToken(receiver: PublicKey, qty: number) {
-        await reserveToken.mintTo(receiver, owner, [], qty);
+    async function mintReserveTokens(receiver: PublicKey, qty: number) {
+        const instructions = isNative
+            ? [
+                  SystemProgram.transfer({
+                      fromPubkey: owner.publicKey,
+                      toPubkey: receiver,
+                      lamports: qty,
+                  }),
+                  createTokenSyncNativeInstruction(receiver),
+              ]
+            : [
+                  Token.createMintToInstruction(
+                      TOKEN_PROGRAM_ID,
+                      reserveToken.publicKey,
+                      receiver,
+                      owner.publicKey,
+                      [],
+                      qty
+                  ),
+              ];
+
+        const tx = new Transaction().add(...instructions);
+        const txHash = await provider.connection.sendTransaction(tx, [owner]);
+
+        await provider.connection.confirmTransaction(txHash, "singleGossip");
     }
 
     async function depositToVault(qty: number): Promise<string[]> {
@@ -309,14 +421,10 @@ describe("castle-vault", () => {
         });
 
         it("Deposits to vault reserves", async function () {
-            const qty = 100;
-
-            await mintReserveToken(userReserveTokenAccount, qty);
+            const qty = 1_000_000_000;
+            await mintReserveTokens(userReserveTokenAccount, qty);
             await depositToVault(qty);
-
-            const userReserveBalance = await getReserveTokenBalance(
-                userReserveTokenAccount
-            );
+            const userReserveBalance = await getUserReserveTokenBalance();
             const vaultReserveBalance = await getVaultReserveTokenBalance();
             const userLpBalance = await getUserLpTokenBalance();
             const lpTokenSupply = await getLpTokenSupply();
@@ -331,7 +439,7 @@ describe("castle-vault", () => {
             const vaultReserveBalance0 = await getVaultReserveTokenBalance();
             const loTokenSupply0 = await getLpTokenSupply();
 
-            const qty1 = 70;
+            const qty1 = 700_000_000;
             await withdrawFromVault(qty1);
 
             const userReserveBalance1 = await getUserReserveTokenBalance();
@@ -342,7 +450,7 @@ describe("castle-vault", () => {
             assert.equal(loTokenSupply0 - loTokenSupply1, qty1);
             assert.equal(userReserveBalance1, qty1);
 
-            const qty2 = 20;
+            const qty2 = 200_000_000;
             await withdrawFromVault(qty2);
 
             const userReserveBalance2 = await getUserReserveTokenBalance();
@@ -352,6 +460,23 @@ describe("castle-vault", () => {
             assert.equal(vaultReserveBalance1 - vaultReserveBalance2, qty2);
             assert.equal(loTokenSupply1 - loTokenSupply2, qty2);
             assert.equal(userReserveBalance2, qty1 + qty2);
+
+            if (isNative) {
+                await reserveToken.closeAccount(
+                    userReserveTokenAccount,
+                    wallet.publicKey,
+                    wallet.payer,
+                    []
+                );
+
+                await reserveToken.closeAccount(
+                    ownerReserveTokenAccount,
+                    owner.publicKey,
+                    owner,
+                    []
+                );
+                setNativeMode(false);
+            }
         });
     }
 
@@ -367,7 +492,7 @@ describe("castle-vault", () => {
         it("Reject transaction if deposit cap is reached", async function () {
             const qty = poolSizeLimit + 100;
 
-            await mintReserveToken(userReserveTokenAccount, qty);
+            await mintReserveTokens(userReserveTokenAccount, qty);
             try {
                 await depositToVault(qty);
                 assert.fail("Deposit should be rejected but was not.");
@@ -378,6 +503,7 @@ describe("castle-vault", () => {
             const userReserveBalance = await getReserveTokenBalance(
                 userReserveTokenAccount
             );
+
             const vaultReserveBalance = await getVaultReserveTokenBalance();
             const userLpBalance = await getUserLpTokenBalance();
             const lpTokenSupply = await getLpTokenSupply();
@@ -441,7 +567,7 @@ describe("castle-vault", () => {
     ) {
         it("Perform rebalance", async function () {
             const qty = 1024503;
-            await mintReserveToken(userReserveTokenAccount, qty);
+            await mintReserveTokens(userReserveTokenAccount, qty);
             await depositToVault(qty);
 
             await performRebalance();
@@ -510,7 +636,7 @@ describe("castle-vault", () => {
     ) {
         it("Collect fees", async function () {
             const qty1 = 5.47 * 10 ** 9;
-            await mintReserveToken(userReserveTokenAccount, qty1);
+            await mintReserveTokens(userReserveTokenAccount, qty1);
             let txs = await depositToVault(qty1);
             const slots0 = await fetchSlots(txs);
 
@@ -522,7 +648,7 @@ describe("castle-vault", () => {
             // This is needed to trigger refresh and fee collection
             // Consider adding an API to client library to trigger refresh
             const qty2 = 10;
-            await mintReserveToken(userReserveTokenAccount, qty2);
+            await mintReserveTokens(userReserveTokenAccount, qty2);
             txs = await depositToVault(qty2);
             const slots1 = await fetchSlots(txs);
 
@@ -638,6 +764,15 @@ describe("castle-vault", () => {
     }
 
     describe("Equal allocation strategy", () => {
+        describe("Deposit and withdrawal for WSOL", () => {
+            before(setNativeMode.bind(this));
+            before(initLendingMarkets.bind(this));
+            before(async function () {
+                await initializeVault({ equalAllocation: {} });
+            });
+            testDepositAndWithdrawal();
+        });
+
         describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -678,7 +813,6 @@ describe("castle-vault", () => {
             });
             testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
         });
-
         // TODO borrow from solend to increase apy and ensure it switches to that
         // TODO borrow from port to increase apy and ensure it switches to that
     });
@@ -686,6 +820,15 @@ describe("castle-vault", () => {
     describe("Max yield strategy", () => {
         describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
+            before(async function () {
+                await initializeVault({ maxYield: {} });
+            });
+            testDepositAndWithdrawal();
+        });
+
+        describe("Deposit and withdrawal for WSOL", () => {
+            before(setNativeMode.bind(this));
+            before(initLendingMarkets.bind(this));
             before(async function () {
                 await initializeVault({ maxYield: {} });
             });
