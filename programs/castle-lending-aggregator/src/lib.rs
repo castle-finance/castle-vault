@@ -66,8 +66,11 @@ pub mod castle_lending_aggregator {
         instructions::rebalance::handler(ctx, proposed_weights)
     }
 
-    pub fn refresh(ctx: Context<Refresh>) -> ProgramResult {
-        instructions::refresh::handler(ctx)
+    pub fn refresh<'info>(
+        ctx: Context<'_, '_, '_, 'info, Refresh<'info>>,
+        use_port_oracle: bool,
+    ) -> ProgramResult {
+        instructions::refresh::handler(ctx, use_port_oracle)
     }
 
     pub fn reconcile_solend(ctx: Context<SolendAccounts>, withdraw_option: u64) -> ProgramResult {

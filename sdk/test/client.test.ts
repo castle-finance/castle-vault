@@ -40,6 +40,7 @@ describe("VaultClient", () => {
 
     it("loads devnet sol vault", async () => {
         const vaultId = new PublicKey(
+            //"3PUZJamT1LAwgkjT58PHoY8izM1Y8jRz2A1UwiV4JTkk"
             "FEthCwaa3sGvPTTYV7ZSuYKTm4gaHPGtju4xFxDqv5gJ"
         );
         vaultClient = await VaultClient.load(

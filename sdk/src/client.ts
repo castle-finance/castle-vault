@@ -166,7 +166,7 @@ export class VaultClient {
             referralFeeOwner
         );
 
-        await program.rpc.initialize(
+        const txSig = await program.rpc.initialize(
             {
                 authority: authorityBump,
                 reserve: reserveBump,
@@ -228,7 +228,17 @@ export class VaultClient {
     }
 
     private getRefreshIx(): TransactionInstruction {
-        return this.program.instruction.refresh({
+        // Port does not accept an oracle as input if the reserve is denominated
+        // in the same token as the market quote currency (USDC).
+        // We account for this by passing in an argument that indicates whether
+        // or not to use the given oracle value.
+        let usePortOracle = true;
+        let portOracle = this.port.accounts.oracle;
+        if (portOracle == null) {
+            usePortOracle = false;
+            portOracle = Keypair.generate().publicKey;
+        }
+        return this.program.instruction.refresh(usePortOracle, {
             accounts: {
                 vault: this.vaultId,
                 vaultAuthority: this.vaultState.vaultAuthority,
@@ -243,7 +253,7 @@ export class VaultClient {
                 solendSwitchboard: this.solend.accounts.switchboardFeed,
                 portProgram: this.port.accounts.program,
                 portReserve: this.port.accounts.reserve,
-                portOracle: this.port.accounts.oracle,
+                portOracle: portOracle,
                 jetProgram: this.jet.accounts.program,
                 jetMarket: this.jet.accounts.market,
                 jetMarketAuthority: this.jet.accounts.marketAuthority,
@@ -251,11 +261,21 @@ export class VaultClient {
                 jetFeeNoteVault: this.jet.accounts.feeNoteVault,
                 jetDepositNoteMint: this.jet.accounts.depositNoteMint,
                 jetPyth: this.jet.accounts.pythPrice,
-                feeReceiver: this.vaultState.fees.feeReceiver,
-                referralFeeReceiver: this.vaultState.fees.referralFeeReceiver,
                 tokenProgram: TOKEN_PROGRAM_ID,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
+            remainingAccounts: [
+                {
+                    isSigner: false,
+                    isWritable: true,
+                    pubkey: this.vaultState.fees.feeReceiver,
+                },
+                {
+                    isSigner: false,
+                    isWritable: true,
+                    pubkey: this.vaultState.fees.referralFeeReceiver,
+                },
+            ],
         });
     }
 
@@ -456,8 +476,6 @@ export class VaultClient {
         const vaultReserveAmount = new Big(
             vaultReserveTokenAccountInfo.amount.toString()
         ).round(0, Big.roundDown);
-
-        // TODO sdk input should be in lp tokens, not reserve tokens
 
         // Convert from reserve tokens to LP tokens
         // NOTE: this rate is slightly lower than what it will be in the transaction
