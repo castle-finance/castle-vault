@@ -267,6 +267,11 @@ pub fn handler<'info>(
             primary_fees_converted
         );
 
+        if ctx.remaining_accounts.len() < 2 {
+            msg!("Not enough accounts passed in to collect fees");
+            return Err(ErrorCode::InsufficientAccounts.into());
+        }
+
         let primary_fee_receiver = &ctx.remaining_accounts[0];
         if primary_fee_receiver.key() != ctx.accounts.vault.fees.fee_receiver {
             msg!("Fee receivers do not match");
