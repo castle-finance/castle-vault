@@ -1,5 +1,8 @@
+#![allow(dead_code)]
+#![allow(unused_imports)]
+
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
+use anchor_spl::token::{Mint, MintTo, Token, TokenAccount};
 use port_anchor_adaptor::{port_lending_id, PortReserve};
 
 use crate::adapters::{solend, SolendReserve};
@@ -155,6 +158,7 @@ impl<'info> Refresh<'info> {
     }
 
     /// CpiContext for collecting fees by minting new vault lp tokens
+    #[cfg(feature = "fees")]
     fn mint_to_context(
         &self,
         fee_receiver: &AccountInfo<'info>,
