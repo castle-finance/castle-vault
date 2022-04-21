@@ -76,16 +76,25 @@ describe("VaultClient", () => {
         port = vaultClient.getPort();
 
         console.log("Jet");
+        console.log(
+            (await vaultClient.getVaultJetLpTokenAccountValue()).toString()
+        );
         console.log((await jet.getApy()).toString());
         console.log((await jet.getBorrowedAmount()).toString());
         console.log((await jet.getDepositedAmount()).toString());
 
         console.log("Solend");
+        console.log(
+            (await vaultClient.getVaultSolendLpTokenAccountValue()).toString()
+        );
         console.log((await solend.getApy()).toString());
         console.log((await solend.getBorrowedAmount()).toString());
         console.log((await solend.getDepositedAmount()).toString());
 
         console.log("Port");
+        console.log(
+            (await vaultClient.getVaultPortLpTokenAccountValue()).toString()
+        );
         console.log((await port.getApy()).toString());
         console.log((await port.getBorrowedAmount()).toString());
         console.log((await port.getDepositedAmount()).toString());
@@ -122,6 +131,8 @@ describe("VaultClient", () => {
         assert.isNull(result.value.err);
     });
 
+    // TODO sleep to avoid AlreadyProcessed error
+
     it("withdraws", async () => {
         const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
         console.log("start value: ", startUserValue.toNumber());
@@ -129,10 +140,19 @@ describe("VaultClient", () => {
         const exchangeRate = await vaultClient.getLpExchangeRate();
         const withdrawAmount = new Big(depositAmount)
             .div(exchangeRate)
+            .round(0, Big.roundDown)
             .toNumber();
 
-        const sigs = await vaultClient.withdraw(wallet, withdrawAmount);
-        await connection.confirmTransaction(sigs[sigs.length - 1], "finalized");
+        try {
+            const sigs = await vaultClient.withdraw(wallet, withdrawAmount);
+            await connection.confirmTransaction(
+                sigs[sigs.length - 1],
+                "finalized"
+            );
+        } catch (e) {
+            console.log(e);
+            throw e;
+        }
 
         const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
         console.log("end value: ", endUserValue.toNumber());
