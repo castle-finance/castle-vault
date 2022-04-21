@@ -465,7 +465,12 @@ export type CastleLendingAggregator = {
                     isSigner: false;
                 }
             ];
-            args: [];
+            args: [
+                {
+                    name: "usePortOracle";
+                    type: "bool";
+                }
+            ];
         },
         {
             name: "reconcileSolend";
@@ -1062,6 +1067,16 @@ export type CastleLendingAggregator = {
             code: 310;
             name: "DepositCapError";
             msg: "Vault size limit is reached";
+        },
+        {
+            code: 311;
+            name: "InvalidAccount";
+            msg: "Account passed in is not valid";
+        },
+        {
+            code: 312;
+            name: "InsufficientAccounts";
+            msg: "Insufficient number of accounts for a given operation";
         }
     ];
 };
@@ -1533,7 +1548,12 @@ export const IDL: CastleLendingAggregator = {
                     isSigner: false,
                 },
             ],
-            args: [],
+            args: [
+                {
+                    name: "usePortOracle",
+                    type: "bool",
+                },
+            ],
         },
         {
             name: "reconcileSolend",
@@ -2130,6 +2150,16 @@ export const IDL: CastleLendingAggregator = {
             code: 310,
             name: "DepositCapError",
             msg: "Vault size limit is reached",
+        },
+        {
+            code: 311,
+            name: "InvalidAccount",
+            msg: "Account passed in is not valid",
+        },
+        {
+            code: 312,
+            name: "InsufficientAccounts",
+            msg: "Insufficient number of accounts for a given operation",
         },
     ],
 };

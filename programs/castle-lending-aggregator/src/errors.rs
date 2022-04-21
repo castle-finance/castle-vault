@@ -37,4 +37,7 @@ pub enum ErrorCode {
 
     #[msg("Account passed in is not valid")]
     InvalidAccount,
+
+    #[msg("Insufficient number of accounts for a given operation")]
+    InsufficientAccounts,
 }

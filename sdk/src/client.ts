@@ -228,7 +228,17 @@ export class VaultClient {
     }
 
     private getRefreshIx(): TransactionInstruction {
-        return this.program.instruction.refresh({
+        // Port does not accept an oracle as input if the reserve is denominated
+        // in the same token as the market quote currency (USDC).
+        // We account for this by passing in an argument that indicates whether
+        // or not to use the given oracle value.
+        let usePortOracle = true;
+        let portOracle = this.port.accounts.oracle;
+        if (portOracle == null) {
+            usePortOracle = false;
+            portOracle = Keypair.generate().publicKey;
+        }
+        return this.program.instruction.refresh(usePortOracle, {
             accounts: {
                 vault: this.vaultId,
                 vaultAuthority: this.vaultState.vaultAuthority,
@@ -243,7 +253,7 @@ export class VaultClient {
                 solendSwitchboard: this.solend.accounts.switchboardFeed,
                 portProgram: this.port.accounts.program,
                 portReserve: this.port.accounts.reserve,
-                portOracle: this.port.accounts.oracle,
+                portOracle: portOracle,
                 jetProgram: this.jet.accounts.program,
                 jetMarket: this.jet.accounts.market,
                 jetMarketAuthority: this.jet.accounts.marketAuthority,
