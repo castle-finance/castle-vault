@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use solana_maths::{Rate, TryMul};
-use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 // TODO rebalance module should not be dependent on specific names of assets
@@ -47,7 +46,11 @@ impl_provider_index!(Assets, LendingMarketAsset);
 
 impl Assets {
     pub fn len(&self) -> usize {
-        Provider::iter().len()
+        3_usize
+    }
+
+    pub fn is_empty(&self) -> bool {
+        false
     }
 }
 

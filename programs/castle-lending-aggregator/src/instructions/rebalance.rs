@@ -65,7 +65,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
         port: LendingMarketAsset(Box::new(
             ctx.accounts.port_reserve.as_ref().deref().deref().clone(),
         )),
-        jet: LendingMarketAsset(Box::new(ctx.accounts.jet_reserve.load()?.clone())),
+        jet: LendingMarketAsset(Box::new(*ctx.accounts.jet_reserve.load()?)),
     };
 
     // TODO reduce the duplication between the Enum and Struct
