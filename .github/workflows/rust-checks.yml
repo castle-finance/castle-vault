@@ -1,13 +1,15 @@
-name: Continuous integration
+name: Rust Checks
 on:
   push:
-    branches: "dev"
+    branches:
+      - "main"
+      - "dev"
   pull_request:
     branches: "*"
 
 jobs:
   check:
-    name: Check
+    name: Cargo check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -21,7 +23,7 @@ jobs:
           command: check
 
   test:
-    name: Test Suite
+    name: Cargo test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -51,6 +53,7 @@ jobs:
           args: --all -- --check
 
   clippy_check:
+    name: Clippy check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1

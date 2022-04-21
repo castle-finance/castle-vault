@@ -32,7 +32,7 @@ pub trait HasVault {
 #[macro_export]
 macro_rules! impl_has_vault {
     ($($t:ty),+ $(,)?) => ($(
-        impl crate::instructions::reconcile::HasVault for $t {
+        impl $crate::instructions::reconcile::HasVault for $t {
             fn vault(&self) -> &Vault {
                 self.vault.deref()
             }
