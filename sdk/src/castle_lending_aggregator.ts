@@ -1072,6 +1072,11 @@ export type CastleLendingAggregator = {
             code: 311;
             name: "InvalidAccount";
             msg: "Account passed in is not valid";
+        },
+        {
+            code: 312;
+            name: "InsufficientAccounts";
+            msg: "Insufficient number of accounts for a given operation";
         }
     ];
 };
@@ -2150,6 +2155,11 @@ export const IDL: CastleLendingAggregator = {
             code: 311,
             name: "InvalidAccount",
             msg: "Account passed in is not valid",
+        },
+        {
+            code: 312,
+            name: "InsufficientAccounts",
+            msg: "Insufficient number of accounts for a given operation",
         },
     ],
 };
