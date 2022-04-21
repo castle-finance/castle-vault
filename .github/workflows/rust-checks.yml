@@ -4,8 +4,13 @@ on:
     branches:
       - "main"
       - "dev"
+    paths:
+      - "**.rs"
+      - "**.toml"
   pull_request:
     branches: "*"
+    paths:
+      - "**.toml"
 
 jobs:
   check:

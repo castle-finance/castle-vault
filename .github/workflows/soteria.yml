@@ -4,8 +4,12 @@ on:
     branches:
       - "main"
       - "dev"
+    paths:
+      - "**.rs"
   pull_request:
     branches: "*"
+    paths:
+      - "**.rs"
 jobs:
   audit:
     runs-on: ubuntu-latest
