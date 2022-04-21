@@ -159,7 +159,10 @@ export class PortReserveAsset extends Asset {
             (await lpToken.getAccountInfo(address)).amount.toNumber()
         );
 
-        return lpTokenAmount.divide(exchangeRate.getUnchecked()).getRaw();
+        return lpTokenAmount
+            .divide(exchangeRate.getUnchecked())
+            .getRaw()
+            .round(0, Big.roundDown);
     }
 
     /**

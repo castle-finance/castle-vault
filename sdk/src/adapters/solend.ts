@@ -170,7 +170,7 @@ export class SolendReserveAsset extends Asset {
         );
         const exchangeRate = new Big(this.reserve.stats.cTokenExchangeRate);
 
-        return lpTokenAmount.mul(exchangeRate);
+        return lpTokenAmount.mul(exchangeRate).round(0, Big.roundDown);
     }
 
     /**
