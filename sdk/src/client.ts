@@ -230,7 +230,7 @@ export class VaultClient {
     private getRefreshIx(): TransactionInstruction {
         let usePortOracle = true;
         let portOracle = this.port.accounts.oracle;
-        if (portOracle != null) {
+        if (portOracle == null) {
             usePortOracle = false;
             portOracle = Keypair.generate().publicKey;
         }
