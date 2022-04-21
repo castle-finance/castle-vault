@@ -16,9 +16,17 @@ import {
 } from "../src";
 import Big from "big.js";
 
+const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+
 describe("VaultClient", () => {
+    const PROGRAM_ID = new PublicKey(
+        //"Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn"
+        "4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK"
+    );
     const cluster: Cluster = "devnet";
+    //const cluster: Cluster = "mainnet-beta";
     const connection = new Connection(
+        //"https://ssc-dao.genesysgo.net/"
         "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
     );
     const wallet = Wallet.local();
@@ -26,7 +34,7 @@ describe("VaultClient", () => {
         commitment: "confirmed",
     });
 
-    const depositAmount = LAMPORTS_PER_SOL * 1;
+    const depositAmount = LAMPORTS_PER_SOL * 0.1;
 
     let vaultClient: VaultClient;
     let jet: JetReserveAsset;
@@ -41,13 +49,19 @@ describe("VaultClient", () => {
     it("loads devnet sol vault", async () => {
         const vaultId = new PublicKey(
             //"3PUZJamT1LAwgkjT58PHoY8izM1Y8jRz2A1UwiV4JTkk"
-            "FEthCwaa3sGvPTTYV7ZSuYKTm4gaHPGtju4xFxDqv5gJ"
+            //"FEthCwaa3sGvPTTYV7ZSuYKTm4gaHPGtju4xFxDqv5gJ"
+            //"9n6ekjHHgkPB9fVuWHzH6iNuxBxN22hEBryZXYFg6cNk" // old devnet-parity vault
+            //"EDtqJFHksXpdXLDuxgoYpjpxg3LjBpmW4jh3fkz4SX32"
+            //"HKnAJ5wX3w7b52wFr4ZFf7fAtiHS3oaFngnkViXGCusf" // new devnet-parity vault
+            "5zwJzQbw8PzNT2SwkhwrYfriVsLshytWk1UQkkudQv6G" // new devnet-staging vault
         );
         vaultClient = await VaultClient.load(
             provider,
             cluster,
+            //USDC_MINT,
             NATIVE_MINT,
-            vaultId
+            vaultId,
+            PROGRAM_ID
         );
         assert.isNotNull(vaultClient);
 
@@ -116,16 +130,9 @@ describe("VaultClient", () => {
         const withdrawAmount = new Big(depositAmount)
             .div(exchangeRate)
             .toNumber();
-        try {
-            const sigs = await vaultClient.withdraw(wallet, withdrawAmount);
-            await connection.confirmTransaction(
-                sigs[sigs.length - 1],
-                "finalized"
-            );
-        } catch (e) {
-            console.log(e);
-            console.log(Object.keys(e));
-        }
+
+        const sigs = await vaultClient.withdraw(wallet, withdrawAmount);
+        await connection.confirmTransaction(sigs[sigs.length - 1], "finalized");
 
         const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
         console.log("end value: ", endUserValue.toNumber());

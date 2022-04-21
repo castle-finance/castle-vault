@@ -46,19 +46,19 @@ export class VaultClient {
         private vaultState: Vault,
         private solend: SolendReserveAsset,
         private port: PortReserveAsset,
-        private jet: JetReserveAsset
+        private jet: JetReserveAsset,
+        private feesEnabled: boolean = false
     ) {}
-
-    // TODO add function to change wallet
 
     static async load(
         provider: anchor.Provider,
         cluster: Cluster,
         reserveMint: PublicKey,
-        vaultId: PublicKey
+        vaultId: PublicKey,
+        program_id: PublicKey = PROGRAM_ID
     ): Promise<VaultClient> {
         const program = (await anchor.Program.at(
-            PROGRAM_ID,
+            program_id,
             provider
         )) as anchor.Program<CastleLendingAggregator>;
         const vaultState = await program.account.vault.fetch(vaultId);
@@ -215,6 +215,11 @@ export class VaultClient {
                 ],
             }
         );
+        console.log(txSig);
+        await program.provider.connection.confirmTransaction(
+            txSig,
+            "finalized"
+        );
         const vaultState = await program.account.vault.fetch(vaultId.publicKey);
 
         return new VaultClient(
@@ -238,6 +243,22 @@ export class VaultClient {
             usePortOracle = false;
             portOracle = Keypair.generate().publicKey;
         }
+
+        const feeAccounts = this.feesEnabled
+            ? [
+                  {
+                      isSigner: false,
+                      isWritable: true,
+                      pubkey: this.vaultState.fees.feeReceiver,
+                  },
+                  {
+                      isSigner: false,
+                      isWritable: true,
+                      pubkey: this.vaultState.fees.referralFeeReceiver,
+                  },
+              ]
+            : [];
+
         return this.program.instruction.refresh(usePortOracle, {
             accounts: {
                 vault: this.vaultId,
@@ -264,18 +285,7 @@ export class VaultClient {
                 tokenProgram: TOKEN_PROGRAM_ID,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
-            remainingAccounts: [
-                {
-                    isSigner: false,
-                    isWritable: true,
-                    pubkey: this.vaultState.fees.feeReceiver,
-                },
-                {
-                    isSigner: false,
-                    isWritable: true,
-                    pubkey: this.vaultState.fees.referralFeeReceiver,
-                },
-            ],
+            remainingAccounts: feeAccounts,
         });
     }
 

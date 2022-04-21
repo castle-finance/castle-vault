@@ -9,7 +9,7 @@ import {
     PROGRAM_ID,
     SolendReserveAsset,
     VaultClient,
-} from "vault-sdk";
+} from "../sdk/src";
 
 const main = async () => {
     const cluster: Cluster = "devnet";
@@ -22,6 +22,7 @@ const main = async () => {
     });
     const program = (await Program.at(
         PROGRAM_ID,
+        //new PublicKey("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn"),
         provider
     )) as Program<CastleLendingAggregator>;
 
@@ -43,6 +44,7 @@ const main = async () => {
         port,
         jet,
         { maxYield: {} },
+        { calculator: {} },
         wallet.publicKey,
         {
             feeCarryBps: 0,
@@ -54,7 +56,6 @@ const main = async () => {
         }
     );
     console.log(vaultClient.vaultId);
-    console.log(vaultClient.vaultState);
 };
 
 main();
