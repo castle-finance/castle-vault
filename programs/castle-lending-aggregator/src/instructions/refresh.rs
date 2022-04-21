@@ -125,7 +125,13 @@ impl<'info> Refresh<'info> {
     /// CpiContext for refreshing port reserve
     pub fn port_refresh_reserve_context(
         &self,
+        use_oracle: bool,
     ) -> CpiContext<'_, '_, '_, 'info, port_anchor_adaptor::RefreshReserve<'info>> {
+        let oracle_vec = if use_oracle {
+            vec![self.port_oracle.clone()]
+        } else {
+            vec![]
+        };
         CpiContext::new(
             self.port_program.clone(),
             port_anchor_adaptor::RefreshReserve {
@@ -133,7 +139,7 @@ impl<'info> Refresh<'info> {
                 clock: self.clock.to_account_info(),
             },
         )
-        .with_remaining_accounts(vec![self.port_oracle.clone()])
+        .with_remaining_accounts(oracle_vec)
     }
 
     /// CpiContext for refreshing jet reserve
@@ -172,13 +178,18 @@ impl<'info> Refresh<'info> {
 
 /// Refreshes the reserves of downstream lending markets,
 /// updates the vault total value, and collects fees
-pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, Refresh<'info>>) -> ProgramResult {
+pub fn handler<'info>(
+    ctx: Context<'_, '_, '_, 'info, Refresh<'info>>,
+    use_port_oracle: bool,
+) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Refreshing vault");
 
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
-    port_anchor_adaptor::refresh_port_reserve(ctx.accounts.port_refresh_reserve_context())?;
+    port_anchor_adaptor::refresh_port_reserve(
+        ctx.accounts.port_refresh_reserve_context(use_port_oracle),
+    )?;
     jet::cpi::refresh_reserve(ctx.accounts.jet_refresh_reserve_context())?;
 
     // Calculate value of solend position

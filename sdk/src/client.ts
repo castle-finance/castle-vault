@@ -228,7 +228,13 @@ export class VaultClient {
     }
 
     private getRefreshIx(): TransactionInstruction {
-        return this.program.instruction.refresh({
+        let usePortOracle = true;
+        let portOracle = this.port.accounts.oracle;
+        if (portOracle != null) {
+            usePortOracle = false;
+            portOracle = Keypair.generate().publicKey;
+        }
+        return this.program.instruction.refresh(usePortOracle, {
             accounts: {
                 vault: this.vaultId,
                 vaultAuthority: this.vaultState.vaultAuthority,
