@@ -22,7 +22,7 @@ import {
 import * as anchor from "@project-serum/anchor";
 import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 
-import { PROGRAM_ID } from ".";
+import { CLUSTER_MAP, PROGRAM_IDS } from ".";
 import { CastleLendingAggregator } from "./castle_lending_aggregator";
 import {
     PortReserveAsset,
@@ -37,6 +37,7 @@ import {
     ProposedWeightsBps,
     RebalanceMode,
     VaultFees,
+    Envs,
 } from "./types";
 
 export class VaultClient {
@@ -52,16 +53,17 @@ export class VaultClient {
 
     static async load(
         provider: anchor.Provider,
-        cluster: Cluster,
         reserveMint: PublicKey,
         vaultId: PublicKey,
-        program_id: PublicKey = PROGRAM_ID
+        env: Envs = Envs.mainnet
     ): Promise<VaultClient> {
         const program = (await anchor.Program.at(
-            program_id,
+            PROGRAM_IDS[env],
             provider
         )) as anchor.Program<CastleLendingAggregator>;
         const vaultState = await program.account.vault.fetch(vaultId);
+
+        const cluster = CLUSTER_MAP[env];
 
         const solend = await SolendReserveAsset.load(
             provider,

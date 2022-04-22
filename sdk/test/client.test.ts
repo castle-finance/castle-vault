@@ -9,6 +9,7 @@ import { NATIVE_MINT } from "@solana/spl-token";
 import { Wallet, Provider } from "@project-serum/anchor";
 
 import {
+    Envs,
     JetReserveAsset,
     PortReserveAsset,
     SolendReserveAsset,
@@ -19,12 +20,6 @@ import Big from "big.js";
 const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 describe("VaultClient", () => {
-    const PROGRAM_ID = new PublicKey(
-        "Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn"
-        //"4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK"
-    );
-    //const cluster: Cluster = "devnet";
-    const cluster: Cluster = "mainnet-beta";
     const connection = new Connection(
         "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
         //"https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
@@ -58,11 +53,10 @@ describe("VaultClient", () => {
         );
         vaultClient = await VaultClient.load(
             provider,
-            cluster,
             USDC_MINT,
             //NATIVE_MINT,
             vaultId,
-            PROGRAM_ID
+            Envs.mainnet
         );
         assert.isNotNull(vaultClient);
 
