@@ -871,30 +871,6 @@ export class VaultClient {
         }
     }
 
-    getLpTokenMint(): PublicKey {
-        return this.vaultState.lpTokenMint;
-    }
-
-    getDepositCap(): Big {
-        return new Big(this.vaultState.depositCap.toString());
-    }
-
-    getVaultReserveTokenAccount(): PublicKey {
-        return this.vaultState.vaultReserveToken;
-    }
-
-    getVaultSolendLpTokenAccount(): PublicKey {
-        return this.vaultState.vaultSolendLpToken;
-    }
-
-    getVaultPortLpTokenAccount(): PublicKey {
-        return this.vaultState.vaultPortLpToken;
-    }
-
-    getVaultJetLpTokenAccount(): PublicKey {
-        return this.vaultState.vaultJetLpToken;
-    }
-
     async getVaultReserveTokenAccountValue(): Promise<Big> {
         return Big(
             (
@@ -1015,6 +991,30 @@ export class VaultClient {
                 )
             ).toNumber()
         );
+    }
+
+    getLpTokenMint(): PublicKey {
+        return this.vaultState.lpTokenMint;
+    }
+
+    getDepositCap(): Big {
+        return new Big(this.vaultState.depositCap.toString());
+    }
+
+    getVaultReserveTokenAccount(): PublicKey {
+        return this.vaultState.vaultReserveToken;
+    }
+
+    getVaultSolendLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultSolendLpToken;
+    }
+
+    getVaultPortLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultPortLpToken;
+    }
+
+    getVaultJetLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultJetLpToken;
     }
 
     getStrategyType(): StrategyType {
