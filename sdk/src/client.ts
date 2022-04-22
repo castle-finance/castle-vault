@@ -43,7 +43,7 @@ export class VaultClient {
     private constructor(
         public program: anchor.Program<CastleLendingAggregator>,
         public vaultId: PublicKey,
-        private vaultState: Vault,
+        public vaultState: Vault,
         private solend: SolendReserveAsset,
         private port: PortReserveAsset,
         private jet: JetReserveAsset
@@ -57,6 +57,7 @@ export class VaultClient {
         reserveMint: PublicKey,
         vaultId: PublicKey
     ): Promise<VaultClient> {
+        console.log("yoooooo", vaultId.toBase58());
         const program = (await anchor.Program.at(
             PROGRAM_ID,
             provider
@@ -228,6 +229,7 @@ export class VaultClient {
     }
 
     getRefreshIx(): TransactionInstruction {
+        console.log("where it at!", this);
         return this.program.instruction.refresh({
             accounts: {
                 vault: this.vaultId,
@@ -302,21 +304,34 @@ export class VaultClient {
         };
     }
 
-    async depositIxs(
-        wallet: anchor.Wallet,
-        amount: number,
-        userReserveTokenAccount: PublicKey
-    ): Promise<{
+    /**
+     *
+     * @param reserveTokenOwner DAOs wallet
+     * @param amount amount
+     * @param userReserveTokenAccount DAOs reserve token account
+     * @param lpTokenAccountFeePayer the proposal creator that pays for the LP ATA creation
+     * @returns
+     */
+    async realmsDepositIxs({
+        reserveTokenOwner,
+        amount,
+        userReserveTokenAccount,
+        lpTokenAccountFeePayer,
+    }: {
+        reserveTokenOwner: PublicKey;
+        amount: number;
+        userReserveTokenAccount: PublicKey;
+        lpTokenAccountFeePayer: PublicKey;
+    }): Promise<{
+        createLpAcctIx: TransactionInstruction;
         refreshIx: TransactionInstruction;
         depositIxs: TransactionInstruction[];
         wSolSigner: Keypair;
     }> {
-        // const createLpAcctTx = new Transaction();
-        // const depositTx = new Transaction();
-
         // instructions
-        let depositIx: TransactionInstruction | undefined = undefined;
+        let createLpAcctIx: TransactionInstruction | undefined = undefined;
         let refreshIx: TransactionInstruction | undefined = undefined;
+        let depositIx: TransactionInstruction | undefined = undefined;
 
         // optional wSOL ixs and signer
         let wSolCreateIx: TransactionInstruction | undefined;
@@ -324,38 +339,42 @@ export class VaultClient {
         let wSolCloseIx: TransactionInstruction | undefined;
         let wsolKeypair: Keypair | undefined;
 
+        // If the reserve token mint is SOL, create a temporary wSOL account
         let wrappedSolIxResponse: WrapSolIxResponse;
-        if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
-            wrappedSolIxResponse = await this.getWrappedSolIxs(wallet, amount);
-            // depositTx.add(...wrappedSolIxResponse.openIxs);
-            userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
-            // // //
-            wSolCreateIx = wrappedSolIxResponse.openIxs[0];
-            wSolInitIx = wrappedSolIxResponse.openIxs[1];
-            wSolCloseIx = wrappedSolIxResponse.closeIx;
-            wsolKeypair = wrappedSolIxResponse.keyPair;
-        }
-
-        // // Create users LP token account if it does not exist
-        const userLpTokenAccount = await this.getUserLpTokenAccount(
-            wallet.publicKey
-        );
-        // const userLpTokenAccountInfo =
-        //     await this.program.provider.connection.getAccountInfo(
-        //         userLpTokenAccount
-        //     );
-        // if (userLpTokenAccountInfo == null) {
-        //     createLpAcctTx.add(
-        //         createAta(
-        //             wallet,
-        //             this.vaultState.lpTokenMint,
-        //             userLpTokenAccount
-        //         )
-        //     );
+        // if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
+        //     wrappedSolIxResponse = await this.getWrappedSolIxs(wallet, amount);
+        //     // depositTx.add(...wrappedSolIxResponse.openIxs);
+        //     userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
+        //     // // //
+        //     wSolCreateIx = wrappedSolIxResponse.openIxs[0];
+        //     wSolInitIx = wrappedSolIxResponse.openIxs[1];
+        //     wSolCloseIx = wrappedSolIxResponse.closeIx;
+        //     wsolKeypair = wrappedSolIxResponse.keyPair;
         // }
 
-        refreshIx = this.getRefreshIx();
+        // Create users LP token account if it does not exist
 
+        const userLpTokenAccount = await this.getUserLpTokenAccount(
+            reserveTokenOwner // when ME, it
+        );
+        const userLpTokenAccountInfo =
+            await this.program.provider.connection.getAccountInfo(
+                userLpTokenAccount
+            );
+        if (userLpTokenAccountInfo == null) {
+            createLpAcctIx = createAta(
+                reserveTokenOwner,
+                this.vaultState.lpTokenMint,
+                userLpTokenAccount,
+                // proposal creator pays for LP account creation
+                lpTokenAccountFeePayer
+            );
+        }
+
+        // Get the refresh instruction
+        // refreshIx = this.getRefreshIx();
+
+        // Get the deposit instruction
         depositIx = this.program.instruction.deposit(new anchor.BN(amount), {
             accounts: {
                 vault: this.vaultId,
@@ -364,7 +383,10 @@ export class VaultClient {
                 lpTokenMint: this.vaultState.lpTokenMint,
                 userReserveToken: userReserveTokenAccount,
                 userLpToken: userLpTokenAccount,
-                userAuthority: wallet.publicKey,
+                // userAuthority: new PublicKey(
+                //     "5qH53uTj3dNs6gcYYbynNdn17GF7PWKALtWf8UMiyvTH"
+                // ),
+                userAuthority: reserveTokenOwner,
                 tokenProgram: TOKEN_PROGRAM_ID,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
@@ -372,17 +394,18 @@ export class VaultClient {
 
         // Bundle all defined instructions
         const depositIxs = [
-            wSolCreateIx,
-            wSolInitIx,
+            createLpAcctIx,
+            // wSolCreateIx,
+            // wSolInitIx,
             // refreshIx,
             depositIx,
-            wSolCloseIx,
+            // wSolCloseIx,
         ].filter((ix) => ix) as TransactionInstruction[];
 
         // Grab the signer
         const wSolSigner = wsolKeypair || undefined;
 
-        return { refreshIx, depositIxs, wSolSigner };
+        return { createLpAcctIx, refreshIx, depositIxs, wSolSigner };
     }
 
     /**
@@ -473,7 +496,7 @@ export class VaultClient {
         if (userLpTokenAccountInfo == null) {
             createLpAcctTx = new Transaction().add(
                 createAta(
-                    wallet,
+                    wallet.publicKey,
                     this.vaultState.lpTokenMint,
                     userLpTokenAccount
                 )
@@ -603,7 +626,7 @@ export class VaultClient {
             if (userReserveTokenAccountInfo == null) {
                 withdrawTx.add(
                     createAta(
-                        wallet,
+                        wallet.publicKey,
                         this.vaultState.reserveTokenMint,
                         userReserveTokenAccount
                     )
@@ -966,6 +989,12 @@ export class VaultClient {
             this.getVaultJetLpTokenAccount()
         );
     }
+
+    /**
+     * Calculates the ATA given the user's address and vault mint
+     * @param address Users public key
+     * @returns Users reserve ATA given vault reserve mint
+     */
     async getUserReserveTokenAccount(address: PublicKey): Promise<PublicKey> {
         return await Token.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -990,7 +1019,8 @@ export class VaultClient {
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             this.vaultState.lpTokenMint,
-            address
+            address,
+            true
         );
     }
 
@@ -1081,18 +1111,22 @@ export class VaultClient {
 }
 
 const createAta = (
-    wallet: anchor.Wallet,
+    pubkey: PublicKey,
     mint: PublicKey,
-    address: PublicKey
+    address: PublicKey,
+    feePayer?: PublicKey
 ): TransactionInstruction => {
     return Token.createAssociatedTokenAccountInstruction(
         ASSOCIATED_TOKEN_PROGRAM_ID,
         TOKEN_PROGRAM_ID,
         mint,
         address,
-        wallet.publicKey,
-        wallet.publicKey
+        pubkey, // owner
+        feePayer ? feePayer : pubkey // payer
     );
+    // receiverAddress, // ata
+    // governedTokenAccount.governance.pubkey, // owner of token account
+    // wallet.publicKey!; // fee payer
 };
 
 interface WrapSolIxResponse {
