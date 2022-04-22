@@ -17,8 +17,6 @@ import {
 } from "../src";
 import Big from "big.js";
 
-const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-
 describe("VaultClient", () => {
     const connection = new Connection(
         "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
@@ -51,13 +49,7 @@ describe("VaultClient", () => {
             //"5zwJzQbw8PzNT2SwkhwrYfriVsLshytWk1UQkkudQv6G" // new devnet-staging vault
             //"5VsCBvW7CswQfYe5rQdP9W5tSWb2rEZBQZ2C8wU7qrnL" // new mainnet vault
         );
-        vaultClient = await VaultClient.load(
-            provider,
-            USDC_MINT,
-            //NATIVE_MINT,
-            vaultId,
-            Envs.mainnet
-        );
+        vaultClient = await VaultClient.load(provider, vaultId, Envs.mainnet);
         assert.isNotNull(vaultClient);
 
         console.log(

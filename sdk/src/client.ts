@@ -53,7 +53,6 @@ export class VaultClient {
 
     static async load(
         provider: anchor.Provider,
-        reserveMint: PublicKey,
         vaultId: PublicKey,
         env: Envs = Envs.mainnet
     ): Promise<VaultClient> {
@@ -64,6 +63,7 @@ export class VaultClient {
         const vaultState = await program.account.vault.fetch(vaultId);
 
         const cluster = CLUSTER_MAP[env];
+        const reserveMint = vaultState.reserveTokenMint;
 
         const solend = await SolendReserveAsset.load(
             provider,
