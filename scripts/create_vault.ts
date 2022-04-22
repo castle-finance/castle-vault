@@ -1,4 +1,4 @@
-import { Cluster, clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
+import { Cluster, Connection, PublicKey } from "@solana/web3.js";
 import { Program, Provider, Wallet } from "@project-serum/anchor";
 import { NATIVE_MINT } from "@solana/spl-token";
 
@@ -9,21 +9,27 @@ import {
     PROGRAM_ID,
     SolendReserveAsset,
     VaultClient,
-} from "vault-sdk";
+} from "../sdk/src";
 
 const main = async () => {
-    const cluster: Cluster = "devnet";
-    const connection = new Connection(clusterApiUrl(cluster));
+    const cluster: Cluster = "mainnet-beta";
+    const connection = new Connection(
+        "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
+    );
     const wallet = Wallet.local();
     const provider = new Provider(connection, wallet, {
         commitment: "confirmed",
     });
     const program = (await Program.at(
-        PROGRAM_ID,
+        //PROGRAM_ID,
+        new PublicKey("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn"),
         provider
     )) as Program<CastleLendingAggregator>;
 
-    const reserveMint = NATIVE_MINT;
+    //const reserveMint = NATIVE_MINT;
+    const reserveMint = new PublicKey(
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    );
 
     const solend = await SolendReserveAsset.load(
         provider,
@@ -41,6 +47,7 @@ const main = async () => {
         port,
         jet,
         { maxYield: {} },
+        { calculator: {} },
         wallet.publicKey,
         {
             feeCarryBps: 0,
@@ -51,11 +58,7 @@ const main = async () => {
             ),
         }
     );
-    console.log(vaultClient.vaultId);
-
-    //const vaultId = new PublicKey("81krfC8ptDbjwY5bkur1SqHYKLPxGQLYBQEUv5zhojUW");
-    //const vaultClient = await VaultClient.load(provider, cluster, reserveMint, vaultId);
-    console.log(vaultClient.vaultState);
+    console.log(vaultClient.vaultId.toString());
 };
 
 main();

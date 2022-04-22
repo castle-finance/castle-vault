@@ -187,12 +187,25 @@ export class JetReserveAsset extends Asset {
         const lpTokenAccountInfo = await lpToken.getAccountInfo(address);
         const lpTokenAmount = new Big(lpTokenAccountInfo.amount.toString());
 
-        return exchangeRate.mul(lpTokenAmount);
+        return exchangeRate.mul(lpTokenAmount).round(0, Big.roundDown);
     }
 
     async getApy(): Promise<Big> {
         await this.reserve.refresh();
         return new Big(this.reserve.data.depositApy);
+    }
+
+    async getDepositedAmount(): Promise<Big> {
+        await this.reserve.refresh();
+        return new Big(this.reserve.data.marketSize.lamports.toString());
+    }
+
+    async getBorrowedAmount(): Promise<Big> {
+        await this.reserve.refresh();
+        const borrowed = this.reserve.data.marketSize.sub(
+            this.reserve.data.availableLiquidity
+        );
+        return new Big(borrowed.lamports.toString());
     }
 }
 

@@ -4,6 +4,8 @@ use anchor_lang::prelude::*;
 
 use crate::{errors::ErrorCode, rebalance::assets::Provider, state::Vault};
 
+const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 100;
+
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?
 pub trait LendingMarket {
@@ -30,7 +32,7 @@ pub trait HasVault {
 #[macro_export]
 macro_rules! impl_has_vault {
     ($($t:ty),+ $(,)?) => ($(
-        impl crate::instructions::reconcile::HasVault for $t {
+        impl $crate::instructions::reconcile::HasVault for $t {
             fn vault(&self) -> &Vault {
                 self.vault.deref()
             }
@@ -64,7 +66,7 @@ pub fn handler<T: LendingMarket + HasVault>(
 
             // Make sure that rebalance was called recently
             let clock = Clock::get()?;
-            if allocation.last_update.slots_elapsed(clock.slot)? > 10 {
+            if allocation.last_update.slots_elapsed(clock.slot)? > MAX_SLOTS_SINCE_ALLOC_UPDATE {
                 return Err(ErrorCode::AllocationIsNotUpdated.into());
             }
 
@@ -76,6 +78,7 @@ pub fn handler<T: LendingMarket + HasVault>(
 
                     #[cfg(feature = "debug")]
                     msg!("Depositing {}", tokens_to_deposit_checked);
+
                     ctx.accounts.deposit(tokens_to_deposit_checked)?;
                 }
                 None => {
@@ -100,7 +103,7 @@ pub fn handler<T: LendingMarket + HasVault>(
         _ => {
             // TODO check that tx is signed by owner OR there is a withdraw tx later with the withdraw_option <= withdraw_amount
 
-            let tokens_to_redeem = ctx.accounts.convert_amount_lp_to_reserve(withdraw_option)?;
+            let tokens_to_redeem = ctx.accounts.convert_amount_reserve_to_lp(withdraw_option)?;
 
             #[cfg(feature = "debug")]
             msg!("Redeeming {}", tokens_to_redeem);

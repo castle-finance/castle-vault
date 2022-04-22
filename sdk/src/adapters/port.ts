@@ -159,7 +159,10 @@ export class PortReserveAsset extends Asset {
             (await lpToken.getAccountInfo(address)).amount.toNumber()
         );
 
-        return lpTokenAmount.divide(exchangeRate.getUnchecked()).getRaw();
+        return lpTokenAmount
+            .divide(exchangeRate.getUnchecked())
+            .getRaw()
+            .round(0, Big.roundDown);
     }
 
     /**
@@ -175,6 +178,22 @@ export class PortReserveAsset extends Asset {
         const apy = Math.expm1(apr.toNumber());
 
         return new Big(apy);
+    }
+
+    async getBorrowedAmount(): Promise<Big> {
+        const reserve = await this.client.getReserve(this.accounts.reserve);
+        const borrowed = reserve.getBorrowedAsset();
+        // Need to round here because the SDK returns a non-int value
+        // and retaining that value might cause problems for the fn caller
+        return borrowed.getRaw().round();
+    }
+
+    async getDepositedAmount(): Promise<Big> {
+        const reserve = await this.client.getReserve(this.accounts.reserve);
+        const total = reserve.getTotalAsset();
+        // Need to round here because the SDK returns a non-int value
+        // and retaining that value might cause problems for the fn caller
+        return total.getRaw().round();
     }
 }
 

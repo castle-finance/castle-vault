@@ -173,7 +173,7 @@ impl ReserveAccessor for Reserve {
         &self,
         allocation: u64,
     ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
-        let mut reserve = Box::new(self.clone());
+        let mut reserve = Box::new(*self);
         // We only care about the token amount here
         reserve.deposit(allocation, 0);
 

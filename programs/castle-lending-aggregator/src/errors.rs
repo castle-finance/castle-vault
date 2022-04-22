@@ -34,4 +34,10 @@ pub enum ErrorCode {
 
     #[msg("Vault size limit is reached")]
     DepositCapError,
+
+    #[msg("Account passed in is not valid")]
+    InvalidAccount,
+
+    #[msg("Insufficient number of accounts for a given operation")]
+    InsufficientAccounts,
 }
