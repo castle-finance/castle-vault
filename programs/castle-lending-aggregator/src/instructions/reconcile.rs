@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 
 use crate::{errors::ErrorCode, rebalance::assets::Provider, state::Vault};
 
-const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 20;
+const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 100;
 
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?
@@ -103,7 +103,7 @@ pub fn handler<T: LendingMarket + HasVault>(
         _ => {
             // TODO check that tx is signed by owner OR there is a withdraw tx later with the withdraw_option <= withdraw_amount
 
-            let tokens_to_redeem = ctx.accounts.convert_amount_lp_to_reserve(withdraw_option)?;
+            let tokens_to_redeem = ctx.accounts.convert_amount_reserve_to_lp(withdraw_option)?;
 
             #[cfg(feature = "debug")]
             msg!("Redeeming {}", tokens_to_redeem);
