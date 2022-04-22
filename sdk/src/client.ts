@@ -1017,7 +1017,13 @@ export class VaultClient {
         );
     }
 
-    // NOTE: These should really only be used for testing
+    getStrategyType(): StrategyType {
+        return this.vaultState.strategyType;
+    }
+
+    getRebalanceMode(): RebalanceMode {
+        return this.vaultState.rebalanceMode;
+    }
 
     getSolend(): SolendReserveAsset {
         return this.solend;
