@@ -12,21 +12,24 @@ import {
 } from "../sdk/src";
 
 const main = async () => {
-    const cluster: Cluster = "devnet";
+    const cluster: Cluster = "mainnet-beta";
     const connection = new Connection(
-        "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+        "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
     );
     const wallet = Wallet.local();
     const provider = new Provider(connection, wallet, {
         commitment: "confirmed",
     });
     const program = (await Program.at(
-        PROGRAM_ID,
-        //new PublicKey("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn"),
+        //PROGRAM_ID,
+        new PublicKey("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn"),
         provider
     )) as Program<CastleLendingAggregator>;
 
-    const reserveMint = NATIVE_MINT;
+    //const reserveMint = NATIVE_MINT;
+    const reserveMint = new PublicKey(
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    );
 
     const solend = await SolendReserveAsset.load(
         provider,
@@ -55,7 +58,7 @@ const main = async () => {
             ),
         }
     );
-    console.log(vaultClient.vaultId);
+    console.log(vaultClient.vaultId.toString());
 };
 
 main();

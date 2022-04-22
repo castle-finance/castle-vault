@@ -20,21 +20,21 @@ const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 describe("VaultClient", () => {
     const PROGRAM_ID = new PublicKey(
-        //"Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn"
-        "4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK"
+        "Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn"
+        //"4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK"
     );
-    const cluster: Cluster = "devnet";
-    //const cluster: Cluster = "mainnet-beta";
+    //const cluster: Cluster = "devnet";
+    const cluster: Cluster = "mainnet-beta";
     const connection = new Connection(
-        //"https://ssc-dao.genesysgo.net/"
-        "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+        "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
+        //"https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
     );
     const wallet = Wallet.local();
     const provider = new Provider(connection, wallet, {
         commitment: "confirmed",
     });
 
-    const depositAmount = LAMPORTS_PER_SOL * 0.1;
+    const depositAmount = (0.1 * LAMPORTS_PER_SOL) / 1000;
 
     let vaultClient: VaultClient;
     let jet: JetReserveAsset;
@@ -51,15 +51,16 @@ describe("VaultClient", () => {
             //"3PUZJamT1LAwgkjT58PHoY8izM1Y8jRz2A1UwiV4JTkk"
             //"FEthCwaa3sGvPTTYV7ZSuYKTm4gaHPGtju4xFxDqv5gJ"
             //"9n6ekjHHgkPB9fVuWHzH6iNuxBxN22hEBryZXYFg6cNk" // old devnet-parity vault
-            //"EDtqJFHksXpdXLDuxgoYpjpxg3LjBpmW4jh3fkz4SX32"
+            "EDtqJFHksXpdXLDuxgoYpjpxg3LjBpmW4jh3fkz4SX32" // old mainnet vault
             //"HKnAJ5wX3w7b52wFr4ZFf7fAtiHS3oaFngnkViXGCusf" // new devnet-parity vault
-            "5zwJzQbw8PzNT2SwkhwrYfriVsLshytWk1UQkkudQv6G" // new devnet-staging vault
+            //"5zwJzQbw8PzNT2SwkhwrYfriVsLshytWk1UQkkudQv6G" // new devnet-staging vault
+            //"5VsCBvW7CswQfYe5rQdP9W5tSWb2rEZBQZ2C8wU7qrnL" // new mainnet vault
         );
         vaultClient = await VaultClient.load(
             provider,
             cluster,
-            //USDC_MINT,
-            NATIVE_MINT,
+            USDC_MINT,
+            //NATIVE_MINT,
             vaultId,
             PROGRAM_ID
         );
@@ -104,12 +105,23 @@ describe("VaultClient", () => {
         const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
         console.log("start value: ", startUserValue.toNumber());
 
-        const sigs = await vaultClient.deposit(
-            wallet,
-            depositAmount,
-            wallet.publicKey
-        );
-        await connection.confirmTransaction(sigs[sigs.length - 1], "finalized");
+        //const userReserveTokenAccount = wallet.publicKey;
+        const userReserveTokenAccount =
+            await vaultClient.getUserReserveTokenAccount(wallet.publicKey);
+        try {
+            const sigs = await vaultClient.deposit(
+                wallet,
+                depositAmount,
+                userReserveTokenAccount
+            );
+            await connection.confirmTransaction(
+                sigs[sigs.length - 1],
+                "finalized"
+            );
+        } catch (e) {
+            console.log(e);
+            throw e;
+        }
 
         const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
         console.log("end value: ", endUserValue.toNumber());
@@ -118,7 +130,7 @@ describe("VaultClient", () => {
             Math.abs(
                 endUserValue.sub(startUserValue).sub(depositAmount).toNumber()
             ),
-            1000000
+            1000
         );
     });
 

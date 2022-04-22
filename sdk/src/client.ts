@@ -215,7 +215,6 @@ export class VaultClient {
                 ],
             }
         );
-        console.log(txSig);
         await program.provider.connection.confirmTransaction(
             txSig,
             "finalized"
