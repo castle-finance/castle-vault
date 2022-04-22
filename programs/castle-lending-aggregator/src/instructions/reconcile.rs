@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 
 use crate::{errors::ErrorCode, rebalance::assets::Provider, state::Vault};
 
-const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 20;
+const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 100;
 
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?
