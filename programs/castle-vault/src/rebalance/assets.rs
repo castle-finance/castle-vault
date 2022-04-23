@@ -44,8 +44,11 @@ pub struct Assets {
 }
 impl_provider_index!(Assets, LendingMarketAsset);
 
+use strum::IntoEnumIterator;
+
 impl Assets {
     pub fn len(&self) -> usize {
+        let _val = Provider::iter();
         3_usize
     }
 
@@ -74,5 +77,16 @@ impl ReturnCalculator for LendingMarketAsset {
     fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
         let reserve = self.0.reserve_with_deposit(allocation)?;
         reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
+    }
+}
+
+impl<T> ReturnCalculator for T
+where
+    T: ReserveAccessor,
+{
+    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
+        self.reserve_with_deposit(allocation)?
+            .utilization_rate()?
+            .try_mul(self.borrow_rate()?)
     }
 }
