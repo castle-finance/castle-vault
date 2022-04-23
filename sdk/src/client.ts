@@ -57,7 +57,6 @@ export class VaultClient {
         vaultId: PublicKey,
         env: Envs = Envs.mainnet
     ): Promise<VaultClient> {
-        console.log("yoooooo", vaultId.toBase58());
         const program = (await anchor.Program.at(
             PROGRAM_IDS[env],
             provider
@@ -234,7 +233,7 @@ export class VaultClient {
         );
     }
 
-    private getRefreshIx(): TransactionInstruction {
+    public getRefreshIx(): TransactionInstruction {
         // Port does not accept an oracle as input if the reserve is denominated
         // in the same token as the market quote currency (USDC).
         // We account for this by passing in an argument that indicates whether
