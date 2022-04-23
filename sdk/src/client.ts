@@ -237,7 +237,7 @@ export class VaultClient {
         );
     }
 
-    public getRefreshIx(): TransactionInstruction {
+    getRefreshIx(): TransactionInstruction {
         // Port does not accept an oracle as input if the reserve is denominated
         // in the same token as the market quote currency (USDC).
         // We account for this by passing in an argument that indicates whether
