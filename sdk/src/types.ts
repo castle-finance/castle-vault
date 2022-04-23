@@ -1,21 +1,10 @@
 import { BN } from "@project-serum/anchor";
-import { Cluster, PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 
-// TODO change to enum or mapping
-export type StrategyType = { equalAllocation: {} } | { maxYield: {} };
-export type RebalanceMode = { calculator: {} } | { proofChecker: {} };
+import { DeploymentEnvs } from "@castlefinance/vault-core";
 
-export enum Envs {
-    devnetStaging,
-    devnetParity,
-    mainnet,
-}
 export type ProgramIdMap = {
-    [E in Envs]: PublicKey;
-};
-
-export type ClusterMap = {
-    [E in Envs]: Cluster;
+    [E in DeploymentEnvs]: PublicKey;
 };
 
 export interface LastUpdate {

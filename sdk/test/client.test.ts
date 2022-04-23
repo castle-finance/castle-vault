@@ -1,23 +1,16 @@
 import { assert } from "chai";
-import {
-    Cluster,
-    Connection,
-    LAMPORTS_PER_SOL,
-    PublicKey,
-} from "@solana/web3.js";
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { Wallet, Provider } from "@project-serum/anchor";
 
 import {
-    Envs,
     JetReserveAsset,
     PortReserveAsset,
     SolendReserveAsset,
     VaultClient,
 } from "../src";
 import Big from "big.js";
-
-const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+import { DeploymentEnvs } from "@castlefinance/vault-core";
 
 describe("VaultClient", () => {
     const connection = new Connection(
@@ -53,10 +46,8 @@ describe("VaultClient", () => {
         );
         vaultClient = await VaultClient.load(
             provider,
-            USDC_MINT,
-            //NATIVE_MINT,
             vaultId,
-            Envs.mainnet
+            DeploymentEnvs.mainnet
         );
         assert.isNotNull(vaultClient);
 

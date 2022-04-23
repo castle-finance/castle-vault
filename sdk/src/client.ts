@@ -1,6 +1,5 @@
 import Big from "big.js";
 import {
-    Cluster,
     Keypair,
     PublicKey,
     SystemProgram,
@@ -22,6 +21,14 @@ import {
 import * as anchor from "@project-serum/anchor";
 import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 
+import {
+    DeploymentEnvs,
+    StrategyType,
+    RebalanceMode,
+    RebalanceModes,
+    DeploymentEnv,
+} from "@castlefinance/vault-core";
+
 import { CLUSTER_MAP, PROGRAM_IDS } from ".";
 import { CastleLendingAggregator } from "./castle_lending_aggregator";
 import {
@@ -30,14 +37,11 @@ import {
     JetReserveAsset,
 } from "./adapters";
 import {
-    StrategyType,
     RebalanceEvent,
     Vault,
     FeeArgs,
     ProposedWeightsBps,
-    RebalanceMode,
     VaultFees,
-    Envs,
 } from "./types";
 
 export class VaultClient {
@@ -53,9 +57,8 @@ export class VaultClient {
 
     static async load(
         provider: anchor.Provider,
-        reserveMint: PublicKey,
         vaultId: PublicKey,
-        env: Envs = Envs.mainnet
+        env: DeploymentEnv = DeploymentEnvs.mainnet
     ): Promise<VaultClient> {
         const program = (await anchor.Program.at(
             PROGRAM_IDS[env],
@@ -64,6 +67,7 @@ export class VaultClient {
         const vaultState = await program.account.vault.fetch(vaultId);
 
         const cluster = CLUSTER_MAP[env];
+        const reserveMint = vaultState.reserveTokenMint;
 
         const solend = await SolendReserveAsset.load(
             provider,
@@ -177,8 +181,8 @@ export class VaultClient {
                 portLp: portLpBump,
                 jetLp: jetLpBump,
             },
-            strategyType,
-            rebalanceMode,
+            { [strategyType]: {} },
+            { [rebalanceMode]: {} },
             {
                 feeCarryBps: new anchor.BN(feeCarryBps),
                 feeMgmtBps: new anchor.BN(feeMgmtBps),
@@ -717,7 +721,7 @@ export class VaultClient {
         proposedWeights?: ProposedWeightsBps
     ): Promise<TransactionSignature[]> {
         if (
-            this.vaultState.rebalanceMode == { proofChecker: {} } &&
+            this.vaultState.rebalanceMode == RebalanceModes.proofChecker &&
             proposedWeights == null
         ) {
             throw new Error(
@@ -758,13 +762,6 @@ export class VaultClient {
     ): Promise<
         [Big, Big, (withdrawOption?: anchor.BN) => TransactionInstruction][]
     > {
-        if (proposedWeights == null) {
-            proposedWeights = {
-                solend: 0,
-                port: 0,
-                jet: 0,
-            };
-        }
         const newAllocations = (
             await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
@@ -1131,11 +1128,11 @@ export class VaultClient {
     }
 
     getStrategyType(): StrategyType {
-        return this.vaultState.strategyType;
+        return Object.keys(this.vaultState.strategyType)[0] as StrategyType;
     }
 
     getRebalanceMode(): RebalanceMode {
-        return this.vaultState.rebalanceMode;
+        return Object.keys(this.vaultState.rebalanceMode)[0] as RebalanceMode;
     }
 
     getSolend(): SolendReserveAsset {

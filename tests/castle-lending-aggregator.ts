@@ -9,10 +9,14 @@ import {
     PortReserveAsset,
     VaultClient,
     CastleLendingAggregator,
-    StrategyType,
-    RebalanceMode,
+    ProposedWeightsBps,
 } from "../sdk/src/index";
-import { ProposedWeightsBps } from "sdk/lib";
+import {
+    RebalanceMode,
+    RebalanceModes,
+    StrategyType,
+    StrategyTypes,
+} from "@castlefinance/vault-core";
 
 describe("castle-vault", () => {
     const provider = anchor.Provider.env();
@@ -486,7 +490,7 @@ describe("castle-vault", () => {
         expectedSolendRatio: number,
         expectedPortRatio: number,
         expectedJetRatio: number,
-        rebalanceMode: RebalanceMode = { calculator: {} }
+        rebalanceMode: RebalanceMode = RebalanceModes.calculator
     ) {
         // NOTE: should not be divisible by the number of markets, 3 in this case
         // The TODO to correct this is below
@@ -497,11 +501,7 @@ describe("castle-vault", () => {
             await depositToVault(qty);
         });
 
-        // JAVASCRIPT IS DUMB
-        if (
-            JSON.stringify(rebalanceMode) ==
-            JSON.stringify({ proofChecker: {} })
-        ) {
+        if (rebalanceMode == RebalanceModes.proofChecker) {
             it("Rejects tx if weights don't equal 100%", async () => {
                 const errorCode = program.idl.errors
                     .find((e) => e.name == "InvalidProposedWeights")
@@ -769,8 +769,8 @@ describe("castle-vault", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault(
-                    { equalAllocation: {} },
-                    { calculator: {} }
+                    StrategyTypes.equalAllocation,
+                    RebalanceModes.calculator
                 );
             });
             testDepositAndWithdrawal();
@@ -780,8 +780,8 @@ describe("castle-vault", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault(
-                    { equalAllocation: {} },
-                    { calculator: {} }
+                    StrategyTypes.equalAllocation,
+                    RebalanceModes.calculator
                 );
             });
             testDepositCap();
@@ -791,8 +791,8 @@ describe("castle-vault", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault(
-                    { equalAllocation: {} },
-                    { calculator: {} }
+                    StrategyTypes.equalAllocation,
+                    RebalanceModes.calculator
                 );
             });
             testRebalance(1 / 3, 1 / 3, 1 / 3);
@@ -806,8 +806,8 @@ describe("castle-vault", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault(
-                    { equalAllocation: {} },
-                    { calculator: {} },
+                    StrategyTypes.equalAllocation,
+                    RebalanceModes.calculator,
                     feeCarryBps,
                     feeMgmtBps,
                     referralFeePct
@@ -821,7 +821,10 @@ describe("castle-vault", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault({ maxYield: {} }, { calculator: {} });
+                await initializeVault(
+                    StrategyTypes.maxYield,
+                    RebalanceModes.calculator
+                );
             });
             testRebalance(0, 0, 1);
 
@@ -832,10 +835,10 @@ describe("castle-vault", () => {
 
     describe("Max yield proof checker", () => {
         describe("Rebalance", () => {
-            const rebalanceMode = { proofChecker: {} };
+            const rebalanceMode = RebalanceModes.proofChecker;
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault({ maxYield: {} }, rebalanceMode);
+                await initializeVault(StrategyTypes.maxYield, rebalanceMode);
             });
             testRebalance(0, 0, 1, rebalanceMode);
         });
