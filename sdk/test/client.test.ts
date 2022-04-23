@@ -1,21 +1,16 @@
 import { assert } from "chai";
-import {
-    Cluster,
-    Connection,
-    LAMPORTS_PER_SOL,
-    PublicKey,
-} from "@solana/web3.js";
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { Wallet, Provider } from "@project-serum/anchor";
 
 import {
-    Envs,
     JetReserveAsset,
     PortReserveAsset,
     SolendReserveAsset,
     VaultClient,
 } from "../src";
 import Big from "big.js";
+import { DeploymentEnvs } from "@castlefinance/vault-core";
 
 describe("VaultClient", () => {
     const connection = new Connection(
@@ -49,7 +44,11 @@ describe("VaultClient", () => {
             //"5zwJzQbw8PzNT2SwkhwrYfriVsLshytWk1UQkkudQv6G" // new devnet-staging vault
             //"5VsCBvW7CswQfYe5rQdP9W5tSWb2rEZBQZ2C8wU7qrnL" // new mainnet vault
         );
-        vaultClient = await VaultClient.load(provider, vaultId, Envs.mainnet);
+        vaultClient = await VaultClient.load(
+            provider,
+            vaultId,
+            DeploymentEnvs.mainnet
+        );
         assert.isNotNull(vaultClient);
 
         console.log(
