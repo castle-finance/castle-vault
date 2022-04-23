@@ -26,6 +26,7 @@ import {
     StrategyType,
     RebalanceMode,
     RebalanceModes,
+    DeploymentEnv,
 } from "@castlefinance/vault-core";
 
 import { CLUSTER_MAP, PROGRAM_IDS } from ".";
@@ -57,7 +58,7 @@ export class VaultClient {
     static async load(
         provider: anchor.Provider,
         vaultId: PublicKey,
-        env: DeploymentEnvs = DeploymentEnvs.mainnet
+        env: DeploymentEnv = DeploymentEnvs.mainnet
     ): Promise<VaultClient> {
         const program = (await anchor.Program.at(
             PROGRAM_IDS[env],
