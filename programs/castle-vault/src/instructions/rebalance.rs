@@ -1,8 +1,9 @@
+use std::iter::FromIterator;
 use std::ops::Deref;
-use std::ops::Index;
 
 use anchor_lang::prelude::*;
 use port_anchor_adaptor::PortReserve;
+use solana_maths::Decimal;
 use solana_maths::{Rate, TryAdd, TryMul};
 use strum::IntoEnumIterator;
 
@@ -37,6 +38,8 @@ impl From<&Allocations> for RebalanceDataEvent {
     }
 }
 
+/// If we can't find a way to make these all the same underlying type
+/// one solution is to use an enum to wrap them all
 #[derive(Clone)]
 pub enum Reserves {
     Solend(SolendReserve),
@@ -93,7 +96,7 @@ pub struct Rebalance<'info> {
 
     pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
-    pub container: Account<'info, BackendContainer<'info, Reserves>>,
+    pub reserves_container: Account<'info, BackendContainer<Reserves>>,
 
     pub clock: Sysvar<'info, Clock>,
 }
@@ -137,23 +140,51 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    // let assets: Vec<LendingMarketAsset> = ctx
-    let _val = ctx
+    // Here's an example of how the BackendContainer can be used
+    let _unused_example_container: BackendContainer<&'static str> = ctx
         .accounts
-        .container
-        .apply(|_provider, container| {
-            // Optionally apply some function to each backend item
-            container
+        .reserves_container
+        .apply(|_provider, reserve| {
+            // apply some function to each backend item
+            (reserve.clone(), String::from("this is a happy provider!"))
         })
         .into_iter()
-        .map(|(provider, reserve)| {
-            LendingMarketAsset(Box::new(reserve.clone()))
-            // match ctx.accounts.vault.strategy_type {
-            //     StrategyType::MaxYield => MaxYieldStrategy.calculate_weights(&assets),
-            //     StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets),
-            // }
-        });
-    // .collect();
+        .map(|(provider, (_reserve, _happy_string))| {
+            // if we want to collect into a BackendContainer<T>, we need to return
+            // a tuple with the first item being the provider
+            (provider, "this is a happy provider!")
+        })
+        .collect();
+
+    // Here we'll build a BackendContainer<Rate>
+    let rates = match ctx.accounts.vault.strategy_type {
+        StrategyType::MaxYield => {
+            MaxYieldStrategy.calculate_weights_chris(&ctx.accounts.reserves_container)
+        }
+        StrategyType::EqualAllocation => {
+            EqualAllocationStrategy.calculate_weights_chris(&ctx.accounts.reserves_container)
+        }
+    }?;
+
+    // And here we'll use that to build a BackendContainer<Allocation> with try_apply() because we're dealing with Result<>'s
+    let strategy_allocations = rates.try_apply(|_provider, rate| {
+        rate.try_mul(vault_value).and_then(|product| {
+            let value = Decimal::from(product).try_floor_u64()?;
+            Ok(Allocation {
+                value,
+                last_update: LastUpdate::new(clock.slot),
+            })
+        })
+    })?;
+
+    // We can build a BackendContainer<u16> from the proposed_weights_arg
+    let proposed_weights =
+        BackendContainer::from_iter(Provider::iter().map(|p| (p, proposed_weights_arg[p])));
+
+    let final_allocations = match ctx.accounts.vault.rebalance_mode {
+        RebalanceMode::ProofChecker => {}
+        RebalanceMode::Calculator => {}
+    };
 
     ////////////////////////////////////////////////////////////////////////////////
     let assets = Assets {

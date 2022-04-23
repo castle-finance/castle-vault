@@ -44,11 +44,8 @@ pub struct Assets {
 }
 impl_provider_index!(Assets, LendingMarketAsset);
 
-use strum::IntoEnumIterator;
-
 impl Assets {
     pub fn len(&self) -> usize {
-        let _val = Provider::iter();
         3_usize
     }
 
@@ -80,6 +77,7 @@ impl ReturnCalculator for LendingMarketAsset {
     }
 }
 
+// impl `ReturnCalculator` for any type that implements `ReserveAccessor`
 impl<T> ReturnCalculator for T
 where
     T: ReserveAccessor,

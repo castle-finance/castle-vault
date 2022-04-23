@@ -95,30 +95,43 @@ pub mod castle_vault {
 }
 
 #[derive(Clone)]
-pub struct BackendContainer<'a, T> {
-    pub solend: &'a T,
-    pub port: &'a T,
-    pub jet: &'a T,
+pub struct BackendContainer<T> {
+    pub solend: T,
+    pub port: T,
+    pub jet: T,
 }
 
-impl<'a, T> BackendContainer<'a, T> {
-    pub fn apply<U, F: Fn(Provider, &T) -> &U>(&mut self, f: F) -> BackendContainer<'a, U> {
+impl<T> BackendContainer<T> {
+    pub fn apply<U, F: Fn(Provider, &T) -> U>(&self, f: F) -> BackendContainer<U> {
         BackendContainer {
-            solend: f(Provider::Solend, self.solend),
-            port: f(Provider::Port, self.port),
-            jet: f(Provider::Jet, self.jet),
+            solend: f(Provider::Solend, &self.solend),
+            port: f(Provider::Port, &self.port),
+            jet: f(Provider::Jet, &self.jet),
         }
+    }
+
+    pub fn try_apply<U, E, F: Fn(Provider, &T) -> Result<U, E>>(
+        &self,
+        f: F,
+    ) -> Result<BackendContainer<U>, E> {
+        Ok(BackendContainer {
+            solend: f(Provider::Solend, &self.solend)?,
+            port: f(Provider::Port, &self.port)?,
+            jet: f(Provider::Jet, &self.jet)?,
+        })
+    }
+
+    pub fn len(&self) -> usize {
+        3
+    }
+
+    pub fn is_empty(&self) -> bool {
+        false
     }
 }
 
-// impl<'a, T> From<Iterator<Item = (Provider, &'a T)>> for BackendContainer<'a, T> {
-//     fn from(_: Iterator<Item = (Provider, &'a T)>) -> Self {
-//         todo!()
-//     }
-// }
-
-impl<'a, T> FromIterator<(Provider, &'a T)> for BackendContainer<'a, T> {
-    fn from_iter<U: IntoIterator<Item = (Provider, &'a T)>>(iter: U) -> Self {
+impl<T> FromIterator<(Provider, T)> for BackendContainer<T> {
+    fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
         let mut solend = None;
         let mut port = None;
         let mut jet = None;
@@ -137,39 +150,20 @@ impl<'a, T> FromIterator<(Provider, &'a T)> for BackendContainer<'a, T> {
     }
 }
 
-// fn from(iter: Iterator<Item = (Provider, &'a T)>) -> Self {
-//     let mut solend = None;
-//     let mut port = None;
-//     let mut jet = None;
-//     for (provider, backend) in iter {
-//         match provider {
-//             Provider::Solend => solend = Some(backend),
-//             Provider::Port => port = Some(backend),
-//             Provider::Jet => jet = Some(backend),
-//         }
-//     }
-//     Self {
-//         solend: solend.unwrap(),
-//         port: port.unwrap(),
-//         jet: jet.unwrap(),
-//     }
-// }
-// }
-
-impl<T> Index<Provider> for BackendContainer<'_, T> {
+impl<T> Index<Provider> for BackendContainer<T> {
     type Output = T;
 
     fn index(&self, provider: Provider) -> &Self::Output {
         match provider {
-            Provider::Solend => self.solend,
-            Provider::Port => self.port,
-            Provider::Jet => self.jet,
+            Provider::Solend => &self.solend,
+            Provider::Port => &self.port,
+            Provider::Jet => &self.jet,
         }
     }
 }
 
 pub struct BackendContainerIterator<'inner, T> {
-    inner: &'inner BackendContainer<'inner, T>,
+    inner: &'inner BackendContainer<T>,
     inner_iter: ProviderIter,
 }
 
@@ -183,7 +177,7 @@ impl<'inner, T> Iterator for BackendContainerIterator<'inner, T> {
     }
 }
 
-impl<'a, T> IntoIterator for &'a BackendContainer<'_, T> {
+impl<'a, T> IntoIterator for &'a BackendContainer<T> {
     type Item = (Provider, &'a T);
     type IntoIter = BackendContainerIterator<'a, T>;
 
@@ -195,7 +189,7 @@ impl<'a, T> IntoIterator for &'a BackendContainer<'_, T> {
     }
 }
 
-impl<T> anchor_lang::AccountDeserialize for BackendContainer<'_, T> {
+impl<T> anchor_lang::AccountDeserialize for BackendContainer<T> {
     fn try_deserialize(_: &mut &[u8]) -> Result<Self, ProgramError> {
         todo!()
     }
@@ -205,13 +199,13 @@ impl<T> anchor_lang::AccountDeserialize for BackendContainer<'_, T> {
     }
 }
 
-impl<T> anchor_lang::AccountSerialize for BackendContainer<'_, T> {
+impl<T> anchor_lang::AccountSerialize for BackendContainer<T> {
     fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
         todo!()
     }
 }
 
-impl<T> anchor_lang::Owner for BackendContainer<'_, T> {
+impl<T> anchor_lang::Owner for BackendContainer<T> {
     fn owner() -> Pubkey {
         todo!()
     }
