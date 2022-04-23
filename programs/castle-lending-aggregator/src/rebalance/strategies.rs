@@ -19,6 +19,16 @@ pub struct StrategyWeights {
 }
 impl_provider_index!(StrategyWeights, Rate);
 
+// impl<'a, T> From<&'a T> for StrategyWeights
+// where
+//     T: Index<Provider>,
+// {
+//     fn from(value: &'a T) -> Self {
+//         // let _val = Provider::iter().map(|p| Rate::from_bips(value[p] as u64));
+//         todo!()
+//     }
+// }
+
 pub trait Strategy {
     fn calculate_weights(
         &self,

@@ -1,4 +1,5 @@
 use std::ops::Deref;
+use std::ops::Index;
 
 use anchor_lang::prelude::*;
 use port_anchor_adaptor::PortReserve;
@@ -10,7 +11,44 @@ use crate::errors::ErrorCode;
 use crate::events::RebalanceEvent;
 use crate::rebalance::assets::*;
 use crate::rebalance::strategies::*;
+use crate::BackendContainer;
 use crate::{impl_provider_index, state::*};
+
+#[derive(Clone)]
+pub enum Reserves {
+    Solend(SolendReserve),
+    Port(PortReserve),
+    Jet(jet::state::Reserve),
+}
+
+impl ReserveAccessor for Reserves {
+    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+        match self {
+            Reserves::Solend(reserve) => reserve.utilization_rate(),
+            Reserves::Port(reserve) => reserve.utilization_rate(),
+            Reserves::Jet(reserve) => reserve.utilization_rate(),
+        }
+    }
+
+    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+        match self {
+            Reserves::Solend(reserve) => reserve.borrow_rate(),
+            Reserves::Port(reserve) => reserve.borrow_rate(),
+            Reserves::Jet(reserve) => reserve.borrow_rate(),
+        }
+    }
+
+    fn reserve_with_deposit(
+        &self,
+        allocation: u64,
+    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+        match self {
+            Reserves::Solend(reserve) => reserve.reserve_with_deposit(allocation),
+            Reserves::Port(reserve) => reserve.reserve_with_deposit(allocation),
+            Reserves::Jet(reserve) => reserve.reserve_with_deposit(allocation),
+        }
+    }
+}
 
 #[derive(Accounts)]
 pub struct Rebalance<'info> {
@@ -32,6 +70,8 @@ pub struct Rebalance<'info> {
 
     pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
+    pub container: Account<'info, BackendContainer<'info, Reserves>>,
+
     pub clock: Sysvar<'info, Clock>,
 }
 
@@ -43,9 +83,20 @@ pub struct StrategyWeightsArg {
 }
 impl_provider_index!(StrategyWeightsArg, u16);
 
+// impl<'a, T> From<&'a T> for StrategyWeightsArg
+// where
+//     T: Index<Provider>,
+// {
+//     fn from(_: &'a T) -> Self {
+//         todo!()
+//     }
+// }
+
 impl From<StrategyWeightsArg> for StrategyWeights {
     fn from(value: StrategyWeightsArg) -> Self {
         let mut strategy_weights = Self::default();
+        // let _val = StrategyWeights::from(&value);
+
         for p in Provider::iter() {
             strategy_weights[p] = Rate::from_bips(value[p] as u64);
         }
@@ -58,6 +109,27 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     let vault_value = ctx.accounts.vault.total_value;
     let clock = Clock::get()?;
 
+    ////////////////////////////////////////////////////////////////////////////////
+
+    // let assets: Vec<LendingMarketAsset> = ctx
+    let _val = ctx
+        .accounts
+        .container
+        .apply(|_provider, container| {
+            // Optionally apply some function to each backend item
+            container
+        })
+        .into_iter()
+        .map(|(provider, reserve)| {
+            LendingMarketAsset(Box::new(reserve.clone()))
+            // match ctx.accounts.vault.strategy_type {
+            //     StrategyType::MaxYield => MaxYieldStrategy.calculate_weights(&assets),
+            //     StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets),
+            // }
+        });
+    // .collect();
+
+    ////////////////////////////////////////////////////////////////////////////////
     let assets = Assets {
         solend: LendingMarketAsset(Box::new(
             ctx.accounts.solend_reserve.as_ref().deref().deref().clone(),
