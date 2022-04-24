@@ -74,6 +74,13 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
         StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets),
     }?;
 
+    let cap = Rate::from_percent(ctx.accounts.vault.allocation_cap);
+    for p in Provider::iter() {
+        if strategy_weights[p] > cap {
+            return Err(ErrorCode::AllocationCapError.into());
+        }
+    }
+
     // Convert weights to allocations
     let strategy_allocations =
         Allocations::try_from_weights(strategy_weights, vault_value, clock.slot)?;
