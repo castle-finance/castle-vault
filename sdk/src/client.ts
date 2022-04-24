@@ -1126,9 +1126,6 @@ const createAta = (
         pubkey, // owner
         feePayer ? feePayer : pubkey // payer
     );
-    // receiverAddress, // ata
-    // governedTokenAccount.governance.pubkey, // owner of token account
-    // wallet.publicKey!; // fee payer
 };
 
 interface WrapSolIxResponse {
