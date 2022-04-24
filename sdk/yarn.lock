@@ -9,10 +9,10 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
-"@castlefinance/vault-core@0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@castlefinance/vault-core/-/vault-core-0.1.0.tgz#efcdd13e0a83bada52d57c4a9f57398c660cbfcd"
-  integrity sha512-9xvSGB9styR4SXGVOYEG38wOmP2NyqHVc4Wk/QqIt/3B3fxAeqKztwWuJqLKS9ya8rn9Bm/x7D2xAdjbvUtAaQ==
+"@castlefinance/vault-core@^0.1.0":
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@castlefinance/vault-core/-/vault-core-0.1.1.tgz#a47cc891669cfd48f2af749b624defc0a2f0b8f8"
+  integrity sha512-aX5dbwvT1pVU9aL9ACah8axfwFaZVLRmr0snToJmC8nVPfaRgbVhimbqVO3PnEyDMJB1tQ5F/NiZY2L3nwtQKA==
 
 "@eslint/eslintrc@^1.2.1":
   version "1.2.1"

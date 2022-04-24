@@ -237,7 +237,7 @@ export class VaultClient {
         );
     }
 
-    private getRefreshIx(): TransactionInstruction {
+    getRefreshIx(): TransactionInstruction {
         // Port does not accept an oracle as input if the reserve is denominated
         // in the same token as the market quote currency (USDC).
         // We account for this by passing in an argument that indicates whether
@@ -425,7 +425,7 @@ export class VaultClient {
         if (userLpTokenAccountInfo == null) {
             createLpAcctTx = new Transaction().add(
                 createAta(
-                    wallet,
+                    wallet.publicKey,
                     this.vaultState.lpTokenMint,
                     userLpTokenAccount
                 )
@@ -554,7 +554,7 @@ export class VaultClient {
             if (userReserveTokenAccountInfo == null) {
                 withdrawTx.add(
                     createAta(
-                        wallet,
+                        wallet.publicKey,
                         this.vaultState.reserveTokenMint,
                         userReserveTokenAccount
                     )
@@ -897,6 +897,12 @@ export class VaultClient {
             this.getVaultJetLpTokenAccount()
         );
     }
+
+    /**
+     * Calculates the ATA given the user's address and vault mint
+     * @param address Users public key
+     * @returns Users reserve ATA given vault reserve mint
+     */
     async getUserReserveTokenAccount(address: PublicKey): Promise<PublicKey> {
         return await Token.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -921,7 +927,8 @@ export class VaultClient {
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             this.vaultState.lpTokenMint,
-            address
+            address,
+            true
         );
     }
 
@@ -992,6 +999,10 @@ export class VaultClient {
         );
     }
 
+    getVaultState(): Vault {
+        return this.vaultState;
+    }
+
     getLpTokenMint(): PublicKey {
         return this.vaultState.lpTokenMint;
     }
@@ -1042,17 +1053,18 @@ export class VaultClient {
 }
 
 const createAta = (
-    wallet: anchor.Wallet,
+    owner: PublicKey,
     mint: PublicKey,
-    address: PublicKey
+    address: PublicKey,
+    feePayer?: PublicKey
 ): TransactionInstruction => {
     return Token.createAssociatedTokenAccountInstruction(
         ASSOCIATED_TOKEN_PROGRAM_ID,
         TOKEN_PROGRAM_ID,
         mint,
         address,
-        wallet.publicKey,
-        wallet.publicKey
+        owner,
+        feePayer ? feePayer : owner
     );
 };
 
