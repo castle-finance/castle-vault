@@ -48,7 +48,7 @@ export class VaultClient {
     private constructor(
         public program: anchor.Program<CastleLendingAggregator>,
         public vaultId: PublicKey,
-        public vaultState: Vault,
+        private vaultState: Vault,
         private solend: SolendReserveAsset,
         private port: PortReserveAsset,
         private jet: JetReserveAsset,
@@ -972,70 +972,6 @@ export class VaultClient {
         return lpToken.getAccountInfo(this.vaultState.fees.referralFeeReceiver);
     }
 
-    /**
-     * Creates LP ATA creation and deposit ix transactions for Realms (https://realms.today/)
-     * @param reserveTokenOwner DAO's wallet
-     * @param amount amount
-     * @param userReserveTokenAccount DAO's reserve token account
-     * @param lpTokenAccountFeePayer The proposal creator that pays for the LP ATA creation
-     * @returns
-     */
-    async realmsDepositIxs({
-        reserveTokenOwner,
-        amount,
-        userReserveTokenAccount,
-        lpTokenAccountFeePayer,
-    }: {
-        reserveTokenOwner: PublicKey;
-        amount: number;
-        userReserveTokenAccount: PublicKey;
-        lpTokenAccountFeePayer: PublicKey;
-    }): Promise<{
-        depositIx: TransactionInstruction;
-        createLpAcctIx: TransactionInstruction | undefined;
-    }> {
-        // Create the DAOs LP ATA if it does not exist already
-        let createLpAcctIx: TransactionInstruction | undefined = undefined;
-
-        const userLpTokenAccount = await this.getUserLpTokenAccount(
-            reserveTokenOwner
-        );
-        const userLpTokenAccountInfo =
-            await this.program.provider.connection.getAccountInfo(
-                userLpTokenAccount
-            );
-
-        if (userLpTokenAccountInfo == null) {
-            createLpAcctIx = createAta(
-                reserveTokenOwner,
-                this.vaultState.lpTokenMint,
-                userLpTokenAccount,
-                // proposal creator pays for LP account creation
-                lpTokenAccountFeePayer
-            );
-        }
-
-        // Get the deposit instruction
-        const depositIx = this.program.instruction.deposit(
-            new anchor.BN(amount),
-            {
-                accounts: {
-                    vault: this.vaultId,
-                    vaultAuthority: this.vaultState.vaultAuthority,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    lpTokenMint: this.vaultState.lpTokenMint,
-                    userReserveToken: userReserveTokenAccount,
-                    userLpToken: userLpTokenAccount,
-                    userAuthority: reserveTokenOwner,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                },
-            }
-        );
-
-        return { createLpAcctIx, depositIx };
-    }
-
     async debug_log() {
         console.log(
             "solend value: ",
@@ -1061,6 +997,10 @@ export class VaultClient {
                 )
             ).toNumber()
         );
+    }
+
+    getVaultState(): Vault {
+        return this.vaultState;
     }
 
     getLpTokenMint(): PublicKey {
@@ -1113,7 +1053,7 @@ export class VaultClient {
 }
 
 const createAta = (
-    pubkey: PublicKey,
+    owner: PublicKey,
     mint: PublicKey,
     address: PublicKey,
     feePayer?: PublicKey
@@ -1123,8 +1063,8 @@ const createAta = (
         TOKEN_PROGRAM_ID,
         mint,
         address,
-        pubkey, // owner
-        feePayer ? feePayer : pubkey // payer
+        owner,
+        feePayer ? feePayer : owner
     );
 };
 
