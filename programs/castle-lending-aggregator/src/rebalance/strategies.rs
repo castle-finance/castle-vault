@@ -43,7 +43,7 @@ impl Strategy for EqualAllocationStrategy {
     fn calculate_weights(&self, assets: &Assets) -> Result<StrategyWeights, ProgramError> {
         // TODO make this error handling more granular and informative
         let num_assets = u8::try_from(assets.len()).map_err(|_| ErrorCode::StrategyError)?;
-        let equal_allocation = Rate::one().try_div(Rate::from_percent(num_assets).try_mul(100)?)?;
+        let equal_allocation = Rate::one().try_div(num_assets as u64)?;
 
         let mut strategy_weights = StrategyWeights::default();
         for p in Provider::iter() {
