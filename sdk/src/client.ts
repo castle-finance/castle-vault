@@ -100,7 +100,8 @@ export class VaultClient {
         rebalanceMode: RebalanceMode,
         owner: PublicKey,
         feeData: FeeArgs,
-        poolSizeLimit: number = 10000000000
+        poolSizeLimit: number = 10000000000,
+        allocationCap: number = 100
     ): Promise<VaultClient> {
         const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
             feeData;
@@ -189,6 +190,7 @@ export class VaultClient {
                 referralFeePct: new anchor.BN(referralFeePct),
             },
             new anchor.BN(poolSizeLimit),
+            allocationCap,
             {
                 accounts: {
                     vault: vaultId.publicKey,

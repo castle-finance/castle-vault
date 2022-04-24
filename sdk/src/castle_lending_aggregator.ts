@@ -1,5 +1,5 @@
 export type CastleLendingAggregator = {
-    version: "0.0.0";
+    version: "1.5.0";
     name: "castle_lending_aggregator";
     instructions: [
         {
@@ -149,6 +149,10 @@ export type CastleLendingAggregator = {
                 {
                     name: "depositCap";
                     type: "u64";
+                },
+                {
+                    name: "allocationCap";
+                    type: "u8";
                 }
             ];
         },
@@ -778,6 +782,10 @@ export type CastleLendingAggregator = {
                         type: {
                             defined: "RebalanceMode";
                         };
+                    },
+                    {
+                        name: "allocationCap";
+                        type: "u8";
                     }
                 ];
             };
@@ -1014,75 +1022,80 @@ export type CastleLendingAggregator = {
     ];
     errors: [
         {
-            code: 300;
+            code: 6000;
             name: "MathError";
             msg: "failed to perform some math operation safely";
         },
         {
-            code: 301;
+            code: 6001;
             name: "StrategyError";
             msg: "Failed to run the strategy";
         },
         {
-            code: 302;
+            code: 6002;
             name: "VaultIsNotRefreshed";
             msg: "Vault is not refreshed";
         },
         {
-            code: 303;
+            code: 6003;
             name: "AllocationIsNotUpdated";
             msg: "Allocation is not updated";
         },
         {
-            code: 304;
+            code: 6004;
             name: "TryFromReserveError";
             msg: "Failed to convert from Reserve";
         },
         {
-            code: 305;
+            code: 6005;
             name: "OverflowError";
             msg: "Failed to perform a math operation without an overflow";
         },
         {
-            code: 306;
+            code: 6006;
             name: "ReferralFeeError";
             msg: "Failed to set referral fee share which is greater than 50%";
         },
         {
-            code: 307;
+            code: 6007;
             name: "FeeBpsError";
             msg: "Failed to set fee BPS which is greater than 10000";
         },
         {
-            code: 308;
+            code: 6008;
             name: "InvalidProposedWeights";
             msg: "Proposed weights don't add up to 100%";
         },
         {
-            code: 309;
+            code: 6009;
             name: "RebalanceProofCheckFailed";
             msg: "Proposed weights failed proof check";
         },
         {
-            code: 310;
+            code: 6010;
             name: "DepositCapError";
             msg: "Vault size limit is reached";
         },
         {
-            code: 311;
+            code: 6011;
             name: "InvalidAccount";
             msg: "Account passed in is not valid";
         },
         {
-            code: 312;
+            code: 6012;
             name: "InsufficientAccounts";
             msg: "Insufficient number of accounts for a given operation";
+        },
+        {
+            code: 6013;
+            name: "AllocationCapError";
+            msg: "Allocation exceeded the cap, or the cap itself is invalid";
         }
     ];
 };
 
 export const IDL: CastleLendingAggregator = {
-    version: "0.0.0",
+    version: "1.5.0",
     name: "castle_lending_aggregator",
     instructions: [
         {
@@ -1232,6 +1245,10 @@ export const IDL: CastleLendingAggregator = {
                 {
                     name: "depositCap",
                     type: "u64",
+                },
+                {
+                    name: "allocationCap",
+                    type: "u8",
                 },
             ],
         },
@@ -1862,6 +1879,10 @@ export const IDL: CastleLendingAggregator = {
                             defined: "RebalanceMode",
                         },
                     },
+                    {
+                        name: "allocationCap",
+                        type: "u8",
+                    },
                 ],
             },
         },
@@ -2097,69 +2118,74 @@ export const IDL: CastleLendingAggregator = {
     ],
     errors: [
         {
-            code: 300,
+            code: 6000,
             name: "MathError",
             msg: "failed to perform some math operation safely",
         },
         {
-            code: 301,
+            code: 6001,
             name: "StrategyError",
             msg: "Failed to run the strategy",
         },
         {
-            code: 302,
+            code: 6002,
             name: "VaultIsNotRefreshed",
             msg: "Vault is not refreshed",
         },
         {
-            code: 303,
+            code: 6003,
             name: "AllocationIsNotUpdated",
             msg: "Allocation is not updated",
         },
         {
-            code: 304,
+            code: 6004,
             name: "TryFromReserveError",
             msg: "Failed to convert from Reserve",
         },
         {
-            code: 305,
+            code: 6005,
             name: "OverflowError",
             msg: "Failed to perform a math operation without an overflow",
         },
         {
-            code: 306,
+            code: 6006,
             name: "ReferralFeeError",
             msg: "Failed to set referral fee share which is greater than 50%",
         },
         {
-            code: 307,
+            code: 6007,
             name: "FeeBpsError",
             msg: "Failed to set fee BPS which is greater than 10000",
         },
         {
-            code: 308,
+            code: 6008,
             name: "InvalidProposedWeights",
             msg: "Proposed weights don't add up to 100%",
         },
         {
-            code: 309,
+            code: 6009,
             name: "RebalanceProofCheckFailed",
             msg: "Proposed weights failed proof check",
         },
         {
-            code: 310,
+            code: 6010,
             name: "DepositCapError",
             msg: "Vault size limit is reached",
         },
         {
-            code: 311,
+            code: 6011,
             name: "InvalidAccount",
             msg: "Account passed in is not valid",
         },
         {
-            code: 312,
+            code: 6012,
             name: "InsufficientAccounts",
             msg: "Insufficient number of accounts for a given operation",
+        },
+        {
+            code: 6013,
+            name: "AllocationCapError",
+            msg: "Allocation exceeded the cap, or the cap itself is invalid",
         },
     ],
 };
