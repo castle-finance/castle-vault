@@ -1013,6 +1013,10 @@ export class VaultClient {
         return new Big(this.vaultState.depositCap.toString());
     }
 
+    getAllocationCap(): Number {
+        return this.vaultState.allocationCap;
+    }
+
     getVaultReserveTokenAccount(): PublicKey {
         return this.vaultState.vaultReserveToken;
     }

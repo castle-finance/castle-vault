@@ -43,6 +43,7 @@ describe("castle-vault", () => {
     const initialCollateralRatio = 1.0;
     const referralFeeOwner = Keypair.generate().publicKey;
     const vaultDepositCap = 10 * 10 ** 9;
+    const vaultAllocationCap = 76;
 
     let jetReserveAmount: number;
 
@@ -243,7 +244,8 @@ describe("castle-vault", () => {
             rebalanceMode,
             owner.publicKey,
             { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct },
-            vaultDepositCap
+            vaultDepositCap,
+            vaultAllocationCap
         );
 
         userReserveTokenAccount = await reserveToken.createAccount(
@@ -352,6 +354,7 @@ describe("castle-vault", () => {
                 vaultClient.getDepositCap().toNumber(),
                 vaultDepositCap
             );
+            assert.equal(vaultClient.getAllocationCap(), vaultAllocationCap);
         });
 
         it("Deposits to vault reserves", async function () {
@@ -411,6 +414,7 @@ describe("castle-vault", () => {
                 vaultClient.getDepositCap().toNumber(),
                 vaultDepositCap
             );
+            assert.equal(vaultClient.getAllocationCap(), vaultAllocationCap);
         });
 
         it("Reject transaction if deposit cap is reached", async function () {
