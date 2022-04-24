@@ -338,110 +338,6 @@ export class VaultClient {
     }
 
     /**
-     *
-     * @param reserveTokenOwner DAOs wallet
-     * @param amount amount
-     * @param userReserveTokenAccount DAOs reserve token account
-     * @param lpTokenAccountFeePayer the proposal creator that pays for the LP ATA creation
-     * @returns
-     */
-    async realmsDepositIxs({
-        reserveTokenOwner,
-        amount,
-        userReserveTokenAccount,
-        lpTokenAccountFeePayer,
-    }: {
-        reserveTokenOwner: PublicKey;
-        amount: number;
-        userReserveTokenAccount: PublicKey;
-        lpTokenAccountFeePayer: PublicKey;
-    }): Promise<{
-        createLpAcctIx: TransactionInstruction;
-        refreshIx: TransactionInstruction;
-        depositIxs: TransactionInstruction[];
-        wSolSigner: Keypair;
-    }> {
-        // instructions
-        let createLpAcctIx: TransactionInstruction | undefined = undefined;
-        let refreshIx: TransactionInstruction | undefined = undefined;
-        let depositIx: TransactionInstruction | undefined = undefined;
-
-        // optional wSOL ixs and signer
-        let wSolCreateIx: TransactionInstruction | undefined;
-        let wSolInitIx: TransactionInstruction | undefined;
-        let wSolCloseIx: TransactionInstruction | undefined;
-        let wsolKeypair: Keypair | undefined;
-
-        // If the reserve token mint is SOL, create a temporary wSOL account
-        let wrappedSolIxResponse: WrapSolIxResponse;
-        // if (this.vaultState.reserveTokenMint.equals(NATIVE_MINT)) {
-        //     wrappedSolIxResponse = await this.getWrappedSolIxs(wallet, amount);
-        //     // depositTx.add(...wrappedSolIxResponse.openIxs);
-        //     userReserveTokenAccount = wrappedSolIxResponse.keyPair.publicKey;
-        //     // // //
-        //     wSolCreateIx = wrappedSolIxResponse.openIxs[0];
-        //     wSolInitIx = wrappedSolIxResponse.openIxs[1];
-        //     wSolCloseIx = wrappedSolIxResponse.closeIx;
-        //     wsolKeypair = wrappedSolIxResponse.keyPair;
-        // }
-
-        // Create users LP token account if it does not exist
-
-        const userLpTokenAccount = await this.getUserLpTokenAccount(
-            reserveTokenOwner // when ME, it
-        );
-        const userLpTokenAccountInfo =
-            await this.program.provider.connection.getAccountInfo(
-                userLpTokenAccount
-            );
-        if (userLpTokenAccountInfo == null) {
-            createLpAcctIx = createAta(
-                reserveTokenOwner,
-                this.vaultState.lpTokenMint,
-                userLpTokenAccount,
-                // proposal creator pays for LP account creation
-                lpTokenAccountFeePayer
-            );
-        }
-
-        // Get the refresh instruction
-        // refreshIx = this.getRefreshIx();
-
-        // Get the deposit instruction
-        depositIx = this.program.instruction.deposit(new anchor.BN(amount), {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultReserveToken: this.vaultState.vaultReserveToken,
-                lpTokenMint: this.vaultState.lpTokenMint,
-                userReserveToken: userReserveTokenAccount,
-                userLpToken: userLpTokenAccount,
-                // userAuthority: new PublicKey(
-                //     "5qH53uTj3dNs6gcYYbynNdn17GF7PWKALtWf8UMiyvTH"
-                // ),
-                userAuthority: reserveTokenOwner,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                clock: SYSVAR_CLOCK_PUBKEY,
-            },
-        });
-
-        // Bundle all defined instructions
-        const depositIxs = [
-            createLpAcctIx,
-            // wSolCreateIx,
-            // wSolInitIx,
-            // refreshIx,
-            depositIx,
-            // wSolCloseIx,
-        ].filter((ix) => ix) as TransactionInstruction[];
-
-        // Grab the signer
-        const wSolSigner = wsolKeypair || undefined;
-
-        return { createLpAcctIx, refreshIx, depositIxs, wSolSigner };
-    }
-
-    /**
      * @param new_value
      * @returns
      */
@@ -1074,6 +970,70 @@ export class VaultClient {
             Keypair.generate() // dummy since we don't need to send txs
         );
         return lpToken.getAccountInfo(this.vaultState.fees.referralFeeReceiver);
+    }
+
+    /**
+     * Creates LP ATA creation and deposit ix transactions for Realms (https://realms.today/)
+     * @param reserveTokenOwner DAO's wallet
+     * @param amount amount
+     * @param userReserveTokenAccount DAO's reserve token account
+     * @param lpTokenAccountFeePayer The proposal creator that pays for the LP ATA creation
+     * @returns
+     */
+    async realmsDepositIxs({
+        reserveTokenOwner,
+        amount,
+        userReserveTokenAccount,
+        lpTokenAccountFeePayer,
+    }: {
+        reserveTokenOwner: PublicKey;
+        amount: number;
+        userReserveTokenAccount: PublicKey;
+        lpTokenAccountFeePayer: PublicKey;
+    }): Promise<{
+        depositIx: TransactionInstruction;
+        createLpAcctIx: TransactionInstruction | undefined;
+    }> {
+        // Create the DAOs LP ATA if it does not exist already
+        let createLpAcctIx: TransactionInstruction | undefined = undefined;
+
+        const userLpTokenAccount = await this.getUserLpTokenAccount(
+            reserveTokenOwner
+        );
+        const userLpTokenAccountInfo =
+            await this.program.provider.connection.getAccountInfo(
+                userLpTokenAccount
+            );
+
+        if (userLpTokenAccountInfo == null) {
+            createLpAcctIx = createAta(
+                reserveTokenOwner,
+                this.vaultState.lpTokenMint,
+                userLpTokenAccount,
+                // proposal creator pays for LP account creation
+                lpTokenAccountFeePayer
+            );
+        }
+
+        // Get the deposit instruction
+        const depositIx = this.program.instruction.deposit(
+            new anchor.BN(amount),
+            {
+                accounts: {
+                    vault: this.vaultId,
+                    vaultAuthority: this.vaultState.vaultAuthority,
+                    vaultReserveToken: this.vaultState.vaultReserveToken,
+                    lpTokenMint: this.vaultState.lpTokenMint,
+                    userReserveToken: userReserveTokenAccount,
+                    userLpToken: userLpTokenAccount,
+                    userAuthority: reserveTokenOwner,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                    clock: SYSVAR_CLOCK_PUBKEY,
+                },
+            }
+        );
+
+        return { createLpAcctIx, depositIx };
     }
 
     async debug_log() {
