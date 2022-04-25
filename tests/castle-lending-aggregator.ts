@@ -830,7 +830,12 @@ describe("castle-vault", () => {
                     RebalanceModes.calculator
                 );
             });
-            testRebalance(0, 0, 1);
+
+            testRebalance(
+                1 - vaultAllocationCap / 100,
+                0,
+                vaultAllocationCap / 100
+            );
 
             // TODO borrow from solend to increase apy and ensure it switches to that
             // TODO borrow from port to increase apy and ensure it switches to that
