@@ -1089,7 +1089,7 @@ export type CastleLendingAggregator = {
         {
             code: 6013;
             name: "AllocationCapError";
-            msg: "Allocation exceeded the cap, or the cap itself is invalid";
+            msg: "Allocation cap is invalid";
         }
     ];
 };
@@ -2185,7 +2185,7 @@ export const IDL: CastleLendingAggregator = {
         {
             code: 6013,
             name: "AllocationCapError",
-            msg: "Allocation exceeded the cap, or the cap itself is invalid",
+            msg: "Allocation cap is invalid",
         },
     ],
 };
