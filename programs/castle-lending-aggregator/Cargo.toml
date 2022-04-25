@@ -36,5 +36,6 @@ port-variable-rate-lending-instructions = "0.2.9"
 solana-maths = "0.1.1"
 spl-math = {version = "0.1", features = ["no-entrypoint"]}
 spl-token-lending = {git = "https://github.com/castle-finance/solana-program-library", version = "0.1.1", features = ["no-entrypoint"]}
-strum = "0.24.0"
-strum_macros = "0.24.0"
+strum = "0.24"
+strum_macros = "0.24"
+arrayref = "0.3"
