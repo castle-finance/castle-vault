@@ -61,10 +61,6 @@ pub trait Strategy {
 
         Ok(())
     }
-
-    fn verify_weights_chris(&self) -> ProgramResult {
-        Ok(().into())
-    }
 }
 
 #[derive(Clone, Copy, Debug)]

@@ -20,7 +20,7 @@ use crate::{impl_provider_index, state::*};
 pub enum Reserves {
     Solend(SolendReserve),
     Port(PortReserve),
-    Jet(jet::state::Reserve),
+    Jet(Box<jet::state::Reserve>),
 }
 
 impl AccountDeserialize for Reserves {
@@ -37,12 +37,8 @@ impl AccountDeserialize for Reserves {
 impl Pack for Reserves {
     const LEN: usize = 42;
 
-    fn pack_into_slice(&self, dst: &mut [u8]) {
-        match self {
-            Reserves::Solend(v) => v.pack_into_slice(dst),
-            Reserves::Port(v) => v.pack_into_slice(dst),
-            Reserves::Jet(_v) => todo!(), //v.pack_into_slice(dst),
-        }
+    fn pack_into_slice(&self, _dst: &mut [u8]) {
+        todo!()
     }
 
     fn unpack_from_slice(_src: &[u8]) -> Result<Self, ProgramError> {
@@ -197,8 +193,11 @@ pub fn handler_chris(
                 proposed_weights
             );
 
+            proposed_weights.verify_weights()?;
+
             let proposed_apr = get_apr_chris(&proposed_weights, &proposed_allocations, assets)?;
             let proof_apr = get_apr_chris(&strategy_weights, &strategy_allocations, assets)?;
+
             #[cfg(feature = "debug")]
             msg!(
                 "Proposed APR: {:?}\nProof APR: {:?}",
