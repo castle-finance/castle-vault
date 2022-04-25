@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::ops::Deref;
+use std::ops::{Deref, Index};
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_pack::{IsInitialized, Pack, Sealed};
@@ -141,11 +141,9 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler_chris(
     ctx: Context<Rebalance>,
-    _proposed_weights_arg: BackendContainer<u16>,
+    proposed_weights_arg: BackendContainer<u16>,
 ) -> ProgramResult {
-    // let vault_value = ctx.accounts.vault.total_value;
-    // let clock = Clock::get()?;
-
+    ////////////////////////////////////////////////////////////////////////////////
     // Here's an example of how a BackendContainer can be used
     let _unused_example_container: BackendContainer<&'static str> = ctx
         .accounts
@@ -165,47 +163,71 @@ pub fn handler_chris(
         })
         // You can `.collect()` a BackendContainerIterator<T> into a BackendContainer<T>
         .collect();
+    ////////////////////////////////////////////////////////////////////////////////
+
+    let vault_value = ctx.accounts.vault.total_value;
+    let clock = Clock::get()?;
+    let assets = ctx.accounts.reserves_container.deref();
 
     // Here we'll build a BackendContainer<Rate> from the BackendContainer<Reserves>
-    // let strategy_weights = match ctx.accounts.vault.strategy_type {
-    //     StrategyType::MaxYield => {
-    //         // MaxYieldStrategy.calculate_weights_chris(&ctx.accounts.reserves_container)
-    //     }
-    //     StrategyType::EqualAllocation => {
-    //         // EqualAllocationStrategy.calculate_weights_chris(&ctx.accounts.reserves_container)
-    //     }
-    // };
-    // let strategy_weights: BackendContainer<Rate> = Default::default();
+    let strategy_weights = assets
+        // This `calculate_weights()` is provided by the impl BackendContainer<Reserves>
+        .calculate_weights(ctx.accounts.vault.strategy_type)?;
 
     // // And here we'll use that to build a BackendContainer<Allocation> with try_apply()
     // // (instead of apply() because we're dealing with Result<>'s)
-    // let strategy_allocations = BackendContainer::<Allocation>::try_from_weights(
-    //     &strategy_weights,
-    //     vault_value,
-    //     clock.slot,
-    // )?;
+    let strategy_allocations = BackendContainer::<Allocation>::try_from_weights(
+        &strategy_weights,
+        vault_value,
+        clock.slot,
+    )?;
 
-    // let final_allocations = match ctx.accounts.vault.rebalance_mode {
-    //     RebalanceMode::ProofChecker => {
-    //         // We can build a BackendContainer<u16> from the proposed_weights_arg
-    //         let proposed_weights = proposed_weights_arg.calculate_weights_chris(vault_value)?;
-    //         // If we can't pass in a BackendContainer<u16>, we could use this code instead
-    //         // let proposed_weights = BackendContainer::from_iter(Provider::iter().map(|p| (p, proposed_weights_arg[p])));
-    //         let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
-    //             &strategy_weights,
-    //             vault_value,
-    //             clock.slot,
-    //         )?;
+    let final_allocations = match ctx.accounts.vault.rebalance_mode {
+        RebalanceMode::ProofChecker => {
+            // We can build a BackendContainer<u16> from the proposed_weights_arg
+            let proposed_weights: BackendContainer<Rate> = proposed_weights_arg.into();
 
-    //         #[cfg(feature = "debug")]
-    //         msg!(
-    //             "Running as proof checker with proposed weights: {:?}",
-    //             proposed_weights
-    //         );
-    //     }
-    //     RebalanceMode::Calculator => {}
-    // };
-    Ok(().into())
+            let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
+                &strategy_weights,
+                vault_value,
+                clock.slot,
+            )?;
+
+            #[cfg(feature = "debug")]
+            msg!(
+                "Running as proof checker with proposed weights: {:?}",
+                proposed_weights
+            );
+
+            let proposed_apr = get_apr_chris(&proposed_weights, &proposed_allocations, assets)?;
+            let proof_apr = get_apr_chris(&strategy_weights, &strategy_allocations, assets)?;
+            #[cfg(feature = "debug")]
+            msg!(
+                "Proposed APR: {:?}\nProof APR: {:?}",
+                proposed_apr,
+                proof_apr
+            );
+
+            if proposed_apr < proof_apr {
+                return Err(ErrorCode::RebalanceProofCheckFailed.into());
+            }
+            proposed_allocations
+        }
+        RebalanceMode::Calculator => {
+            #[cfg(feature = "debug")]
+            msg!("Running as calculator");
+            strategy_allocations
+        }
+    };
+    #[cfg(feature = "debug")]
+    msg!("Final allocations: {:?}", final_allocations);
+
+    // TODO
+    // emit!(RebalanceEvent::from(&final_allocations));
+
+    ctx.accounts.vault.allocations_chris = final_allocations;
+
+    Ok(())
 }
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
@@ -298,15 +320,19 @@ fn get_apr(
         .try_fold(Rate::zero(), |acc, r| acc.try_add(*r))
 }
 
-impl BackendContainer<Allocation> {
-    fn compare(
-        &self,
-        lhs: &impl ReturnCalculator,
-        rhs: &impl ReturnCalculator,
-    ) -> Result<Ordering, ProgramError> {
-        Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
-    }
+fn get_apr_chris(
+    weights: &dyn Index<Provider, Output = Rate>,
+    allocations: &dyn Index<Provider, Output = Allocation>,
+    assets: &dyn Index<Provider, Output = Reserves>,
+) -> Result<Rate, ProgramError> {
+    Provider::iter()
+        .map(|p| weights[p].try_mul(assets[p].calculate_return(allocations[p].value)?))
+        .collect::<Result<Vec<_>, ProgramError>>()?
+        .iter()
+        .try_fold(Rate::zero(), |acc, r| acc.try_add(*r))
+}
 
+impl BackendContainer<Allocation> {
     pub fn try_from_weights(
         rates: &BackendContainer<Rate>,
         vault_value: u64,
@@ -323,8 +349,19 @@ impl BackendContainer<Allocation> {
             })
         })
     }
+}
 
-    fn calculate_weights_max(&self) -> Result<BackendContainer<Rate>, ProgramError> {
+impl<T> BackendContainer<T>
+where
+    T: ReturnCalculator,
+{
+    fn compare(&self, lhs: &T, rhs: &T) -> Result<Ordering, ProgramError> {
+        Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
+    }
+}
+
+impl BackendContainer<Reserves> {
+    fn calculate_weights_max_yield(&self) -> Result<BackendContainer<Rate>, ProgramError> {
         self.into_iter()
             .max_by(|(_prov_x, alloc_x), (_prov_y, alloc_y)| {
                 // TODO: can we remove the unwrap() in any way?
@@ -349,7 +386,7 @@ impl BackendContainer<Allocation> {
         stype: StrategyType,
     ) -> Result<BackendContainer<Rate>, ProgramError> {
         match stype {
-            StrategyType::MaxYield => self.calculate_weights_max(),
+            StrategyType::MaxYield => self.calculate_weights_max_yield(),
             StrategyType::EqualAllocation => todo!(),
         }
     }
@@ -385,6 +422,12 @@ impl Strategy for BackendContainer<u16> {
             return Err(ErrorCode::InvalidProposedWeights.into());
         }
         Ok(())
+    }
+}
+
+impl From<BackendContainer<u16>> for BackendContainer<Rate> {
+    fn from(c: BackendContainer<u16>) -> Self {
+        c.apply(|_provider, v| Rate::from_bips(*v as u64))
     }
 }
 

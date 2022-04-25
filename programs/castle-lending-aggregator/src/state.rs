@@ -6,9 +6,10 @@ use solana_maths::{Decimal, TryMul};
 use std::cmp::Ordering;
 use strum::IntoEnumIterator;
 
+use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;
-use crate::rebalance::assets::{Provider, ReturnCalculator};
+use crate::rebalance::assets::Provider;
 use crate::rebalance::strategies::StrategyWeights;
 
 /// Number of slots per year
@@ -68,6 +69,8 @@ pub struct Vault {
 
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
+
+    pub allocations_chris: BackendContainer<Allocation>,
 
     /// Strategy type that is executed during rebalance
     pub strategy_type: StrategyType,
@@ -183,12 +186,6 @@ impl Allocations {
 pub struct Allocation {
     pub value: u64,
     pub last_update: LastUpdate,
-}
-
-impl ReturnCalculator for Allocation {
-    fn calculate_return(&self, _allocation: u64) -> Result<solana_maths::Rate, ProgramError> {
-        Ok(Default::default())
-    }
 }
 
 impl Allocation {
