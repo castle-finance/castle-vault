@@ -219,7 +219,8 @@ pub fn handler(
     // Validating referral token account's mint
     validate_fees(&fees)?;
 
-    if allocation_cap > 100 {
+    // TODO compute the lower limit of the cap using number of lenging pools
+    if allocation_cap < 34 || allocation_cap > 100 {
         return Err(ErrorCode::AllocationCapError.into());
     }
 
