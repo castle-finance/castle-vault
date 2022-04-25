@@ -192,7 +192,9 @@ export class JetReserveAsset extends Asset {
 
     async getApy(): Promise<Big> {
         await this.reserve.refresh();
-        return new Big(this.reserve.data.depositApy);
+        const apr = this.reserve.data.depositApy;
+        const apy = Math.expm1(apr);
+        return new Big(apy);
     }
 
     async getDepositedAmount(): Promise<Big> {
