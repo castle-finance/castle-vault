@@ -33,6 +33,7 @@ no-idl = []
 [dependencies]
 anchor-lang = "0.18.2"
 anchor-spl = "0.18.2"
+arrayref = "0.3"
 boolinator = "2.4.0"
 jet = {git = "https://github.com/jet-lab/jet-v1/", version = "0.2.0", features = ["no-entrypoint", "cpi"]}
 jet-proto-math = "1.0.1"
@@ -43,6 +44,6 @@ solana-maths = "0.1.1"
 spl-math = {version = "0.1", features = ["no-entrypoint"]}
 spl-token-lending = {git = "https://github.com/castle-finance/solana-program-library", version = "0.1.1", features = ["no-entrypoint"]}
 static_assertions = "1.1.0"
-strum = "0.24.0"
-strum_macros = "0.24.0"
+strum = "0.24"
+strum_macros = "0.24"
 type-layout = "0.2.0"

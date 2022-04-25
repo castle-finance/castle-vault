@@ -296,7 +296,7 @@ pub struct RefreshReserve<'info> {
     pub clock: AccountInfo<'info>,
 }
 
-#[derive(Clone)]
+#[derive(Clone)] //, BorshSerialize, BorshDeserialize)]
 pub struct SolendReserve(Reserve);
 
 impl anchor_lang::AccountDeserialize for SolendReserve {

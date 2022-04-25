@@ -638,6 +638,7 @@ version = "1.7.0"
 dependencies = [
  "anchor-lang 0.18.2",
  "anchor-spl 0.18.2",
+ "arrayref",
  "boolinator",
  "jet",
  "jet-proto-math",

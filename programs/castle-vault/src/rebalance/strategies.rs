@@ -6,7 +6,7 @@ use solana_maths::{Rate, TryAdd, TryDiv, TrySub};
 use strum::IntoEnumIterator;
 
 // TODO refactor so we don't need to depend on higher-level modules
-use crate::{errors::ErrorCode, impl_provider_index, BackendContainer};
+use crate::{backend_container::BackendContainer, errors::ErrorCode, impl_provider_index};
 
 use super::assets::*;
 
@@ -61,6 +61,10 @@ pub trait Strategy {
 
         Ok(())
     }
+
+    fn verify_weights_chris(&self) -> ProgramResult {
+        Ok(().into())
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -80,22 +84,6 @@ impl Strategy for EqualAllocationStrategy {
             strategy_weights[p] = equal_allocation;
         }
         Ok(strategy_weights)
-    }
-
-    fn calculate_weights_chris<T>(
-        &self,
-        assets: &BackendContainer<T>,
-    ) -> Result<BackendContainer<Rate>, ProgramError>
-    where
-        T: ReserveAccessor,
-    {
-        let num_assets = u8::try_from(assets.len()).map_err(|_| ErrorCode::StrategyError)?;
-        let equal_allocation = Rate::one().try_div(Rate::from_percent(num_assets).try_mul(100)?)?;
-        let val = assets
-            .into_iter()
-            .map(|(provider, _)| (provider, equal_allocation))
-            .collect();
-        Ok(val)
     }
 }
 
@@ -132,6 +120,7 @@ impl Strategy for MaxYieldStrategy {
         Ok(strategy_weights)
     }
 
+    /*
     fn calculate_weights_chris<T>(
         &self,
         assets: &BackendContainer<T>,
@@ -153,4 +142,5 @@ impl Strategy for MaxYieldStrategy {
         });
         Ok(val)
     }
+    */
 }

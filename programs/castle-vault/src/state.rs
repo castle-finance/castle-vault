@@ -10,7 +10,7 @@ use type_layout::TypeLayout;
 
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;
-use crate::rebalance::assets::Provider;
+use crate::rebalance::assets::{Provider, ReturnCalculator};
 use crate::rebalance::strategies::StrategyWeights;
 
 /// Number of slots per year
@@ -225,6 +225,12 @@ impl Allocations {
 pub struct Allocation {
     pub value: u64,
     pub last_update: LastUpdate,
+}
+
+impl ReturnCalculator for Allocation {
+    fn calculate_return(&self, _allocation: u64) -> Result<solana_maths::Rate, ProgramError> {
+        Ok(Default::default())
+    }
 }
 
 impl Allocation {

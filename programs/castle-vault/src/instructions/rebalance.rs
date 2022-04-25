@@ -1,17 +1,18 @@
-use std::iter::FromIterator;
+use std::cmp::Ordering;
 use std::ops::Deref;
 
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use port_anchor_adaptor::PortReserve;
 use solana_maths::Decimal;
 use solana_maths::{Rate, TryAdd, TryMul};
 use strum::IntoEnumIterator;
 
 use crate::adapters::SolendReserve;
+use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
 use crate::rebalance::assets::*;
 use crate::rebalance::strategies::*;
-use crate::BackendContainer;
 use crate::{impl_provider_index, state::*};
 
 #[event]
@@ -45,6 +46,45 @@ pub enum Reserves {
     Solend(SolendReserve),
     Port(PortReserve),
     Jet(jet::state::Reserve),
+}
+
+impl AccountDeserialize for Reserves {
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+        Self::try_deserialize_unchecked(buf)
+    }
+
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+        Self::unpack(buf)
+    }
+}
+
+// TODO
+impl Pack for Reserves {
+    const LEN: usize = 42;
+
+    fn pack_into_slice(&self, dst: &mut [u8]) {
+        match self {
+            Reserves::Solend(v) => v.pack_into_slice(dst),
+            Reserves::Port(v) => v.pack_into_slice(dst),
+            Reserves::Jet(_v) => todo!(), //v.pack_into_slice(dst),
+        }
+    }
+
+    fn unpack_from_slice(_src: &[u8]) -> Result<Self, ProgramError> {
+        todo!()
+    }
+}
+
+impl Sealed for Reserves {}
+impl IsInitialized for Reserves {
+    fn is_initialized(&self) -> bool {
+        todo!()
+    }
+}
+impl AccountSerialize for Reserves {
+    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
+        todo!()
+    }
 }
 
 impl ReserveAccessor for Reserves {
@@ -109,15 +149,6 @@ pub struct StrategyWeightsArg {
 }
 impl_provider_index!(StrategyWeightsArg, u16);
 
-// impl<'a, T> From<&'a T> for StrategyWeightsArg
-// where
-//     T: Index<Provider>,
-// {
-//     fn from(_: &'a T) -> Self {
-//         todo!()
-//     }
-// }
-
 impl From<StrategyWeightsArg> for StrategyWeights {
     fn from(value: StrategyWeightsArg) -> Self {
         let mut strategy_weights = Self::default();
@@ -131,22 +162,23 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 }
 
 /// Calculate and store optimal allocations to downstream lending markets
-pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
-    #[cfg(feature = "debug")]
-    msg!("Rebalancing");
+pub fn handler_chris(
+    ctx: Context<Rebalance>,
+    _proposed_weights_arg: BackendContainer<u16>,
+) -> ProgramResult {
+    // let vault_value = ctx.accounts.vault.total_value;
+    // let clock = Clock::get()?;
 
-    let vault_value = ctx.accounts.vault.total_value;
-    let clock = Clock::get()?;
-
-    ////////////////////////////////////////////////////////////////////////////////
-
-    // Here's an example of how the BackendContainer can be used
+    // Here's an example of how a BackendContainer can be used
     let _unused_example_container: BackendContainer<&'static str> = ctx
         .accounts
         .reserves_container
         .apply(|_provider, reserve| {
             // apply some function to each backend item
-            (reserve.clone(), String::from("this is a happy provider!"))
+            fn foo<T: Clone>(t: &T) -> T {
+                t.clone()
+            }
+            (foo(reserve), String::from("this is a happy provider!"))
         })
         .into_iter()
         .map(|(provider, (_reserve, _happy_string))| {
@@ -154,39 +186,55 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
             // a tuple with the first item being the provider
             (provider, "this is a happy provider!")
         })
+        // You can `.collect()` a BackendContainerIterator<T> into a BackendContainer<T>
         .collect();
 
-    // Here we'll build a BackendContainer<Rate>
-    let rates = match ctx.accounts.vault.strategy_type {
-        StrategyType::MaxYield => {
-            MaxYieldStrategy.calculate_weights_chris(&ctx.accounts.reserves_container)
-        }
-        StrategyType::EqualAllocation => {
-            EqualAllocationStrategy.calculate_weights_chris(&ctx.accounts.reserves_container)
-        }
-    }?;
+    // Here we'll build a BackendContainer<Rate> from the BackendContainer<Reserves>
+    // let strategy_weights = match ctx.accounts.vault.strategy_type {
+    //     StrategyType::MaxYield => {
+    //         // MaxYieldStrategy.calculate_weights_chris(&ctx.accounts.reserves_container)
+    //     }
+    //     StrategyType::EqualAllocation => {
+    //         // EqualAllocationStrategy.calculate_weights_chris(&ctx.accounts.reserves_container)
+    //     }
+    // };
+    // let strategy_weights: BackendContainer<Rate> = Default::default();
 
-    // And here we'll use that to build a BackendContainer<Allocation> with try_apply() because we're dealing with Result<>'s
-    let strategy_allocations = rates.try_apply(|_provider, rate| {
-        rate.try_mul(vault_value).and_then(|product| {
-            let value = Decimal::from(product).try_floor_u64()?;
-            Ok(Allocation {
-                value,
-                last_update: LastUpdate::new(clock.slot),
-            })
-        })
-    })?;
+    // // And here we'll use that to build a BackendContainer<Allocation> with try_apply()
+    // // (instead of apply() because we're dealing with Result<>'s)
+    // let strategy_allocations = BackendContainer::<Allocation>::try_from_weights(
+    //     &strategy_weights,
+    //     vault_value,
+    //     clock.slot,
+    // )?;
 
-    // We can build a BackendContainer<u16> from the proposed_weights_arg
-    let proposed_weights =
-        BackendContainer::from_iter(Provider::iter().map(|p| (p, proposed_weights_arg[p])));
+    // let final_allocations = match ctx.accounts.vault.rebalance_mode {
+    //     RebalanceMode::ProofChecker => {
+    //         // We can build a BackendContainer<u16> from the proposed_weights_arg
+    //         let proposed_weights = proposed_weights_arg.calculate_weights_chris(vault_value)?;
+    //         // If we can't pass in a BackendContainer<u16>, we could use this code instead
+    //         // let proposed_weights = BackendContainer::from_iter(Provider::iter().map(|p| (p, proposed_weights_arg[p])));
+    //         let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
+    //             &strategy_weights,
+    //             vault_value,
+    //             clock.slot,
+    //         )?;
 
-    let final_allocations = match ctx.accounts.vault.rebalance_mode {
-        RebalanceMode::ProofChecker => {}
-        RebalanceMode::Calculator => {}
-    };
+    //         #[cfg(feature = "debug")]
+    //         msg!(
+    //             "Running as proof checker with proposed weights: {:?}",
+    //             proposed_weights
+    //         );
+    //     }
+    //     RebalanceMode::Calculator => {}
+    // };
+    Ok(().into())
+}
+/// Calculate and store optimal allocations to downstream lending markets
+pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
+    let vault_value = ctx.accounts.vault.total_value;
+    let clock = Clock::get()?;
 
-    ////////////////////////////////////////////////////////////////////////////////
     let assets = Assets {
         solend: LendingMarketAsset(Box::new(
             ctx.accounts.solend_reserve.as_ref().deref().deref().clone(),
@@ -275,3 +323,112 @@ fn get_apr(
         .iter()
         .try_fold(Rate::zero(), |acc, r| acc.try_add(*r))
 }
+
+impl BackendContainer<Allocation> {
+    fn compare(
+        &self,
+        lhs: &impl ReturnCalculator,
+        rhs: &impl ReturnCalculator,
+    ) -> Result<Ordering, ProgramError> {
+        Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
+    }
+
+    pub fn try_from_weights(
+        rates: &BackendContainer<Rate>,
+        vault_value: u64,
+        slot: u64,
+    ) -> Result<Self, ProgramError> {
+        rates.try_apply(|_provider, rate| {
+            rate.try_mul(vault_value).and_then(|product| {
+                Decimal::from(product)
+                    .try_floor_u64()
+                    .map(|value| Allocation {
+                        value,
+                        last_update: LastUpdate::new(slot),
+                    })
+            })
+        })
+    }
+
+    fn calculate_weights_max(&self) -> Result<BackendContainer<Rate>, ProgramError> {
+        self.into_iter()
+            .max_by(|(_prov_x, alloc_x), (_prov_y, alloc_y)| {
+                // TODO: can we remove the unwrap() in any way?
+                self.compare(*alloc_x, *alloc_y).unwrap()
+            })
+            .map(|(max_yielding_provider, _a)| {
+                self.apply(|provider, _v| {
+                    if provider == max_yielding_provider {
+                        Rate::one()
+                    } else {
+                        Rate::zero()
+                    }
+                })
+            })
+            // TODO make this error handling more granular and informative
+            .ok_or(ErrorCode::StrategyError)
+            .map_err(Into::into)
+    }
+
+    pub fn calculate_weights(
+        &self,
+        stype: StrategyType,
+    ) -> Result<BackendContainer<Rate>, ProgramError> {
+        match stype {
+            StrategyType::MaxYield => self.calculate_weights_max(),
+            StrategyType::EqualAllocation => todo!(),
+        }
+    }
+}
+
+impl Strategy for BackendContainer<u16> {
+    fn calculate_weights(&self, _assets: &Assets) -> Result<StrategyWeights, ProgramError> {
+        todo!()
+    }
+
+    fn calculate_weights_chris<T>(&self) -> Result<BackendContainer<Rate>, ProgramError> {
+        todo!()
+    }
+
+    fn verify_weights_chris(&self) -> ProgramResult {
+        // let sum = Provider::iter()
+        //     .map(|p| proposed_weights[p])
+        //     .try_fold(Rate::zero(), |acc, x| acc.try_add(x))?;
+
+        // self.into_iter()
+        //     .try_fold(Rate::zero(), |acc, (_, x)| acc.try_add(x.value))?;
+        // .map(|(_provider, allocation)| {
+        //     if allocation.value > 0 {
+        //         Ok(())
+        //     } else {
+        //         Err(ErrorCode::RebalanceProofCheckFailed.into())
+        //     }
+        // })
+        // .collect::<Result<Vec<_>, ProgramError>>()?;
+
+        let sum = Rate::default();
+        if sum != Rate::one() {
+            return Err(ErrorCode::InvalidProposedWeights.into());
+        }
+        Ok(())
+    }
+}
+
+/*
+impl TryFrom<BackendContainer<Rate>> for BackendContainer<Allocation> {
+    type Error = ProgramError;
+
+    fn try_from(value: BackendContainer<Rate>) -> Result<Self, Self::Error> {
+        value.try_apply(|_provider, rate| {
+            rate.try_mul(vault_value).and_then(|product| {
+                Decimal::from(product)
+                    .try_floor_u64()
+                    .map(|value| Allocation {
+                        value,
+                        last_update: LastUpdate::new(clock.slot),
+                    })
+            })
+        })
+    }
+}
+*/
