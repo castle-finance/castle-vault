@@ -1,13 +1,14 @@
 mod allocation;
+mod iter;
 mod rate;
 mod reserves;
 
 pub use allocation::*;
+pub use iter::*;
 pub use rate::*;
 pub use reserves::*;
 
 use crate::borsh::{BorshDeserialize, BorshSerialize};
-use crate::rebalance::assets::ProviderIter;
 use crate::rebalance::assets::{Provider, ReturnCalculator};
 use anchor_lang::prelude::{ProgramError, Pubkey};
 use std::cmp::Ordering;
@@ -21,32 +22,47 @@ pub struct BackendContainer<T> {
     pub jet: T,
 }
 
-impl<T> BackendContainer<T> {
-    pub fn apply<U, F: Fn(Provider, &T) -> U>(&self, f: F) -> BackendContainer<U> {
-        BackendContainer {
-            solend: f(Provider::Solend, &self.solend),
-            port: f(Provider::Port, &self.port),
-            jet: f(Provider::Jet, &self.jet),
+impl<T> Index<Provider> for BackendContainer<T> {
+    type Output = T;
+
+    fn index(&self, provider: Provider) -> &Self::Output {
+        match provider {
+            Provider::Solend => &self.solend,
+            Provider::Port => &self.port,
+            Provider::Jet => &self.jet,
         }
     }
+}
 
-    pub fn try_apply<U, E, F: Fn(Provider, &T) -> Result<U, E>>(
-        &self,
-        f: F,
-    ) -> Result<BackendContainer<U>, E> {
-        Ok(BackendContainer {
-            solend: f(Provider::Solend, &self.solend)?,
-            port: f(Provider::Port, &self.port)?,
-            jet: f(Provider::Jet, &self.jet)?,
-        })
-    }
-
+impl<T> BackendContainer<T> {
     pub fn len(&self) -> usize {
         3
     }
 
     pub fn is_empty(&self) -> bool {
         false
+    }
+}
+
+impl<T> BackendContainer<T> {
+    /// Applies `f` to each element of the container individually, yielding a new container
+    pub fn apply<U, F: Fn(Provider, &T) -> U>(&self, f: F) -> BackendContainer<U> {
+        // Because we have FromIterator<(Provider, T)>, if we yield a tuple of
+        // `(Provider, U)` we can `collect()` this into a `BackendContainer<U>`
+        self.into_iter()
+            .map(|(provider, value)| (provider, f(provider, value)))
+            .collect()
+    }
+
+    /// Identical to `apply` but returns a `Result<BackendContainer<..>>`
+    pub fn try_apply<U, E, F: Fn(Provider, &T) -> Result<U, E>>(
+        &self,
+        f: F,
+    ) -> Result<BackendContainer<U>, E> {
+        self.into_iter()
+            .map(|(provider, value)| f(provider, value).map(|res| (provider, res)))
+            // collect() will stop at the first failure
+            .collect()
     }
 }
 
@@ -70,45 +86,6 @@ impl<T> FromIterator<(Provider, T)> for BackendContainer<T> {
     }
 }
 
-impl<T> Index<Provider> for BackendContainer<T> {
-    type Output = T;
-
-    fn index(&self, provider: Provider) -> &Self::Output {
-        match provider {
-            Provider::Solend => &self.solend,
-            Provider::Port => &self.port,
-            Provider::Jet => &self.jet,
-        }
-    }
-}
-
-pub struct BackendContainerIterator<'inner, T> {
-    inner: &'inner BackendContainer<T>,
-    inner_iter: ProviderIter,
-}
-
-impl<'inner, T> Iterator for BackendContainerIterator<'inner, T> {
-    type Item = (Provider, &'inner T);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner_iter
-            .next()
-            .map(|provider| (provider, &self.inner[provider]))
-    }
-}
-
-impl<'a, T> IntoIterator for &'a BackendContainer<T> {
-    type Item = (Provider, &'a T);
-    type IntoIter = BackendContainerIterator<'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        BackendContainerIterator {
-            inner: self,
-            inner_iter: Provider::iter(),
-        }
-    }
-}
-
 impl<T> std::fmt::Debug for BackendContainer<T>
 where
     T: std::fmt::Debug,
@@ -119,6 +96,15 @@ where
             .field("port", &self.port)
             .field("jet", &self.jet)
             .finish()
+    }
+}
+
+impl<T> BackendContainer<T>
+where
+    T: ReturnCalculator,
+{
+    pub fn compare(&self, lhs: &T, rhs: &T) -> Result<Ordering, ProgramError> {
+        Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
     }
 }
 
@@ -198,14 +184,5 @@ where
             port: port.expect("missing item in BorshDeserialize for BackendContainer"),
             jet: jet.expect("missing item in BorshDeserialize for BackendContainer"),
         })
-    }
-}
-
-impl<T> BackendContainer<T>
-where
-    T: ReturnCalculator,
-{
-    pub fn compare(&self, lhs: &T, rhs: &T) -> Result<Ordering, ProgramError> {
-        Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
     }
 }
