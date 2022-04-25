@@ -1,7 +1,16 @@
+mod allocation;
+mod rate;
+mod reserves;
+
+pub use allocation::*;
+pub use rate::*;
+pub use reserves::*;
+
 use crate::borsh::{BorshDeserialize, BorshSerialize};
-use crate::rebalance::assets::Provider;
 use crate::rebalance::assets::ProviderIter;
+use crate::rebalance::assets::{Provider, ReturnCalculator};
 use anchor_lang::prelude::{ProgramError, Pubkey};
+use std::cmp::Ordering;
 use std::{iter::FromIterator, ops::Index};
 use strum::IntoEnumIterator;
 
@@ -189,5 +198,14 @@ where
             port: port.expect("missing item in BorshDeserialize for BackendContainer"),
             jet: jet.expect("missing item in BorshDeserialize for BackendContainer"),
         })
+    }
+}
+
+impl<T> BackendContainer<T>
+where
+    T: ReturnCalculator,
+{
+    pub fn compare(&self, lhs: &T, rhs: &T) -> Result<Ordering, ProgramError> {
+        Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
     }
 }
