@@ -74,13 +74,6 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
         StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets),
     }?;
 
-    let cap = Rate::from_percent(ctx.accounts.vault.allocation_cap);
-    for p in Provider::iter() {
-        if strategy_weights[p] > cap {
-            return Err(ErrorCode::AllocationCapError.into());
-        }
-    }
-
     // Convert weights to allocations
     let strategy_allocations =
         Allocations::try_from_weights(strategy_weights, vault_value, clock.slot)?;
@@ -98,10 +91,10 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
             );
 
             match ctx.accounts.vault.strategy_type {
-                StrategyType::MaxYield => MaxYieldStrategy.verify_weights(&proposed_weights),
-                StrategyType::EqualAllocation => {
-                    EqualAllocationStrategy.verify_weights(&proposed_weights)
-                }
+                StrategyType::MaxYield => MaxYieldStrategy
+                    .verify_weights(&proposed_weights, ctx.accounts.vault.allocation_cap),
+                StrategyType::EqualAllocation => EqualAllocationStrategy
+                    .verify_weights(&proposed_weights, ctx.accounts.vault.allocation_cap),
             }?;
 
             let proposed_apr = get_apr(&proposed_weights, &proposed_allocations, &assets)?;

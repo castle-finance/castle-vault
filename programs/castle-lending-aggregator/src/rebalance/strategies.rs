@@ -25,7 +25,11 @@ pub trait Strategy {
     // TODO split this into separate trait?
     /// Fails if the proposed weights don't meet the constraints of the strategy
     /// Default impl is to check that weights add up to 100%
-    fn verify_weights(&self, proposed_weights: &StrategyWeights) -> ProgramResult {
+    fn verify_weights(
+        &self,
+        proposed_weights: &StrategyWeights,
+        allocation_cap: u8,
+    ) -> ProgramResult {
         let sum = Provider::iter()
             .map(|p| proposed_weights[p])
             .try_fold(Rate::zero(), |acc, x| acc.try_add(x))?;
@@ -33,6 +37,14 @@ pub trait Strategy {
         if sum != Rate::one() {
             return Err(ErrorCode::InvalidProposedWeights.into());
         }
+
+        let cap = Rate::from_percent(allocation_cap);
+        for p in Provider::iter() {
+            if proposed_weights[p] > cap {
+                return Err(ErrorCode::InvalidProposedWeights.into());
+            }
+        }
+
         Ok(())
     }
 }
