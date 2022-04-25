@@ -1,7 +1,15 @@
-use anchor_lang::prelude::ProgramError;
-use solana_maths::Rate;
+use core::ops::Index;
 
-use crate::{errors::ErrorCode, instructions::Reserves, state::StrategyType};
+use anchor_lang::prelude::ProgramError;
+use solana_maths::{Rate, TryAdd};
+use strum::IntoEnumIterator;
+
+use crate::{
+    errors::ErrorCode,
+    instructions::Reserves,
+    rebalance::assets::{Provider, ReturnCalculator},
+    state::{Allocation, StrategyType},
+};
 
 use super::BackendContainer;
 
@@ -34,5 +42,22 @@ impl BackendContainer<Reserves> {
             StrategyType::MaxYield => self.calculate_weights_max_yield(),
             StrategyType::EqualAllocation => todo!(),
         }
+    }
+
+    pub fn get_apr(
+        &self,
+        weights: &dyn Index<Provider, Output = Rate>,
+        allocations: &dyn Index<Provider, Output = Allocation>,
+    ) -> Result<Rate, ProgramError> {
+        Provider::iter()
+            .map(|p| {
+                solana_maths::TryMul::try_mul(
+                    weights[p],
+                    self[p].calculate_return(allocations[p].value)?,
+                )
+            })
+            .collect::<Result<Vec<_>, ProgramError>>()?
+            .iter()
+            .try_fold(Rate::zero(), |acc, r| acc.try_add(*r))
     }
 }

@@ -1,7 +1,15 @@
 use anchor_lang::prelude::*;
 
-use crate::{rebalance::assets::Provider, state::Allocations};
+use crate::{
+    backend_container::BackendContainer,
+    rebalance::assets::Provider,
+    state::{Allocation, Allocations},
+};
 
+#[event]
+pub struct RebalanceEventChris {
+    pub allocations: BackendContainer<Allocation>,
+}
 // TODO might be able to delete since sim isn't done anymore
 #[event]
 pub struct RebalanceEvent {

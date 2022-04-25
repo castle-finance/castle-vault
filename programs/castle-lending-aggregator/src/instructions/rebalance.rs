@@ -1,7 +1,8 @@
-use std::ops::{Deref, Index};
+use std::ops::Deref;
 
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program_pack::{IsInitialized, Pack, Sealed};
+use boolinator::Boolinator;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Rate, TryAdd, TryMul};
 use strum::IntoEnumIterator;
@@ -9,7 +10,7 @@ use strum::IntoEnumIterator;
 use crate::adapters::SolendReserve;
 use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
-use crate::events::RebalanceEvent;
+use crate::events::{RebalanceEvent, RebalanceEventChris};
 use crate::rebalance::assets::*;
 use crate::rebalance::strategies::*;
 use crate::{impl_provider_index, state::*};
@@ -133,6 +134,70 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 }
 
 /// Calculate and store optimal allocations to downstream lending markets
+pub fn handler_chris_concise(
+    ctx: Context<Rebalance>,
+    proposed_weights_arg: BackendContainer<u16>,
+) -> ProgramResult {
+    let vault_value = ctx.accounts.vault.total_value;
+    let assets = ctx.accounts.reserves_container.deref();
+
+    let strategy_weights = assets.calculate_weights(ctx.accounts.vault.strategy_type)?;
+    let clock = Clock::get()?;
+
+    BackendContainer::<Allocation>::try_from_weights(&strategy_weights, vault_value, clock.slot)
+        .and_then(
+            |strategy_allocations| match ctx.accounts.vault.rebalance_mode {
+                RebalanceMode::ProofChecker => {
+                    let proposed_weights = BackendContainer::<Rate>::from(proposed_weights_arg);
+                    let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
+                        &strategy_weights,
+                        vault_value,
+                        clock.slot,
+                    )?;
+
+                    #[cfg(feature = "debug")]
+                    msg!(
+                        "Running as proof checker with proposed weights: {:?}",
+                        proposed_weights
+                    );
+
+                    proposed_weights.verify_weights()?;
+
+                    let proposed_apr = assets.get_apr(&proposed_weights, &proposed_allocations)?;
+                    let proof_apr = assets.get_apr(&strategy_weights, &strategy_allocations)?;
+
+                    #[cfg(feature = "debug")]
+                    msg!(
+                        "Proposed APR: {:?}\nProof APR: {:?}",
+                        proposed_apr,
+                        proof_apr
+                    );
+
+                    (proposed_apr < proof_apr).as_result(
+                        proposed_allocations,
+                        ErrorCode::RebalanceProofCheckFailed.into(),
+                    )
+                }
+                RebalanceMode::Calculator => {
+                    #[cfg(feature = "debug")]
+                    msg!("Running as calculator");
+                    Ok(strategy_allocations)
+                }
+            },
+        )
+        .map(|final_allocations| {
+            #[cfg(feature = "debug")]
+            msg!("Final allocations: {:?}", final_allocations);
+
+            // TODO: remove clone() if we're going to use this event?
+            emit!(RebalanceEventChris {
+                allocations: final_allocations.clone()
+            });
+
+            ctx.accounts.vault.allocations_chris = final_allocations;
+        })
+}
+/// Calculate and store optimal allocations to downstream lending markets
 pub fn handler_chris(
     ctx: Context<Rebalance>,
     proposed_weights_arg: BackendContainer<u16>,
@@ -195,8 +260,8 @@ pub fn handler_chris(
 
             proposed_weights.verify_weights()?;
 
-            let proposed_apr = get_apr_chris(&proposed_weights, &proposed_allocations, assets)?;
-            let proof_apr = get_apr_chris(&strategy_weights, &strategy_allocations, assets)?;
+            let proposed_apr = assets.get_apr(&proposed_weights, &proposed_allocations)?;
+            let proof_apr = assets.get_apr(&strategy_weights, &strategy_allocations)?;
 
             #[cfg(feature = "debug")]
             msg!(
@@ -219,8 +284,10 @@ pub fn handler_chris(
     #[cfg(feature = "debug")]
     msg!("Final allocations: {:?}", final_allocations);
 
-    // TODO
-    // emit!(RebalanceEvent::from(&final_allocations));
+    // TODO: remove clone() if we're going to use this event?
+    emit!(RebalanceEventChris {
+        allocations: final_allocations.clone()
+    });
 
     ctx.accounts.vault.allocations_chris = final_allocations;
 
@@ -309,18 +376,6 @@ fn get_apr(
     weights: &StrategyWeights,
     allocations: &Allocations,
     assets: &Assets,
-) -> Result<Rate, ProgramError> {
-    Provider::iter()
-        .map(|p| weights[p].try_mul(assets[p].calculate_return(allocations[p].value)?))
-        .collect::<Result<Vec<_>, ProgramError>>()?
-        .iter()
-        .try_fold(Rate::zero(), |acc, r| acc.try_add(*r))
-}
-
-fn get_apr_chris(
-    weights: &dyn Index<Provider, Output = Rate>,
-    allocations: &dyn Index<Provider, Output = Allocation>,
-    assets: &dyn Index<Provider, Output = Reserves>,
 ) -> Result<Rate, ProgramError> {
     Provider::iter()
         .map(|p| weights[p].try_mul(assets[p].calculate_return(allocations[p].value)?))
