@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::ops::Deref;
 
 use anchor_lang::prelude::*;
@@ -24,7 +25,7 @@ pub enum Reserves {
     Jet(Box<jet::state::Reserve>),
 }
 
-impl AccountDeserialize for Reserves {
+impl<'a> AccountDeserialize for Reserves {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
         Self::try_deserialize_unchecked(buf)
     }
@@ -35,7 +36,7 @@ impl AccountDeserialize for Reserves {
 }
 
 // TODO
-impl Pack for Reserves {
+impl<'a> Pack for Reserves {
     const LEN: usize = 42;
 
     fn pack_into_slice(&self, _dst: &mut [u8]) {
@@ -47,19 +48,19 @@ impl Pack for Reserves {
     }
 }
 
-impl Sealed for Reserves {}
-impl IsInitialized for Reserves {
+impl<'a> Sealed for Reserves {}
+impl<'a> IsInitialized for Reserves {
     fn is_initialized(&self) -> bool {
         todo!()
     }
 }
-impl AccountSerialize for Reserves {
+impl<'a> AccountSerialize for Reserves {
     fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
         todo!()
     }
 }
 
-impl ReserveAccessor for Reserves {
+impl<'a> ReserveAccessor for Reserves {
     fn utilization_rate(&self) -> Result<Rate, ProgramError> {
         match self {
             Reserves::Solend(reserve) => reserve.utilization_rate(),
@@ -108,9 +109,25 @@ pub struct Rebalance<'info> {
 
     pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
 
-    pub reserves_container: Account<'info, BackendContainer<Reserves>>,
-
+    // TODO: I'm not sure if there is any way to make this work, but I don't think so
+    // pub reserves_container: Account<'info, BackendContainer<Reserves>>,
     pub clock: Sysvar<'info, Clock>,
+}
+
+impl TryFrom<&Rebalance<'_>> for BackendContainer<Reserves> {
+    type Error = ProgramError;
+    fn try_from(r: &Rebalance<'_>) -> Result<BackendContainer<Reserves>, Self::Error> {
+        // NOTE: I tried pretty hard to get rid of these clones and only use the references
+        // the problem is that these references originate from a deref() (or as_ref())
+        // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
+        // which means that the lifetimes are shared, preventing any other borrows
+        // (in particular the mutable borrow required to save state)
+        Ok(BackendContainer {
+            solend: Some(Reserves::Solend(r.solend_reserve.deref().deref().clone())),
+            port: Some(Reserves::Port(r.port_reserve.deref().deref().clone())),
+            jet: Some(Reserves::Jet(Box::new(*r.jet_reserve.load()?))),
+        })
+    }
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
@@ -134,12 +151,14 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 
 /// Calculate and store optimal allocations to downstream lending markets
 // This is identical to `handler_chris()` below (at least that's the intention), just a different style
-pub fn handler_chris_concise(
-    ctx: Context<Rebalance>,
+pub fn handler_chris_concise<'info>(
+    ctx: Context<'_, 'info, '_, '_, Rebalance<'info>>,
     proposed_weights_arg: BackendContainer<u16>,
 ) -> ProgramResult {
     let vault_value = ctx.accounts.vault.total_value;
-    let assets = ctx.accounts.reserves_container.deref();
+
+    // let assets = ctx.accounts.reserves_container.deref();
+    let assets = BackendContainer::try_from(&*ctx.accounts)?;
 
     let strategy_weights = assets.calculate_weights(ctx.accounts.vault.strategy_type)?;
     let clock = Clock::get()?;
@@ -199,86 +218,91 @@ pub fn handler_chris_concise(
 }
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler_chris(
+    // ctx: Context<'_, 'rebalRef, '_, '_, Rebalance<'rebalRef>>,
     ctx: Context<Rebalance>,
     proposed_weights_arg: BackendContainer<u16>,
 ) -> ProgramResult {
     ////////////////////////////////////////////////////////////////////////////////
     // Here's an example of how a BackendContainer can be used
-    let _unused_example_container: BackendContainer<&'static str> = ctx
-        .accounts
-        .reserves_container
-        .apply(|_provider, reserve| {
-            // apply some function to each backend item
-            fn foo<T: Clone>(t: &T) -> T {
-                t.clone()
-            }
-            (foo(reserve), String::from("this is a happy provider!"))
-        })
-        .into_iter()
-        .map(|(provider, (_reserve, _happy_string))| {
-            // if we want to collect into a BackendContainer<T>, we need to return
-            // a tuple with the first item being the provider
-            (provider, "this is a happy provider!")
-        })
-        // You can `.collect()` a BackendContainerIterator<T> into a BackendContainer<T>
-        .collect();
+    // let _unused_example_container: BackendContainer<&'static str> = ctx
+    //     .accounts
+    //     .reserves_container
+    //     .apply(|_provider, reserve| {
+    //         // apply some function to each backend item
+    //         fn foo<T: Clone>(t: &T) -> T {
+    //             t.clone()
+    //         }
+    //         (foo(reserve), String::from("this is a happy provider!"))
+    //     })
+    //     .into_iter()
+    //     .map(|(provider, (_reserve, _happy_string))| {
+    //         // if we want to collect into a BackendContainer<T>, we need to return
+    //         // a tuple with the first item being the provider
+    //         (provider, "this is a happy provider!")
+    //     })
+    //     // You can `.collect()` a BackendContainerIterator<T> into a BackendContainer<T>
+    //     .collect();
     ////////////////////////////////////////////////////////////////////////////////
 
     let vault_value = ctx.accounts.vault.total_value;
     let clock = Clock::get()?;
-    let assets = ctx.accounts.reserves_container.deref();
 
-    // Here we'll build a BackendContainer<Rate> from the BackendContainer<Reserves>
-    let strategy_weights = assets
-        // This `calculate_weights()` is provided by the impl BackendContainer<Reserves>
-        .calculate_weights(ctx.accounts.vault.strategy_type)?;
+    let final_allocations = {
+        //
+        // let assets = ctx.accounts.reserves_container.deref();
+        let assets = BackendContainer::<Reserves>::try_from(&*ctx.accounts)?;
 
-    // // And here we'll use that to build a BackendContainer<Allocation> with try_apply()
-    // // (instead of apply() because we're dealing with Result<>'s)
-    let strategy_allocations = BackendContainer::<Allocation>::try_from_weights(
-        &strategy_weights,
-        vault_value,
-        clock.slot,
-    )?;
+        // Here we'll build a BackendContainer<Rate> from the BackendContainer<Reserves>
+        let strategy_weights = assets
+            // This `calculate_weights()` is provided by the impl BackendContainer<Reserves>
+            .calculate_weights(ctx.accounts.vault.strategy_type)?;
 
-    let final_allocations = match ctx.accounts.vault.rebalance_mode {
-        RebalanceMode::ProofChecker => {
-            // We can build a BackendContainer<u16> from the proposed_weights_arg
-            let proposed_weights: BackendContainer<Rate> = proposed_weights_arg.into();
+        // // And here we'll use that to build a BackendContainer<Allocation> with try_apply()
+        // // (instead of apply() because we're dealing with Result<>'s)
+        let strategy_allocations = BackendContainer::<Allocation>::try_from_weights(
+            &strategy_weights,
+            vault_value,
+            clock.slot,
+        )?;
+        match ctx.accounts.vault.rebalance_mode {
+            RebalanceMode::ProofChecker => {
+                // We can build a BackendContainer<u16> from the proposed_weights_arg
+                let proposed_weights: BackendContainer<Rate> = proposed_weights_arg.into();
 
-            let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
-                &strategy_weights,
-                vault_value,
-                clock.slot,
-            )?;
+                let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
+                    &strategy_weights,
+                    vault_value,
+                    clock.slot,
+                )?;
 
-            #[cfg(feature = "debug")]
-            msg!(
-                "Running as proof checker with proposed weights: {:?}",
-                proposed_weights
-            );
+                #[cfg(feature = "debug")]
+                msg!(
+                    "Running as proof checker with proposed weights: {:?}",
+                    proposed_weights
+                );
 
-            proposed_weights.verify_weights()?;
+                proposed_weights.verify_weights()?;
 
-            let proposed_apr = assets.get_apr(&proposed_weights, &proposed_allocations)?;
-            let proof_apr = assets.get_apr(&strategy_weights, &strategy_allocations)?;
+                let proposed_apr = assets.get_apr(&proposed_weights, &proposed_allocations)?;
+                let proof_apr = assets.get_apr(&strategy_weights, &strategy_allocations)?;
 
-            #[cfg(feature = "debug")]
-            msg!(
-                "Proposed APR: {:?}\nProof APR: {:?}",
-                proposed_apr,
-                proof_apr
-            );
+                #[cfg(feature = "debug")]
+                msg!(
+                    "Proposed APR: {:?}\nProof APR: {:?}",
+                    proposed_apr,
+                    proof_apr
+                );
 
-            if proposed_apr < proof_apr {
-                return Err(ErrorCode::RebalanceProofCheckFailed.into());
+                if proposed_apr < proof_apr {
+                    return Err(ErrorCode::RebalanceProofCheckFailed.into());
+                }
+                proposed_allocations
             }
-            proposed_allocations
-        }
-        RebalanceMode::Calculator => {
-            #[cfg(feature = "debug")]
-            msg!("Running as calculator");
-            strategy_allocations
+            RebalanceMode::Calculator => {
+                #[cfg(feature = "debug")]
+                msg!("Running as calculator");
+                strategy_allocations
+            }
         }
     };
     #[cfg(feature = "debug")]

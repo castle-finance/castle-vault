@@ -72,7 +72,7 @@ pub mod castle_lending_aggregator {
     }
 
     pub fn rebalance_chris(
-        ctx: Context<Rebalance>,
+        ctx: Context<Rebalance<'_>>,
         proposed_weights: backend_container::BackendContainer<u16>,
     ) -> ProgramResult {
         instructions::rebalance::handler_chris(ctx, proposed_weights)
