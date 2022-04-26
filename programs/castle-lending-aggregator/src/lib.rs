@@ -28,7 +28,7 @@ pub mod castle_lending_aggregator {
         strategy_type: StrategyType,
         rebalance_mode: RebalanceMode,
         fees: FeeArgs,
-        deposit_cap: u64,
+        deposit_cap: Option<u64>,
     ) -> ProgramResult {
         instructions::init::handler(
             ctx,
