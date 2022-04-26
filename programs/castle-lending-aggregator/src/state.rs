@@ -195,7 +195,7 @@ impl Allocation {
 }
 
 /// Number of slots to consider stale after
-pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 1;
+pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 2;
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct LastUpdate {
@@ -228,6 +228,11 @@ impl LastUpdate {
 
     /// Check if marked stale or last update slot is too long ago
     pub fn is_stale(&self, slot: u64) -> Result<bool, ProgramError> {
+        #[cfg(feature = "debug")]
+        {
+            msg!("Last updated slot: {}", self.slot);
+            msg!("Current slot: {}", slot);
+        }
         Ok(self.stale || self.slots_elapsed(slot)? >= STALE_AFTER_SLOTS_ELAPSED)
     }
 }
