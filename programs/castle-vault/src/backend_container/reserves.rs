@@ -1,7 +1,8 @@
 use core::ops::Index;
 
 use anchor_lang::prelude::ProgramError;
-use solana_maths::{Rate, TryAdd};
+use core::convert::TryFrom;
+use solana_maths::{Rate, TryAdd, TryDiv, TryMul};
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -34,13 +35,22 @@ impl BackendContainer<Reserves> {
             .map_err(Into::into)
     }
 
+    fn calculate_weights_equal(&self) -> Result<BackendContainer<Rate>, ProgramError> {
+        u8::try_from(self.len())
+            // TODO: error code?
+            .map_err(|_| ProgramError::Custom(0))
+            .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100))
+            .and_then(|r| Rate::one().try_div(r))
+            .map(|equal_allocation| self.apply(|_, _| equal_allocation))
+    }
+
     pub fn calculate_weights(
         &self,
         stype: StrategyType,
     ) -> Result<BackendContainer<Rate>, ProgramError> {
         match stype {
             StrategyType::MaxYield => self.calculate_weights_max_yield(),
-            StrategyType::EqualAllocation => todo!(),
+            StrategyType::EqualAllocation => self.calculate_weights_equal(),
         }
     }
 
@@ -51,13 +61,10 @@ impl BackendContainer<Reserves> {
     ) -> Result<Rate, ProgramError> {
         Provider::iter()
             .map(|p| {
-                solana_maths::TryMul::try_mul(
-                    weights[p],
-                    self[p].calculate_return(allocations[p].value)?,
-                )
+                self[p]
+                    .calculate_return(allocations[p].value)
+                    .and_then(|r| weights[p].try_mul(r))
             })
-            .collect::<Result<Vec<_>, ProgramError>>()?
-            .iter()
-            .try_fold(Rate::zero(), |acc, r| acc.try_add(*r))
+            .try_fold(Rate::zero(), |acc, r| acc.try_add(r?))
     }
 }

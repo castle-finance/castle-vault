@@ -1,3 +1,5 @@
+use core::iter::FromIterator;
+
 use strum::IntoEnumIterator;
 
 use crate::rebalance::assets::{Provider, ProviderIter};
@@ -27,6 +29,26 @@ impl<'a, T> IntoIterator for &'a BackendContainer<T> {
         BackendContainerIterator {
             inner: self,
             inner_iter: Provider::iter(),
+        }
+    }
+}
+
+impl<T> FromIterator<(Provider, T)> for BackendContainer<T> {
+    fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
+        let mut solend = None;
+        let mut port = None;
+        let mut jet = None;
+        for (provider, backend) in iter {
+            match provider {
+                Provider::Solend => solend = Some(backend),
+                Provider::Port => port = Some(backend),
+                Provider::Jet => jet = Some(backend),
+            }
+        }
+        Self {
+            solend: solend.expect("missing item in FromIterator for BackendContainer"),
+            port: port.expect("missing item in FromIterator for BackendContainer"),
+            jet: jet.expect("missing item in FromIterator for BackendContainer"),
         }
     }
 }
