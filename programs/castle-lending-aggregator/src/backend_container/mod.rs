@@ -16,11 +16,12 @@ use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 
-#[derive(PartialEq, AnchorSerialize, AnchorDeserialize)]
+/// Provides an abstraction over supported backends
+#[derive(PartialEq, AnchorSerialize, AnchorDeserialize, Debug, Default, Clone)]
 pub struct BackendContainer<T> {
-    pub solend: T,
-    pub port: T,
-    pub jet: T,
+    pub solend: Option<T>,
+    pub port: Option<T>,
+    pub jet: Option<T>,
 }
 
 impl<T> Index<Provider> for BackendContainer<T> {
@@ -28,19 +29,31 @@ impl<T> Index<Provider> for BackendContainer<T> {
 
     fn index(&self, provider: Provider) -> &Self::Output {
         match provider {
-            Provider::Solend => &self.solend,
-            Provider::Port => &self.port,
-            Provider::Jet => &self.jet,
+            Provider::Solend => self
+                .solend
+                .as_ref()
+                .expect("missing Solend in BackendContainer"),
+            Provider::Port => self
+                .port
+                .as_ref()
+                .expect("missing Port in BackendContainer"),
+            Provider::Jet => self.jet.as_ref().expect("missing Jet in BackendContainer"),
         }
     }
 }
 
 impl<T> IndexMut<Provider> for BackendContainer<T> {
-    fn index_mut(&mut self, provider: Provider) -> &mut Self::Output {
+    fn index_mut(&mut self, provider: Provider) -> &mut T {
         match provider {
-            Provider::Solend => &mut self.solend,
-            Provider::Port => &mut self.port,
-            Provider::Jet => &mut self.jet,
+            Provider::Solend => self
+                .solend
+                .as_mut()
+                .expect("missing Solend in BackendContainer"),
+            Provider::Port => self
+                .port
+                .as_mut()
+                .expect("missing Port in BackendContainer"),
+            Provider::Jet => self.jet.as_mut().expect("missing Jet in BackendContainer"),
         }
     }
 }
@@ -53,13 +66,28 @@ impl<T> BackendContainer<T> {
     pub fn is_empty(&self) -> bool {
         false
     }
+    fn take(&mut self, provider: Provider) -> Option<T> {
+        match provider {
+            Provider::Solend => self.solend.take(),
+            Provider::Port => self.port.take(),
+            Provider::Jet => self.jet.take(),
+        }
+    }
 }
 
 impl<T> BackendContainer<T> {
-    pub fn apply_owned<U, F: Fn(Provider, T) -> U>(self, f: F) -> BackendContainer<U> {
-        //
+    pub fn apply_owned<U, F: Fn(Provider, T) -> U>(mut self, f: F) -> BackendContainer<U> {
         Provider::iter()
-            .map(|provider| (provider, f(provider, self[provider])))
+            .map(|provider| {
+                (
+                    provider,
+                    f(
+                        provider,
+                        self.take(provider)
+                            .expect("unable to take() in apply_owned()"),
+                    ),
+                )
+            })
             .collect()
     }
 
@@ -80,41 +108,6 @@ impl<T> BackendContainer<T> {
         Provider::iter()
             .map(|provider| f(provider, &self[provider]).map(|res| (provider, res)))
             // collect() will stop at the first failure
-            .collect()
-    }
-}
-
-impl<T> std::fmt::Debug for BackendContainer<T>
-where
-    T: std::fmt::Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BackendContainer")
-            .field("solend", &self.solend)
-            .field("port", &self.port)
-            .field("jet", &self.jet)
-            .finish()
-    }
-}
-
-impl<T> Clone for BackendContainer<T>
-where
-    T: Clone,
-{
-    fn clone(&self) -> Self {
-        Provider::iter()
-            .map(|provider| (provider, self[provider].clone()))
-            .collect()
-    }
-}
-
-impl<T> Default for BackendContainer<T>
-where
-    T: Default,
-{
-    fn default() -> Self {
-        Provider::iter()
-            .map(|provider| (provider, T::default()))
             .collect()
     }
 }
@@ -147,7 +140,7 @@ where
             .collect()
     }
 
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+    fn try_deserialize_unchecked(_buf: &mut &[u8]) -> Result<Self, ProgramError> {
         todo!()
     }
 }

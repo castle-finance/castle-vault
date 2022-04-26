@@ -17,12 +17,12 @@ use super::BackendContainer;
 impl BackendContainer<Reserves> {
     fn calculate_weights_max_yield(&self) -> Result<BackendContainer<Rate>, ProgramError> {
         self.into_iter()
-            .max_by(|(_prov_x, alloc_x), (_prov_y, alloc_y)| {
+            .max_by(|(_, alloc_x), (_, alloc_y)| {
                 // TODO: can we remove the unwrap() in any way?
                 self.compare(*alloc_x, *alloc_y).unwrap()
             })
             .map(|(max_yielding_provider, _a)| {
-                self.apply(|provider, _v| {
+                self.apply(|provider, _| {
                     if provider == max_yielding_provider {
                         Rate::one()
                     } else {

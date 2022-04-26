@@ -124,7 +124,6 @@ impl_provider_index!(StrategyWeightsArg, u16);
 impl From<StrategyWeightsArg> for StrategyWeights {
     fn from(value: StrategyWeightsArg) -> Self {
         let mut strategy_weights = Self::default();
-        // let _val = StrategyWeights::from(&value);
 
         for p in Provider::iter() {
             strategy_weights[p] = Rate::from_bips(value[p] as u64);
