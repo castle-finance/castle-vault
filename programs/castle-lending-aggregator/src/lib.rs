@@ -29,7 +29,7 @@ pub mod castle_lending_aggregator {
         rebalance_mode: RebalanceMode,
         fees: FeeArgs,
         deposit_cap: u64,
-        allocation_cap: u8
+        allocation_cap: u8,
     ) -> ProgramResult {
         instructions::init::handler(
             ctx,
@@ -38,7 +38,7 @@ pub mod castle_lending_aggregator {
             rebalance_mode,
             fees,
             deposit_cap,
-            allocation_cap
+            allocation_cap,
         )
     }
 

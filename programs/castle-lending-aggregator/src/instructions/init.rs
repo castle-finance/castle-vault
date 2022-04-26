@@ -209,7 +209,7 @@ pub fn handler(
     rebalance_mode: RebalanceMode,
     fees: FeeArgs,
     vault_deposit_cap: u64,
-    allocation_cap: u8
+    allocation_cap: u8,
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
