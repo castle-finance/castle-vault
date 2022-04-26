@@ -44,7 +44,7 @@ pub trait Strategy {
 
         let cap = Rate::from_percent(allocation_cap);
         for p in Provider::iter() {
-            if proposed_weights[p] > cap {
+            if proposed_weights[p].gt(&cap) {
                 return Err(ErrorCode::InvalidProposedWeights.into());
             }
         }
