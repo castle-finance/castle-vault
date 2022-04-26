@@ -134,6 +134,7 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 }
 
 /// Calculate and store optimal allocations to downstream lending markets
+// This is identical to `handler_chris()` below (at least that's the intention), just a different style
 pub fn handler_chris_concise(
     ctx: Context<Rebalance>,
     proposed_weights_arg: BackendContainer<u16>,
@@ -173,7 +174,7 @@ pub fn handler_chris_concise(
                         proof_apr
                     );
 
-                    (proposed_apr < proof_apr).as_result(
+                    (proposed_apr >= proof_apr).as_result(
                         proposed_allocations,
                         ErrorCode::RebalanceProofCheckFailed.into(),
                     )

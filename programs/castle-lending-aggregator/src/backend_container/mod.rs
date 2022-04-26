@@ -7,15 +7,16 @@ pub use allocation::*;
 pub use iter::*;
 pub use rate::*;
 pub use reserves::*;
-
-use crate::borsh::{BorshDeserialize, BorshSerialize};
-use crate::rebalance::assets::{Provider, ReturnCalculator};
-use anchor_lang::prelude::{ProgramError, Pubkey};
-use std::cmp::Ordering;
-use std::{iter::FromIterator, ops::Index};
 use strum::IntoEnumIterator;
 
-#[derive(Clone)]
+use crate::rebalance::assets::{Provider, ReturnCalculator};
+// use crate::{BorshDeserialize, BorshSerialize};
+use anchor_lang::prelude::{ProgramError, Pubkey};
+use anchor_lang::{AnchorDeserialize, AnchorSerialize};
+use std::cmp::Ordering;
+use std::ops::Index;
+
+#[derive(PartialEq, AnchorSerialize, AnchorDeserialize)]
 pub struct BackendContainer<T> {
     pub solend: T,
     pub port: T,
@@ -66,26 +67,6 @@ impl<T> BackendContainer<T> {
     }
 }
 
-impl<T> FromIterator<(Provider, T)> for BackendContainer<T> {
-    fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
-        let mut solend = None;
-        let mut port = None;
-        let mut jet = None;
-        for (provider, backend) in iter {
-            match provider {
-                Provider::Solend => solend = Some(backend),
-                Provider::Port => port = Some(backend),
-                Provider::Jet => jet = Some(backend),
-            }
-        }
-        Self {
-            solend: solend.expect("missing item in FromIterator for BackendContainer"),
-            port: port.expect("missing item in FromIterator for BackendContainer"),
-            jet: jet.expect("missing item in FromIterator for BackendContainer"),
-        }
-    }
-}
-
 impl<T> std::fmt::Debug for BackendContainer<T>
 where
     T: std::fmt::Debug,
@@ -99,6 +80,19 @@ where
     }
 }
 
+impl<T> Clone for BackendContainer<T>
+where
+    T: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            solend: self.solend.clone(),
+            port: self.port.clone(),
+            jet: self.jet.clone(),
+        }
+    }
+}
+
 impl<T> BackendContainer<T>
 where
     T: ReturnCalculator,
@@ -108,10 +102,11 @@ where
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-/// De/serialization code
-/// This is required if we want to pass this in directly to a handler, e.g. `rebalance_chris()`
-////////////////////////////////////////////////////////////////////////////
+impl<T> anchor_lang::Owner for BackendContainer<T> {
+    fn owner() -> Pubkey {
+        todo!()
+    }
+}
 
 impl<T> anchor_lang::AccountDeserialize for BackendContainer<T>
 where
@@ -129,14 +124,14 @@ where
             }
         }
         Ok(BackendContainer {
-            solend: solend.expect("missing item in AccountDeserialize for BackendContainer"),
-            port: port.expect("missing item in AccountDeserialize for BackendContainer"),
-            jet: jet.expect("missing item in AccountDeserialize for BackendContainer"),
+            solend: solend.ok_or(ProgramError::InvalidAccountData)?,
+            port: port.ok_or(ProgramError::InvalidAccountData)?,
+            jet: jet.ok_or(ProgramError::InvalidAccountData)?,
         })
     }
 
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Self::try_deserialize(buf)
+        todo!()
     }
 }
 
@@ -144,45 +139,8 @@ impl<T> anchor_lang::AccountSerialize for BackendContainer<T>
 where
     T: anchor_lang::AccountSerialize,
 {
+    // TODO: is this right?
     fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), ProgramError> {
         Provider::iter().try_for_each(|provider| self[provider].try_serialize(writer))
-    }
-}
-
-impl<T> anchor_lang::Owner for BackendContainer<T> {
-    fn owner() -> Pubkey {
-        todo!()
-    }
-}
-
-impl<T> BorshSerialize for BackendContainer<T>
-where
-    T: BorshSerialize,
-{
-    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        Provider::iter().try_for_each(|provider| self[provider].serialize(writer))
-    }
-}
-
-impl<T> BorshDeserialize for BackendContainer<T>
-where
-    T: BorshDeserialize,
-{
-    fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-        let mut solend = None;
-        let mut port = None;
-        let mut jet = None;
-        for provider in Provider::iter() {
-            match provider {
-                Provider::Solend => solend = Some(T::deserialize(buf)?),
-                Provider::Port => port = Some(T::deserialize(buf)?),
-                Provider::Jet => jet = Some(T::deserialize(buf)?),
-            }
-        }
-        Ok(BackendContainer {
-            solend: solend.expect("missing item in BorshDeserialize for BackendContainer"),
-            port: port.expect("missing item in BorshDeserialize for BackendContainer"),
-            jet: jet.expect("missing item in BorshDeserialize for BackendContainer"),
-        })
     }
 }
