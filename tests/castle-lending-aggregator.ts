@@ -554,6 +554,47 @@ describe("castle-vault", () => {
                 try {
                     await performRebalance(
                         {
+                            solend: 3333,
+                            port: 3333,
+                            jet: 3334,
+                        },
+                        true
+                    );
+                    assert.fail("Rebalance did not fail");
+                } catch (err) {
+                    assert.isTrue(
+                        err.message.includes(errorCode),
+                        `Error code ${errorCode} not included in error message: ${err}`
+                    );
+                }
+
+                assert.equal(
+                    (
+                        await vaultClient.getVaultSolendLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+                assert.equal(
+                    (
+                        await vaultClient.getVaultPortLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+                assert.equal(
+                    (
+                        await vaultClient.getVaultJetLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+            });
+
+            it("Rejects tx if weights exceeds the cap", async () => {
+                const errorCode = program.idl.errors
+                    .find((e) => e.name == "InvalidProposedWeights")
+                    .code.toString(16);
+                try {
+                    await performRebalance(
+                        {
                             solend: 10000,
                             port: 0,
                             jet: 0,
