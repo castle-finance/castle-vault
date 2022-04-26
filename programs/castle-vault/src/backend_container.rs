@@ -56,12 +56,19 @@ impl<T> BackendContainer<T> {
 }
 
 impl<T> BackendContainer<T> {
+    pub fn apply_owned<U, F: Fn(Provider, T) -> U>(self, f: F) -> BackendContainer<U> {
+        //
+        Provider::iter()
+            .map(|provider| (provider, f(provider, self[provider])))
+            .collect()
+    }
+
     /// Applies `f` to each element of the container individually, yielding a new container
     pub fn apply<U, F: Fn(Provider, &T) -> U>(&self, f: F) -> BackendContainer<U> {
         // Because we have FromIterator<(Provider, T)>, if we yield a tuple of
         // `(Provider, U)` we can `collect()` this into a `BackendContainer<U>`
-        self.into_iter()
-            .map(|(provider, value)| (provider, f(provider, value)))
+        Provider::iter()
+            .map(|provider| (provider, f(provider, &self[provider])))
             .collect()
     }
 
@@ -70,8 +77,8 @@ impl<T> BackendContainer<T> {
         &self,
         f: F,
     ) -> Result<BackendContainer<U>, E> {
-        self.into_iter()
-            .map(|(provider, value)| f(provider, value).map(|res| (provider, res)))
+        Provider::iter()
+            .map(|provider| f(provider, &self[provider]).map(|res| (provider, res)))
             // collect() will stop at the first failure
             .collect()
     }
