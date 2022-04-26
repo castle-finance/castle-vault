@@ -849,7 +849,12 @@ describe("castle-vault", () => {
             before(async function () {
                 await initializeVault(StrategyTypes.maxYield, rebalanceMode);
             });
-            testRebalance(0, 0, 1, rebalanceMode);
+            testRebalance(
+                1 - vaultAllocationCap / 100,
+                0,
+                vaultAllocationCap / 100,
+                rebalanceMode
+            );
         });
     });
 });
