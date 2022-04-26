@@ -22,6 +22,7 @@ pub struct BackendContainer<T> {
     pub solend: Option<T>,
     pub port: Option<T>,
     pub jet: Option<T>,
+    // pub m: BTreeMap<Provider, T>,
 }
 
 impl<T> Index<Provider> for BackendContainer<T> {
@@ -54,6 +55,16 @@ impl<T> IndexMut<Provider> for BackendContainer<T> {
                 .as_mut()
                 .expect("missing Port in BackendContainer"),
             Provider::Jet => self.jet.as_mut().expect("missing Jet in BackendContainer"),
+        }
+    }
+}
+
+impl<'a, T> From<&'a dyn Index<Provider, Output = &'a T>> for BackendContainer<&'a T> {
+    fn from(p: &'a dyn Index<Provider, Output = &'a T>) -> Self {
+        Self {
+            solend: Some(p[Provider::Solend]),
+            port: Some(p[Provider::Port]),
+            jet: Some(p[Provider::Jet]),
         }
     }
 }

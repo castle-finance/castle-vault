@@ -3,7 +3,19 @@ use solana_maths::{Rate, TryMul};
 use strum_macros::EnumIter;
 
 // TODO rebalance module should not be dependent on specific names of assets
-#[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    EnumIter,
+    PartialEq,
+    Ord,
+    Hash,
+    Eq,
+    PartialOrd,
+    AnchorSerialize,
+    AnchorDeserialize,
+)]
 pub enum Provider {
     Solend,
     Port,
