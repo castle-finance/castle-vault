@@ -54,7 +54,10 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 }
 
 /// Calculate and store optimal allocations to downstream lending markets
-pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
+pub fn handler(
+    ctx: Context<Rebalance>,
+    proposed_weights_arg: Option<StrategyWeightsArg>,
+) -> ProgramResult {
     let vault_value = ctx.accounts.vault.total_value;
     let clock = Clock::get()?;
 
@@ -78,9 +81,9 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     let strategy_allocations =
         Allocations::try_from_weights(strategy_weights, vault_value, clock.slot)?;
 
-    let final_allocations = match ctx.accounts.vault.rebalance_mode {
-        RebalanceMode::ProofChecker => {
-            let proposed_weights: StrategyWeights = proposed_weights_arg.into();
+    let final_allocations = match (ctx.accounts.vault.rebalance_mode, proposed_weights_arg) {
+        (RebalanceMode::ProofChecker, Some(proposed_weights_val)) => {
+            let proposed_weights: StrategyWeights = proposed_weights_val.into();
             let proposed_allocations =
                 Allocations::try_from_weights(proposed_weights, vault_value, clock.slot)?;
 
@@ -112,9 +115,10 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
             }
             proposed_allocations
         }
-        RebalanceMode::Calculator => {
+        _ => {
             #[cfg(feature = "debug")]
             msg!("Running as calculator");
+
             strategy_allocations
         }
     };

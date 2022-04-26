@@ -591,7 +591,7 @@ export class VaultClient {
         return this.program.provider.sendAll(txs);
     }
 
-    getRebalanceTx(proposedWeights: ProposedWeightsBps): Transaction {
+    getRebalanceTx(proposedWeights?: ProposedWeightsBps): Transaction {
         const rebalanceTx = new Transaction();
         rebalanceTx.add(this.getRefreshIx());
         rebalanceTx.add(

@@ -61,9 +61,9 @@ pub mod castle_lending_aggregator {
 
     pub fn rebalance(
         ctx: Context<Rebalance>,
-        proposed_weights: StrategyWeightsArg,
+        proposed_weights_arg: Option<StrategyWeightsArg>,
     ) -> ProgramResult {
-        instructions::rebalance::handler(ctx, proposed_weights)
+        instructions::rebalance::handler(ctx, proposed_weights_arg)
     }
 
     pub fn refresh<'info>(
