@@ -14,7 +14,7 @@ use crate::rebalance::assets::{Provider, ReturnCalculator};
 use anchor_lang::prelude::{ProgramError, Pubkey};
 use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 use std::cmp::Ordering;
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 #[derive(PartialEq, AnchorSerialize, AnchorDeserialize)]
 pub struct BackendContainer<T> {
@@ -31,6 +31,16 @@ impl<T> Index<Provider> for BackendContainer<T> {
             Provider::Solend => &self.solend,
             Provider::Port => &self.port,
             Provider::Jet => &self.jet,
+        }
+    }
+}
+
+impl<T> IndexMut<Provider> for BackendContainer<T> {
+    fn index_mut(&mut self, provider: Provider) -> &mut Self::Output {
+        match provider {
+            Provider::Solend => &mut self.solend,
+            Provider::Port => &mut self.port,
+            Provider::Jet => &mut self.jet,
         }
     }
 }
@@ -85,11 +95,20 @@ where
     T: Clone,
 {
     fn clone(&self) -> Self {
-        Self {
-            solend: self.solend.clone(),
-            port: self.port.clone(),
-            jet: self.jet.clone(),
-        }
+        Provider::iter()
+            .map(|provider| (provider, self[provider].clone()))
+            .collect()
+    }
+}
+
+impl<T> Default for BackendContainer<T>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        Provider::iter()
+            .map(|provider| (provider, T::default()))
+            .collect()
     }
 }
 
@@ -113,21 +132,12 @@ where
     T: anchor_lang::AccountDeserialize,
 {
     fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        let mut solend = None;
-        let mut port = None;
-        let mut jet = None;
-        for provider in Provider::iter() {
-            match provider {
-                Provider::Solend => solend = Some(T::try_deserialize(buf)?),
-                Provider::Port => port = Some(T::try_deserialize(buf)?),
-                Provider::Jet => jet = Some(T::try_deserialize(buf)?),
-            }
-        }
-        Ok(BackendContainer {
-            solend: solend.ok_or(ProgramError::InvalidAccountData)?,
-            port: port.ok_or(ProgramError::InvalidAccountData)?,
-            jet: jet.ok_or(ProgramError::InvalidAccountData)?,
-        })
+        Provider::iter()
+            .map(|provider| {
+                let val = T::try_deserialize(buf)?;
+                Ok((provider, val))
+            })
+            .collect()
     }
 
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {

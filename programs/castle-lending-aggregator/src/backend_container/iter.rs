@@ -33,6 +33,7 @@ impl<'a, T> IntoIterator for &'a BackendContainer<T> {
     }
 }
 
+// Allows us to create a BackendContainer<T> from an Iterator that yields (Provider, T)
 impl<T> FromIterator<(Provider, T)> for BackendContainer<T> {
     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
         let mut solend = None;
