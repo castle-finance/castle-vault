@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock::{
     DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
 };
+use jet_proto_proc_macros::assert_size;
 use solana_maths::{Decimal, TryMul};
 use std::cmp::Ordering;
 use strum::IntoEnumIterator;
@@ -17,6 +18,7 @@ pub const SLOTS_PER_YEAR: u64 =
 
 pub const ONE_AS_BPS: u64 = 10000;
 
+#[assert_size(768)]
 #[account]
 #[derive(Debug)]
 pub struct Vault {
@@ -74,6 +76,9 @@ pub struct Vault {
 
     /// Whether to run rebalance as a proof check or a calculation
     pub rebalance_mode: RebalanceMode,
+
+    // 16 * 12 = 192
+    _reserved: [u128; 12],
 }
 
 impl Vault {
@@ -127,6 +132,7 @@ pub enum RebalanceMode {
     ProofChecker,
 }
 
+#[assert_size(aligns, 80)]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
 pub struct VaultFees {
     /// Basis points of the accrued interest that gets sent to the fee_receiver
@@ -143,6 +149,8 @@ pub struct VaultFees {
 
     /// Account that referral fees from this vault are sent to
     pub referral_fee_receiver: Pubkey,
+
+    pub _padding: u32,
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
@@ -151,6 +159,7 @@ pub enum StrategyType {
     EqualAllocation,
 }
 
+#[assert_size(aligns, 72)]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: Allocation,
@@ -176,6 +185,7 @@ impl Allocations {
     }
 }
 
+#[assert_size(aligns, 24)]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocation {
     pub value: u64,
@@ -197,6 +207,7 @@ impl Allocation {
 /// Number of slots to consider stale after
 pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 2;
 
+#[assert_size(aligns, 16)]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct LastUpdate {
     pub slot: u64,

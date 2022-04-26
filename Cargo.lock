@@ -641,11 +641,13 @@ dependencies = [
  "boolinator",
  "jet",
  "jet-proto-math",
+ "jet-proto-proc-macros",
  "port-anchor-adaptor",
  "port-variable-rate-lending-instructions",
  "solana-maths",
  "spl-math",
  "spl-token-lending",
+ "static_assertions",
  "strum",
  "strum_macros",
 ]
@@ -928,9 +930,9 @@ dependencies = [
 
 [[package]]
 name = "jet-proto-proc-macros"
-version = "1.0.1"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4192cd13ebb6b5c319970e5883045441c0334afc21b9c64bc8885f60916310f2"
+checksum = "7eab4c6fd9509fa9c5e6f329363fe47aa77343a5d0b2f82db5a5a2c1e7e3ef6d"
 dependencies = [
  "proc-macro2",
  "quote",

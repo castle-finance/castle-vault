@@ -244,6 +244,7 @@ pub fn handler(
         fee_carry_bps: fees.fee_carry_bps,
         fee_mgmt_bps: fees.fee_mgmt_bps,
         referral_fee_pct: fees.referral_fee_pct,
+        _padding: 0_u32,
     };
 
     // Initialize fee receiver account
