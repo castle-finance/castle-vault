@@ -22,6 +22,8 @@ pub const ONE_AS_BPS: u64 = 10000;
 #[account]
 #[derive(Debug)]
 pub struct Vault {
+    pub version: u8,
+
     /// Account which is allowed to call restricted instructions
     /// Also the authority of the fee receiver account
     pub owner: Pubkey,
@@ -77,8 +79,10 @@ pub struct Vault {
     /// Whether to run rebalance as a proof check or a calculation
     pub rebalance_mode: RebalanceMode,
 
+    _reserved0: [u8; 15],
+
     // 16 * 12 = 192
-    _reserved: [u128; 12],
+    _reserved1: [u128; 11],
 }
 
 impl Vault {

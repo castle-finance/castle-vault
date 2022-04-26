@@ -219,6 +219,7 @@ pub fn handler(
     validate_fees(&fees)?;
 
     let vault = &mut ctx.accounts.vault;
+    vault.version = 0;
     vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.owner = ctx.accounts.owner.key();
     vault.authority_seed = vault.key();
