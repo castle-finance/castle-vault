@@ -92,7 +92,7 @@ impl Strategy for MaxYieldStrategy {
         allocation_cap: u8,
     ) -> Result<StrategyWeights, ProgramError> {
         let mut sorted_pools: Vec<Provider> = Provider::iter().collect();
-        sorted_pools.sort_by(|x, y| self.compare(&assets[*y], &assets[*x]).unwrap());
+        sorted_pools.sort_unstable_by(|x, y| self.compare(&assets[*y], &assets[*x]).unwrap());
 
         let cap = Rate::from_percent(allocation_cap);
         let mut remaining_weight = Rate::one();

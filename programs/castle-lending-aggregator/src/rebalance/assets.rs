@@ -4,7 +4,6 @@ use strum_macros::EnumIter;
 
 // TODO rebalance module should not be dependent on specific names of assets
 #[derive(Clone, Copy, Debug, EnumIter, PartialEq)]
-#[repr(u32)]
 pub enum Provider {
     Solend,
     Port,
