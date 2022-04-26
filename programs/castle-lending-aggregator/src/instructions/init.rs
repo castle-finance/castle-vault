@@ -239,14 +239,13 @@ pub fn handler(
     vault.rebalance_mode = rebalance_mode;
     vault.deposit_cap = vault_deposit_cap;
 
-    vault.fees = VaultFees {
-        fee_receiver: ctx.accounts.fee_receiver.key(),
-        referral_fee_receiver: ctx.accounts.referral_fee_receiver.key(),
-        fee_carry_bps: fees.fee_carry_bps,
-        fee_mgmt_bps: fees.fee_mgmt_bps,
-        referral_fee_pct: fees.referral_fee_pct,
-        _padding: 0_u32,
-    };
+    vault.fees = VaultFees::new(
+        fees.fee_carry_bps,
+        fees.fee_mgmt_bps,
+        fees.referral_fee_pct,
+        ctx.accounts.fee_receiver.key(),
+        ctx.accounts.referral_fee_receiver.key(),
+    );
 
     // Initialize fee receiver account
     associated_token::create(ctx.accounts.init_fee_receiver_create_context(

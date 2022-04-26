@@ -20,6 +20,7 @@ pub const ONE_AS_BPS: u64 = 10000;
 
 #[assert_size(768)]
 #[account]
+#[repr(C, align(8))]
 #[derive(Debug)]
 pub struct Vault {
     pub version: u8,
@@ -59,6 +60,16 @@ pub struct Vault {
     /// Mint address of the tokens that are stored in vault
     pub reserve_token_mint: Pubkey,
 
+    /// Whether to run rebalance as a proof check or a calculation
+    pub rebalance_mode: RebalanceMode,
+
+    /// Strategy type that is executed during rebalance
+    pub strategy_type: StrategyType,
+
+    // 4
+    /// Explicit padding to guarantee alignment
+    _padding: u32,
+
     pub fees: VaultFees,
 
     /// Last slot when vault was refreshed
@@ -73,16 +84,9 @@ pub struct Vault {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    /// Strategy type that is executed during rebalance
-    pub strategy_type: StrategyType,
-
-    /// Whether to run rebalance as a proof check or a calculation
-    pub rebalance_mode: RebalanceMode,
-
-    _reserved0: [u8; 15],
-
-    // 16 * 12 = 192
-    _reserved1: [u128; 11],
+    // 8 * 24 = 192
+    /// Reserved space for future upgrades
+    _reserved: [u64; 24],
 }
 
 impl Vault {
@@ -137,6 +141,7 @@ pub enum RebalanceMode {
 }
 
 #[assert_size(aligns, 80)]
+#[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
 pub struct VaultFees {
     /// Basis points of the accrued interest that gets sent to the fee_receiver
@@ -154,7 +159,26 @@ pub struct VaultFees {
     /// Account that referral fees from this vault are sent to
     pub referral_fee_receiver: Pubkey,
 
-    pub _padding: u32,
+    _padding: [u8; 7],
+}
+
+impl VaultFees {
+    pub fn new(
+        fee_carry_bps: u32,
+        fee_mgmt_bps: u32,
+        referral_fee_pct: u8,
+        fee_receiver: Pubkey,
+        referral_fee_receiver: Pubkey,
+    ) -> Self {
+        Self {
+            fee_carry_bps,
+            fee_mgmt_bps,
+            referral_fee_pct,
+            fee_receiver,
+            referral_fee_receiver,
+            _padding: [0_u8; 7],
+        }
+    }
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
@@ -164,6 +188,7 @@ pub enum StrategyType {
 }
 
 #[assert_size(aligns, 72)]
+#[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: Allocation,
@@ -190,6 +215,7 @@ impl Allocations {
 }
 
 #[assert_size(aligns, 24)]
+#[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocation {
     pub value: u64,
@@ -212,16 +238,22 @@ impl Allocation {
 pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 2;
 
 #[assert_size(aligns, 16)]
+#[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct LastUpdate {
     pub slot: u64,
     pub stale: bool,
+    _padding: [u8; 7],
 }
 
 impl LastUpdate {
     /// Create new last update
     pub fn new(slot: u64) -> Self {
-        Self { slot, stale: true }
+        Self {
+            slot,
+            stale: true,
+            _padding: [0_u8; 7],
+        }
     }
 
     /// Return slots elapsed since given slot
