@@ -220,7 +220,7 @@ pub fn handler(
     validate_fees(&fees)?;
 
     // TODO compute the lower limit of the cap using number of lenging pools
-    if allocation_cap_pct < 34 || allocation_cap_pct > 100 {
+    if !(34..=100).contains(&allocation_cap_pct) {
         return Err(ErrorCode::AllocationCapError.into());
     }
 

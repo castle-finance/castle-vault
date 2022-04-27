@@ -2,7 +2,7 @@ use std::{cmp::Ordering, convert::TryFrom};
 
 // TODO should ProgramError be used in this module?
 use anchor_lang::prelude::*;
-use solana_maths::{Rate, TryAdd, TryDiv, TryMul, TrySub};
+use solana_maths::{Rate, TryAdd, TryDiv, TrySub};
 use strum::IntoEnumIterator;
 
 // TODO refactor so we don't need to depend on higher-level modules
@@ -23,7 +23,7 @@ pub trait Strategy {
     fn calculate_weights(
         &self,
         assets: &Assets,
-        allocation_cap_pct: u8,
+        _allocation_cap_pct: u8,
     ) -> Result<StrategyWeights, ProgramError>;
 
     // TODO split this into separate trait?
@@ -59,7 +59,7 @@ impl Strategy for EqualAllocationStrategy {
     fn calculate_weights(
         &self,
         assets: &Assets,
-        allocation_cap_pct: u8,
+        _allocation_cap_pct: u8,
     ) -> Result<StrategyWeights, ProgramError> {
         // TODO make this error handling more granular and informative
         let num_assets = u8::try_from(assets.len()).map_err(|_| ErrorCode::StrategyError)?;
