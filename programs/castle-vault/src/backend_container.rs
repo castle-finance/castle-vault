@@ -10,14 +10,13 @@ pub use reserves::*;
 use strum::IntoEnumIterator;
 
 use crate::rebalance::assets::{Provider, ReturnCalculator};
-// use crate::{BorshDeserialize, BorshSerialize};
-use anchor_lang::prelude::{ProgramError, Pubkey};
+use anchor_lang::prelude::ProgramError;
 use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
 
 /// Provides an abstraction over supported backends
-#[derive(PartialEq, AnchorSerialize, AnchorDeserialize, Debug, Default, Clone)]
+#[derive(PartialEq, AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct BackendContainer<T> {
     pub solend: Option<T>,
     pub port: Option<T>,
@@ -61,11 +60,10 @@ impl<T> IndexMut<Provider> for BackendContainer<T> {
 
 impl<'a, T> From<&'a dyn Index<Provider, Output = &'a T>> for BackendContainer<&'a T> {
     fn from(p: &'a dyn Index<Provider, Output = &'a T>) -> Self {
-        Self {
-            solend: Some(p[Provider::Solend]),
-            port: Some(p[Provider::Port]),
-            jet: Some(p[Provider::Jet]),
-        }
+        Provider::iter().fold(BackendContainer::default(), |mut acc, provider| {
+            acc[provider] = p[provider];
+            acc
+        })
     }
 }
 
@@ -82,6 +80,16 @@ impl<T> BackendContainer<T> {
             Provider::Solend => self.solend.take(),
             Provider::Port => self.port.take(),
             Provider::Jet => self.jet.take(),
+        }
+    }
+}
+
+impl<T> Default for BackendContainer<T> {
+    fn default() -> Self {
+        Self {
+            solend: Default::default(),
+            port: Default::default(),
+            jet: Default::default(),
         }
     }
 }
@@ -129,39 +137,5 @@ where
 {
     pub fn compare(&self, lhs: &T, rhs: &T) -> Result<Ordering, ProgramError> {
         Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
-    }
-}
-
-impl<T> anchor_lang::Owner for BackendContainer<T> {
-    fn owner() -> Pubkey {
-        todo!()
-    }
-}
-
-impl<T> anchor_lang::AccountDeserialize for BackendContainer<T>
-where
-    T: anchor_lang::AccountDeserialize,
-{
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Provider::iter()
-            .map(|provider| {
-                let val = T::try_deserialize(buf)?;
-                Ok((provider, val))
-            })
-            .collect()
-    }
-
-    fn try_deserialize_unchecked(_buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        todo!()
-    }
-}
-
-impl<T> anchor_lang::AccountSerialize for BackendContainer<T>
-where
-    T: anchor_lang::AccountSerialize,
-{
-    // TODO: is this right?
-    fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> Result<(), ProgramError> {
-        Provider::iter().try_for_each(|provider| self[provider].try_serialize(writer))
     }
 }

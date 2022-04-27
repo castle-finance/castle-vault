@@ -2,7 +2,6 @@ use std::convert::TryFrom;
 use std::ops::Deref;
 
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use boolinator::Boolinator;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::{Rate, TryAdd, TryMul};
@@ -47,41 +46,6 @@ pub enum Reserves {
     Solend(SolendReserve),
     Port(PortReserve),
     Jet(Box<jet::state::Reserve>),
-}
-
-impl<'a> AccountDeserialize for Reserves {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Self::try_deserialize_unchecked(buf)
-    }
-
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        Self::unpack(buf)
-    }
-}
-
-// TODO
-impl<'a> Pack for Reserves {
-    const LEN: usize = 42;
-
-    fn pack_into_slice(&self, _dst: &mut [u8]) {
-        todo!()
-    }
-
-    fn unpack_from_slice(_src: &[u8]) -> Result<Self, ProgramError> {
-        todo!()
-    }
-}
-
-impl<'a> Sealed for Reserves {}
-impl<'a> IsInitialized for Reserves {
-    fn is_initialized(&self) -> bool {
-        todo!()
-    }
-}
-impl<'a> AccountSerialize for Reserves {
-    fn try_serialize<W: std::io::Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
-        todo!()
-    }
 }
 
 impl<'a> ReserveAccessor for Reserves {
@@ -141,11 +105,11 @@ pub struct Rebalance<'info> {
 impl TryFrom<&Rebalance<'_>> for BackendContainer<Reserves> {
     type Error = ProgramError;
     fn try_from(r: &Rebalance<'_>) -> Result<BackendContainer<Reserves>, Self::Error> {
-        // NOTE: I tried pretty hard to get rid of these clones and only use the references
-        // the problem is that these references originate from a deref() (or as_ref())
+        // NOTE: I tried pretty hard to get rid of these clones and only use the references.
+        // The problem is that these references originate from a deref() (or as_ref())
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
         // which means that the lifetimes are shared, preventing any other borrows
-        // (in particular the mutable borrow required to save state)
+        // (in particular the mutable borrow required at the end to save state)
         Ok(BackendContainer {
             solend: Some(Reserves::Solend(r.solend_reserve.deref().deref().clone())),
             port: Some(Reserves::Port(r.port_reserve.deref().deref().clone())),
@@ -175,19 +139,17 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 
 /// Calculate and store optimal allocations to downstream lending markets
 // This is identical to `handler_chris()` below (at least that's the intention), just a different style
-pub fn handler_chris_concise<'info>(
-    ctx: Context<'_, 'info, '_, '_, Rebalance<'info>>,
+pub fn handler_chris_concise(
+    ctx: Context<Rebalance>,
     proposed_weights_arg: BackendContainer<u16>,
 ) -> ProgramResult {
     let vault_value = ctx.accounts.vault.total_value;
+    let slot = Clock::get()?.slot;
 
-    // let assets = ctx.accounts.reserves_container.deref();
-    let assets = BackendContainer::try_from(&*ctx.accounts)?;
-
+    let assets = Box::new(BackendContainer::try_from(&*ctx.accounts)?);
     let strategy_weights = assets.calculate_weights(ctx.accounts.vault.strategy_type)?;
-    let clock = Clock::get()?;
 
-    BackendContainer::<Allocation>::try_from_weights(&strategy_weights, vault_value, clock.slot)
+    BackendContainer::<Allocation>::try_from_weights(&strategy_weights, vault_value, slot)
         .and_then(
             |strategy_allocations| match ctx.accounts.vault.rebalance_mode {
                 RebalanceMode::ProofChecker => {
@@ -195,7 +157,7 @@ pub fn handler_chris_concise<'info>(
                     let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
                         &strategy_weights,
                         vault_value,
-                        clock.slot,
+                        slot,
                     )?;
 
                     #[cfg(feature = "debug")]
@@ -232,7 +194,6 @@ pub fn handler_chris_concise<'info>(
             #[cfg(feature = "debug")]
             msg!("Final allocations: {:?}", final_allocations);
 
-            // TODO: remove clone() if we're going to use this event?
             emit!(RebalanceEventChris {
                 allocations: final_allocations.clone()
             });
@@ -242,38 +203,60 @@ pub fn handler_chris_concise<'info>(
 }
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler_chris(
-    // ctx: Context<'_, 'rebalRef, '_, '_, Rebalance<'rebalRef>>,
     ctx: Context<Rebalance>,
     proposed_weights_arg: BackendContainer<u16>,
 ) -> ProgramResult {
     ////////////////////////////////////////////////////////////////////////////////
     // Here's an example of how a BackendContainer can be used
-    // let _unused_example_container: BackendContainer<&'static str> = ctx
-    //     .accounts
-    //     .reserves_container
-    //     .apply(|_provider, reserve| {
-    //         // apply some function to each backend item
-    //         fn foo<T: Clone>(t: &T) -> T {
-    //             t.clone()
-    //         }
-    //         (foo(reserve), String::from("this is a happy provider!"))
-    //     })
-    //     .into_iter()
-    //     .map(|(provider, (_reserve, _happy_string))| {
-    //         // if we want to collect into a BackendContainer<T>, we need to return
-    //         // a tuple with the first item being the provider
-    //         (provider, "this is a happy provider!")
-    //     })
-    //     // You can `.collect()` a BackendContainerIterator<T> into a BackendContainer<T>
-    //     .collect();
+    let _unused_example_container: BackendContainer<&'static str> =
+        BackendContainer::<Reserves>::try_from(&*ctx.accounts)?
+            .apply(|_provider, reserve| {
+                // apply some function to each backend item
+                fn foo<T: Clone>(t: &T) -> T {
+                    t.clone()
+                }
+                (foo(reserve), String::from("this is a happy provider!"))
+            })
+            .into_iter()
+            .map(|(provider, (_reserve, _happy_string))| {
+                // if we want to collect into a BackendContainer<T>, we need to return
+                // a tuple with the first item being the provider
+                (provider, "this is a happy provider!")
+            })
+            // You can `.collect()` a BackendContainerIterator<T> into a BackendContainer<T>
+            .collect();
     ////////////////////////////////////////////////////////////////////////////////
 
     let vault_value = ctx.accounts.vault.total_value;
     let clock = Clock::get()?;
 
     let final_allocations = {
-        //
-        // let assets = ctx.accounts.reserves_container.deref();
+        ////////////////////////////////////////////////////////////////////////////////
+        // Here is an alternative that uses LendingMarketAsset
+        let val = [
+            (
+                Provider::Solend,
+                LendingMarketAsset(Box::new(
+                    ctx.accounts.solend_reserve.as_ref().deref().deref().clone(),
+                )),
+            ),
+            (
+                Provider::Port,
+                LendingMarketAsset(Box::new(
+                    ctx.accounts.port_reserve.as_ref().deref().deref().clone(),
+                )),
+            ),
+            (
+                Provider::Jet,
+                LendingMarketAsset(Box::new(*ctx.accounts.jet_reserve.load()?)),
+            ),
+        ];
+
+        // IntoIterator::into_iter() is used here because it can consume an array by value
+        let _assets: BackendContainer<LendingMarketAsset> = IntoIterator::into_iter(val).collect();
+        ////////////////////////////////////////////////////////////////////////////////
+
+        // For now we'll use the `Reserves` type
         let assets = BackendContainer::<Reserves>::try_from(&*ctx.accounts)?;
 
         // Here we'll build a BackendContainer<Rate> from the BackendContainer<Reserves>
@@ -281,8 +264,8 @@ pub fn handler_chris(
             // This `calculate_weights()` is provided by the impl BackendContainer<Reserves>
             .calculate_weights(ctx.accounts.vault.strategy_type)?;
 
-        // // And here we'll use that to build a BackendContainer<Allocation> with try_apply()
-        // // (instead of apply() because we're dealing with Result<>'s)
+        // And here we'll use that to build a BackendContainer<Allocation> with try_apply()
+        // (instead of apply() because we're dealing with Result<>'s)
         let strategy_allocations = BackendContainer::<Allocation>::try_from_weights(
             &strategy_weights,
             vault_value,
@@ -290,7 +273,6 @@ pub fn handler_chris(
         )?;
         match ctx.accounts.vault.rebalance_mode {
             RebalanceMode::ProofChecker => {
-                // We can build a BackendContainer<u16> from the proposed_weights_arg
                 let proposed_weights: BackendContainer<Rate> = proposed_weights_arg.into();
 
                 let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
@@ -332,7 +314,6 @@ pub fn handler_chris(
     #[cfg(feature = "debug")]
     msg!("Final allocations: {:?}", final_allocations);
 
-    // TODO: remove clone() if we're going to use this event?
     emit!(RebalanceEventChris {
         allocations: final_allocations.clone()
     });
