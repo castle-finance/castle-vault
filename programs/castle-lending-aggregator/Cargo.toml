@@ -40,3 +40,4 @@ spl-token-lending = {git = "https://github.com/castle-finance/solana-program-lib
 static_assertions = "1.1.0"
 strum = "0.24.0"
 strum_macros = "0.24.0"
+type-layout = "0.2.0"

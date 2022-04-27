@@ -6,6 +6,7 @@ use jet_proto_proc_macros::assert_size;
 use solana_maths::{Decimal, TryMul};
 use std::cmp::Ordering;
 use strum::IntoEnumIterator;
+use type_layout::TypeLayout;
 
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;
@@ -21,7 +22,7 @@ pub const ONE_AS_BPS: u64 = 10000;
 #[assert_size(768)]
 #[account]
 #[repr(C, align(8))]
-#[derive(Debug)]
+#[derive(TypeLayout, Debug)]
 pub struct Vault {
     pub version: u8,
 
@@ -66,9 +67,11 @@ pub struct Vault {
     /// Strategy type that is executed during rebalance
     pub strategy_type: StrategyType,
 
-    // 4
+    /// Max percentage to allocate to each pool
+    pub allocation_cap_pct: u8,
+
     /// Explicit padding to guarantee alignment
-    _padding0: u32,
+    _padding0: [u8; 3],
 
     pub fees: VaultFees,
 
@@ -84,14 +87,9 @@ pub struct Vault {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    /// Max percentage to allocate to each pool
-    pub allocation_cap_pct: u8,
-
-    _padding1: [u8; 7],
-
-    // 8 * 23 = 184
+    // 8 * 24 = 192
     /// Reserved space for future upgrades
-    _reserved: [u64; 23],
+    _reserved: [u64; 24],
 }
 
 impl Vault {
@@ -300,5 +298,15 @@ impl PartialEq for LastUpdate {
 impl PartialOrd for LastUpdate {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.slot.partial_cmp(&other.slot)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn print_vault_layout() {
+        println!("{}", Vault::type_layout());
     }
 }
