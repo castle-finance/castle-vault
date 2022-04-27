@@ -55,11 +55,12 @@ impl<T> Iterator for OwnedBackendContainerIterator<T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner_iter.next().map(|provider| {
-            let v = self
-                .inner
-                .take(provider)
-                .expect("missing index in OwnedBackendContainerIterator");
-            (provider, v)
+            (
+                provider,
+                self.inner
+                    .take(provider)
+                    .expect("missing index in OwnedBackendContainerIterator"),
+            )
         })
     }
 }
@@ -68,9 +69,9 @@ impl<T> Iterator for OwnedBackendContainerIterator<T> {
 // TODO: this would need to be macro'd
 impl<T> FromIterator<(Provider, T)> for BackendContainer<T> {
     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
-        let mut solend: Option<T> = None;
-        let mut port: Option<T> = None;
-        let mut jet: Option<T> = None;
+        let mut solend = None;
+        let mut port = None;
+        let mut jet = None;
 
         iter.into_iter().for_each(|(provider, v)| match provider {
             Provider::Solend => solend = Some(v),
