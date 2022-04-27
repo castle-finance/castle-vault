@@ -139,10 +139,18 @@ impl Vault {
     }
 }
 
+#[repr(u8)]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
 pub enum RebalanceMode {
     Calculator,
     ProofChecker,
+}
+
+#[repr(u8)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
+pub enum StrategyType {
+    MaxYield,
+    EqualAllocation,
 }
 
 #[assert_size(aligns, 80)]
@@ -184,12 +192,6 @@ impl VaultFees {
             _padding: [0_u8; 7],
         }
     }
-}
-
-#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
-pub enum StrategyType {
-    MaxYield,
-    EqualAllocation,
 }
 
 #[assert_size(aligns, 72)]
