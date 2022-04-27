@@ -68,7 +68,7 @@ pub struct Vault {
 
     // 4
     /// Explicit padding to guarantee alignment
-    _padding: u32,
+    _padding0: u32,
 
     pub fees: VaultFees,
 
@@ -84,9 +84,14 @@ pub struct Vault {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    // 8 * 24 = 192
+    /// Max percentage to allocate to each pool
+    pub allocation_cap_pct: u8,
+
+    _padding1: [u8; 7],
+
+    // 8 * 23 = 184
     /// Reserved space for future upgrades
-    _reserved: [u64; 24],
+    _reserved: [u64; 23],
 }
 
 impl Vault {

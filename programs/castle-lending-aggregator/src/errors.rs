@@ -40,4 +40,7 @@ pub enum ErrorCode {
 
     #[msg("Insufficient number of accounts for a given operation")]
     InsufficientAccounts,
+
+    #[msg("Allocation cap is invalid")]
+    AllocationCapError,
 }

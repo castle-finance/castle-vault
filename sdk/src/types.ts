@@ -41,6 +41,7 @@ export interface Vault {
     rebalanceMode: any;
     owner: PublicKey;
     fees: VaultFees;
+    allocationCapPct: number;
 }
 
 export interface VaultFees {

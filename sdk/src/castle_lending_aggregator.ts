@@ -149,6 +149,10 @@ export type CastleLendingAggregator = {
                 {
                     name: "depositCap";
                     type: "u64";
+                },
+                {
+                    name: "allocationCapPct";
+                    type: "u8";
                 }
             ];
         },
@@ -778,6 +782,10 @@ export type CastleLendingAggregator = {
                         type: {
                             defined: "RebalanceMode";
                         };
+                    },
+                    {
+                        name: "allocationCapPct";
+                        type: "u8";
                     }
                 ];
             };
@@ -1077,6 +1085,11 @@ export type CastleLendingAggregator = {
             code: 312;
             name: "InsufficientAccounts";
             msg: "Insufficient number of accounts for a given operation";
+        },
+        {
+            code: 313;
+            name: "AllocationCapError";
+            msg: "Allocation cap is invalid";
         }
     ];
 };
@@ -1232,6 +1245,10 @@ export const IDL: CastleLendingAggregator = {
                 {
                     name: "depositCap",
                     type: "u64",
+                },
+                {
+                    name: "allocationCapPct",
+                    type: "u8",
                 },
             ],
         },
@@ -1862,6 +1879,10 @@ export const IDL: CastleLendingAggregator = {
                             defined: "RebalanceMode",
                         },
                     },
+                    {
+                        name: "allocationCapPct",
+                        type: "u8",
+                    },
                 ],
             },
         },
@@ -2160,6 +2181,11 @@ export const IDL: CastleLendingAggregator = {
             code: 312,
             name: "InsufficientAccounts",
             msg: "Insufficient number of accounts for a given operation",
+        },
+        {
+            code: 313,
+            name: "AllocationCapError",
+            msg: "Allocation cap is invalid",
         },
     ],
 };

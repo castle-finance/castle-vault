@@ -102,6 +102,7 @@ export class VaultClient {
         owner: PublicKey,
         feeData: FeeArgs,
         poolSizeLimit: number = 10000000000,
+        allocationCapPct: number = 100,
         program?: anchor.Program<CastleLendingAggregator>
     ): Promise<VaultClient> {
         // TODO Once the below issue is resolved, remove this logic
@@ -201,6 +202,7 @@ export class VaultClient {
                 referralFeePct: new anchor.BN(referralFeePct),
             },
             new anchor.BN(poolSizeLimit),
+            allocationCapPct,
             {
                 accounts: {
                     vault: vaultId.publicKey,
@@ -1021,6 +1023,10 @@ export class VaultClient {
 
     getDepositCap(): Big {
         return new Big(this.vaultState.depositCap.toString());
+    }
+
+    getAllocationCap(): number {
+        return this.vaultState.allocationCapPct;
     }
 
     getVaultReserveTokenAccount(): PublicKey {
