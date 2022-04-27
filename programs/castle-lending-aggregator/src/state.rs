@@ -76,7 +76,7 @@ pub struct Vault {
     pub rebalance_mode: RebalanceMode,
 
     /// Max percentage to allocate to each pool
-    pub allocation_cap: u8,
+    pub allocation_cap_pct: u8,
 }
 
 impl Vault {

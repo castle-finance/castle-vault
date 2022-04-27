@@ -101,7 +101,7 @@ export class VaultClient {
         owner: PublicKey,
         feeData: FeeArgs,
         poolSizeLimit: number = 10000000000,
-        allocationCap: number = 100
+        allocationCapPct: number = 100
     ): Promise<VaultClient> {
         const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
             feeData;
@@ -190,7 +190,7 @@ export class VaultClient {
                 referralFeePct: new anchor.BN(referralFeePct),
             },
             new anchor.BN(poolSizeLimit),
-            allocationCap,
+            allocationCapPct,
             {
                 accounts: {
                     vault: vaultId.publicKey,
@@ -1014,7 +1014,7 @@ export class VaultClient {
     }
 
     getAllocationCap(): Number {
-        return this.vaultState.allocationCap;
+        return this.vaultState.allocationCapPct;
     }
 
     getVaultReserveTokenAccount(): PublicKey {

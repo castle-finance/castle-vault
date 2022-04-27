@@ -151,7 +151,7 @@ export type CastleLendingAggregator = {
                     type: "u64";
                 },
                 {
-                    name: "allocationCap";
+                    name: "allocationCapPct";
                     type: "u8";
                 }
             ];
@@ -784,7 +784,7 @@ export type CastleLendingAggregator = {
                         };
                     },
                     {
-                        name: "allocationCap";
+                        name: "allocationCapPct";
                         type: "u8";
                     }
                 ];
@@ -1247,7 +1247,7 @@ export const IDL: CastleLendingAggregator = {
                     type: "u64",
                 },
                 {
-                    name: "allocationCap",
+                    name: "allocationCapPct",
                     type: "u8",
                 },
             ],
@@ -1880,7 +1880,7 @@ export const IDL: CastleLendingAggregator = {
                         },
                     },
                     {
-                        name: "allocationCap",
+                        name: "allocationCapPct",
                         type: "u8",
                     },
                 ],

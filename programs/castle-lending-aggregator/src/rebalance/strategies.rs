@@ -23,7 +23,7 @@ pub trait Strategy {
     fn calculate_weights(
         &self,
         assets: &Assets,
-        allocation_cap: u8,
+        allocation_cap_pct: u8,
     ) -> Result<StrategyWeights, ProgramError>;
 
     // TODO split this into separate trait?
@@ -32,7 +32,7 @@ pub trait Strategy {
     fn verify_weights(
         &self,
         proposed_weights: &StrategyWeights,
-        allocation_cap: u8,
+        allocation_cap_pct: u8,
     ) -> ProgramResult {
         let sum = Provider::iter()
             .map(|p| proposed_weights[p])
@@ -42,7 +42,7 @@ pub trait Strategy {
             return Err(ErrorCode::InvalidProposedWeights.into());
         }
 
-        let cap = Rate::from_percent(allocation_cap);
+        let cap = Rate::from_percent(allocation_cap_pct);
         for p in Provider::iter() {
             if proposed_weights[p].gt(&cap) {
                 return Err(ErrorCode::InvalidProposedWeights.into());
@@ -59,7 +59,7 @@ impl Strategy for EqualAllocationStrategy {
     fn calculate_weights(
         &self,
         assets: &Assets,
-        allocation_cap: u8,
+        allocation_cap_pct: u8,
     ) -> Result<StrategyWeights, ProgramError> {
         // TODO make this error handling more granular and informative
         let num_assets = u8::try_from(assets.len()).map_err(|_| ErrorCode::StrategyError)?;
@@ -89,12 +89,12 @@ impl Strategy for MaxYieldStrategy {
     fn calculate_weights(
         &self,
         assets: &Assets,
-        allocation_cap: u8,
+        allocation_cap_pct: u8,
     ) -> Result<StrategyWeights, ProgramError> {
         let mut sorted_pools: Vec<Provider> = Provider::iter().collect();
         sorted_pools.sort_unstable_by(|x, y| self.compare(&assets[*y], &assets[*x]).unwrap());
 
-        let cap = Rate::from_percent(allocation_cap);
+        let cap = Rate::from_percent(allocation_cap_pct);
         let mut remaining_weight = Rate::one();
         let mut strategy_weights = StrategyWeights::default();
         for p in sorted_pools {

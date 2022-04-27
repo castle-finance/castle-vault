@@ -209,7 +209,7 @@ pub fn handler(
     rebalance_mode: RebalanceMode,
     fees: FeeArgs,
     vault_deposit_cap: u64,
-    allocation_cap: u8,
+    allocation_cap_pct: u8,
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
@@ -220,7 +220,7 @@ pub fn handler(
     validate_fees(&fees)?;
 
     // TODO compute the lower limit of the cap using number of lenging pools
-    if allocation_cap < 34 || allocation_cap > 100 {
+    if allocation_cap_pct < 34 || allocation_cap_pct > 100 {
         return Err(ErrorCode::AllocationCapError.into());
     }
 
@@ -243,7 +243,7 @@ pub fn handler(
     vault.strategy_type = strategy_type;
     vault.rebalance_mode = rebalance_mode;
     vault.deposit_cap = vault_deposit_cap;
-    vault.allocation_cap = allocation_cap;
+    vault.allocation_cap_pct = allocation_cap_pct;
 
     vault.fees = VaultFees {
         fee_receiver: ctx.accounts.fee_receiver.key(),
