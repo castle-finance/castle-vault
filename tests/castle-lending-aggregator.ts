@@ -12,6 +12,7 @@ import {
     ProposedWeightsBps,
 } from "../sdk/src/index";
 import {
+    DeploymentEnvs,
     RebalanceMode,
     RebalanceModes,
     StrategyType,
@@ -233,8 +234,9 @@ describe("castle-vault", () => {
         referralFeePct: number = 0
     ) {
         vaultClient = await VaultClient.initialize(
-            program,
+            provider,
             provider.wallet as anchor.Wallet,
+            DeploymentEnvs.devnetStaging,
             reserveToken.publicKey,
             solend,
             port,
@@ -243,7 +245,8 @@ describe("castle-vault", () => {
             rebalanceMode,
             owner.publicKey,
             { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct },
-            vaultDepositCap
+            vaultDepositCap,
+            program
         );
 
         userReserveTokenAccount = await reserveToken.createAccount(
