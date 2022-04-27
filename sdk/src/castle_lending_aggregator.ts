@@ -692,6 +692,10 @@ export type CastleLendingAggregator = {
                 kind: "struct";
                 fields: [
                     {
+                        name: "version";
+                        type: "u8";
+                    },
+                    {
                         name: "owner";
                         type: "publicKey";
                     },
@@ -746,6 +750,22 @@ export type CastleLendingAggregator = {
                         type: "publicKey";
                     },
                     {
+                        name: "rebalanceMode";
+                        type: {
+                            defined: "RebalanceMode";
+                        };
+                    },
+                    {
+                        name: "strategyType";
+                        type: {
+                            defined: "StrategyType";
+                        };
+                    },
+                    {
+                        name: "padding0";
+                        type: "u32";
+                    },
+                    {
                         name: "fees";
                         type: {
                             defined: "VaultFees";
@@ -772,20 +792,20 @@ export type CastleLendingAggregator = {
                         };
                     },
                     {
-                        name: "strategyType";
-                        type: {
-                            defined: "StrategyType";
-                        };
-                    },
-                    {
-                        name: "rebalanceMode";
-                        type: {
-                            defined: "RebalanceMode";
-                        };
-                    },
-                    {
                         name: "allocationCapPct";
                         type: "u8";
+                    },
+                    {
+                        name: "padding1";
+                        type: {
+                            array: ["u8", 7];
+                        };
+                    },
+                    {
+                        name: "reserved";
+                        type: {
+                            array: ["u64", 23];
+                        };
                     }
                 ];
             };
@@ -888,6 +908,12 @@ export type CastleLendingAggregator = {
                     {
                         name: "referralFeeReceiver";
                         type: "publicKey";
+                    },
+                    {
+                        name: "padding";
+                        type: {
+                            array: ["u8", 7];
+                        };
                     }
                 ];
             };
@@ -948,6 +974,12 @@ export type CastleLendingAggregator = {
                     {
                         name: "stale";
                         type: "bool";
+                    },
+                    {
+                        name: "padding";
+                        type: {
+                            array: ["u8", 7];
+                        };
                     }
                 ];
             };
@@ -1788,6 +1820,10 @@ export const IDL: CastleLendingAggregator = {
                 kind: "struct",
                 fields: [
                     {
+                        name: "version",
+                        type: "u8",
+                    },
+                    {
                         name: "owner",
                         type: "publicKey",
                     },
@@ -1842,6 +1878,22 @@ export const IDL: CastleLendingAggregator = {
                         type: "publicKey",
                     },
                     {
+                        name: "rebalanceMode",
+                        type: {
+                            defined: "RebalanceMode",
+                        },
+                    },
+                    {
+                        name: "strategyType",
+                        type: {
+                            defined: "StrategyType",
+                        },
+                    },
+                    {
+                        name: "padding0",
+                        type: "u32",
+                    },
+                    {
                         name: "fees",
                         type: {
                             defined: "VaultFees",
@@ -1868,20 +1920,20 @@ export const IDL: CastleLendingAggregator = {
                         },
                     },
                     {
-                        name: "strategyType",
-                        type: {
-                            defined: "StrategyType",
-                        },
-                    },
-                    {
-                        name: "rebalanceMode",
-                        type: {
-                            defined: "RebalanceMode",
-                        },
-                    },
-                    {
                         name: "allocationCapPct",
                         type: "u8",
+                    },
+                    {
+                        name: "padding1",
+                        type: {
+                            array: ["u8", 7],
+                        },
+                    },
+                    {
+                        name: "reserved",
+                        type: {
+                            array: ["u64", 23],
+                        },
                     },
                 ],
             },
@@ -1985,6 +2037,12 @@ export const IDL: CastleLendingAggregator = {
                         name: "referralFeeReceiver",
                         type: "publicKey",
                     },
+                    {
+                        name: "padding",
+                        type: {
+                            array: ["u8", 7],
+                        },
+                    },
                 ],
             },
         },
@@ -2044,6 +2102,12 @@ export const IDL: CastleLendingAggregator = {
                     {
                         name: "stale",
                         type: "bool",
+                    },
+                    {
+                        name: "padding",
+                        type: {
+                            array: ["u8", 7],
+                        },
                     },
                 ],
             },
