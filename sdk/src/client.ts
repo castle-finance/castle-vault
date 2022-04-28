@@ -37,7 +37,7 @@ import {
     JetReserveAsset,
 } from "./adapters";
 import {
-    RebalanceEvent,
+    RebalanceDataEvent,
     Vault,
     FeeArgs,
     ProposedWeightsBps,
@@ -683,7 +683,7 @@ export class VaultClient {
                 },
                 instructions: [this.getRefreshIx()],
             })
-        ).events[0].data as RebalanceEvent;
+        ).events[0].data as RebalanceDataEvent;
 
         return [
             [
