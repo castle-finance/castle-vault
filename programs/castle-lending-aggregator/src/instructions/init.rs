@@ -36,7 +36,7 @@ pub struct Initialize<'info> {
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     #[account(
         mut,
-        seeds = [vault.key().as_ref(), b"authority".as_ref()], 
+        seeds = [vault.key().as_ref(), b"authority".as_ref()],
         bump = bumps.authority,
     )]
     pub vault_authority: AccountInfo<'info>,
@@ -209,6 +209,7 @@ pub fn handler(
     rebalance_mode: RebalanceMode,
     fees: FeeArgs,
     vault_deposit_cap: Option<u64>,
+    allocation_cap_pct: Option<u8>,
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
@@ -239,6 +240,17 @@ pub fn handler(
     vault.deposit_cap = match vault_deposit_cap {
         Some(value) => value,
         None => u64::MAX,
+    };
+    vault.allocation_cap_pct = match allocation_cap_pct {
+        Some(value) => {
+            // compute the lower limit of the cap using number of yield sources
+            // TODO Get this number from Chris's branch: MAX for const generic
+            if !(34..=100).contains(&value) {
+                return Err(ErrorCode::AllocationCapError.into());
+            }
+            value
+        }
+        None => 100,
     };
 
     vault.fees = VaultFees {

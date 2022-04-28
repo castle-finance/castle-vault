@@ -73,8 +73,11 @@ pub fn handler(
 
     // TODO reduce the duplication between the Enum and Struct
     let strategy_weights = match ctx.accounts.vault.strategy_type {
-        StrategyType::MaxYield => MaxYieldStrategy.calculate_weights(&assets),
-        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets),
+        StrategyType::MaxYield => {
+            MaxYieldStrategy.calculate_weights(&assets, ctx.accounts.vault.allocation_cap_pct)
+        }
+        StrategyType::EqualAllocation => EqualAllocationStrategy
+            .calculate_weights(&assets, ctx.accounts.vault.allocation_cap_pct),
     }?;
 
     // Convert weights to allocations
@@ -94,10 +97,10 @@ pub fn handler(
             );
 
             match ctx.accounts.vault.strategy_type {
-                StrategyType::MaxYield => MaxYieldStrategy.verify_weights(&proposed_weights),
-                StrategyType::EqualAllocation => {
-                    EqualAllocationStrategy.verify_weights(&proposed_weights)
-                }
+                StrategyType::MaxYield => MaxYieldStrategy
+                    .verify_weights(&proposed_weights, ctx.accounts.vault.allocation_cap_pct),
+                StrategyType::EqualAllocation => EqualAllocationStrategy
+                    .verify_weights(&proposed_weights, ctx.accounts.vault.allocation_cap_pct),
             }?;
 
             let proposed_apr = get_apr(&proposed_weights, &proposed_allocations, &assets)?;

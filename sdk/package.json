@@ -1,6 +1,6 @@
 {
     "name": "@castlefinance/vault-sdk",
-    "version": "1.5.8",
+    "version": "1.5.9",
     "license": "MIT",
     "main": "./lib/index.js",
     "typings": "./lib/index.d.ts",
@@ -34,6 +34,7 @@
         "build": "tsc",
         "lint": "eslint -c .eslintrc.js src/**/*.ts",
         "prettify": "prettier -w ./src",
+        "prettify-check": "prettier -c ./src",
         "precommit": "yarn prettify && yarn lint",
         "prepublish": "npm run build",
         "test": "ts-mocha test/*.test.ts -t 100000"

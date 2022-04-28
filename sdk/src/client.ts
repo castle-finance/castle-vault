@@ -100,7 +100,8 @@ export class VaultClient {
         rebalanceMode: RebalanceMode,
         owner: PublicKey,
         feeData: FeeArgs,
-        depositCap?: number
+        depositCap?: number,
+        allocationCapPct?: number
     ): Promise<VaultClient> {
         const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
             feeData;
@@ -189,6 +190,7 @@ export class VaultClient {
                 referralFeePct: new anchor.BN(referralFeePct),
             },
             depositCap == null ? null : new anchor.BN(depositCap),
+            allocationCapPct,
             {
                 accounts: {
                     vault: vaultId.publicKey,
@@ -1009,6 +1011,10 @@ export class VaultClient {
 
     getDepositCap(): Big {
         return new Big(this.vaultState.depositCap.toString());
+    }
+
+    getAllocationCap(): Number {
+        return this.vaultState.allocationCapPct;
     }
 
     getVaultReserveTokenAccount(): PublicKey {

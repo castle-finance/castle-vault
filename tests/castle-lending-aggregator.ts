@@ -43,6 +43,7 @@ describe("castle-vault", () => {
     const initialCollateralRatio = 1.0;
     const referralFeeOwner = Keypair.generate().publicKey;
     const vaultDepositCap = 10 * 10 ** 9;
+    const vaultAllocationCap = 76;
 
     let jetReserveAmount: number;
 
@@ -243,7 +244,8 @@ describe("castle-vault", () => {
             rebalanceMode,
             owner.publicKey,
             { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct },
-            vaultDepositCap
+            vaultDepositCap,
+            vaultAllocationCap
         );
 
         userReserveTokenAccount = await reserveToken.createAccount(
@@ -352,6 +354,7 @@ describe("castle-vault", () => {
                 vaultClient.getDepositCap().toNumber(),
                 vaultDepositCap
             );
+            assert.equal(vaultClient.getAllocationCap(), vaultAllocationCap);
         });
 
         it("Deposits to vault reserves", async function () {
@@ -411,6 +414,7 @@ describe("castle-vault", () => {
                 vaultClient.getDepositCap().toNumber(),
                 vaultDepositCap
             );
+            assert.equal(vaultClient.getAllocationCap(), vaultAllocationCap);
         });
 
         it("Reject transaction if deposit cap is reached", async function () {
@@ -546,6 +550,47 @@ describe("castle-vault", () => {
             it("Rejects tx if weights are suboptimal", async () => {
                 const errorCode = program.idl.errors
                     .find((e) => e.name == "RebalanceProofCheckFailed")
+                    .code.toString(16);
+                try {
+                    await performRebalance(
+                        {
+                            solend: 3333,
+                            port: 3333,
+                            jet: 3334,
+                        },
+                        true
+                    );
+                    assert.fail("Rebalance did not fail");
+                } catch (err) {
+                    assert.isTrue(
+                        err.message.includes(errorCode),
+                        `Error code ${errorCode} not included in error message: ${err}`
+                    );
+                }
+
+                assert.equal(
+                    (
+                        await vaultClient.getVaultSolendLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+                assert.equal(
+                    (
+                        await vaultClient.getVaultPortLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+                assert.equal(
+                    (
+                        await vaultClient.getVaultJetLpTokenAccountValue()
+                    ).toNumber(),
+                    0
+                );
+            });
+
+            it("Rejects tx if weights exceeds the cap", async () => {
+                const errorCode = program.idl.errors
+                    .find((e) => e.name == "InvalidProposedWeights")
                     .code.toString(16);
                 try {
                     await performRebalance(
@@ -826,7 +871,12 @@ describe("castle-vault", () => {
                     RebalanceModes.calculator
                 );
             });
-            testRebalance(0, 0, 1);
+
+            testRebalance(
+                1 - vaultAllocationCap / 100,
+                0,
+                vaultAllocationCap / 100
+            );
 
             // TODO borrow from solend to increase apy and ensure it switches to that
             // TODO borrow from port to increase apy and ensure it switches to that
@@ -840,7 +890,12 @@ describe("castle-vault", () => {
             before(async function () {
                 await initializeVault(StrategyTypes.maxYield, rebalanceMode);
             });
-            testRebalance(0, 0, 1, rebalanceMode);
+            testRebalance(
+                1 - vaultAllocationCap / 100,
+                0,
+                vaultAllocationCap / 100,
+                rebalanceMode
+            );
         });
     });
 });
