@@ -6,6 +6,13 @@ use std::convert::Into;
 use crate::errors::ErrorCode;
 use crate::state::Vault;
 
+#[event]
+pub struct WithdrawEvent {
+    vault: Pubkey,
+    user: Pubkey,
+    amount: u64,
+}
+
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
     /// Vault state account
@@ -110,6 +117,12 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
         .total_value
         .checked_sub(reserve_tokens_to_transfer)
         .ok_or(ErrorCode::MathError)?;
+
+    emit!(WithdrawEvent {
+        vault: ctx.accounts.vault.key(),
+        user: ctx.accounts.user_authority.key(),
+        amount: lp_token_amount,
+    });
 
     Ok(())
 }
