@@ -8,9 +8,9 @@ use strum::IntoEnumIterator;
 
 use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
+use crate::impl_provider_index;
 use crate::rebalance::assets::Provider;
 use crate::rebalance::strategies::StrategyWeights;
-use crate::{impl_provider_index, MAX_NUM_PROVIDERS};
 
 /// Number of slots per year
 pub const SLOTS_PER_YEAR: u64 =
@@ -70,7 +70,7 @@ pub struct Vault {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    pub allocations_chris: BackendContainer<Allocation, MAX_NUM_PROVIDERS>,
+    pub allocations_chris: BackendContainer<Allocation>,
 
     /// Strategy type that is executed during rebalance
     pub strategy_type: StrategyType,

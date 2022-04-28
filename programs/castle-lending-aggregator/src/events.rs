@@ -4,12 +4,11 @@ use crate::{
     backend_container::BackendContainer,
     rebalance::assets::Provider,
     state::{Allocation, Allocations},
-    MAX_NUM_PROVIDERS,
 };
 
 #[event]
 pub struct RebalanceEventChris {
-    pub allocations: BackendContainer<Allocation, MAX_NUM_PROVIDERS>,
+    pub allocations: BackendContainer<Allocation>,
 }
 // TODO might be able to delete since sim isn't done anymore
 #[event]

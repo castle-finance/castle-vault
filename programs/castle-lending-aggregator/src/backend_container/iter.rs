@@ -6,9 +6,9 @@ use crate::rebalance::assets::{Provider, ProviderIter};
 
 use super::BackendContainer;
 
-impl<'a, T, const N: usize> IntoIterator for &'a BackendContainer<T, N> {
+impl<'a, T> IntoIterator for &'a BackendContainer<T> {
     type Item = (Provider, &'a T);
-    type IntoIter = BackendContainerIterator<'a, T, N>;
+    type IntoIter = BackendContainerIterator<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         BackendContainerIterator {
@@ -18,9 +18,9 @@ impl<'a, T, const N: usize> IntoIterator for &'a BackendContainer<T, N> {
     }
 }
 
-impl<T, const N: usize> IntoIterator for BackendContainer<T, N> {
+impl<T> IntoIterator for BackendContainer<T> {
     type Item = (Provider, T);
-    type IntoIter = OwnedBackendContainerIterator<T, N>;
+    type IntoIter = OwnedBackendContainerIterator<T>;
 
     fn into_iter(self) -> Self::IntoIter {
         OwnedBackendContainerIterator {
@@ -30,12 +30,12 @@ impl<T, const N: usize> IntoIterator for BackendContainer<T, N> {
     }
 }
 
-pub struct BackendContainerIterator<'inner, T, const N: usize> {
-    inner: &'inner BackendContainer<T, N>,
+pub struct BackendContainerIterator<'inner, T> {
+    inner: &'inner BackendContainer<T>,
     inner_iter: ProviderIter,
 }
 
-impl<'inner, T, const N: usize> Iterator for BackendContainerIterator<'inner, T, N> {
+impl<'inner, T> Iterator for BackendContainerIterator<'inner, T> {
     type Item = (Provider, &'inner T);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -45,12 +45,12 @@ impl<'inner, T, const N: usize> Iterator for BackendContainerIterator<'inner, T,
     }
 }
 
-pub struct OwnedBackendContainerIterator<T, const N: usize> {
-    inner: BackendContainer<T, N>,
+pub struct OwnedBackendContainerIterator<T> {
+    inner: BackendContainer<T>,
     inner_iter: ProviderIter,
 }
 
-impl<T, const N: usize> Iterator for OwnedBackendContainerIterator<T, N> {
+impl<T> Iterator for OwnedBackendContainerIterator<T> {
     type Item = (Provider, T);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -65,8 +65,8 @@ impl<T, const N: usize> Iterator for OwnedBackendContainerIterator<T, N> {
     }
 }
 
-// Allows us to create a BackendContainer<T, N> from an Iterator that yields (Provider, T)
-impl<T, const N: usize> FromIterator<(Provider, T)> for BackendContainer<T, N> {
+// Allows us to create a BackendContainer<T> from an Iterator that yields (Provider, T)
+impl<T> FromIterator<(Provider, T)> for BackendContainer<T> {
     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
         iter.into_iter()
             .fold(BackendContainer::default(), |mut acc, (provider, v)| {

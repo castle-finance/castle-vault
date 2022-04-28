@@ -67,15 +67,15 @@ pub mod castle_lending_aggregator {
     }
 
     pub fn rebalance(
-        ctx: Context<Rebalance<MAX_NUM_PROVIDERS>>,
+        ctx: Context<Rebalance>,
         proposed_weights: StrategyWeightsArg,
     ) -> ProgramResult {
         instructions::rebalance::handler(ctx, proposed_weights)
     }
 
     pub fn rebalance_chris(
-        ctx: Context<Rebalance<'_, MAX_NUM_PROVIDERS>>,
-        proposed_weights: backend_container::BackendContainer<u16, MAX_NUM_PROVIDERS>,
+        ctx: Context<Rebalance<'_>>,
+        proposed_weights: backend_container::BackendContainer<u16>,
     ) -> ProgramResult {
         instructions::rebalance::handler_chris(ctx, proposed_weights)
     }
