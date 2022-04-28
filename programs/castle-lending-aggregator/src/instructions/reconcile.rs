@@ -32,7 +32,7 @@ pub trait HasVault {
 #[macro_export]
 macro_rules! impl_has_vault {
     ($($t:ty),+ $(,)?) => ($(
-        impl<const N: usize> $crate::instructions::reconcile::HasVault for $t {
+        impl $crate::instructions::reconcile::HasVault for $t {
             fn vault(&self) -> &Vault {
                 self.vault.deref()
             }
@@ -47,7 +47,7 @@ macro_rules! impl_has_vault {
 // #[macro_export]
 // macro_rules! impl_has_vault_with_size {
 //     ($($t:ty),+ $(,)?) => ($(
-//         impl<const N: usize> $crate::instructions::reconcile::HasVault for $t<N> {
+//         impl $crate::instructions::reconcile::HasVault for $t<N> {
 //             fn vault(&self) -> &Vault {
 //                 self.vault.deref()
 //             }

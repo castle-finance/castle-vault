@@ -13,7 +13,7 @@ use crate::state::Vault;
 // NOTE: having all accounts for each lending market reserve here is not scalable
 // since eventually we will hit into transaction size limits
 #[derive(Accounts)]
-pub struct Refresh<'info, const N: usize> {
+pub struct Refresh<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -121,7 +121,7 @@ pub enum Foo<'info> {
 }
 
 // TODO refactor refresh cpi calls into adapter pattern
-impl<'info, const N: usize> Refresh<'info, N> {
+impl<'info> Refresh<'info> {
     /// CpiContext for refreshing solend reserve
     pub fn solend_refresh_reserve_context(
         &self,
@@ -195,8 +195,8 @@ impl<'info, const N: usize> Refresh<'info, N> {
 
 /// Refreshes the reserves of downstream lending markets,
 /// updates the vault total value, and collects fees
-pub fn handler<'info, const N: usize>(
-    ctx: Context<'_, '_, '_, 'info, Refresh<'info, N>>,
+pub fn handler<'info>(
+    ctx: Context<'_, '_, '_, 'info, Refresh<'info>>,
     use_port_oracle: bool,
 ) -> ProgramResult {
     #[cfg(feature = "debug")]

@@ -66,26 +66,6 @@ impl<T, const N: usize> Iterator for OwnedBackendContainerIterator<T, N> {
 }
 
 // Allows us to create a BackendContainer<T, N> from an Iterator that yields (Provider, T)
-// TODO: this would need to be macro'd
-// impl<T, const N: usize> FromIterator<(Provider, T)> for BackendContainer<T, N> {
-//     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
-//         let mut solend = None;
-//         let mut port = None;
-//         let mut jet = None;
-
-//         iter.into_iter().for_each(|(provider, v)| match provider {
-//             Provider::Solend => solend = Some(v),
-//             Provider::Port => port = Some(v),
-//             Provider::Jet => jet = Some(v),
-//         });
-
-//         // TODO: check that all are Some() or push it off until an attempted Index?
-//         BackendContainer {
-//             inner: [solend, port, jet],
-//         }
-//     }
-// }
-
 impl<T, const N: usize> FromIterator<(Provider, T)> for BackendContainer<T, N> {
     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
         iter.into_iter()

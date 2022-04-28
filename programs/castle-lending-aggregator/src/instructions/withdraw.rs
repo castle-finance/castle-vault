@@ -7,7 +7,7 @@ use crate::errors::ErrorCode;
 use crate::state::Vault;
 
 #[derive(Accounts)]
-pub struct Withdraw<'info, const N: usize> {
+pub struct Withdraw<'info> {
     /// Vault state account
     /// Checks that the refresh has been called in the same slot
     /// Checks that the accounts passed in are correct
@@ -49,7 +49,7 @@ pub struct Withdraw<'info, const N: usize> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl<'info, const N: usize> Withdraw<'info, N> {
+impl<'info> Withdraw<'info> {
     /// CpiContext for burning vault lp tokens from user account
     fn burn_context(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
         CpiContext::new(
@@ -78,7 +78,7 @@ impl<'info, const N: usize> Withdraw<'info, N> {
 /// Withdraw from the vault
 ///
 /// Burns the user's lp tokens and transfers their share of reserve tokens
-pub fn handler<const N: usize>(ctx: Context<Withdraw<N>>, lp_token_amount: u64) -> ProgramResult {
+pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Withdrawing {} lp tokens", lp_token_amount);
 

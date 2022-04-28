@@ -16,7 +16,7 @@ use crate::{
 };
 
 #[derive(Accounts)]
-pub struct JetAccounts<'info, const N: usize> {
+pub struct JetAccounts<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -65,7 +65,7 @@ pub struct JetAccounts<'info, const N: usize> {
     pub token_program: Program<'info, Token>,
 }
 
-impl<'info, const N: usize> JetAccounts<'info, N> {
+impl<'info> JetAccounts<'info> {
     fn get_reserve_info(&self) -> Result<CachedReserveInfo, ProgramError> {
         let market = self.jet_market.load()?;
         let reserve = self.jet_reserve.load()?;
@@ -74,9 +74,9 @@ impl<'info, const N: usize> JetAccounts<'info, N> {
     }
 }
 
-impl_has_vault!(JetAccounts<'_, N>);
+impl_has_vault!(JetAccounts<'_>);
 
-impl<'info, const N: usize> LendingMarket for JetAccounts<'info, N> {
+impl<'info> LendingMarket for JetAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.jet_program.clone(),

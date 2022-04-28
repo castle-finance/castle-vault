@@ -28,7 +28,7 @@ pub struct FeeArgs {
 
 #[derive(Accounts)]
 #[instruction(bumps: InitBumpSeeds)]
-pub struct Initialize<'info, const N: usize> {
+pub struct Initialize<'info> {
     /// Vault state account
     #[account(zero)]
     pub vault: Box<Account<'info, Vault>>,
@@ -145,7 +145,7 @@ pub struct Initialize<'info, const N: usize> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-impl<'info, const N: usize> Initialize<'info, N> {
+impl<'info> Initialize<'info> {
     fn init_fee_receiver_create_context(
         &self,
         fee_token_account: AccountInfo<'info>,
@@ -202,8 +202,8 @@ pub fn validate_fees(fees: &FeeArgs) -> ProgramResult {
 /// * `bumps` - bump seeds for creating PDAs
 /// * `strategy_type` - type of strategy that rebalance will execute
 /// * `fees` - carry and management fee that the vault collects denominated in basis points on behalf of primary and supplementary fee receivers
-pub fn handler<const N: usize>(
-    ctx: Context<Initialize<N>>,
+pub fn handler(
+    ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     strategy_type: StrategyType,
     rebalance_mode: RebalanceMode,
