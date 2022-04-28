@@ -762,8 +762,14 @@ export type CastleLendingAggregator = {
                         };
                     },
                     {
+                        name: "allocationCapPct";
+                        type: "u8";
+                    },
+                    {
                         name: "padding0";
-                        type: "u32";
+                        type: {
+                            array: ["u8", 3];
+                        };
                     },
                     {
                         name: "fees";
@@ -792,19 +798,9 @@ export type CastleLendingAggregator = {
                         };
                     },
                     {
-                        name: "allocationCapPct";
-                        type: "u8";
-                    },
-                    {
-                        name: "padding1";
-                        type: {
-                            array: ["u8", 7];
-                        };
-                    },
-                    {
                         name: "reserved";
                         type: {
-                            array: ["u64", 23];
+                            array: ["u64", 24];
                         };
                     }
                 ];
@@ -1033,6 +1029,16 @@ export type CastleLendingAggregator = {
     events: [
         {
             name: "RebalanceEvent";
+            fields: [
+                {
+                    name: "vault";
+                    type: "publicKey";
+                    index: false;
+                }
+            ];
+        },
+        {
+            name: "RebalanceDataEvent";
             fields: [
                 {
                     name: "solend";
@@ -1890,8 +1896,14 @@ export const IDL: CastleLendingAggregator = {
                         },
                     },
                     {
+                        name: "allocationCapPct",
+                        type: "u8",
+                    },
+                    {
                         name: "padding0",
-                        type: "u32",
+                        type: {
+                            array: ["u8", 3],
+                        },
                     },
                     {
                         name: "fees",
@@ -1920,19 +1932,9 @@ export const IDL: CastleLendingAggregator = {
                         },
                     },
                     {
-                        name: "allocationCapPct",
-                        type: "u8",
-                    },
-                    {
-                        name: "padding1",
-                        type: {
-                            array: ["u8", 7],
-                        },
-                    },
-                    {
                         name: "reserved",
                         type: {
-                            array: ["u64", 23],
+                            array: ["u64", 24],
                         },
                     },
                 ],
@@ -2161,6 +2163,16 @@ export const IDL: CastleLendingAggregator = {
     events: [
         {
             name: "RebalanceEvent",
+            fields: [
+                {
+                    name: "vault",
+                    type: "publicKey",
+                    index: false,
+                },
+            ],
+        },
+        {
+            name: "RebalanceDataEvent",
             fields: [
                 {
                     name: "solend",
