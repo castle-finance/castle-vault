@@ -17,7 +17,7 @@ use strum_macros::EnumIter;
     AnchorDeserialize,
 )]
 pub enum Provider {
-    Solend,
+    Solend = 0,
     Port,
     Jet,
 }

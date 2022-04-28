@@ -6,17 +6,17 @@ use std::convert::Into;
 use crate::init::{validate_fees, FeeArgs};
 
 #[derive(Accounts)]
-pub struct UpdateFees<'info> {
+pub struct UpdateFees<'info, const N: usize> {
     #[account(
         mut,
         has_one = owner,
     )]
-    pub vault: Box<Account<'info, Vault>>,
+    pub vault: Box<Account<'info, Vault<N>>>,
 
     pub owner: Signer<'info>,
 }
 
-pub fn handler(ctx: Context<UpdateFees>, new_fees: FeeArgs) -> ProgramResult {
+pub fn handler<const N: usize>(ctx: Context<UpdateFees<N>>, new_fees: FeeArgs) -> ProgramResult {
     validate_fees(&new_fees)?;
 
     ctx.accounts.vault.fees.fee_carry_bps = new_fees.fee_carry_bps;

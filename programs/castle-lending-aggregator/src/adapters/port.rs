@@ -15,7 +15,7 @@ use crate::{
 };
 
 #[derive(Accounts)]
-pub struct PortAccounts<'info> {
+pub struct PortAccounts<'info, const N: usize> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -25,7 +25,7 @@ pub struct PortAccounts<'info> {
         has_one = vault_port_lp_token,
         has_one = port_reserve,
     )]
-    pub vault: Box<Account<'info, Vault>>,
+    pub vault: Box<Account<'info, Vault<N>>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
@@ -66,9 +66,9 @@ pub struct PortAccounts<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-impl_has_vault!(PortAccounts<'_>);
+impl_has_vault!(PortAccounts<'_, N>);
 
-impl<'info> LendingMarket for PortAccounts<'info> {
+impl<'info, const N: usize> LendingMarket for PortAccounts<'info, N> {
     fn deposit(&self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.port_program.clone(),

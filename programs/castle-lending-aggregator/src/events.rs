@@ -6,10 +6,10 @@ use crate::{
     state::{Allocation, Allocations},
 };
 
-#[event]
-pub struct RebalanceEventChris {
-    pub allocations: BackendContainer<Allocation>,
-}
+// #[event]
+// pub struct RebalanceEventChris<const N: usize> {
+//     pub allocations: BackendContainer<Allocation, N>,
+// }
 // TODO might be able to delete since sim isn't done anymore
 #[event]
 pub struct RebalanceEvent {

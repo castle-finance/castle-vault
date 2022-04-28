@@ -5,9 +5,9 @@ use crate::state::{Allocation, LastUpdate};
 
 use super::BackendContainer;
 
-impl BackendContainer<Allocation> {
+impl<const N: usize> BackendContainer<Allocation, N> {
     pub fn try_from_weights(
-        rates: &BackendContainer<Rate>,
+        rates: &BackendContainer<Rate, N>,
         vault_value: u64,
         slot: u64,
     ) -> Result<Self, ProgramError> {
