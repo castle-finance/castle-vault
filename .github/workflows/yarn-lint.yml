@@ -1,6 +1,6 @@
 name: Prettier and ESLint
 on:
-  - push:
+  push:
     paths:
       - "**.ts"
       - "**.json"
