@@ -23,7 +23,6 @@ import {
     LENDING_MARKET_SIZE,
     SolendReserve,
     SolendMarket,
-    SolendAction,
 } from "@solendprotocol/solend-sdk";
 
 import { Asset } from "./asset";

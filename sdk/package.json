@@ -34,6 +34,7 @@
         "build": "tsc",
         "lint": "eslint -c .eslintrc.js src/**/*.ts",
         "prettify": "prettier -w ./src",
+        "prettify-check": "prettier -c ./src",
         "precommit": "yarn prettify && yarn lint",
         "prepublish": "npm run build",
         "test": "ts-mocha test/*.test.ts -t 100000"
