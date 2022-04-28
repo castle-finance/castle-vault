@@ -154,23 +154,23 @@ impl VaultConfig {
     pub fn new(config: VaultConfigArg) -> Result<Self, ProgramError> {
         // Fee cannot be over 100%
         if config.fee_carry_bps > 10000 {
-            return Err(ErrorCode::FeeBpsError.into());
+            return Err(ErrorCode::InvalidFeeConfig.into());
         }
 
         // Fee cannot be over 100%
         if config.fee_mgmt_bps > 10000 {
-            return Err(ErrorCode::FeeBpsError.into());
+            return Err(ErrorCode::InvalidFeeConfig.into());
         }
 
         // Referral percentage cannot be over 50%
         if config.referral_fee_pct > 50 {
-            return Err(ErrorCode::ReferralFeeError.into());
+            return Err(ErrorCode::InvalidReferralFeeConfig.into());
         }
 
         // compute the lower limit of the cap using number of yield sources
         // TODO get this from MAX const in Chris's changes
         if !(34..=100).contains(&config.allocation_cap_pct) {
-            return Err(ErrorCode::AllocationCapError.into());
+            return Err(ErrorCode::InvalidAllocationCap.into());
         }
 
         Ok(Self {

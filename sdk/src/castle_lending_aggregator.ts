@@ -1056,13 +1056,13 @@ export type CastleLendingAggregator = {
         },
         {
             code: 306;
-            name: "ReferralFeeError";
-            msg: "Failed to set referral fee share which is greater than 50%";
+            name: "InvalidReferralFeeConfig";
+            msg: "Referral fee split cannot set to be over 50%";
         },
         {
             code: 307;
-            name: "FeeBpsError";
-            msg: "Failed to set fee BPS which is greater than 10000";
+            name: "InvalidFeeConfig";
+            msg: "Fees cannot be set to over 100%";
         },
         {
             code: 308;
@@ -1091,8 +1091,8 @@ export type CastleLendingAggregator = {
         },
         {
             code: 313;
-            name: "AllocationCapError";
-            msg: "Allocation cap is invalid";
+            name: "InvalidAllocationCap";
+            msg: "Allocation cap cannot set to under 34% or over 100%";
         }
     ];
 };
@@ -2155,13 +2155,13 @@ export const IDL: CastleLendingAggregator = {
         },
         {
             code: 306,
-            name: "ReferralFeeError",
-            msg: "Failed to set referral fee share which is greater than 50%",
+            name: "InvalidReferralFeeConfig",
+            msg: "Referral fee split cannot set to be over 50%",
         },
         {
             code: 307,
-            name: "FeeBpsError",
-            msg: "Failed to set fee BPS which is greater than 10000",
+            name: "InvalidFeeConfig",
+            msg: "Fees cannot be set to over 100%",
         },
         {
             code: 308,
@@ -2190,8 +2190,8 @@ export const IDL: CastleLendingAggregator = {
         },
         {
             code: 313,
-            name: "AllocationCapError",
-            msg: "Allocation cap is invalid",
+            name: "InvalidAllocationCap",
+            msg: "Allocation cap cannot set to under 34% or over 100%",
         },
     ],
 };

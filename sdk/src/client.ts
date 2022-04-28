@@ -363,9 +363,9 @@ export class VaultClient {
      * @returns
      */
     async updateConfig(
-        wallet: anchor.Wallet,
+        owner: Keypair,
         config: VaultConfig
-    ): Promise<TransactionSignature[]> {
+    ): Promise<TransactionSignature> {
         const updateTx = new Transaction();
         updateTx.add(
             // Anchor has a bug that decodes nested types incorrectly
@@ -374,11 +374,11 @@ export class VaultClient {
             this.program.instruction.updateConfig(config, {
                 accounts: {
                     vault: this.vaultId,
-                    owner: wallet.publicKey,
+                    owner: owner.publicKey,
                 },
             })
         );
-        return [await this.program.provider.send(updateTx, [wallet.payer])];
+        return await this.program.provider.send(updateTx, [owner]);
     }
 
     /**
@@ -964,35 +964,13 @@ export class VaultClient {
         return lpToken.getAccountInfo(this.vaultState.referralFeeReceiver);
     }
 
-    async debug_log() {
-        console.log(
-            "solend value: ",
-            (
-                await this.solend.getLpTokenAccountValue(
-                    this.vaultState.vaultSolendLpToken
-                )
-            ).toNumber()
-        );
-        console.log(
-            "port value: ",
-            (
-                await this.port.getLpTokenAccountValue(
-                    this.vaultState.vaultPortLpToken
-                )
-            ).toNumber()
-        );
-        console.log(
-            "jet value: ",
-            (
-                await this.jet.getLpTokenAccountValue(
-                    this.vaultState.vaultJetLpToken
-                )
-            ).toNumber()
-        );
-    }
-
+    // TODO remove this
     getVaultState(): Vault {
         return this.vaultState;
+    }
+
+    getVaultConfig(): VaultConfig {
+        return this.vaultState.config;
     }
 
     getLpTokenMint(): PublicKey {
