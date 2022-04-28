@@ -90,8 +90,9 @@ export class VaultClient {
     }
 
     static async initialize(
-        program: anchor.Program<CastleLendingAggregator>,
+        provider: anchor.Provider,
         wallet: anchor.Wallet,
+        env: DeploymentEnv,
         reserveTokenMint: PublicKey,
         solend: SolendReserveAsset,
         port: PortReserveAsset,
@@ -101,8 +102,19 @@ export class VaultClient {
         owner: PublicKey,
         feeData: FeeArgs,
         poolSizeLimit: number = 10000000000,
-        allocationCapPct: number = 100
+        allocationCapPct: number = 100,
+        program?: anchor.Program<CastleLendingAggregator>
     ): Promise<VaultClient> {
+        // TODO Once the below issue is resolved, remove this logic
+        // https://github.com/project-serum/anchor/issues/1844
+        // Program should only be passed in during testing
+        if (program == null) {
+            program = (await anchor.Program.at(
+                PROGRAM_IDS[env],
+                provider
+            )) as anchor.Program<CastleLendingAggregator>;
+        }
+
         const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
             feeData;
 
@@ -1013,7 +1025,7 @@ export class VaultClient {
         return new Big(this.vaultState.depositCap.toString());
     }
 
-    getAllocationCap(): Number {
+    getAllocationCap(): number {
         return this.vaultState.allocationCapPct;
     }
 
