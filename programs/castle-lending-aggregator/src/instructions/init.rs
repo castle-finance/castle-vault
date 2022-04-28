@@ -225,6 +225,7 @@ pub fn handler(
     }
 
     let vault = &mut ctx.accounts.vault;
+    vault.version = 0;
     vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.owner = ctx.accounts.owner.key();
     vault.authority_seed = vault.key();
@@ -245,13 +246,13 @@ pub fn handler(
     vault.deposit_cap = vault_deposit_cap;
     vault.allocation_cap_pct = allocation_cap_pct;
 
-    vault.fees = VaultFees {
-        fee_receiver: ctx.accounts.fee_receiver.key(),
-        referral_fee_receiver: ctx.accounts.referral_fee_receiver.key(),
-        fee_carry_bps: fees.fee_carry_bps,
-        fee_mgmt_bps: fees.fee_mgmt_bps,
-        referral_fee_pct: fees.referral_fee_pct,
-    };
+    vault.fees = VaultFees::new(
+        fees.fee_carry_bps,
+        fees.fee_mgmt_bps,
+        fees.referral_fee_pct,
+        ctx.accounts.fee_receiver.key(),
+        ctx.accounts.referral_fee_receiver.key(),
+    );
 
     // Initialize fee receiver account
     associated_token::create(ctx.accounts.init_fee_receiver_create_context(
