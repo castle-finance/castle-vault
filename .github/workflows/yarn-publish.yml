@@ -4,7 +4,7 @@ on:
     types: [created]
   # TODO delete
   # This is just for testing
-  pull-request:
+  pull_request:
     branches: "*"
 jobs:
   build:
