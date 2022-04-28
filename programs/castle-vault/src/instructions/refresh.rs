@@ -6,13 +6,14 @@ use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use port_anchor_adaptor::{port_lending_id, PortReserve};
 
 use crate::adapters::{solend, SolendReserve};
+use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
 use crate::state::Vault;
 
 // NOTE: having all accounts for each lending market reserve here is not scalable
 // since eventually we will hit into transaction size limits
 #[derive(Accounts)]
-pub struct Refresh<'info> {
+pub struct Refresh<'info, const N: usize> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -27,7 +28,7 @@ pub struct Refresh<'info> {
         has_one = port_reserve,
         has_one = jet_reserve,
     )]
-    pub vault: Box<Account<'info, Vault>>,
+    pub vault: Box<Account<'info, Vault<N>>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
@@ -107,8 +108,20 @@ pub struct Refresh<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
+pub enum Foo<'info> {
+    Jet {
+        market: AccountInfo<'info>,
+        market_authority: AccountInfo<'info>,
+    },
+    Solend {
+        reserve: AccountInfo<'info>,
+        pyth: AccountInfo<'info>,
+        switchboard: AccountInfo<'info>,
+    },
+}
+
 // TODO refactor refresh cpi calls into adapter pattern
-impl<'info> Refresh<'info> {
+impl<'info, const N: usize> Refresh<'info, N> {
     /// CpiContext for refreshing solend reserve
     pub fn solend_refresh_reserve_context(
         &self,
@@ -182,12 +195,14 @@ impl<'info> Refresh<'info> {
 
 /// Refreshes the reserves of downstream lending markets,
 /// updates the vault total value, and collects fees
-pub fn handler<'info>(
-    ctx: Context<'_, '_, '_, 'info, Refresh<'info>>,
+pub fn handler<'info, const N: usize>(
+    ctx: Context<'_, '_, '_, 'info, Refresh<'info, N>>,
     use_port_oracle: bool,
 ) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Refreshing vault");
+
+    // let _val = BackendContainer::<Foo>::default();
 
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;

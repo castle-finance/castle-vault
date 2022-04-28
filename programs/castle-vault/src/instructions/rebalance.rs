@@ -10,7 +10,7 @@ use strum::IntoEnumIterator;
 use crate::adapters::SolendReserve;
 use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
-use crate::events::{RebalanceEvent, RebalanceEventChris};
+use crate::events::RebalanceEvent;
 use crate::rebalance::assets::*;
 use crate::rebalance::strategies::*;
 use crate::{impl_provider_index, state::*};
@@ -78,7 +78,7 @@ impl<'a> ReserveAccessor for Reserves {
 }
 
 #[derive(Accounts)]
-pub struct Rebalance<'info> {
+pub struct Rebalance<'info, const N: usize> {
     /// Vault state account
     /// Checks that the refresh has been called in the same slot
     /// Checks that the accounts passed in are correct
@@ -89,7 +89,7 @@ pub struct Rebalance<'info> {
         has_one = port_reserve,
         has_one = jet_reserve,
     )]
-    pub vault: Box<Account<'info, Vault>>,
+    pub vault: Box<Account<'info, Vault<N>>>,
 
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
@@ -102,18 +102,19 @@ pub struct Rebalance<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl TryFrom<&Rebalance<'_>> for BackendContainer<Reserves> {
+impl<const N: usize> TryFrom<&Rebalance<'_, N>> for BackendContainer<Reserves, N> {
     type Error = ProgramError;
-    fn try_from(r: &Rebalance<'_>) -> Result<BackendContainer<Reserves>, Self::Error> {
+    fn try_from(r: &Rebalance<'_, N>) -> Result<BackendContainer<Reserves, N>, Self::Error> {
         // NOTE: I tried pretty hard to get rid of these clones and only use the references.
         // The problem is that these references originate from a deref() (or as_ref())
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
+        let solend = Some(Reserves::Solend(r.solend_reserve.deref().deref().clone()));
+        let port = Some(Reserves::Port(r.port_reserve.deref().deref().clone()));
+        let jet = Some(Reserves::Jet(Box::new(*r.jet_reserve.load()?)));
         Ok(BackendContainer {
-            solend: Some(Reserves::Solend(r.solend_reserve.deref().deref().clone())),
-            port: Some(Reserves::Port(r.port_reserve.deref().deref().clone())),
-            jet: Some(Reserves::Jet(Box::new(*r.jet_reserve.load()?))),
+            inner: [solend, port, jet],
         })
     }
 }
@@ -139,9 +140,9 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 
 /// Calculate and store optimal allocations to downstream lending markets
 // This is identical to `handler_chris()` below (at least that's the intention), just a different style
-pub fn handler_chris_concise(
-    ctx: Context<Rebalance>,
-    proposed_weights_arg: BackendContainer<u16>,
+pub fn handler_chris_concise<const N: usize>(
+    ctx: Context<Rebalance<N>>,
+    proposed_weights_arg: BackendContainer<u16, N>,
 ) -> ProgramResult {
     let vault_value = ctx.accounts.vault.total_value;
     let slot = Clock::get()?.slot;
@@ -194,17 +195,17 @@ pub fn handler_chris_concise(
             #[cfg(feature = "debug")]
             msg!("Final allocations: {:?}", final_allocations);
 
-            emit!(RebalanceEventChris {
-                allocations: final_allocations.clone()
-            });
+            // emit!(RebalanceEventChris {
+            //     allocations: final_allocations.clone()
+            // });
 
             ctx.accounts.vault.allocations_chris = final_allocations;
         })
 }
 /// Calculate and store optimal allocations to downstream lending markets
-pub fn handler_chris(
-    ctx: Context<Rebalance>,
-    proposed_weights_arg: BackendContainer<u16>,
+pub fn handler_chris<const N: usize>(
+    ctx: Context<Rebalance<N>>,
+    proposed_weights_arg: BackendContainer<u16, N>,
 ) -> ProgramResult {
     ////////////////////////////////////////////////////////////////////////////////
     // Here's an example of how a BackendContainer can be used
@@ -314,16 +315,19 @@ pub fn handler_chris(
     #[cfg(feature = "debug")]
     msg!("Final allocations: {:?}", final_allocations);
 
-    emit!(RebalanceEventChris {
-        allocations: final_allocations.clone()
-    });
+    // emit!(RebalanceEventChris {
+    //     allocations: final_allocations.clone()
+    // });
 
     ctx.accounts.vault.allocations_chris = final_allocations;
 
     Ok(())
 }
 /// Calculate and store optimal allocations to downstream lending markets
-pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
+pub fn handler<const N: usize>(
+    ctx: Context<Rebalance<N>>,
+    proposed_weights_arg: StrategyWeightsArg,
+) -> ProgramResult {
     let vault_value = ctx.accounts.vault.total_value;
     let clock = Clock::get()?;
 

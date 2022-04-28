@@ -6,7 +6,7 @@ use solana_maths::{Rate, TryAdd, TryDiv, TrySub};
 use strum::IntoEnumIterator;
 
 // TODO refactor so we don't need to depend on higher-level modules
-use crate::{backend_container::BackendContainer, errors::ErrorCode, impl_provider_index};
+use crate::{errors::ErrorCode, impl_provider_index};
 
 use super::assets::*;
 

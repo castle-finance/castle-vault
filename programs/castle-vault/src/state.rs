@@ -24,9 +24,8 @@ pub const ONE_AS_BPS: u64 = 10000;
 #[account]
 #[repr(C, align(8))]
 #[derive(TypeLayout, Debug)]
-pub struct Vault {
+pub struct Vault<const N: usize> {
     pub version: u8,
-
     /// Account which is allowed to call restricted instructions
     /// Also the authority of the fee receiver account
     pub owner: Pubkey,
@@ -88,14 +87,14 @@ pub struct Vault {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    pub allocations_chris: BackendContainer<Allocation>,
+    pub allocations_chris: BackendContainer<Allocation, N>,
 
     // 8 * 15 = 120
     /// Reserved space for future upgrades
     _reserved: [u64; 15],
 }
 
-impl Vault {
+impl<const N: usize> Vault<N> {
     // TODO use a more specific error type
     pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
         let vault_value_diff = new_vault_value.saturating_sub(self.total_value);

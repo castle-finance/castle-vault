@@ -13,7 +13,7 @@ pub struct DepositEvent {
 }
 
 #[derive(Accounts)]
-pub struct Deposit<'info> {
+pub struct Deposit<'info, const N: usize> {
     /// Vault state account
     /// Checks that the refresh has been called in the same slot
     /// Checks that the accounts passed in are correct
@@ -24,7 +24,7 @@ pub struct Deposit<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
     )]
-    pub vault: Box<Account<'info, Vault>>,
+    pub vault: Box<Account<'info, Vault<N>>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
@@ -55,7 +55,7 @@ pub struct Deposit<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl<'info> Deposit<'info> {
+impl<'info, const N: usize> Deposit<'info, N> {
     /// CpiContext for minting vault Lp tokens to user account
     fn mint_to_context(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
         CpiContext::new(
@@ -84,7 +84,10 @@ impl<'info> Deposit<'info> {
 /// Deposit to the vault
 ///
 /// Transfers reserve tokens from user to vault and mints their share of lp tokens
-pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
+pub fn handler<const N: usize>(
+    ctx: Context<Deposit<N>>,
+    reserve_token_amount: u64,
+) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Depositing {} reserve tokens", reserve_token_amount);
 

@@ -14,7 +14,7 @@ pub struct WithdrawEvent {
 }
 
 #[derive(Accounts)]
-pub struct Withdraw<'info> {
+pub struct Withdraw<'info, const N: usize> {
     /// Vault state account
     /// Checks that the refresh has been called in the same slot
     /// Checks that the accounts passed in are correct
@@ -25,7 +25,7 @@ pub struct Withdraw<'info> {
         has_one = vault_reserve_token,
         has_one = lp_token_mint,
     )]
-    pub vault: Box<Account<'info, Vault>>,
+    pub vault: Box<Account<'info, Vault<N>>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
@@ -56,7 +56,7 @@ pub struct Withdraw<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl<'info> Withdraw<'info> {
+impl<'info, const N: usize> Withdraw<'info, N> {
     /// CpiContext for burning vault lp tokens from user account
     fn burn_context(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
         CpiContext::new(
@@ -85,7 +85,7 @@ impl<'info> Withdraw<'info> {
 /// Withdraw from the vault
 ///
 /// Burns the user's lp tokens and transfers their share of reserve tokens
-pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
+pub fn handler<const N: usize>(ctx: Context<Withdraw<N>>, lp_token_amount: u64) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Withdrawing {} lp tokens", lp_token_amount);
 

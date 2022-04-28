@@ -6,9 +6,9 @@ use crate::rebalance::assets::{Provider, ProviderIter};
 
 use super::BackendContainer;
 
-impl<'a, T> IntoIterator for &'a BackendContainer<T> {
+impl<'a, T, const N: usize> IntoIterator for &'a BackendContainer<T, N> {
     type Item = (Provider, &'a T);
-    type IntoIter = BackendContainerIterator<'a, T>;
+    type IntoIter = BackendContainerIterator<'a, T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
         BackendContainerIterator {
@@ -18,9 +18,9 @@ impl<'a, T> IntoIterator for &'a BackendContainer<T> {
     }
 }
 
-impl<T> IntoIterator for BackendContainer<T> {
+impl<T, const N: usize> IntoIterator for BackendContainer<T, N> {
     type Item = (Provider, T);
-    type IntoIter = OwnedBackendContainerIterator<T>;
+    type IntoIter = OwnedBackendContainerIterator<T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
         OwnedBackendContainerIterator {
@@ -30,12 +30,12 @@ impl<T> IntoIterator for BackendContainer<T> {
     }
 }
 
-pub struct BackendContainerIterator<'inner, T> {
-    inner: &'inner BackendContainer<T>,
+pub struct BackendContainerIterator<'inner, T, const N: usize> {
+    inner: &'inner BackendContainer<T, N>,
     inner_iter: ProviderIter,
 }
 
-impl<'inner, T> Iterator for BackendContainerIterator<'inner, T> {
+impl<'inner, T, const N: usize> Iterator for BackendContainerIterator<'inner, T, N> {
     type Item = (Provider, &'inner T);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -45,41 +45,53 @@ impl<'inner, T> Iterator for BackendContainerIterator<'inner, T> {
     }
 }
 
-pub struct OwnedBackendContainerIterator<T> {
-    inner: BackendContainer<T>,
+pub struct OwnedBackendContainerIterator<T, const N: usize> {
+    inner: BackendContainer<T, N>,
     inner_iter: ProviderIter,
 }
 
-impl<T> Iterator for OwnedBackendContainerIterator<T> {
+impl<T, const N: usize> Iterator for OwnedBackendContainerIterator<T, N> {
     type Item = (Provider, T);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner_iter.next().map(|provider| {
             (
                 provider,
-                self.inner
-                    .take(provider)
+                self.inner.inner[provider as usize]
+                    .take()
                     .expect("missing index in OwnedBackendContainerIterator"),
             )
         })
     }
 }
 
-// Allows us to create a BackendContainer<T> from an Iterator that yields (Provider, T)
+// Allows us to create a BackendContainer<T, N> from an Iterator that yields (Provider, T)
 // TODO: this would need to be macro'd
-impl<T> FromIterator<(Provider, T)> for BackendContainer<T> {
+// impl<T, const N: usize> FromIterator<(Provider, T)> for BackendContainer<T, N> {
+//     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
+//         let mut solend = None;
+//         let mut port = None;
+//         let mut jet = None;
+
+//         iter.into_iter().for_each(|(provider, v)| match provider {
+//             Provider::Solend => solend = Some(v),
+//             Provider::Port => port = Some(v),
+//             Provider::Jet => jet = Some(v),
+//         });
+
+//         // TODO: check that all are Some() or push it off until an attempted Index?
+//         BackendContainer {
+//             inner: [solend, port, jet],
+//         }
+//     }
+// }
+
+impl<T, const N: usize> FromIterator<(Provider, T)> for BackendContainer<T, N> {
     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
-        let mut solend = None;
-        let mut port = None;
-        let mut jet = None;
-
-        iter.into_iter().for_each(|(provider, v)| match provider {
-            Provider::Solend => solend = Some(v),
-            Provider::Port => port = Some(v),
-            Provider::Jet => jet = Some(v),
-        });
-
-        // TODO: check that all are Some() or push it off until an attempted Index?
-        BackendContainer { solend, port, jet }
+        iter.into_iter()
+            .fold(BackendContainer::default(), |mut acc, (provider, v)| {
+                acc[provider] = v;
+                acc
+            })
     }
 }
