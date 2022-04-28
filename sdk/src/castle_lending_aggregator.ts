@@ -129,35 +129,15 @@ export type CastleLendingAggregator = {
                     };
                 },
                 {
-                    name: "strategyType";
+                    name: "config";
                     type: {
-                        defined: "StrategyType";
+                        defined: "VaultConfigArg";
                     };
-                },
-                {
-                    name: "rebalanceMode";
-                    type: {
-                        defined: "RebalanceMode";
-                    };
-                },
-                {
-                    name: "fees";
-                    type: {
-                        defined: "FeeArgs";
-                    };
-                },
-                {
-                    name: "depositCap";
-                    type: "u64";
-                },
-                {
-                    name: "allocationCapPct";
-                    type: "u8";
                 }
             ];
         },
         {
-            name: "updateDepositCap";
+            name: "updateConfig";
             accounts: [
                 {
                     name: "vault";
@@ -172,30 +152,9 @@ export type CastleLendingAggregator = {
             ];
             args: [
                 {
-                    name: "depositCapNewValue";
-                    type: "u64";
-                }
-            ];
-        },
-        {
-            name: "updateFees";
-            accounts: [
-                {
-                    name: "vault";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
-                    name: "owner";
-                    isMut: false;
-                    isSigner: true;
-                }
-            ];
-            args: [
-                {
-                    name: "newFees";
+                    name: "newConfig";
                     type: {
-                        defined: "FeeArgs";
+                        defined: "VaultConfigArg";
                     };
                 }
             ];
@@ -750,40 +709,24 @@ export type CastleLendingAggregator = {
                         type: "publicKey";
                     },
                     {
-                        name: "rebalanceMode";
+                        name: "feeReceiver";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "referralFeeReceiver";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "padding";
                         type: {
-                            defined: "RebalanceMode";
+                            array: ["u8", 6];
                         };
                     },
                     {
-                        name: "strategyType";
+                        name: "value";
                         type: {
-                            defined: "StrategyType";
+                            defined: "SlotTrackedValue";
                         };
-                    },
-                    {
-                        name: "padding0";
-                        type: "u32";
-                    },
-                    {
-                        name: "fees";
-                        type: {
-                            defined: "VaultFees";
-                        };
-                    },
-                    {
-                        name: "lastUpdate";
-                        type: {
-                            defined: "LastUpdate";
-                        };
-                    },
-                    {
-                        name: "totalValue";
-                        type: "u64";
-                    },
-                    {
-                        name: "depositCap";
-                        type: "u64";
                     },
                     {
                         name: "allocations";
@@ -792,13 +735,9 @@ export type CastleLendingAggregator = {
                         };
                     },
                     {
-                        name: "allocationCapPct";
-                        type: "u8";
-                    },
-                    {
-                        name: "padding1";
+                        name: "config";
                         type: {
-                            array: ["u8", 7];
+                            defined: "VaultConfig";
                         };
                     },
                     {
@@ -845,10 +784,14 @@ export type CastleLendingAggregator = {
             };
         },
         {
-            name: "FeeArgs";
+            name: "VaultConfigArg";
             type: {
                 kind: "struct";
                 fields: [
+                    {
+                        name: "depositCap";
+                        type: "u64";
+                    },
                     {
                         name: "feeCarryBps";
                         type: "u32";
@@ -860,6 +803,22 @@ export type CastleLendingAggregator = {
                     {
                         name: "referralFeePct";
                         type: "u8";
+                    },
+                    {
+                        name: "allocationCapPct";
+                        type: "u8";
+                    },
+                    {
+                        name: "rebalanceMode";
+                        type: {
+                            defined: "RebalanceMode";
+                        };
+                    },
+                    {
+                        name: "strategyType";
+                        type: {
+                            defined: "StrategyType";
+                        };
                     }
                 ];
             };
@@ -885,10 +844,14 @@ export type CastleLendingAggregator = {
             };
         },
         {
-            name: "VaultFees";
+            name: "VaultConfig";
             type: {
                 kind: "struct";
                 fields: [
+                    {
+                        name: "depositCap";
+                        type: "u64";
+                    },
                     {
                         name: "feeCarryBps";
                         type: "u32";
@@ -902,17 +865,25 @@ export type CastleLendingAggregator = {
                         type: "u8";
                     },
                     {
-                        name: "feeReceiver";
-                        type: "publicKey";
+                        name: "allocationCapPct";
+                        type: "u8";
                     },
                     {
-                        name: "referralFeeReceiver";
-                        type: "publicKey";
+                        name: "rebalanceMode";
+                        type: {
+                            defined: "RebalanceMode";
+                        };
+                    },
+                    {
+                        name: "strategyType";
+                        type: {
+                            defined: "StrategyType";
+                        };
                     },
                     {
                         name: "padding";
                         type: {
-                            array: ["u8", 7];
+                            array: ["u32", 3];
                         };
                     }
                 ];
@@ -926,26 +897,26 @@ export type CastleLendingAggregator = {
                     {
                         name: "solend";
                         type: {
-                            defined: "Allocation";
+                            defined: "SlotTrackedValue";
                         };
                     },
                     {
                         name: "port";
                         type: {
-                            defined: "Allocation";
+                            defined: "SlotTrackedValue";
                         };
                     },
                     {
                         name: "jet";
                         type: {
-                            defined: "Allocation";
+                            defined: "SlotTrackedValue";
                         };
                     }
                 ];
             };
         },
         {
-            name: "Allocation";
+            name: "SlotTrackedValue";
             type: {
                 kind: "struct";
                 fields: [
@@ -1257,35 +1228,15 @@ export const IDL: CastleLendingAggregator = {
                     },
                 },
                 {
-                    name: "strategyType",
+                    name: "config",
                     type: {
-                        defined: "StrategyType",
+                        defined: "VaultConfigArg",
                     },
-                },
-                {
-                    name: "rebalanceMode",
-                    type: {
-                        defined: "RebalanceMode",
-                    },
-                },
-                {
-                    name: "fees",
-                    type: {
-                        defined: "FeeArgs",
-                    },
-                },
-                {
-                    name: "depositCap",
-                    type: "u64",
-                },
-                {
-                    name: "allocationCapPct",
-                    type: "u8",
                 },
             ],
         },
         {
-            name: "updateDepositCap",
+            name: "updateConfig",
             accounts: [
                 {
                     name: "vault",
@@ -1300,30 +1251,9 @@ export const IDL: CastleLendingAggregator = {
             ],
             args: [
                 {
-                    name: "depositCapNewValue",
-                    type: "u64",
-                },
-            ],
-        },
-        {
-            name: "updateFees",
-            accounts: [
-                {
-                    name: "vault",
-                    isMut: true,
-                    isSigner: false,
-                },
-                {
-                    name: "owner",
-                    isMut: false,
-                    isSigner: true,
-                },
-            ],
-            args: [
-                {
-                    name: "newFees",
+                    name: "newConfig",
                     type: {
-                        defined: "FeeArgs",
+                        defined: "VaultConfigArg",
                     },
                 },
             ],
@@ -1878,40 +1808,24 @@ export const IDL: CastleLendingAggregator = {
                         type: "publicKey",
                     },
                     {
-                        name: "rebalanceMode",
+                        name: "feeReceiver",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "referralFeeReceiver",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "padding",
                         type: {
-                            defined: "RebalanceMode",
+                            array: ["u8", 6],
                         },
                     },
                     {
-                        name: "strategyType",
+                        name: "value",
                         type: {
-                            defined: "StrategyType",
+                            defined: "SlotTrackedValue",
                         },
-                    },
-                    {
-                        name: "padding0",
-                        type: "u32",
-                    },
-                    {
-                        name: "fees",
-                        type: {
-                            defined: "VaultFees",
-                        },
-                    },
-                    {
-                        name: "lastUpdate",
-                        type: {
-                            defined: "LastUpdate",
-                        },
-                    },
-                    {
-                        name: "totalValue",
-                        type: "u64",
-                    },
-                    {
-                        name: "depositCap",
-                        type: "u64",
                     },
                     {
                         name: "allocations",
@@ -1920,13 +1834,9 @@ export const IDL: CastleLendingAggregator = {
                         },
                     },
                     {
-                        name: "allocationCapPct",
-                        type: "u8",
-                    },
-                    {
-                        name: "padding1",
+                        name: "config",
                         type: {
-                            array: ["u8", 7],
+                            defined: "VaultConfig",
                         },
                     },
                     {
@@ -1973,10 +1883,14 @@ export const IDL: CastleLendingAggregator = {
             },
         },
         {
-            name: "FeeArgs",
+            name: "VaultConfigArg",
             type: {
                 kind: "struct",
                 fields: [
+                    {
+                        name: "depositCap",
+                        type: "u64",
+                    },
                     {
                         name: "feeCarryBps",
                         type: "u32",
@@ -1988,6 +1902,22 @@ export const IDL: CastleLendingAggregator = {
                     {
                         name: "referralFeePct",
                         type: "u8",
+                    },
+                    {
+                        name: "allocationCapPct",
+                        type: "u8",
+                    },
+                    {
+                        name: "rebalanceMode",
+                        type: {
+                            defined: "RebalanceMode",
+                        },
+                    },
+                    {
+                        name: "strategyType",
+                        type: {
+                            defined: "StrategyType",
+                        },
                     },
                 ],
             },
@@ -2013,10 +1943,14 @@ export const IDL: CastleLendingAggregator = {
             },
         },
         {
-            name: "VaultFees",
+            name: "VaultConfig",
             type: {
                 kind: "struct",
                 fields: [
+                    {
+                        name: "depositCap",
+                        type: "u64",
+                    },
                     {
                         name: "feeCarryBps",
                         type: "u32",
@@ -2030,17 +1964,25 @@ export const IDL: CastleLendingAggregator = {
                         type: "u8",
                     },
                     {
-                        name: "feeReceiver",
-                        type: "publicKey",
+                        name: "allocationCapPct",
+                        type: "u8",
                     },
                     {
-                        name: "referralFeeReceiver",
-                        type: "publicKey",
+                        name: "rebalanceMode",
+                        type: {
+                            defined: "RebalanceMode",
+                        },
+                    },
+                    {
+                        name: "strategyType",
+                        type: {
+                            defined: "StrategyType",
+                        },
                     },
                     {
                         name: "padding",
                         type: {
-                            array: ["u8", 7],
+                            array: ["u32", 3],
                         },
                     },
                 ],
@@ -2054,26 +1996,26 @@ export const IDL: CastleLendingAggregator = {
                     {
                         name: "solend",
                         type: {
-                            defined: "Allocation",
+                            defined: "SlotTrackedValue",
                         },
                     },
                     {
                         name: "port",
                         type: {
-                            defined: "Allocation",
+                            defined: "SlotTrackedValue",
                         },
                     },
                     {
                         name: "jet",
                         type: {
-                            defined: "Allocation",
+                            defined: "SlotTrackedValue",
                         },
                     },
                 ],
             },
         },
         {
-            name: "Allocation",
+            name: "SlotTrackedValue",
             type: {
                 kind: "struct",
                 fields: [

@@ -13,7 +13,7 @@ pub struct Withdraw<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
-        constraint = !vault.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
+        constraint = !vault.value.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = lp_token_mint,
@@ -87,7 +87,7 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     let reserve_tokens_to_transfer = crate::math::calc_lp_to_reserve(
         lp_token_amount,
         ctx.accounts.lp_token_mint.supply,
-        vault.total_value,
+        vault.value.value,
     )
     .ok_or(ErrorCode::MathError)?;
 
@@ -104,10 +104,11 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     )?;
 
     // This is so that the SDK can read an up-to-date total value without calling refresh
-    ctx.accounts.vault.total_value = ctx
+    ctx.accounts.vault.value.value = ctx
         .accounts
         .vault
-        .total_value
+        .value
+        .value
         .checked_sub(reserve_tokens_to_transfer)
         .ok_or(ErrorCode::MathError)?;
 

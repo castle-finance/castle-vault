@@ -37,11 +37,10 @@ import {
     JetReserveAsset,
 } from "./adapters";
 import {
+    ProposedWeightsBps,
     RebalanceEvent,
     Vault,
-    FeeArgs,
-    ProposedWeightsBps,
-    VaultFees,
+    VaultConfig,
 } from "./types";
 
 export class VaultClient {
@@ -100,9 +99,12 @@ export class VaultClient {
         strategyType: StrategyType,
         rebalanceMode: RebalanceMode,
         owner: PublicKey,
-        feeData: FeeArgs,
-        poolSizeLimit: number = 10000000000,
+        referralFeeOwner: PublicKey,
+        feeCarryBps: number = 0,
+        feeMgmtBps: number = 0,
+        referralFeePct: number = 0,
         allocationCapPct: number = 100,
+        depositCap?: number,
         program?: anchor.Program<CastleLendingAggregator>
     ): Promise<VaultClient> {
         // TODO Once the below issue is resolved, remove this logic
@@ -114,9 +116,6 @@ export class VaultClient {
                 provider
             )) as anchor.Program<CastleLendingAggregator>;
         }
-
-        const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
-            feeData;
 
         const vaultId = Keypair.generate();
 
@@ -185,7 +184,23 @@ export class VaultClient {
             referralFeeOwner
         );
 
+        const config: VaultConfig = {
+            depositCap:
+                depositCap == null
+                    ? new anchor.BN("18446744073709551615")
+                    : new anchor.BN(depositCap),
+            feeCarryBps: feeCarryBps,
+            feeMgmtBps: feeMgmtBps,
+            referralFeePct: referralFeePct,
+            allocationCapPct: allocationCapPct,
+            rebalanceMode: { [rebalanceMode]: {} },
+            strategyType: { [strategyType]: {} },
+        };
+
         const txSig = await program.rpc.initialize(
+            // Anchor has a bug that decodes nested types incorrectly
+            // https://github.com/project-serum/anchor/pull/1726
+            //@ts-ignore
             {
                 authority: authorityBump,
                 reserve: reserveBump,
@@ -194,15 +209,7 @@ export class VaultClient {
                 portLp: portLpBump,
                 jetLp: jetLpBump,
             },
-            { [strategyType]: {} },
-            { [rebalanceMode]: {} },
-            {
-                feeCarryBps: new anchor.BN(feeCarryBps),
-                feeMgmtBps: new anchor.BN(feeMgmtBps),
-                referralFeePct: new anchor.BN(referralFeePct),
-            },
-            new anchor.BN(poolSizeLimit),
-            allocationCapPct,
+            config,
             {
                 accounts: {
                     vault: vaultId.publicKey,
@@ -268,12 +275,12 @@ export class VaultClient {
                   {
                       isSigner: false,
                       isWritable: true,
-                      pubkey: this.vaultState.fees.feeReceiver,
+                      pubkey: this.vaultState.feeReceiver,
                   },
                   {
                       isSigner: false,
                       isWritable: true,
-                      pubkey: this.vaultState.fees.referralFeeReceiver,
+                      pubkey: this.vaultState.referralFeeReceiver,
                   },
               ]
             : [];
@@ -355,52 +362,23 @@ export class VaultClient {
      * @param new_value
      * @returns
      */
-    async updateDepositCap(
-        owner: Keypair,
-        new_value: number
+    async updateConfig(
+        wallet: anchor.Wallet,
+        config: VaultConfig
     ): Promise<TransactionSignature[]> {
-        const updateCommand = new Transaction();
-        updateCommand.add(
-            this.program.instruction.updateDepositCap(
-                new anchor.BN(new_value),
-                {
-                    accounts: {
-                        vault: this.vaultId,
-                        owner: owner.publicKey,
-                    },
-                }
-            )
-        );
-        return [await this.program.provider.send(updateCommand, [owner])];
-    }
-
-    /**
-     * @param new_value
-     * @returns
-     */
-    async updateFees(
-        owner: Keypair,
-        feeCarryBps: number,
-        feeMgmtBps: number,
-        referralFeePct: number
-    ): Promise<TransactionSignature[]> {
-        const updateCommand = new Transaction();
-        updateCommand.add(
-            this.program.instruction.updateFees(
-                {
-                    feeCarryBps: feeCarryBps,
-                    feeMgmtBps: feeMgmtBps,
-                    referralFeePct: referralFeePct,
+        const updateTx = new Transaction();
+        updateTx.add(
+            // Anchor has a bug that decodes nested types incorrectly
+            // https://github.com/project-serum/anchor/pull/1726
+            //@ts-ignore
+            this.program.instruction.updateConfig(config, {
+                accounts: {
+                    vault: this.vaultId,
+                    owner: wallet.publicKey,
                 },
-                {
-                    accounts: {
-                        vault: this.vaultId,
-                        owner: owner.publicKey,
-                    },
-                }
-            )
+            })
         );
-        return [await this.program.provider.send(updateCommand, [owner])];
+        return [await this.program.provider.send(updateTx, [wallet.payer])];
     }
 
     /**
@@ -631,7 +609,7 @@ export class VaultClient {
         proposedWeights?: ProposedWeightsBps
     ): Promise<TransactionSignature[]> {
         if (
-            this.vaultState.rebalanceMode == RebalanceModes.proofChecker &&
+            this.getRebalanceMode() == RebalanceModes.proofChecker &&
             proposedWeights == null
         ) {
             throw new Error(
@@ -973,7 +951,7 @@ export class VaultClient {
             TOKEN_PROGRAM_ID,
             Keypair.generate() // dummy since we don't need to send txs
         );
-        return lpToken.getAccountInfo(this.vaultState.fees.feeReceiver);
+        return lpToken.getAccountInfo(this.vaultState.feeReceiver);
     }
 
     async getReferralFeeReceiverAccountInfo(): Promise<AccountInfo> {
@@ -983,7 +961,7 @@ export class VaultClient {
             TOKEN_PROGRAM_ID,
             Keypair.generate() // dummy since we don't need to send txs
         );
-        return lpToken.getAccountInfo(this.vaultState.fees.referralFeeReceiver);
+        return lpToken.getAccountInfo(this.vaultState.referralFeeReceiver);
     }
 
     async debug_log() {
@@ -1022,11 +1000,11 @@ export class VaultClient {
     }
 
     getDepositCap(): Big {
-        return new Big(this.vaultState.depositCap.toString());
+        return new Big(this.vaultState.config.depositCap.toString());
     }
 
     getAllocationCap(): number {
-        return this.vaultState.allocationCapPct;
+        return this.vaultState.config.allocationCapPct;
     }
 
     getVaultReserveTokenAccount(): PublicKey {
@@ -1046,11 +1024,15 @@ export class VaultClient {
     }
 
     getStrategyType(): StrategyType {
-        return Object.keys(this.vaultState.strategyType)[0] as StrategyType;
+        return Object.keys(
+            this.vaultState.config.strategyType
+        )[0] as StrategyType;
     }
 
     getRebalanceMode(): RebalanceMode {
-        return Object.keys(this.vaultState.rebalanceMode)[0] as RebalanceMode;
+        return Object.keys(
+            this.vaultState.config.rebalanceMode
+        )[0] as RebalanceMode;
     }
 
     getSolend(): SolendReserveAsset {
@@ -1065,8 +1047,16 @@ export class VaultClient {
         return this.jet;
     }
 
-    getFees(): VaultFees {
-        return this.vaultState.fees;
+    getReferralFeeSplit(): number {
+        return this.vaultState.config.referralFeePct / 100;
+    }
+
+    getCarryFee(): number {
+        return this.vaultState.config.feeCarryBps / 10000;
+    }
+
+    getManagementFee(): number {
+        return this.vaultState.config.feeMgmtBps / 10000;
     }
 }
 

@@ -230,7 +230,7 @@ pub fn handler<'info>(
     }
 
     #[cfg(not(feature = "fees"))]
-    if ctx.accounts.vault.fees.fee_carry_bps > 0 || ctx.accounts.vault.fees.fee_mgmt_bps > 0 {
+    if ctx.accounts.vault.config.fee_carry_bps > 0 || ctx.accounts.vault.config.fee_mgmt_bps > 0 {
         msg!("WARNING: Fees are non-zero but the fee feature is deactivated");
     }
 
@@ -256,12 +256,12 @@ pub fn handler<'info>(
         );
 
         let primary_fees_converted = total_fees_converted
-            .checked_mul(100 - ctx.accounts.vault.fees.referral_fee_pct as u64)
+            .checked_mul(100 - ctx.accounts.vault.config.referral_fee_pct as u64)
             .and_then(|val| val.checked_div(100))
             .ok_or(ErrorCode::MathError)?;
 
         let referral_fees_converted = total_fees_converted
-            .checked_mul(ctx.accounts.vault.fees.referral_fee_pct as u64)
+            .checked_mul(ctx.accounts.vault.config.referral_fee_pct as u64)
             .and_then(|val| val.checked_div(100))
             .ok_or(ErrorCode::MathError)?;
 
@@ -277,7 +277,7 @@ pub fn handler<'info>(
         }
 
         let primary_fee_receiver = &ctx.remaining_accounts[0];
-        if primary_fee_receiver.key() != ctx.accounts.vault.fees.fee_receiver {
+        if primary_fee_receiver.key() != ctx.accounts.vault.fee_receiver {
             msg!("Fee receivers do not match");
             return Err(ErrorCode::InvalidAccount.into());
         }
@@ -296,7 +296,7 @@ pub fn handler<'info>(
         );
 
         let referral_fee_receiver = &ctx.remaining_accounts[1];
-        if referral_fee_receiver.key() != ctx.accounts.vault.fees.referral_fee_receiver {
+        if referral_fee_receiver.key() != ctx.accounts.vault.referral_fee_receiver {
             msg!("Referral fee receivers do not match");
             return Err(ErrorCode::InvalidAccount.into());
         }
@@ -312,7 +312,8 @@ pub fn handler<'info>(
     // Update vault total value
     ctx.accounts
         .vault
-        .update_value(vault_value, ctx.accounts.clock.slot);
+        .value
+        .update(vault_value, ctx.accounts.clock.slot);
 
     Ok(())
 }
