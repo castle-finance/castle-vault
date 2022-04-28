@@ -11,7 +11,7 @@ pub struct UpdateFees<'info, const N: usize> {
         mut,
         has_one = owner,
     )]
-    pub vault: Box<Account<'info, Vault<N>>>,
+    pub vault: Box<Account<'info, Vault>>,
 
     pub owner: Signer<'info>,
 }

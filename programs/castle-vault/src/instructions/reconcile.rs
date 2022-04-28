@@ -23,21 +23,21 @@ pub trait LendingMarket {
     fn provider(&self) -> Provider;
 }
 
-pub trait HasVault<const N: usize> {
-    fn vault(&self) -> &Vault<N>;
-    fn vault_mut(&mut self) -> &mut Vault<N>;
+pub trait HasVault {
+    fn vault(&self) -> &Vault;
+    fn vault_mut(&mut self) -> &mut Vault;
 }
 
 // TODO make this a custom derive procmacro
 #[macro_export]
 macro_rules! impl_has_vault {
     ($($t:ty),+ $(,)?) => ($(
-        impl<const N: usize> $crate::instructions::reconcile::HasVault<N> for $t {
-            fn vault(&self) -> &Vault<N> {
+        impl<const N: usize> $crate::instructions::reconcile::HasVault for $t {
+            fn vault(&self) -> &Vault {
                 self.vault.deref()
             }
 
-            fn vault_mut(&mut self) -> &mut Vault<N> {
+            fn vault_mut(&mut self) -> &mut Vault {
                 self.vault.deref_mut()
             }
         }
@@ -48,18 +48,18 @@ macro_rules! impl_has_vault {
 // macro_rules! impl_has_vault_with_size {
 //     ($($t:ty),+ $(,)?) => ($(
 //         impl<const N: usize> $crate::instructions::reconcile::HasVault for $t<N> {
-//             fn vault(&self) -> &Vault<N> {
+//             fn vault(&self) -> &Vault {
 //                 self.vault.deref()
 //             }
 
-//             fn vault_mut(&mut self) -> &mut Vault<N> {
+//             fn vault_mut(&mut self) -> &mut Vault {
 //                 self.vault.deref_mut()
 //             }
 //         }
 //     )+)
 // }
 
-pub fn handler<const N: usize, T: LendingMarket + HasVault<N>>(
+pub fn handler<T: LendingMarket + HasVault>(
     ctx: Context<T>,
     withdraw_option: u64,
 ) -> ProgramResult {

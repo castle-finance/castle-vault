@@ -24,7 +24,7 @@ pub struct Deposit<'info, const N: usize> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
     )]
-    pub vault: Box<Account<'info, Vault<N>>>,
+    pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,

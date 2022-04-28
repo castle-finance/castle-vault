@@ -31,7 +31,7 @@ pub struct FeeArgs {
 pub struct Initialize<'info, const N: usize> {
     /// Vault state account
     #[account(zero)]
-    pub vault: Box<Account<'info, Vault<N>>>,
+    pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     #[account(

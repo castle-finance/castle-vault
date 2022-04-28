@@ -26,7 +26,7 @@ pub struct JetAccounts<'info, const N: usize> {
         has_one = vault_jet_lp_token,
         has_one = jet_reserve,
     )]
-    pub vault: Box<Account<'info, Vault<N>>>,
+    pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,

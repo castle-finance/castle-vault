@@ -20,7 +20,7 @@ declare_id!("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn");
 #[cfg(feature = "devnet-castle-addr")]
 declare_id!("4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK");
 
-const MAX_NUM_PROVIDERS: usize = 4;
+pub(crate) const MAX_NUM_PROVIDERS: usize = 3;
 
 #[program]
 pub mod castle_vault {
@@ -88,7 +88,7 @@ pub mod castle_vault {
         instructions::rebalance::handler_chris(ctx, proposed_weights)
     }
 
-    pub fn refresh<'info, const N: usize>(
+    pub fn refresh<'info>(
         ctx: Context<'_, '_, '_, 'info, Refresh<'info, MAX_NUM_PROVIDERS>>,
         use_port_oracle: bool,
     ) -> ProgramResult {
