@@ -10,7 +10,7 @@ use crate::rebalance::assets::ReserveAccessor;
 use crate::{impl_has_vault, rebalance::assets::Provider, reconcile::LendingMarket, state::Vault};
 
 #[derive(Accounts)]
-pub struct SolendAccounts<'info, const N: usize> {
+pub struct SolendAccounts<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -61,9 +61,9 @@ pub struct SolendAccounts<'info, const N: usize> {
     pub token_program: Program<'info, Token>,
 }
 
-impl_has_vault!(SolendAccounts<'_, N>);
+impl_has_vault!(SolendAccounts<'_>);
 
-impl<'info, const N: usize> LendingMarket for SolendAccounts<'info, N> {
+impl<'info> LendingMarket for SolendAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.solend_program.clone(),

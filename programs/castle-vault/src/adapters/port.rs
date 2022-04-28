@@ -15,7 +15,7 @@ use crate::{
 };
 
 #[derive(Accounts)]
-pub struct PortAccounts<'info, const N: usize> {
+pub struct PortAccounts<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -66,9 +66,9 @@ pub struct PortAccounts<'info, const N: usize> {
     pub token_program: Program<'info, Token>,
 }
 
-impl_has_vault!(PortAccounts<'_, N>);
+impl_has_vault!(PortAccounts<'_>);
 
-impl<'info, const N: usize> LendingMarket for PortAccounts<'info, N> {
+impl<'info> LendingMarket for PortAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.port_program.clone(),
