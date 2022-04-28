@@ -24,7 +24,7 @@ pub mod castle_lending_aggregator {
 
     pub fn initialize(
         ctx: Context<Initialize>,
-        _bumps: InitBumpSeeds,
+        bumps: InitBumpSeeds,
         strategy_type: StrategyType,
         rebalance_mode: RebalanceMode,
         fees: FeeArgs,
@@ -33,7 +33,7 @@ pub mod castle_lending_aggregator {
     ) -> ProgramResult {
         instructions::init::handler(
             ctx,
-            _bumps,
+            bumps,
             strategy_type,
             rebalance_mode,
             fees,
@@ -44,9 +44,9 @@ pub mod castle_lending_aggregator {
 
     pub fn update_deposit_cap(
         ctx: Context<UpdateDepositCap>,
-        deposit_cap_new_value: u64,
+        new_deposit_cap: u64,
     ) -> ProgramResult {
-        instructions::update_deposit_cap::handler(ctx, deposit_cap_new_value)
+        instructions::update_deposit_cap::handler(ctx, new_deposit_cap)
     }
 
     pub fn update_fees(ctx: Context<UpdateFees>, new_fees: FeeArgs) -> ProgramResult {
