@@ -1,0 +1,17 @@
+name: Prettier and ESLint
+on:
+  - push:
+    paths:
+      - "**.ts"
+      - "**.json"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: yarn
+        working-directory: ./sdk
+      - run: yarn lint
+        working-directory: ./sdk
+      - run: prettier -c ./src
+        working-directory: ./sdk
