@@ -51,7 +51,7 @@ export class VaultClient {
         private solend: SolendReserveAsset,
         private port: PortReserveAsset,
         private jet: JetReserveAsset,
-        private feesEnabled: boolean = false
+        private feesEnabled: boolean = true
     ) {}
 
     static async load(
