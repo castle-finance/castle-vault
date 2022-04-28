@@ -619,7 +619,7 @@ export class VaultClient {
         proposedWeights?: ProposedWeightsBps
     ): Promise<TransactionSignature[]> {
         if (
-            this.vaultState.rebalanceMode == RebalanceModes.proofChecker &&
+            this.getRebalanceMode() == RebalanceModes.proofChecker &&
             proposedWeights == null
         ) {
             throw new Error(
