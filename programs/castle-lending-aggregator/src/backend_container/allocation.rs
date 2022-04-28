@@ -3,11 +3,11 @@ use solana_maths::{Decimal, Rate, TryMul};
 
 use crate::state::{Allocation, LastUpdate};
 
-use super::BackendContainer;
+use super::BackendContainerGeneric;
 
-impl BackendContainer<Allocation> {
+impl<const N: usize> BackendContainerGeneric<Allocation, N> {
     pub fn try_from_weights(
-        rates: &BackendContainer<Rate>,
+        rates: &BackendContainerGeneric<Rate, N>,
         vault_value: u64,
         slot: u64,
     ) -> Result<Self, ProgramError> {
