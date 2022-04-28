@@ -18,7 +18,7 @@ use std::ops::{Index, IndexMut};
 /// Provides an abstraction over supported backends
 #[derive(PartialEq, AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct BackendContainer<T, const N: usize> {
-    inner: [Option<T>; N],
+    pub(crate) inner: [Option<T>; N],
 }
 
 impl<T, const N: usize> BackendContainer<T, N> {

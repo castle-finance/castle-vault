@@ -8,9 +8,9 @@ use strum::IntoEnumIterator;
 
 use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
-use crate::impl_provider_index;
 use crate::rebalance::assets::Provider;
 use crate::rebalance::strategies::StrategyWeights;
+use crate::{impl_provider_index, MAX_NUM_PROVIDERS};
 
 /// Number of slots per year
 pub const SLOTS_PER_YEAR: u64 =
@@ -20,7 +20,7 @@ pub const ONE_AS_BPS: u64 = 10000;
 
 #[account]
 #[derive(Debug)]
-pub struct Vault<const N: usize> {
+pub struct Vault {
     /// Account which is allowed to call restricted instructions
     /// Also the authority of the fee receiver account
     pub owner: Pubkey,
@@ -70,7 +70,7 @@ pub struct Vault<const N: usize> {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    pub allocations_chris: BackendContainer<Allocation, N>,
+    pub allocations_chris: BackendContainer<Allocation, MAX_NUM_PROVIDERS>,
 
     /// Strategy type that is executed during rebalance
     pub strategy_type: StrategyType,
@@ -82,7 +82,7 @@ pub struct Vault<const N: usize> {
     pub allocation_cap_pct: u8,
 }
 
-impl<const N: usize> Vault<N> {
+impl Vault {
     // TODO use a more specific error type
     pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
         let vault_value_diff = new_vault_value.saturating_sub(self.total_value);
