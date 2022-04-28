@@ -24,55 +24,60 @@ pub struct BackendContainerGeneric<T, const N: usize> {
     pub(crate) inner: [Option<T>; N],
 }
 
-impl<T> BackendContainer<T> {
+impl<T, const N: usize> BackendContainerGeneric<T, N> {
     pub fn len(&self) -> usize {
-        self.inner.len()
+        N
     }
 
-    // TODO: Should this just always return `true`, or do we want it to mean "uninitialized"?
     pub fn is_empty(&self) -> bool {
+        // TODO: Should this just always return `true`, or do we want it to mean "uninitialized"?
         self.inner.iter().all(Option::is_none)
     }
 }
 
-impl<T> Index<Provider> for BackendContainer<T> {
+impl<T, const N: usize> Index<Provider> for BackendContainerGeneric<T, N> {
     type Output = T;
 
     fn index(&self, index: Provider) -> &Self::Output {
         self.inner[index as usize]
             .as_ref()
-            .expect("missing index in BackendContainer")
+            .expect("missing index in BackendContainerGeneric")
     }
 }
 
-impl<T> IndexMut<Provider> for BackendContainer<T> {
+impl<T, const N: usize> IndexMut<Provider> for BackendContainerGeneric<T, N> {
     fn index_mut(&mut self, index: Provider) -> &mut Self::Output {
         self.inner[index as usize]
             .as_mut()
-            .expect("missing index in BackendContainer")
+            .expect("missing index in BackendContainerGeneric")
     }
 }
 
-impl<T> Default for BackendContainer<T> {
+impl<T, const N: usize> Default for BackendContainerGeneric<T, N> {
     fn default() -> Self {
         // TODO: Is there a better way to do this...?
         Self {
-            inner: [(); MAX_NUM_PROVIDERS].map(|_| None),
+            inner: [(); N].map(|_| None),
         }
     }
 }
 
-impl<'a, T> From<&'a dyn Index<Provider, Output = &'a T>> for BackendContainer<&'a T> {
+impl<'a, T, const N: usize> From<&'a dyn Index<Provider, Output = &'a T>>
+    for BackendContainerGeneric<&'a T, N>
+{
     fn from(p: &'a dyn Index<Provider, Output = &'a T>) -> Self {
-        Provider::iter().fold(BackendContainer::default(), |mut acc, provider| {
+        Provider::iter().fold(BackendContainerGeneric::default(), |mut acc, provider| {
             acc[provider] = p[provider];
             acc
         })
     }
 }
 
-impl<T> BackendContainer<T> {
-    pub fn apply_owned<U: Clone, F: Fn(Provider, T) -> U>(mut self, f: F) -> BackendContainer<U> {
+impl<T, const N: usize> BackendContainerGeneric<T, N> {
+    pub fn apply_owned<U: Clone, F: Fn(Provider, T) -> U>(
+        mut self,
+        f: F,
+    ) -> BackendContainerGeneric<U, N> {
         Provider::iter()
             .map(|provider| {
                 (
@@ -89,19 +94,19 @@ impl<T> BackendContainer<T> {
     }
 
     /// Applies `f` to each element of the container individually, yielding a new container
-    pub fn apply<U, F: Fn(Provider, &T) -> U>(&self, f: F) -> BackendContainer<U> {
+    pub fn apply<U, F: Fn(Provider, &T) -> U>(&self, f: F) -> BackendContainerGeneric<U, N> {
         // Because we have FromIterator<(Provider, T)>, if we yield a tuple of
-        // `(Provider, U)` we can `collect()` this into a `BackendContainer<U>`
+        // `(Provider, U)` we can `collect()` this into a `BackendContainerGeneric<U>`
         Provider::iter()
             .map(|provider| (provider, f(provider, &self[provider])))
             .collect()
     }
 
-    /// Identical to `apply` but returns a `Result<BackendContainer<..>>`
+    /// Identical to `apply` but returns a `Result<BackendContainerGeneric<..>>`
     pub fn try_apply<U, E, F: Fn(Provider, &T) -> Result<U, E>>(
         &self,
         f: F,
-    ) -> Result<BackendContainer<U>, E> {
+    ) -> Result<BackendContainerGeneric<U, N>, E> {
         Provider::iter()
             .map(|provider| f(provider, &self[provider]).map(|res| (provider, res)))
             // collect() will stop at the first failure
@@ -109,7 +114,7 @@ impl<T> BackendContainer<T> {
     }
 }
 
-impl<T> BackendContainer<T>
+impl<T, const N: usize> BackendContainerGeneric<T, N>
 where
     T: ReturnCalculator,
 {

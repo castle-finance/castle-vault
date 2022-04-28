@@ -4,9 +4,9 @@ use solana_maths::{Rate, TryAdd};
 
 use crate::errors::ErrorCode;
 
-use super::BackendContainer;
+use super::BackendContainerGeneric;
 
-impl BackendContainer<Rate> {
+impl<const N: usize> BackendContainerGeneric<Rate, N> {
     pub fn verify_weights(&self) -> Result<(), ProgramError> {
         let sum = self
             .into_iter()
@@ -16,8 +16,8 @@ impl BackendContainer<Rate> {
     }
 }
 
-impl From<BackendContainer<u16>> for BackendContainer<Rate> {
-    fn from(c: BackendContainer<u16>) -> Self {
+impl<const N: usize> From<BackendContainerGeneric<u16, N>> for BackendContainerGeneric<Rate, N> {
+    fn from(c: BackendContainerGeneric<u16, N>) -> Self {
         c.apply(|_provider, v| Rate::from_bips(u64::from(*v)))
     }
 }
