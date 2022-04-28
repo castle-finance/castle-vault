@@ -13,7 +13,6 @@ use crate::errors::ErrorCode;
 use crate::events::RebalanceEvent;
 use crate::rebalance::assets::*;
 use crate::rebalance::strategies::*;
-use crate::MAX_NUM_PROVIDERS;
 use crate::{impl_provider_index, state::*};
 
 #[event]
@@ -79,7 +78,7 @@ impl<'a> ReserveAccessor for Reserves {
 }
 
 #[derive(Accounts)]
-pub struct Rebalance<'info, const N: usize> {
+pub struct Rebalance<'info> {
     /// Vault state account
     /// Checks that the refresh has been called in the same slot
     /// Checks that the accounts passed in are correct
@@ -103,11 +102,9 @@ pub struct Rebalance<'info, const N: usize> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl TryFrom<&Rebalance<'_, MAX_NUM_PROVIDERS>> for BackendContainer<Reserves, MAX_NUM_PROVIDERS> {
+impl TryFrom<&Rebalance<'_>> for BackendContainer<Reserves> {
     type Error = ProgramError;
-    fn try_from(
-        r: &Rebalance<'_, MAX_NUM_PROVIDERS>,
-    ) -> Result<BackendContainer<Reserves, MAX_NUM_PROVIDERS>, Self::Error> {
+    fn try_from(r: &Rebalance<'_>) -> Result<BackendContainer<Reserves>, Self::Error> {
         // NOTE: I tried pretty hard to get rid of these clones and only use the references.
         // The problem is that these references originate from a deref() (or as_ref())
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
@@ -144,8 +141,8 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 /// Calculate and store optimal allocations to downstream lending markets
 // This is identical to `handler_chris()` below (at least that's the intention), just a different style
 pub fn handler_chris_concise(
-    ctx: Context<Rebalance<MAX_NUM_PROVIDERS>>,
-    proposed_weights_arg: BackendContainer<u16, MAX_NUM_PROVIDERS>,
+    ctx: Context<Rebalance>,
+    proposed_weights_arg: BackendContainer<u16>,
 ) -> ProgramResult {
     let vault_value = ctx.accounts.vault.total_value;
     let slot = Clock::get()?.slot;
@@ -153,73 +150,67 @@ pub fn handler_chris_concise(
     let assets = Box::new(BackendContainer::try_from(&*ctx.accounts)?);
     let strategy_weights = assets.calculate_weights(ctx.accounts.vault.strategy_type)?;
 
-    BackendContainer::<Allocation, MAX_NUM_PROVIDERS>::try_from_weights(
-        &strategy_weights,
-        vault_value,
-        slot,
-    )
-    .and_then(
-        |strategy_allocations| match ctx.accounts.vault.rebalance_mode {
-            RebalanceMode::ProofChecker => {
-                let proposed_weights =
-                    BackendContainer::<Rate, MAX_NUM_PROVIDERS>::from(proposed_weights_arg);
-                let proposed_allocations =
-                    BackendContainer::<Allocation, MAX_NUM_PROVIDERS>::try_from_weights(
+    BackendContainer::<Allocation>::try_from_weights(&strategy_weights, vault_value, slot)
+        .and_then(
+            |strategy_allocations| match ctx.accounts.vault.rebalance_mode {
+                RebalanceMode::ProofChecker => {
+                    let proposed_weights = BackendContainer::<Rate>::from(proposed_weights_arg);
+                    let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
                         &strategy_weights,
                         vault_value,
                         slot,
                     )?;
 
-                #[cfg(feature = "debug")]
-                msg!(
-                    "Running as proof checker with proposed weights: {:?}",
-                    proposed_weights
-                );
+                    #[cfg(feature = "debug")]
+                    msg!(
+                        "Running as proof checker with proposed weights: {:?}",
+                        proposed_weights
+                    );
 
-                proposed_weights.verify_weights()?;
+                    proposed_weights.verify_weights()?;
 
-                let proposed_apr = assets.get_apr(&proposed_weights, &proposed_allocations)?;
-                let proof_apr = assets.get_apr(&strategy_weights, &strategy_allocations)?;
+                    let proposed_apr = assets.get_apr(&proposed_weights, &proposed_allocations)?;
+                    let proof_apr = assets.get_apr(&strategy_weights, &strategy_allocations)?;
 
-                #[cfg(feature = "debug")]
-                msg!(
-                    "Proposed APR: {:?}\nProof APR: {:?}",
-                    proposed_apr,
-                    proof_apr
-                );
+                    #[cfg(feature = "debug")]
+                    msg!(
+                        "Proposed APR: {:?}\nProof APR: {:?}",
+                        proposed_apr,
+                        proof_apr
+                    );
 
-                (proposed_apr >= proof_apr).as_result(
-                    proposed_allocations,
-                    ErrorCode::RebalanceProofCheckFailed.into(),
-                )
-            }
-            RebalanceMode::Calculator => {
-                #[cfg(feature = "debug")]
-                msg!("Running as calculator");
-                Ok(strategy_allocations)
-            }
-        },
-    )
-    .map(|final_allocations| {
-        #[cfg(feature = "debug")]
-        msg!("Final allocations: {:?}", final_allocations);
+                    (proposed_apr >= proof_apr).as_result(
+                        proposed_allocations,
+                        ErrorCode::RebalanceProofCheckFailed.into(),
+                    )
+                }
+                RebalanceMode::Calculator => {
+                    #[cfg(feature = "debug")]
+                    msg!("Running as calculator");
+                    Ok(strategy_allocations)
+                }
+            },
+        )
+        .map(|final_allocations| {
+            #[cfg(feature = "debug")]
+            msg!("Final allocations: {:?}", final_allocations);
 
-        // emit!(RebalanceEventChris {
-        //     allocations: final_allocations.clone()
-        // });
+            // emit!(RebalanceEventChris {
+            //     allocations: final_allocations.clone()
+            // });
 
-        ctx.accounts.vault.allocations_chris = final_allocations;
-    })
+            ctx.accounts.vault.allocations_chris = final_allocations;
+        })
 }
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler_chris(
-    ctx: Context<Rebalance<MAX_NUM_PROVIDERS>>,
-    proposed_weights_arg: BackendContainer<u16, MAX_NUM_PROVIDERS>,
+    ctx: Context<Rebalance>,
+    proposed_weights_arg: BackendContainer<u16>,
 ) -> ProgramResult {
     ////////////////////////////////////////////////////////////////////////////////
     // Here's an example of how a BackendContainer can be used
-    let _unused_example_container: BackendContainer<&'static str, MAX_NUM_PROVIDERS> =
-        BackendContainer::<Reserves, MAX_NUM_PROVIDERS>::try_from(&*ctx.accounts)?
+    let _unused_example_container: BackendContainer<&'static str> =
+        BackendContainer::<Reserves>::try_from(&*ctx.accounts)?
             .apply(|_provider, reserve| {
                 // apply some function to each backend item
                 fn foo<T: Clone>(t: &T) -> T {
@@ -263,12 +254,11 @@ pub fn handler_chris(
         ];
 
         // IntoIterator::into_iter() is used here because it can consume an array by value
-        let _assets: BackendContainer<LendingMarketAsset, MAX_NUM_PROVIDERS> =
-            IntoIterator::into_iter(val).collect();
+        let _assets: BackendContainer<LendingMarketAsset> = IntoIterator::into_iter(val).collect();
         ////////////////////////////////////////////////////////////////////////////////
 
         // For now we'll use the `Reserves` type
-        let assets = BackendContainer::<Reserves, MAX_NUM_PROVIDERS>::try_from(&*ctx.accounts)?;
+        let assets = BackendContainer::<Reserves>::try_from(&*ctx.accounts)?;
 
         // Here we'll build a BackendContainer<Rate> from the BackendContainer<Reserves>
         let strategy_weights = assets
@@ -277,23 +267,20 @@ pub fn handler_chris(
 
         // And here we'll use that to build a BackendContainer<Allocation> with try_apply()
         // (instead of apply() because we're dealing with Result<>'s)
-        let strategy_allocations =
-            BackendContainer::<Allocation, MAX_NUM_PROVIDERS>::try_from_weights(
-                &strategy_weights,
-                vault_value,
-                clock.slot,
-            )?;
+        let strategy_allocations = BackendContainer::<Allocation>::try_from_weights(
+            &strategy_weights,
+            vault_value,
+            clock.slot,
+        )?;
         match ctx.accounts.vault.rebalance_mode {
             RebalanceMode::ProofChecker => {
-                let proposed_weights: BackendContainer<Rate, MAX_NUM_PROVIDERS> =
-                    proposed_weights_arg.into();
+                let proposed_weights: BackendContainer<Rate> = proposed_weights_arg.into();
 
-                let proposed_allocations =
-                    BackendContainer::<Allocation, MAX_NUM_PROVIDERS>::try_from_weights(
-                        &strategy_weights,
-                        vault_value,
-                        clock.slot,
-                    )?;
+                let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
+                    &strategy_weights,
+                    vault_value,
+                    clock.slot,
+                )?;
 
                 #[cfg(feature = "debug")]
                 msg!(
@@ -337,10 +324,7 @@ pub fn handler_chris(
     Ok(())
 }
 /// Calculate and store optimal allocations to downstream lending markets
-pub fn handler(
-    ctx: Context<Rebalance<MAX_NUM_PROVIDERS>>,
-    proposed_weights_arg: StrategyWeightsArg,
-) -> ProgramResult {
+pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
     let vault_value = ctx.accounts.vault.total_value;
     let clock = Clock::get()?;
 

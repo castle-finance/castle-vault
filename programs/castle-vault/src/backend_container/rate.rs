@@ -6,7 +6,7 @@ use crate::errors::ErrorCode;
 
 use super::BackendContainer;
 
-impl<const N: usize> BackendContainer<Rate, N> {
+impl BackendContainer<Rate> {
     pub fn verify_weights(&self) -> Result<(), ProgramError> {
         let sum = self
             .into_iter()
@@ -16,8 +16,8 @@ impl<const N: usize> BackendContainer<Rate, N> {
     }
 }
 
-impl<const N: usize> From<BackendContainer<u16, N>> for BackendContainer<Rate, N> {
-    fn from(c: BackendContainer<u16, N>) -> Self {
+impl From<BackendContainer<u16>> for BackendContainer<Rate> {
+    fn from(c: BackendContainer<u16>) -> Self {
         c.apply(|_provider, v| Rate::from_bips(u64::from(*v)))
     }
 }

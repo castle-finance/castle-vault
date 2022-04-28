@@ -10,9 +10,9 @@ use type_layout::TypeLayout;
 
 use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
+use crate::impl_provider_index;
 use crate::rebalance::assets::Provider;
 use crate::rebalance::strategies::StrategyWeights;
-use crate::{impl_provider_index, MAX_NUM_PROVIDERS};
 
 /// Number of slots per year
 pub const SLOTS_PER_YEAR: u64 =
@@ -87,7 +87,7 @@ pub struct Vault {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    pub allocations_chris: BackendContainer<Allocation, MAX_NUM_PROVIDERS>,
+    pub allocations_chris: BackendContainer<Allocation>,
 
     // 8 * 15 = 120
     /// Reserved space for future upgrades

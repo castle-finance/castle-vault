@@ -14,8 +14,8 @@ use crate::{
 
 use super::BackendContainer;
 
-impl<const N: usize> BackendContainer<Reserves, N> {
-    fn calculate_weights_max_yield(&self) -> Result<BackendContainer<Rate, N>, ProgramError> {
+impl BackendContainer<Reserves> {
+    fn calculate_weights_max_yield(&self) -> Result<BackendContainer<Rate>, ProgramError> {
         self.into_iter()
             .max_by(|(_, alloc_x), (_, alloc_y)| {
                 // TODO: can we remove the unwrap() in any way?
@@ -35,7 +35,7 @@ impl<const N: usize> BackendContainer<Reserves, N> {
             .map_err(Into::into)
     }
 
-    fn calculate_weights_equal(&self) -> Result<BackendContainer<Rate, N>, ProgramError> {
+    fn calculate_weights_equal(&self) -> Result<BackendContainer<Rate>, ProgramError> {
         u8::try_from(self.len())
             // TODO: error code?
             .map_err(|_| ProgramError::Custom(0))
@@ -47,7 +47,7 @@ impl<const N: usize> BackendContainer<Reserves, N> {
     pub fn calculate_weights(
         &self,
         stype: StrategyType,
-    ) -> Result<BackendContainer<Rate, N>, ProgramError> {
+    ) -> Result<BackendContainer<Rate>, ProgramError> {
         match stype {
             StrategyType::MaxYield => self.calculate_weights_max_yield(),
             StrategyType::EqualAllocation => self.calculate_weights_equal(),
