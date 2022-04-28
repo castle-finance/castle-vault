@@ -13,5 +13,5 @@ jobs:
         working-directory: ./sdk
       - run: yarn lint
         working-directory: ./sdk
-      - run: prettier -c ./src
+      - run: yarn prettify-check
         working-directory: ./sdk
