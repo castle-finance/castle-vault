@@ -148,11 +148,15 @@ export type CastleLendingAggregator = {
                 },
                 {
                     name: "depositCap";
-                    type: "u64";
+                    type: {
+                        option: "u64";
+                    };
                 },
                 {
                     name: "allocationCapPct";
-                    type: "u8";
+                    type: {
+                        option: "u8";
+                    };
                 }
             ];
         },
@@ -172,7 +176,7 @@ export type CastleLendingAggregator = {
             ];
             args: [
                 {
-                    name: "depositCapNewValue";
+                    name: "newDepositCap";
                     type: "u64";
                 }
             ];
@@ -343,9 +347,11 @@ export type CastleLendingAggregator = {
             ];
             args: [
                 {
-                    name: "proposedWeights";
+                    name: "proposedWeightsArgOpt";
                     type: {
-                        defined: "StrategyWeightsArg";
+                        option: {
+                            defined: "StrategyWeightsArg";
+                        };
                     };
                 }
             ];
@@ -1244,11 +1250,15 @@ export const IDL: CastleLendingAggregator = {
                 },
                 {
                     name: "depositCap",
-                    type: "u64",
+                    type: {
+                        option: "u64",
+                    },
                 },
                 {
                     name: "allocationCapPct",
-                    type: "u8",
+                    type: {
+                        option: "u8",
+                    },
                 },
             ],
         },
@@ -1268,7 +1278,7 @@ export const IDL: CastleLendingAggregator = {
             ],
             args: [
                 {
-                    name: "depositCapNewValue",
+                    name: "newDepositCap",
                     type: "u64",
                 },
             ],
@@ -1439,9 +1449,11 @@ export const IDL: CastleLendingAggregator = {
             ],
             args: [
                 {
-                    name: "proposedWeights",
+                    name: "proposedWeightsArgOpt",
                     type: {
-                        defined: "StrategyWeightsArg",
+                        option: {
+                            defined: "StrategyWeightsArg",
+                        },
                     },
                 },
             ],

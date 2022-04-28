@@ -18,6 +18,8 @@ pub fn handler(ctx: Context<UpdateDepositCap>, new_deposit_cap: u64) -> ProgramR
     #[cfg(feature = "debug")]
     msg!("New deposit cap value: {}", new_deposit_cap);
 
+    // TODO validate input
+
     ctx.accounts.vault.deposit_cap = new_deposit_cap;
     Ok(())
 }
