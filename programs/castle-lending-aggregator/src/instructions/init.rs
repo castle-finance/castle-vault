@@ -194,7 +194,7 @@ pub fn handler(
     ctx.accounts.validate_referral_token()?;
 
     let vault = &mut ctx.accounts.vault;
-    vault.version = 0;
+    vault.version = 1;
     vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.owner = ctx.accounts.owner.key();
     vault.authority_seed = vault.key();
