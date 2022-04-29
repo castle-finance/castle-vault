@@ -225,7 +225,7 @@ pub fn handler(
     }
 
     let vault = &mut ctx.accounts.vault;
-    vault.version = 2;
+    vault.version = 1;
     vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.owner = ctx.accounts.owner.key();
     vault.authority_seed = vault.key();
