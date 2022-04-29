@@ -149,6 +149,10 @@ export type CastleLendingAggregator = {
                 {
                     name: "depositCap";
                     type: "u64";
+                },
+                {
+                    name: "allocationCapPct";
+                    type: "u8";
                 }
             ];
         },
@@ -688,6 +692,10 @@ export type CastleLendingAggregator = {
                 kind: "struct";
                 fields: [
                     {
+                        name: "version";
+                        type: "u8";
+                    },
+                    {
                         name: "owner";
                         type: "publicKey";
                     },
@@ -742,6 +750,28 @@ export type CastleLendingAggregator = {
                         type: "publicKey";
                     },
                     {
+                        name: "rebalanceMode";
+                        type: {
+                            defined: "RebalanceMode";
+                        };
+                    },
+                    {
+                        name: "strategyType";
+                        type: {
+                            defined: "StrategyType";
+                        };
+                    },
+                    {
+                        name: "allocationCapPct";
+                        type: "u8";
+                    },
+                    {
+                        name: "padding0";
+                        type: {
+                            array: ["u8", 3];
+                        };
+                    },
+                    {
                         name: "fees";
                         type: {
                             defined: "VaultFees";
@@ -768,15 +798,9 @@ export type CastleLendingAggregator = {
                         };
                     },
                     {
-                        name: "strategyType";
+                        name: "reserved";
                         type: {
-                            defined: "StrategyType";
-                        };
-                    },
-                    {
-                        name: "rebalanceMode";
-                        type: {
-                            defined: "RebalanceMode";
+                            array: ["u64", 24];
                         };
                     }
                 ];
@@ -880,6 +904,12 @@ export type CastleLendingAggregator = {
                     {
                         name: "referralFeeReceiver";
                         type: "publicKey";
+                    },
+                    {
+                        name: "padding";
+                        type: {
+                            array: ["u8", 7];
+                        };
                     }
                 ];
             };
@@ -940,6 +970,12 @@ export type CastleLendingAggregator = {
                     {
                         name: "stale";
                         type: "bool";
+                    },
+                    {
+                        name: "padding";
+                        type: {
+                            array: ["u8", 7];
+                        };
                     }
                 ];
             };
@@ -992,7 +1028,37 @@ export type CastleLendingAggregator = {
     ];
     events: [
         {
+            name: "DepositEvent";
+            fields: [
+                {
+                    name: "vault";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "user";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "amount";
+                    type: "u64";
+                    index: false;
+                }
+            ];
+        },
+        {
             name: "RebalanceEvent";
+            fields: [
+                {
+                    name: "vault";
+                    type: "publicKey";
+                    index: false;
+                }
+            ];
+        },
+        {
+            name: "RebalanceDataEvent";
             fields: [
                 {
                     name: "solend";
@@ -1006,6 +1072,26 @@ export type CastleLendingAggregator = {
                 },
                 {
                     name: "jet";
+                    type: "u64";
+                    index: false;
+                }
+            ];
+        },
+        {
+            name: "WithdrawEvent";
+            fields: [
+                {
+                    name: "vault";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "user";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "amount";
                     type: "u64";
                     index: false;
                 }
@@ -1077,6 +1163,11 @@ export type CastleLendingAggregator = {
             code: 312;
             name: "InsufficientAccounts";
             msg: "Insufficient number of accounts for a given operation";
+        },
+        {
+            code: 313;
+            name: "AllocationCapError";
+            msg: "Allocation cap is invalid";
         }
     ];
 };
@@ -1232,6 +1323,10 @@ export const IDL: CastleLendingAggregator = {
                 {
                     name: "depositCap",
                     type: "u64",
+                },
+                {
+                    name: "allocationCapPct",
+                    type: "u8",
                 },
             ],
         },
@@ -1771,6 +1866,10 @@ export const IDL: CastleLendingAggregator = {
                 kind: "struct",
                 fields: [
                     {
+                        name: "version",
+                        type: "u8",
+                    },
+                    {
                         name: "owner",
                         type: "publicKey",
                     },
@@ -1825,6 +1924,28 @@ export const IDL: CastleLendingAggregator = {
                         type: "publicKey",
                     },
                     {
+                        name: "rebalanceMode",
+                        type: {
+                            defined: "RebalanceMode",
+                        },
+                    },
+                    {
+                        name: "strategyType",
+                        type: {
+                            defined: "StrategyType",
+                        },
+                    },
+                    {
+                        name: "allocationCapPct",
+                        type: "u8",
+                    },
+                    {
+                        name: "padding0",
+                        type: {
+                            array: ["u8", 3],
+                        },
+                    },
+                    {
                         name: "fees",
                         type: {
                             defined: "VaultFees",
@@ -1851,15 +1972,9 @@ export const IDL: CastleLendingAggregator = {
                         },
                     },
                     {
-                        name: "strategyType",
+                        name: "reserved",
                         type: {
-                            defined: "StrategyType",
-                        },
-                    },
-                    {
-                        name: "rebalanceMode",
-                        type: {
-                            defined: "RebalanceMode",
+                            array: ["u64", 24],
                         },
                     },
                 ],
@@ -1964,6 +2079,12 @@ export const IDL: CastleLendingAggregator = {
                         name: "referralFeeReceiver",
                         type: "publicKey",
                     },
+                    {
+                        name: "padding",
+                        type: {
+                            array: ["u8", 7],
+                        },
+                    },
                 ],
             },
         },
@@ -2024,6 +2145,12 @@ export const IDL: CastleLendingAggregator = {
                         name: "stale",
                         type: "bool",
                     },
+                    {
+                        name: "padding",
+                        type: {
+                            array: ["u8", 7],
+                        },
+                    },
                 ],
             },
         },
@@ -2075,7 +2202,37 @@ export const IDL: CastleLendingAggregator = {
     ],
     events: [
         {
+            name: "DepositEvent",
+            fields: [
+                {
+                    name: "vault",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "user",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "amount",
+                    type: "u64",
+                    index: false,
+                },
+            ],
+        },
+        {
             name: "RebalanceEvent",
+            fields: [
+                {
+                    name: "vault",
+                    type: "publicKey",
+                    index: false,
+                },
+            ],
+        },
+        {
+            name: "RebalanceDataEvent",
             fields: [
                 {
                     name: "solend",
@@ -2089,6 +2246,26 @@ export const IDL: CastleLendingAggregator = {
                 },
                 {
                     name: "jet",
+                    type: "u64",
+                    index: false,
+                },
+            ],
+        },
+        {
+            name: "WithdrawEvent",
+            fields: [
+                {
+                    name: "vault",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "user",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "amount",
                     type: "u64",
                     index: false,
                 },
@@ -2160,6 +2337,11 @@ export const IDL: CastleLendingAggregator = {
             code: 312,
             name: "InsufficientAccounts",
             msg: "Insufficient number of accounts for a given operation",
+        },
+        {
+            code: 313,
+            name: "AllocationCapError",
+            msg: "Allocation cap is invalid",
         },
     ],
 };

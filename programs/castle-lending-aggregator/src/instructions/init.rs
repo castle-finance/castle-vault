@@ -36,7 +36,7 @@ pub struct Initialize<'info> {
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     #[account(
         mut,
-        seeds = [vault.key().as_ref(), b"authority".as_ref()], 
+        seeds = [vault.key().as_ref(), b"authority".as_ref()],
         bump = bumps.authority,
     )]
     pub vault_authority: AccountInfo<'info>,
@@ -209,6 +209,7 @@ pub fn handler(
     rebalance_mode: RebalanceMode,
     fees: FeeArgs,
     vault_deposit_cap: u64,
+    allocation_cap_pct: u8,
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
@@ -218,7 +219,13 @@ pub fn handler(
     // Validating referral token account's mint
     validate_fees(&fees)?;
 
+    // TODO compute the lower limit of the cap using number of lenging pools
+    if !(34..=100).contains(&allocation_cap_pct) {
+        return Err(ErrorCode::AllocationCapError.into());
+    }
+
     let vault = &mut ctx.accounts.vault;
+    vault.version = 1;
     vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.owner = ctx.accounts.owner.key();
     vault.authority_seed = vault.key();
@@ -237,14 +244,15 @@ pub fn handler(
     vault.strategy_type = strategy_type;
     vault.rebalance_mode = rebalance_mode;
     vault.deposit_cap = vault_deposit_cap;
+    vault.allocation_cap_pct = allocation_cap_pct;
 
-    vault.fees = VaultFees {
-        fee_receiver: ctx.accounts.fee_receiver.key(),
-        referral_fee_receiver: ctx.accounts.referral_fee_receiver.key(),
-        fee_carry_bps: fees.fee_carry_bps,
-        fee_mgmt_bps: fees.fee_mgmt_bps,
-        referral_fee_pct: fees.referral_fee_pct,
-    };
+    vault.fees = VaultFees::new(
+        fees.fee_carry_bps,
+        fees.fee_mgmt_bps,
+        fees.referral_fee_pct,
+        ctx.accounts.fee_receiver.key(),
+        ctx.accounts.referral_fee_receiver.key(),
+    );
 
     // Initialize fee receiver account
     associated_token::create(ctx.accounts.init_fee_receiver_create_context(

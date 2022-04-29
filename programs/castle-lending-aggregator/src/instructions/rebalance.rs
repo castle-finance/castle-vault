@@ -7,10 +7,33 @@ use strum::IntoEnumIterator;
 
 use crate::adapters::SolendReserve;
 use crate::errors::ErrorCode;
-use crate::events::RebalanceEvent;
 use crate::rebalance::assets::*;
 use crate::rebalance::strategies::*;
 use crate::{impl_provider_index, state::*};
+
+#[event]
+pub struct RebalanceEvent {
+    vault: Pubkey,
+}
+
+/// Used by the SDK to figure out the order in which reconcile TXs should be sent
+#[event]
+pub struct RebalanceDataEvent {
+    solend: u64,
+    port: u64,
+    jet: u64,
+}
+
+// TODO connect this to same indexing?
+impl From<&Allocations> for RebalanceDataEvent {
+    fn from(allocations: &Allocations) -> Self {
+        RebalanceDataEvent {
+            solend: allocations[Provider::Solend].value,
+            port: allocations[Provider::Port].value,
+            jet: allocations[Provider::Jet].value,
+        }
+    }
+}
 
 #[derive(Accounts)]
 pub struct Rebalance<'info> {
@@ -70,8 +93,11 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
 
     // TODO reduce the duplication between the Enum and Struct
     let strategy_weights = match ctx.accounts.vault.strategy_type {
-        StrategyType::MaxYield => MaxYieldStrategy.calculate_weights(&assets),
-        StrategyType::EqualAllocation => EqualAllocationStrategy.calculate_weights(&assets),
+        StrategyType::MaxYield => {
+            MaxYieldStrategy.calculate_weights(&assets, ctx.accounts.vault.allocation_cap_pct)
+        }
+        StrategyType::EqualAllocation => EqualAllocationStrategy
+            .calculate_weights(&assets, ctx.accounts.vault.allocation_cap_pct),
     }?;
 
     // Convert weights to allocations
@@ -91,10 +117,10 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
             );
 
             match ctx.accounts.vault.strategy_type {
-                StrategyType::MaxYield => MaxYieldStrategy.verify_weights(&proposed_weights),
-                StrategyType::EqualAllocation => {
-                    EqualAllocationStrategy.verify_weights(&proposed_weights)
-                }
+                StrategyType::MaxYield => MaxYieldStrategy
+                    .verify_weights(&proposed_weights, ctx.accounts.vault.allocation_cap_pct),
+                StrategyType::EqualAllocation => EqualAllocationStrategy
+                    .verify_weights(&proposed_weights, ctx.accounts.vault.allocation_cap_pct),
             }?;
 
             let proposed_apr = get_apr(&proposed_weights, &proposed_allocations, &assets)?;
@@ -122,7 +148,10 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     #[cfg(feature = "debug")]
     msg!("Final allocations: {:?}", final_allocations);
 
-    emit!(RebalanceEvent::from(&final_allocations));
+    emit!(RebalanceEvent {
+        vault: ctx.accounts.vault.key()
+    });
+    emit!(RebalanceDataEvent::from(&final_allocations));
 
     ctx.accounts.vault.allocations = final_allocations;
 

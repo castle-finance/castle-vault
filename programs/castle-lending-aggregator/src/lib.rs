@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 
 pub mod adapters;
 pub mod errors;
-pub mod events;
 pub mod instructions;
 pub mod math;
 pub mod rebalance;
@@ -29,6 +28,7 @@ pub mod castle_lending_aggregator {
         rebalance_mode: RebalanceMode,
         fees: FeeArgs,
         deposit_cap: u64,
+        allocation_cap_pct: u8,
     ) -> ProgramResult {
         instructions::init::handler(
             ctx,
@@ -37,6 +37,7 @@ pub mod castle_lending_aggregator {
             rebalance_mode,
             fees,
             deposit_cap,
+            allocation_cap_pct,
         )
     }
 

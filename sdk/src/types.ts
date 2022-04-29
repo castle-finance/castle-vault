@@ -41,6 +41,7 @@ export interface Vault {
     rebalanceMode: any;
     owner: PublicKey;
     fees: VaultFees;
+    allocationCapPct: number;
 }
 
 export interface VaultFees {
@@ -64,7 +65,7 @@ export interface ProposedWeightsBps {
     jet: number;
 }
 
-export interface RebalanceEvent {
+export interface RebalanceDataEvent {
     solend: BN;
     port: BN;
     jet: BN;

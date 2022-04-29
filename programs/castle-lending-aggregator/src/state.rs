@@ -2,9 +2,11 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock::{
     DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
 };
+use jet_proto_proc_macros::assert_size;
 use solana_maths::{Decimal, TryMul};
 use std::cmp::Ordering;
 use strum::IntoEnumIterator;
+use type_layout::TypeLayout;
 
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;
@@ -17,9 +19,13 @@ pub const SLOTS_PER_YEAR: u64 =
 
 pub const ONE_AS_BPS: u64 = 10000;
 
+#[assert_size(768)]
 #[account]
-#[derive(Debug)]
+#[repr(C, align(8))]
+#[derive(TypeLayout, Debug)]
 pub struct Vault {
+    pub version: u8,
+
     /// Account which is allowed to call restricted instructions
     /// Also the authority of the fee receiver account
     pub owner: Pubkey,
@@ -55,6 +61,18 @@ pub struct Vault {
     /// Mint address of the tokens that are stored in vault
     pub reserve_token_mint: Pubkey,
 
+    /// Whether to run rebalance as a proof check or a calculation
+    pub rebalance_mode: RebalanceMode,
+
+    /// Strategy type that is executed during rebalance
+    pub strategy_type: StrategyType,
+
+    /// Max percentage to allocate to each pool
+    pub allocation_cap_pct: u8,
+
+    /// Explicit padding to guarantee alignment
+    _padding0: [u8; 3],
+
     pub fees: VaultFees,
 
     /// Last slot when vault was refreshed
@@ -69,11 +87,9 @@ pub struct Vault {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    /// Strategy type that is executed during rebalance
-    pub strategy_type: StrategyType,
-
-    /// Whether to run rebalance as a proof check or a calculation
-    pub rebalance_mode: RebalanceMode,
+    // 8 * 24 = 192
+    /// Reserved space for future upgrades
+    _reserved: [u64; 24],
 }
 
 impl Vault {
@@ -121,12 +137,22 @@ impl Vault {
     }
 }
 
+#[repr(u8)]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
 pub enum RebalanceMode {
     Calculator,
     ProofChecker,
 }
 
+#[repr(u8)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
+pub enum StrategyType {
+    MaxYield,
+    EqualAllocation,
+}
+
+#[assert_size(aligns, 80)]
+#[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
 pub struct VaultFees {
     /// Basis points of the accrued interest that gets sent to the fee_receiver
@@ -143,14 +169,31 @@ pub struct VaultFees {
 
     /// Account that referral fees from this vault are sent to
     pub referral_fee_receiver: Pubkey,
+
+    _padding: [u8; 7],
 }
 
-#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
-pub enum StrategyType {
-    MaxYield,
-    EqualAllocation,
+impl VaultFees {
+    pub fn new(
+        fee_carry_bps: u32,
+        fee_mgmt_bps: u32,
+        referral_fee_pct: u8,
+        fee_receiver: Pubkey,
+        referral_fee_receiver: Pubkey,
+    ) -> Self {
+        Self {
+            fee_carry_bps,
+            fee_mgmt_bps,
+            referral_fee_pct,
+            fee_receiver,
+            referral_fee_receiver,
+            _padding: [0_u8; 7],
+        }
+    }
 }
 
+#[assert_size(aligns, 72)]
+#[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: Allocation,
@@ -176,6 +219,8 @@ impl Allocations {
     }
 }
 
+#[assert_size(aligns, 24)]
+#[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocation {
     pub value: u64,
@@ -197,16 +242,23 @@ impl Allocation {
 /// Number of slots to consider stale after
 pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 2;
 
+#[assert_size(aligns, 16)]
+#[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct LastUpdate {
     pub slot: u64,
     pub stale: bool,
+    _padding: [u8; 7],
 }
 
 impl LastUpdate {
     /// Create new last update
     pub fn new(slot: u64) -> Self {
-        Self { slot, stale: true }
+        Self {
+            slot,
+            stale: true,
+            _padding: [0_u8; 7],
+        }
     }
 
     /// Return slots elapsed since given slot
@@ -246,5 +298,15 @@ impl PartialEq for LastUpdate {
 impl PartialOrd for LastUpdate {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         self.slot.partial_cmp(&other.slot)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn print_vault_layout() {
+        println!("{}", Vault::type_layout());
     }
 }
