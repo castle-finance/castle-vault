@@ -38,7 +38,7 @@ import {
 } from "./adapters";
 import {
     ProposedWeightsBps,
-    RebalanceEvent,
+    RebalanceDataEvent,
     Vault,
     VaultConfig,
 } from "./types";
@@ -661,7 +661,7 @@ export class VaultClient {
                 },
                 instructions: [this.getRefreshIx()],
             })
-        ).events[0].data as RebalanceEvent;
+        ).events[0].data as RebalanceDataEvent;
 
         return [
             [

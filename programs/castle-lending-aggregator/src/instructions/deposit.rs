@@ -5,6 +5,13 @@ use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 use crate::{errors::ErrorCode, state::Vault};
 use std::convert::Into;
 
+#[event]
+pub struct DepositEvent {
+    vault: Pubkey,
+    user: Pubkey,
+    amount: u64,
+}
+
 #[derive(Accounts)]
 pub struct Deposit<'info> {
     /// Vault state account
@@ -123,6 +130,12 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
         .value
         .checked_add(reserve_token_amount)
         .ok_or(ErrorCode::MathError)?;
+
+    emit!(DepositEvent {
+        vault: ctx.accounts.vault.key(),
+        user: ctx.accounts.user_authority.key(),
+        amount: reserve_token_amount,
+    });
 
     Ok(())
 }

@@ -1003,7 +1003,37 @@ export type CastleLendingAggregator = {
     ];
     events: [
         {
+            name: "DepositEvent";
+            fields: [
+                {
+                    name: "vault";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "user";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "amount";
+                    type: "u64";
+                    index: false;
+                }
+            ];
+        },
+        {
             name: "RebalanceEvent";
+            fields: [
+                {
+                    name: "vault";
+                    type: "publicKey";
+                    index: false;
+                }
+            ];
+        },
+        {
+            name: "RebalanceDataEvent";
             fields: [
                 {
                     name: "solend";
@@ -1017,6 +1047,26 @@ export type CastleLendingAggregator = {
                 },
                 {
                     name: "jet";
+                    type: "u64";
+                    index: false;
+                }
+            ];
+        },
+        {
+            name: "WithdrawEvent";
+            fields: [
+                {
+                    name: "vault";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "user";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "amount";
                     type: "u64";
                     index: false;
                 }
@@ -2102,7 +2152,37 @@ export const IDL: CastleLendingAggregator = {
     ],
     events: [
         {
+            name: "DepositEvent",
+            fields: [
+                {
+                    name: "vault",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "user",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "amount",
+                    type: "u64",
+                    index: false,
+                },
+            ],
+        },
+        {
             name: "RebalanceEvent",
+            fields: [
+                {
+                    name: "vault",
+                    type: "publicKey",
+                    index: false,
+                },
+            ],
+        },
+        {
+            name: "RebalanceDataEvent",
             fields: [
                 {
                     name: "solend",
@@ -2116,6 +2196,26 @@ export const IDL: CastleLendingAggregator = {
                 },
                 {
                     name: "jet",
+                    type: "u64",
+                    index: false,
+                },
+            ],
+        },
+        {
+            name: "WithdrawEvent",
+            fields: [
+                {
+                    name: "vault",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "user",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "amount",
                     type: "u64",
                     index: false,
                 },

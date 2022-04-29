@@ -61,7 +61,7 @@ export interface ProposedWeightsBps {
     jet: number;
 }
 
-export interface RebalanceEvent {
+export interface RebalanceDataEvent {
     solend: BN;
     port: BN;
     jet: BN;
