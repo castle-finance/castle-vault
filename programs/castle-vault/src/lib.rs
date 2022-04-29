@@ -18,7 +18,7 @@ declare_id!("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn");
 declare_id!("4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK");
 
 #[program]
-pub mod castle_lending_aggregator {
+pub mod castle_vault {
     use super::*;
 
     pub fn initialize(

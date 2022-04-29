@@ -1,6 +1,6 @@
-export type CastleLendingAggregator = {
+export type CastleVault = {
     version: "0.0.0";
-    name: "castle_lending_aggregator";
+    name: "castle_vault";
     instructions: [
         {
             name: "initialize";
@@ -1172,9 +1172,9 @@ export type CastleLendingAggregator = {
     ];
 };
 
-export const IDL: CastleLendingAggregator = {
+export const IDL: CastleVault = {
     version: "0.0.0",
-    name: "castle_lending_aggregator",
+    name: "castle_vault",
     instructions: [
         {
             name: "initialize",

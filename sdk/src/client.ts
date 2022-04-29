@@ -30,7 +30,7 @@ import {
 } from "@castlefinance/vault-core";
 
 import { CLUSTER_MAP, PROGRAM_IDS } from ".";
-import { CastleLendingAggregator } from "./castle_lending_aggregator";
+import { CastleVault } from "./idl";
 import {
     PortReserveAsset,
     SolendReserveAsset,
@@ -46,7 +46,7 @@ import {
 
 export class VaultClient {
     private constructor(
-        public program: anchor.Program<CastleLendingAggregator>,
+        public program: anchor.Program<CastleVault>,
         public vaultId: PublicKey,
         private vaultState: Vault,
         private solend: SolendReserveAsset,
@@ -63,7 +63,7 @@ export class VaultClient {
         const program = (await anchor.Program.at(
             PROGRAM_IDS[env],
             provider
-        )) as anchor.Program<CastleLendingAggregator>;
+        )) as anchor.Program<CastleVault>;
         const vaultState = await program.account.vault.fetch(vaultId);
 
         const cluster = CLUSTER_MAP[env];
@@ -103,7 +103,7 @@ export class VaultClient {
         feeData: FeeArgs,
         poolSizeLimit: number = 10000000000,
         allocationCapPct: number = 100,
-        program?: anchor.Program<CastleLendingAggregator>
+        program?: anchor.Program<CastleVault>
     ): Promise<VaultClient> {
         // TODO Once the below issue is resolved, remove this logic
         // https://github.com/project-serum/anchor/issues/1844
@@ -112,7 +112,7 @@ export class VaultClient {
             program = (await anchor.Program.at(
                 PROGRAM_IDS[env],
                 provider
-            )) as anchor.Program<CastleLendingAggregator>;
+            )) as anchor.Program<CastleVault>;
         }
 
         const { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct } =
@@ -693,7 +693,7 @@ export class VaultClient {
                 },
                 instructions: [this.getRefreshIx()],
             })
-        ).events[0].data as RebalanceDataEvent;
+        ).events[1].data as RebalanceDataEvent;
 
         return [
             [

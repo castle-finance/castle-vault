@@ -8,7 +8,7 @@ import {
     JetReserveAsset,
     PortReserveAsset,
     VaultClient,
-    CastleLendingAggregator,
+    CastleVault,
     ProposedWeightsBps,
 } from "../sdk/src/index";
 import {
@@ -24,8 +24,7 @@ describe("castle-vault", () => {
     anchor.setProvider(provider);
     const wallet = provider.wallet as anchor.Wallet;
 
-    const program = anchor.workspace
-        .CastleLendingAggregator as anchor.Program<CastleLendingAggregator>;
+    const program = anchor.workspace.CastleVault as anchor.Program<CastleVault>;
 
     const owner = Keypair.generate();
 

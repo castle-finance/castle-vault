@@ -1,4 +1,4 @@
-# Castle Finance Lending Aggregator
+# Castle Vault
 
 ## Build, Deploy and Test
 
