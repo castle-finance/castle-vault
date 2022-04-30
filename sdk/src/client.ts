@@ -30,7 +30,7 @@ import {
 } from "@castlefinance/vault-core";
 
 import { CLUSTER_MAP, PROGRAM_IDS } from ".";
-import { CastleLendingAggregator } from "./castle_lending_aggregator";
+import { CastleVault } from "./idl";
 import {
     PortReserveAsset,
     SolendReserveAsset,
@@ -45,7 +45,7 @@ import {
 
 export class VaultClient {
     private constructor(
-        public program: anchor.Program<CastleLendingAggregator>,
+        public program: anchor.Program<CastleVault>,
         public vaultId: PublicKey,
         private vaultState: Vault,
         private solend: SolendReserveAsset,
@@ -62,7 +62,7 @@ export class VaultClient {
         const program = (await anchor.Program.at(
             PROGRAM_IDS[env],
             provider
-        )) as anchor.Program<CastleLendingAggregator>;
+        )) as anchor.Program<CastleVault>;
         const vaultState = await program.account.vault.fetch(vaultId);
 
         const cluster = CLUSTER_MAP[env];
@@ -105,7 +105,7 @@ export class VaultClient {
         referralFeePct: number = 0,
         allocationCapPct: number = 100,
         depositCap?: number,
-        program?: anchor.Program<CastleLendingAggregator>
+        program?: anchor.Program<CastleVault>
     ): Promise<VaultClient> {
         // TODO Once the below issue is resolved, remove this logic
         // https://github.com/project-serum/anchor/issues/1844
@@ -114,7 +114,7 @@ export class VaultClient {
             program = (await anchor.Program.at(
                 PROGRAM_IDS[env],
                 provider
-            )) as anchor.Program<CastleLendingAggregator>;
+            )) as anchor.Program<CastleVault>;
         }
 
         const vaultId = Keypair.generate();
@@ -475,57 +475,9 @@ export class VaultClient {
 
         const txs: SendTxRequest[] = [];
 
-        // Withdraw from lending markets if not enough reserves in vault
-        const vaultReserveTokenAccountInfo =
-            await this.getReserveTokenAccountInfo(
-                this.vaultState.vaultReserveToken
-            );
-        const vaultReserveAmount = new Big(
-            vaultReserveTokenAccountInfo.amount.toString()
-        ).round(0, Big.roundDown);
-
-        // Convert from lp tokens to reserve tokens
-        // NOTE: this rate is slightly lower than what it will be in the transaction
-        //  by about 1/10000th of the current yield (1bp per 100%).
-        //  To avoid a insufficient funds error, we slightly over-correct for this
-        //  This does not work when withdrawing the last tokens from the vault
-        const exchangeRate = await this.getLpExchangeRate();
-        const adjustFactor = (await this.getApy()).mul(0.0001);
-        const convertedAmount = exchangeRate
-            .mul(amount)
-            .mul(new Big(1).add(adjustFactor))
-            .round(0, Big.roundUp);
-
-        if (vaultReserveAmount.lt(convertedAmount)) {
-            // Sort reconcile ixs by most to least outflows
-            const reconcileIxs = (
-                await this.newAndOldallocationsWithReconcileIxs()
-            ).sort((a, b) => a[0].sub(a[1]).sub(b[0].sub(b[1])).toNumber());
-
-            const toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
-            let reconciledAmount = Big(0);
-            let n = 0;
-            while (reconciledAmount.lt(toReconcileAmount)) {
-                const [, oldAlloc, ix] = reconcileIxs[n];
-                // min of oldAlloc and toWithdrawAmount - withdrawnAmount
-                const reconcileAmount = oldAlloc.gt(
-                    toReconcileAmount.sub(reconciledAmount)
-                )
-                    ? toReconcileAmount
-                    : oldAlloc;
-
-                if (!Big(0).eq(reconcileAmount)) {
-                    const reconcileTx = new Transaction();
-                    reconcileTx.add(this.getRefreshIx());
-                    reconcileTx.add(
-                        ix(new anchor.BN(reconcileAmount.toString()))
-                    );
-                    txs.push({ tx: reconcileTx, signers: [] });
-                }
-                reconciledAmount = reconciledAmount.add(reconcileAmount);
-                n += 1;
-            }
-        }
+        // Add reconcile txs
+        const reconcileTxs = await this.getReconcileTxs(amount);
+        reconcileTxs.forEach((tx) => txs.push({ tx, signers: [] }));
 
         const withdrawTx = new Transaction();
         let userReserveTokenAccount: PublicKey;
@@ -581,6 +533,64 @@ export class VaultClient {
             txs.push({ tx: withdrawTx, signers: [] });
         }
         return this.program.provider.sendAll(txs);
+    }
+
+    async getReconcileTxs(amount: number) {
+        const txs: Transaction[] = [];
+
+        // Withdraw from lending markets if not enough reserves in vault
+        const vaultReserveTokenAccountInfo =
+            await this.getReserveTokenAccountInfo(
+                this.vaultState.vaultReserveToken
+            );
+        const vaultReserveAmount = new Big(
+            vaultReserveTokenAccountInfo.amount.toString()
+        ).round(0, Big.roundDown);
+
+        // Convert from lp tokens to reserve tokens
+        // NOTE: this rate is slightly lower than what it will be in the transaction
+        //  by about 1/10000th of the current yield (1bp per 100%).
+        //  To avoid a insufficient funds error, we slightly over-correct for this
+        //  This does not work when withdrawing the last tokens from the vault
+        const exchangeRate = await this.getLpExchangeRate();
+        const adjustFactor = (await this.getApy()).mul(0.0001);
+        const convertedAmount = exchangeRate
+            .mul(amount)
+            .mul(new Big(1).add(adjustFactor))
+            .round(0, Big.roundUp);
+
+        if (vaultReserveAmount.lt(convertedAmount)) {
+            // Sort reconcile ixs by most to least outflows
+            const reconcileIxs = (
+                await this.newAndOldallocationsWithReconcileIxs()
+            ).sort((a, b) => a[0].sub(a[1]).sub(b[0].sub(b[1])).toNumber());
+
+            const toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
+            let reconciledAmount = Big(0);
+            let n = 0;
+            while (reconciledAmount.lt(toReconcileAmount)) {
+                const [, oldAlloc, ix] = reconcileIxs[n];
+                // min of oldAlloc and toWithdrawAmount - withdrawnAmount
+                const reconcileAmount = oldAlloc.gt(
+                    toReconcileAmount.sub(reconciledAmount)
+                )
+                    ? toReconcileAmount
+                    : oldAlloc;
+
+                if (!Big(0).eq(reconcileAmount)) {
+                    const reconcileTx = new Transaction();
+                    reconcileTx.add(this.getRefreshIx());
+                    reconcileTx.add(
+                        ix(new anchor.BN(reconcileAmount.toString()))
+                    );
+                    txs.push(reconcileTx);
+                }
+                reconciledAmount = reconciledAmount.add(reconcileAmount);
+                n += 1;
+            }
+        }
+
+        return txs;
     }
 
     getRebalanceTx(proposedWeights: ProposedWeightsBps): Transaction {
@@ -661,7 +671,7 @@ export class VaultClient {
                 },
                 instructions: [this.getRefreshIx()],
             })
-        ).events[0].data as RebalanceDataEvent;
+        ).events[1].data as RebalanceDataEvent;
 
         return [
             [

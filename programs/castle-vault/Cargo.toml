@@ -1,13 +1,17 @@
 [package]
-description = "Created with Anchor"
+authors = ["Castle Labs, Inc."]
+description = "Castle Vault program"
 edition = "2018"
-name = "castle-lending-aggregator"
+homepage = "https://castle.finance"
+license = "GPL-3.0-or-later"
+name = "castle-vault"
+repository = "https://github.com/castle-finance/castle-vault/"
 version = "2.0.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]
 doctest = false
-name = "castle_lending_aggregator"
+name = "castle_vault"
 
 [features]
 debug = ["anchor-lang/anchor-debug"]

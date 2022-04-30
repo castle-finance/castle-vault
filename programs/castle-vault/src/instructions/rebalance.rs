@@ -78,6 +78,9 @@ impl From<StrategyWeightsArg> for StrategyWeights {
 
 /// Calculate and store optimal allocations to downstream lending markets
 pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
+    #[cfg(feature = "debug")]
+    msg!("Rebalancing");
+
     let vault_value = ctx.accounts.vault.value.value;
     let clock = Clock::get()?;
 

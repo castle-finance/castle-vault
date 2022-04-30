@@ -11,7 +11,7 @@ export * from "./client";
 export * from "./types";
 export * from "./adapters";
 
-export { CastleLendingAggregator } from "./castle_lending_aggregator";
+export { CastleVault } from "./idl";
 
 export const PROGRAM_IDS: ProgramIdMap = {
     [DeploymentEnvs.devnetStaging]: new PublicKey(
