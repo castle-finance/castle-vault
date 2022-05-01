@@ -10,7 +10,6 @@ use strum::IntoEnumIterator;
 use crate::adapters::SolendReserve;
 use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
-use crate::events::RebalanceEvent;
 use crate::rebalance::assets::*;
 use crate::rebalance::strategies::*;
 use crate::{impl_provider_index, state::*};
