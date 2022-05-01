@@ -44,21 +44,6 @@ macro_rules! impl_has_vault {
     )+)
 }
 
-// #[macro_export]
-// macro_rules! impl_has_vault_with_size {
-//     ($($t:ty),+ $(,)?) => ($(
-//         impl $crate::instructions::reconcile::HasVault for $t<N> {
-//             fn vault(&self) -> &Vault {
-//                 self.vault.deref()
-//             }
-
-//             fn vault_mut(&mut self) -> &mut Vault {
-//                 self.vault.deref_mut()
-//             }
-//         }
-//     )+)
-// }
-
 pub fn handler<T: LendingMarket + HasVault>(
     ctx: Context<T>,
     withdraw_option: u64,

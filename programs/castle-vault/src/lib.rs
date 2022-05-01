@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
 
-// use crate::borsh::{BorshDeserialize, BorshSerialize};
-
 pub mod adapters;
 pub mod backend_container;
 pub mod errors;
@@ -70,13 +68,6 @@ pub mod castle_vault {
         proposed_weights: StrategyWeightsArg,
     ) -> ProgramResult {
         instructions::rebalance::handler(ctx, proposed_weights)
-    }
-
-    pub fn rebalance_chris(
-        ctx: Context<Rebalance<'_>>,
-        proposed_weights: backend_container::BackendContainer<u16>,
-    ) -> ProgramResult {
-        instructions::rebalance::handler_chris(ctx, proposed_weights)
     }
 
     pub fn refresh<'info>(

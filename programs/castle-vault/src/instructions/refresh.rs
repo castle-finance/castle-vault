@@ -6,7 +6,6 @@ use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use port_anchor_adaptor::{port_lending_id, PortReserve};
 
 use crate::adapters::{solend, SolendReserve};
-use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
 use crate::state::Vault;
 
@@ -108,18 +107,6 @@ pub struct Refresh<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-pub enum Foo<'info> {
-    Jet {
-        market: AccountInfo<'info>,
-        market_authority: AccountInfo<'info>,
-    },
-    Solend {
-        reserve: AccountInfo<'info>,
-        pyth: AccountInfo<'info>,
-        switchboard: AccountInfo<'info>,
-    },
-}
-
 // TODO refactor refresh cpi calls into adapter pattern
 impl<'info> Refresh<'info> {
     /// CpiContext for refreshing solend reserve
@@ -201,8 +188,6 @@ pub fn handler<'info>(
 ) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Refreshing vault");
-
-    // let _val = BackendContainer::<Foo>::default();
 
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;
