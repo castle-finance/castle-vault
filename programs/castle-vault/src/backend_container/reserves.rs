@@ -2,7 +2,8 @@ use core::ops::Index;
 
 use anchor_lang::prelude::ProgramError;
 use core::convert::TryFrom;
-use solana_maths::{Rate, TryAdd, TryDiv, TryMul};
+use itertools::Itertools;
+use solana_maths::{Rate, TryAdd, TryDiv, TryMul, TrySub};
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -18,39 +19,24 @@ impl BackendContainer<Reserves> {
         &self,
         allocation_cap_pct: u8,
     ) -> Result<BackendContainer<Rate>, ProgramError> {
-        // TODO add allocation cap
-
-        // let mut sorted_pools: Vec<Provider> = Provider::iter().collect();
-        // sorted_pools.sort_unstable_by(|x, y| self.compare(&assets[*y], &assets[*x]).unwrap());
-
-        // let cap = Rate::from_percent(allocation_cap_pct);
-        // let mut remaining_weight = Rate::one();
-        // let mut strategy_weights = StrategyWeights::default();
-        // for p in sorted_pools {
-        //     let target_weight = remaining_weight.min(cap);
-        //     remaining_weight = remaining_weight.try_sub(target_weight)?;
-        //     strategy_weights[p] = target_weight;
-        // }
-
-        // Ok(strategy_weights)
-
-        self.into_iter()
-            .max_by(|(_, alloc_x), (_, alloc_y)| {
+        // TODO is there a cleaner way to do this with combinators?
+        let sorted: Vec<(Provider, &Reserves)> = self
+            .into_iter()
+            .sorted_unstable_by(|(_, alloc_x), (_, alloc_y)| {
                 // TODO: can we remove the unwrap() in any way?
                 self.compare(*alloc_x, *alloc_y).unwrap()
             })
-            .map(|(max_yielding_provider, _a)| {
-                self.apply(|provider, _| {
-                    if provider == max_yielding_provider {
-                        Rate::one()
-                    } else {
-                        Rate::zero()
-                    }
-                })
-            })
-            // TODO make this error handling more granular and informative
-            .ok_or(ErrorCode::StrategyError)
-            .map_err(Into::into)
+            .collect();
+
+        let cap = Rate::from_percent(allocation_cap_pct);
+        let mut remaining_weight = Rate::one();
+        let mut strategy_weights = BackendContainer::<Rate>::default();
+        for (p, _) in sorted {
+            let target_weight = remaining_weight.min(cap);
+            remaining_weight = remaining_weight.try_sub(target_weight)?;
+            strategy_weights[p] = target_weight;
+        }
+        Ok(strategy_weights)
     }
 
     fn calculate_weights_equal(&self) -> Result<BackendContainer<Rate>, ProgramError> {
@@ -85,4 +71,18 @@ impl BackendContainer<Reserves> {
             })
             .try_fold(Rate::zero(), |acc, r| acc.try_add(r?))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_weights_equal() {}
+
+    #[test]
+    fn test_calculate_weights_max_yield() {}
+
+    #[test]
+    fn test_get_apr() {}
 }

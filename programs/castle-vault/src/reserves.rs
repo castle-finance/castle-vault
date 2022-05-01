@@ -83,6 +83,7 @@ pub enum Reserves {
     Jet(Box<jet::state::Reserve>),
 }
 
+// TODO Is there a cleaner way to do this?
 impl<'a> ReserveAccessor for Reserves {
     fn utilization_rate(&self) -> Result<Rate, ProgramError> {
         match self {
