@@ -21,7 +21,7 @@ use crate::reserves::{Provider, ReturnCalculator};
 pub type BackendContainer<T> = BackendContainerGeneric<T, { Provider::COUNT }>;
 
 /// Provides an abstraction over supported backends
-#[derive(PartialEq, AnchorSerialize, AnchorDeserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct BackendContainerGeneric<T, const N: usize> {
     pub(crate) inner: [Option<T>; N],
 }
