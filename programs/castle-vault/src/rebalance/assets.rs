@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 use solana_maths::{Rate, TryMul};
 use strum_macros::EnumIter;
 
-// TODO rebalance module should not be dependent on specific names of assets
 #[derive(
     Clone,
     Copy,
@@ -95,8 +94,7 @@ where
     T: ReserveAccessor,
 {
     fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
-        self.reserve_with_deposit(allocation)?
-            .utilization_rate()?
-            .try_mul(self.borrow_rate()?)
+        let reserve = self.reserve_with_deposit(allocation)?;
+        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
     }
 }

@@ -35,7 +35,6 @@ anchor-lang = "0.18.2"
 anchor-spl = "0.18.2"
 arrayref = "0.3"
 boolinator = "2.4.0"
-borsh = "0.9"
 jet = {git = "https://github.com/jet-lab/jet-v1/", version = "0.2.0", features = ["no-entrypoint", "cpi"]}
 jet-proto-math = "1.0.1"
 jet-proto-proc-macros = "1.0.3"

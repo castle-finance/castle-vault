@@ -7,14 +7,17 @@ pub use allocation::*;
 pub use iter::*;
 pub use rate::*;
 pub use reserves::*;
+
+use core::cmp::Ordering;
+use core::ops::{Index, IndexMut};
+
 use strum::IntoEnumIterator;
+
+use anchor_lang::prelude::*;
+use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 
 use crate::rebalance::assets::{Provider, ReturnCalculator};
 use crate::MAX_NUM_PROVIDERS;
-use anchor_lang::prelude::ProgramError;
-use anchor_lang::{AnchorDeserialize, AnchorSerialize};
-use core::cmp::Ordering;
-use core::ops::{Index, IndexMut};
 
 pub type BackendContainer<T> = BackendContainerGeneric<T, MAX_NUM_PROVIDERS>;
 

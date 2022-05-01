@@ -640,7 +640,6 @@ dependencies = [
  "anchor-spl 0.18.2",
  "arrayref",
  "boolinator",
- "borsh 0.9.1",
  "jet",
  "jet-proto-math",
  "jet-proto-proc-macros",

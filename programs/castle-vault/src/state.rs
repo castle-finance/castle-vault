@@ -87,6 +87,7 @@ pub struct Vault {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
+    // TODO Anchor doesn't work with generics
     pub allocations_chris: BackendContainer<Allocation>,
 
     // 8 * 15 = 120
