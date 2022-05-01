@@ -2,7 +2,7 @@ use std::cmp;
 
 use anchor_lang::prelude::*;
 
-use crate::{errors::ErrorCode, rebalance::assets::Provider, state::Vault};
+use crate::{errors::ErrorCode, reserves::Provider, state::Vault};
 
 const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 100;
 

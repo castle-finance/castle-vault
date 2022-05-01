@@ -1,12 +1,16 @@
 use anchor_lang::prelude::*;
+use port_anchor_adaptor::PortReserve;
 use solana_maths::{Rate, TryMul};
-use strum_macros::EnumIter;
+use strum_macros::{EnumCount, EnumIter};
+
+use crate::adapters::solend::SolendReserve;
 
 #[derive(
     Clone,
     Copy,
     Debug,
     EnumIter,
+    EnumCount,
     PartialEq,
     Ord,
     Hash,
@@ -48,27 +52,6 @@ macro_rules! impl_provider_index {
     };
 }
 
-pub struct Assets {
-    pub solend: LendingMarketAsset,
-    pub port: LendingMarketAsset,
-    pub jet: LendingMarketAsset,
-}
-impl_provider_index!(Assets, LendingMarketAsset);
-
-impl Assets {
-    pub fn len(&self) -> usize {
-        3_usize
-    }
-
-    pub fn is_empty(&self) -> bool {
-        false
-    }
-}
-
-pub trait ReturnCalculator {
-    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError>;
-}
-
 pub trait ReserveAccessor {
     fn utilization_rate(&self) -> Result<Rate, ProgramError>;
     fn borrow_rate(&self) -> Result<Rate, ProgramError>;
@@ -79,16 +62,10 @@ pub trait ReserveAccessor {
     ) -> Result<Box<dyn ReserveAccessor>, ProgramError>;
 }
 
-pub struct LendingMarketAsset(pub Box<dyn ReserveAccessor>);
-
-impl ReturnCalculator for LendingMarketAsset {
-    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
-        let reserve = self.0.reserve_with_deposit(allocation)?;
-        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
-    }
+pub trait ReturnCalculator {
+    fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError>;
 }
 
-// impl `ReturnCalculator` for any type that implements `ReserveAccessor`
 impl<T> ReturnCalculator for T
 where
     T: ReserveAccessor,
@@ -96,5 +73,41 @@ where
     fn calculate_return(&self, allocation: u64) -> Result<Rate, ProgramError> {
         let reserve = self.reserve_with_deposit(allocation)?;
         reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
+    }
+}
+
+#[derive(Clone)]
+pub enum Reserves {
+    Solend(SolendReserve),
+    Port(PortReserve),
+    Jet(Box<jet::state::Reserve>),
+}
+
+impl<'a> ReserveAccessor for Reserves {
+    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+        match self {
+            Reserves::Solend(reserve) => reserve.utilization_rate(),
+            Reserves::Port(reserve) => reserve.utilization_rate(),
+            Reserves::Jet(reserve) => reserve.utilization_rate(),
+        }
+    }
+
+    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+        match self {
+            Reserves::Solend(reserve) => reserve.borrow_rate(),
+            Reserves::Port(reserve) => reserve.borrow_rate(),
+            Reserves::Jet(reserve) => reserve.borrow_rate(),
+        }
+    }
+
+    fn reserve_with_deposit(
+        &self,
+        allocation: u64,
+    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+        match self {
+            Reserves::Solend(reserve) => reserve.reserve_with_deposit(allocation),
+            Reserves::Port(reserve) => reserve.reserve_with_deposit(allocation),
+            Reserves::Jet(reserve) => reserve.reserve_with_deposit(allocation),
+        }
     }
 }

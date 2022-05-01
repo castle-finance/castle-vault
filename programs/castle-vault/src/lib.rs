@@ -5,7 +5,7 @@ pub mod backend_container;
 pub mod errors;
 pub mod instructions;
 pub mod math;
-pub mod rebalance;
+pub mod reserves;
 pub mod state;
 
 use crate::state::{RebalanceMode, StrategyType};
@@ -17,8 +17,6 @@ declare_id!("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn");
 
 #[cfg(feature = "devnet-castle-addr")]
 declare_id!("4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK");
-
-pub(crate) const MAX_NUM_PROVIDERS: usize = 3;
 
 #[program]
 pub mod castle_vault {

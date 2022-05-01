@@ -7,15 +7,33 @@ use strum::IntoEnumIterator;
 
 use crate::{
     errors::ErrorCode,
-    instructions::Reserves,
-    rebalance::assets::{Provider, ReturnCalculator},
+    reserves::{Provider, Reserves, ReturnCalculator},
     state::{Allocation, StrategyType},
 };
 
 use super::BackendContainer;
 
 impl BackendContainer<Reserves> {
-    fn calculate_weights_max_yield(&self) -> Result<BackendContainer<Rate>, ProgramError> {
+    fn calculate_weights_max_yield(
+        &self,
+        allocation_cap_pct: u8,
+    ) -> Result<BackendContainer<Rate>, ProgramError> {
+        // TODO add allocation cap
+
+        // let mut sorted_pools: Vec<Provider> = Provider::iter().collect();
+        // sorted_pools.sort_unstable_by(|x, y| self.compare(&assets[*y], &assets[*x]).unwrap());
+
+        // let cap = Rate::from_percent(allocation_cap_pct);
+        // let mut remaining_weight = Rate::one();
+        // let mut strategy_weights = StrategyWeights::default();
+        // for p in sorted_pools {
+        //     let target_weight = remaining_weight.min(cap);
+        //     remaining_weight = remaining_weight.try_sub(target_weight)?;
+        //     strategy_weights[p] = target_weight;
+        // }
+
+        // Ok(strategy_weights)
+
         self.into_iter()
             .max_by(|(_, alloc_x), (_, alloc_y)| {
                 // TODO: can we remove the unwrap() in any way?
@@ -37,8 +55,7 @@ impl BackendContainer<Reserves> {
 
     fn calculate_weights_equal(&self) -> Result<BackendContainer<Rate>, ProgramError> {
         u8::try_from(self.len())
-            // TODO: error code?
-            .map_err(|_| ProgramError::Custom(0))
+            .map_err(|_| ErrorCode::StrategyError.into())
             .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100))
             .and_then(|r| Rate::one().try_div(r))
             .map(|equal_allocation| self.apply(|_, _| equal_allocation))
@@ -46,10 +63,11 @@ impl BackendContainer<Reserves> {
 
     pub fn calculate_weights(
         &self,
-        stype: StrategyType,
+        strategy_type: StrategyType,
+        allocation_cap_pct: u8,
     ) -> Result<BackendContainer<Rate>, ProgramError> {
-        match stype {
-            StrategyType::MaxYield => self.calculate_weights_max_yield(),
+        match strategy_type {
+            StrategyType::MaxYield => self.calculate_weights_max_yield(allocation_cap_pct),
             StrategyType::EqualAllocation => self.calculate_weights_equal(),
         }
     }

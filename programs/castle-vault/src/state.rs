@@ -3,7 +3,6 @@ use anchor_lang::solana_program::clock::{
     DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
 };
 use jet_proto_proc_macros::assert_size;
-use solana_maths::{Decimal, TryMul};
 use std::cmp::Ordering;
 use strum::IntoEnumIterator;
 use type_layout::TypeLayout;
@@ -11,8 +10,7 @@ use type_layout::TypeLayout;
 use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;
-use crate::rebalance::assets::Provider;
-use crate::rebalance::strategies::StrategyWeights;
+use crate::reserves::Provider;
 
 /// Number of slots per year
 pub const SLOTS_PER_YEAR: u64 =
@@ -87,12 +85,9 @@ pub struct Vault {
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    // TODO Anchor doesn't work with generics
-    pub allocations_chris: BackendContainer<Allocation>,
-
-    // 8 * 15 = 120
+    // 8 * 24 = 192
     /// Reserved space for future upgrades
-    _reserved: [u64; 15],
+    _reserved: [u64; 24],
 }
 
 impl Vault {
@@ -205,20 +200,13 @@ pub struct Allocations {
 }
 impl_provider_index!(Allocations, Allocation);
 
-impl Allocations {
-    pub fn try_from_weights(
-        weights: StrategyWeights,
-        total_value: u64,
-        slot: u64,
-    ) -> Result<Self, ProgramError> {
-        let mut allocations = Self::default();
+impl From<BackendContainer<Allocation>> for Allocations {
+    fn from(c: BackendContainer<Allocation>) -> Self {
+        let mut a = Allocations::default();
         for p in Provider::iter() {
-            let allocation = weights[p]
-                .try_mul(total_value)
-                .and_then(|product| Decimal::from(product).try_floor_u64())?;
-            allocations[p].update(allocation, slot);
+            a[p] = c[p]
         }
-        Ok(allocations)
+        a
     }
 }
 

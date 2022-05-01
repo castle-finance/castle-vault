@@ -6,8 +6,8 @@ use anchor_spl::token::{Token, TokenAccount};
 use solana_maths::Rate;
 use spl_token_lending::state::Reserve;
 
-use crate::rebalance::assets::ReserveAccessor;
-use crate::{impl_has_vault, rebalance::assets::Provider, reconcile::LendingMarket, state::Vault};
+use crate::reserves::{Provider, ReserveAccessor};
+use crate::{impl_has_vault, reconcile::LendingMarket, state::Vault};
 
 #[derive(Accounts)]
 pub struct SolendAccounts<'info> {

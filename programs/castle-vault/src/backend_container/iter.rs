@@ -2,7 +2,7 @@ use core::iter::FromIterator;
 
 use strum::IntoEnumIterator;
 
-use crate::rebalance::assets::{Provider, ProviderIter};
+use crate::reserves::{Provider, ProviderIter};
 
 use super::BackendContainerGeneric;
 

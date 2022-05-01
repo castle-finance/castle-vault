@@ -7,12 +7,20 @@ use crate::errors::ErrorCode;
 use super::BackendContainerGeneric;
 
 impl<const N: usize> BackendContainerGeneric<Rate, N> {
-    pub fn verify_weights(&self) -> Result<(), ProgramError> {
+    pub fn verify_weights(&self, allocation_cap_pct: u8) -> Result<(), ProgramError> {
+        let cap = Rate::from_percent(allocation_cap_pct);
+        let max = self
+            .into_iter()
+            .max()
+            .ok_or(ErrorCode::InvalidProposedWeights)?
+            .1;
+
         let sum = self
             .into_iter()
             .map(|(_, r)| r)
             .try_fold(Rate::zero(), |acc, x| acc.try_add(*x))?;
-        (sum != Rate::one()).as_result((), ErrorCode::StrategyError.into())
+
+        (sum != Rate::one() || max.gt(&cap)).as_result((), ErrorCode::InvalidProposedWeights.into())
     }
 }
 

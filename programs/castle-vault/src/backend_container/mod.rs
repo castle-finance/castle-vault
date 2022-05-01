@@ -11,15 +11,14 @@ pub use reserves::*;
 use core::cmp::Ordering;
 use core::ops::{Index, IndexMut};
 
-use strum::IntoEnumIterator;
+use strum::{EnumCount, IntoEnumIterator};
 
 use anchor_lang::prelude::*;
-use anchor_lang::{AnchorDeserialize, AnchorSerialize};
 
-use crate::rebalance::assets::{Provider, ReturnCalculator};
-use crate::MAX_NUM_PROVIDERS;
+use crate::reserves::{Provider, ReturnCalculator};
 
-pub type BackendContainer<T> = BackendContainerGeneric<T, MAX_NUM_PROVIDERS>;
+// TODO is there a better name for this?
+pub type BackendContainer<T> = BackendContainerGeneric<T, { Provider::COUNT }>;
 
 /// Provides an abstraction over supported backends
 #[derive(PartialEq, AnchorSerialize, AnchorDeserialize, Debug, Clone)]
