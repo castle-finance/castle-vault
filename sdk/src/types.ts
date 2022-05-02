@@ -30,13 +30,13 @@ export interface Vault {
 }
 
 export interface VaultConfig {
-    depositCap: BN;
-    feeCarryBps: number;
-    feeMgmtBps: number;
-    referralFeePct: number;
-    allocationCapPct: number;
-    rebalanceMode: { [x: string]: {} };
-    strategyType: { [x: string]: {} };
+    depositCap?: BN;
+    feeCarryBps?: number;
+    feeMgmtBps?: number;
+    referralFeePct?: number;
+    allocationCapPct?: number;
+    rebalanceMode?: { [x: string]: {} };
+    strategyType?: { [x: string]: {} };
 }
 
 export interface LastUpdate {

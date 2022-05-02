@@ -25,7 +25,8 @@ pub const ONE_AS_BPS: u64 = 10000;
 #[repr(C, align(8))]
 #[derive(Debug, TypeLayout)]
 pub struct Vault {
-    pub version: u8,
+    /// Program version when initialized: [major, minor, patch]
+    pub version: [u8; 3],
 
     /// Account which is allowed to call restricted instructions
     /// Also the authority of the fee receiver account
@@ -66,7 +67,7 @@ pub struct Vault {
 
     pub referral_fee_receiver: Pubkey,
 
-    _padding: [u8; 6],
+    _padding: [u8; 4],
 
     /// Total value of vault denominated in the reserve token
     pub value: SlotTrackedValue,

@@ -41,6 +41,6 @@ pub enum ErrorCode {
     #[msg("Insufficient number of accounts for a given operation")]
     InsufficientAccounts,
 
-    #[msg("Allocation cap cannot set to under 34% or over 100%")]
+    #[msg("Allocation cap cannot set to under 1/(number of assets) or over 100%")]
     InvalidAllocationCap,
 }

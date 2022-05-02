@@ -51,7 +51,7 @@ export class VaultClient {
         private solend: SolendReserveAsset,
         private port: PortReserveAsset,
         private jet: JetReserveAsset,
-        private feesEnabled: boolean = false
+        private feesEnabled: boolean = true
     ) {}
 
     static async load(
@@ -96,15 +96,9 @@ export class VaultClient {
         solend: SolendReserveAsset,
         port: PortReserveAsset,
         jet: JetReserveAsset,
-        strategyType: StrategyType,
-        rebalanceMode: RebalanceMode,
         owner: PublicKey,
         referralFeeOwner: PublicKey,
-        feeCarryBps: number = 0,
-        feeMgmtBps: number = 0,
-        referralFeePct: number = 0,
-        allocationCapPct: number = 100,
-        depositCap?: number,
+        config: VaultConfig,
         program?: anchor.Program<CastleVault>
     ): Promise<VaultClient> {
         // TODO Once the below issue is resolved, remove this logic
@@ -184,17 +178,14 @@ export class VaultClient {
             referralFeeOwner
         );
 
-        const config: VaultConfig = {
-            depositCap:
-                depositCap == null
-                    ? new anchor.BN("18446744073709551615")
-                    : new anchor.BN(depositCap),
-            feeCarryBps: feeCarryBps,
-            feeMgmtBps: feeMgmtBps,
-            referralFeePct: referralFeePct,
-            allocationCapPct: allocationCapPct,
-            rebalanceMode: { [rebalanceMode]: {} },
-            strategyType: { [strategyType]: {} },
+        const defaultConfig: VaultConfig = {
+            depositCap: new anchor.BN("18446744073709551615"), // U64::MAX
+            feeCarryBps: 0,
+            feeMgmtBps: 0,
+            referralFeePct: 0,
+            allocationCapPct: 100,
+            rebalanceMode: { calculator: {} },
+            strategyType: { maxYield: {} },
         };
 
         const txSig = await program.rpc.initialize(
@@ -209,7 +200,7 @@ export class VaultClient {
                 portLp: portLpBump,
                 jetLp: jetLpBump,
             },
-            config,
+            { ...defaultConfig, ...config },
             {
                 accounts: {
                     vault: vaultId.publicKey,

@@ -10,6 +10,7 @@ import {
     VaultClient,
     CastleVault,
     ProposedWeightsBps,
+    VaultConfig,
 } from "../sdk/src/index";
 import {
     DeploymentEnvs,
@@ -226,13 +227,7 @@ describe("castle-vault", () => {
         );
     }
 
-    async function initializeVault(
-        strategyType: StrategyType,
-        rebalanceMode: RebalanceMode,
-        feeCarryBps: number = 0,
-        feeMgmtBps: number = 0,
-        referralFeePct: number = 0
-    ) {
+    async function initializeVault(config: VaultConfig) {
         vaultClient = await VaultClient.initialize(
             provider,
             provider.wallet as anchor.Wallet,
@@ -241,15 +236,9 @@ describe("castle-vault", () => {
             solend,
             port,
             jet,
-            strategyType,
-            rebalanceMode,
             owner.publicKey,
             referralFeeOwner,
-            feeCarryBps,
-            feeMgmtBps,
-            referralFeePct,
-            vaultAllocationCap, // TODO add these to params
-            vaultDepositCap,
+            config,
             program
         );
 
@@ -356,10 +345,10 @@ describe("castle-vault", () => {
             assert.isNotNull(vaultClient.getFeeReceiverAccountInfo());
             assert.isNotNull(vaultClient.getReferralFeeReceiverAccountInfo());
             assert.equal(
-                vaultClient.getDepositCap().toNumber(),
-                vaultDepositCap
+                vaultClient.getDepositCap().toString(),
+                "18446744073709551615"
             );
-            assert.equal(vaultClient.getAllocationCap(), vaultAllocationCap);
+            assert.equal(vaultClient.getAllocationCap(), 100);
         });
 
         it("Deposits to vault reserves", async function () {
@@ -419,7 +408,7 @@ describe("castle-vault", () => {
                 vaultClient.getDepositCap().toNumber(),
                 vaultDepositCap
             );
-            assert.equal(vaultClient.getAllocationCap(), vaultAllocationCap);
+            assert.equal(vaultClient.getAllocationCap(), 100);
         });
 
         it("Reject transaction if deposit cap is reached", async function () {
@@ -807,10 +796,10 @@ describe("castle-vault", () => {
         describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.equalAllocation,
-                    RebalanceModes.calculator
-                );
+                await initializeVault({
+                    strategyType: { [StrategyTypes.equalAllocation]: {} },
+                    rebalanceMode: { [RebalanceModes.calculator]: {} },
+                });
             });
             testDepositAndWithdrawal();
         });
@@ -818,10 +807,11 @@ describe("castle-vault", () => {
         describe("Deposit cap", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.equalAllocation,
-                    RebalanceModes.calculator
-                );
+                await initializeVault({
+                    depositCap: new anchor.BN(vaultDepositCap),
+                    strategyType: { [StrategyTypes.equalAllocation]: {} },
+                    rebalanceMode: { [RebalanceModes.calculator]: {} },
+                });
             });
             testDepositCap();
         });
@@ -829,10 +819,10 @@ describe("castle-vault", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.equalAllocation,
-                    RebalanceModes.calculator
-                );
+                await initializeVault({
+                    strategyType: { [StrategyTypes.equalAllocation]: {} },
+                    rebalanceMode: { [RebalanceModes.calculator]: {} },
+                });
             });
             testRebalance(1 / 3, 1 / 3, 1 / 3);
         });
@@ -844,13 +834,13 @@ describe("castle-vault", () => {
 
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.equalAllocation,
-                    RebalanceModes.calculator,
+                await initializeVault({
                     feeCarryBps,
                     feeMgmtBps,
-                    referralFeePct
-                );
+                    referralFeePct,
+                    strategyType: { [StrategyTypes.equalAllocation]: {} },
+                    rebalanceMode: { [RebalanceModes.calculator]: {} },
+                });
             });
             testFees(feeCarryBps, feeMgmtBps, referralFeePct);
         });
@@ -860,10 +850,7 @@ describe("castle-vault", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.maxYield,
-                    RebalanceModes.calculator
-                );
+                await initializeVault({ allocationCapPct: vaultAllocationCap });
             });
 
             testRebalance(
@@ -882,7 +869,11 @@ describe("castle-vault", () => {
             const rebalanceMode = RebalanceModes.proofChecker;
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(StrategyTypes.maxYield, rebalanceMode);
+                await initializeVault({
+                    allocationCapPct: vaultAllocationCap,
+                    strategyType: { [StrategyTypes.maxYield]: {} },
+                    rebalanceMode: { [RebalanceModes.proofChecker]: {} },
+                });
             });
             testRebalance(
                 1 - vaultAllocationCap / 100,
