@@ -7,7 +7,7 @@ use port_anchor_adaptor::PortReserve;
 
 use std::convert::Into;
 
-use crate::{adapters::SolendReserve, errors::ErrorCode, state::*};
+use crate::{adapters::SolendReserve, state::*};
 
 #[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]
 pub struct InitBumpSeeds {
@@ -20,10 +20,14 @@ pub struct InitBumpSeeds {
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]
-pub struct FeeArgs {
+pub struct VaultConfigArg {
+    pub deposit_cap: u64,
     pub fee_carry_bps: u32,
     pub fee_mgmt_bps: u32,
     pub referral_fee_pct: u8,
+    pub allocation_cap_pct: u8,
+    pub rebalance_mode: RebalanceMode,
+    pub strategy_type: StrategyType,
 }
 
 #[derive(Accounts)]
@@ -179,53 +183,18 @@ impl<'info> Initialize<'info> {
     }
 }
 
-pub fn validate_fees(fees: &FeeArgs) -> ProgramResult {
-    if fees.fee_carry_bps > 10000 {
-        return Err(ErrorCode::FeeBpsError.into());
-    }
-
-    if fees.fee_mgmt_bps > 10000 {
-        return Err(ErrorCode::FeeBpsError.into());
-    }
-
-    if fees.referral_fee_pct > 50 {
-        return Err(ErrorCode::ReferralFeeError.into());
-    }
-
-    Ok(())
-}
-
-/// Creates a new vault
-///
-/// # Arguments
-///
-/// * `bumps` - bump seeds for creating PDAs
-/// * `strategy_type` - type of strategy that rebalance will execute
-/// * `fees` - carry and management fee that the vault collects denominated in basis points on behalf of primary and supplementary fee receivers
 pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
-    strategy_type: StrategyType,
-    rebalance_mode: RebalanceMode,
-    fees: FeeArgs,
-    vault_deposit_cap: u64,
-    allocation_cap_pct: u8,
+    config: VaultConfigArg,
 ) -> ProgramResult {
     let clock = Clock::get()?;
 
     // Validating referral token address
     ctx.accounts.validate_referral_token()?;
 
-    // Validating referral token account's mint
-    validate_fees(&fees)?;
-
-    // TODO compute the lower limit of the cap using number of lenging pools
-    if !(34..=100).contains(&allocation_cap_pct) {
-        return Err(ErrorCode::AllocationCapError.into());
-    }
-
     let vault = &mut ctx.accounts.vault;
-    vault.version = 1;
+    vault.version = [2, 0, 0];
     vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.owner = ctx.accounts.owner.key();
     vault.authority_seed = vault.key();
@@ -239,20 +208,13 @@ pub fn handler(
     vault.vault_jet_lp_token = ctx.accounts.vault_jet_lp_token.key();
     vault.lp_token_mint = ctx.accounts.lp_token_mint.key();
     vault.reserve_token_mint = ctx.accounts.reserve_token_mint.key();
-    vault.last_update = LastUpdate::new(clock.slot);
-    vault.total_value = 0;
-    vault.strategy_type = strategy_type;
-    vault.rebalance_mode = rebalance_mode;
-    vault.deposit_cap = vault_deposit_cap;
-    vault.allocation_cap_pct = allocation_cap_pct;
+    vault.fee_receiver = ctx.accounts.fee_receiver.key();
+    vault.referral_fee_receiver = ctx.accounts.referral_fee_receiver.key();
 
-    vault.fees = VaultFees::new(
-        fees.fee_carry_bps,
-        fees.fee_mgmt_bps,
-        fees.referral_fee_pct,
-        ctx.accounts.fee_receiver.key(),
-        ctx.accounts.referral_fee_receiver.key(),
-    );
+    vault.value = SlotTrackedValue::default();
+    vault.value.update(0, clock.slot);
+
+    vault.config = VaultConfig::new(config)?;
 
     // Initialize fee receiver account
     associated_token::create(ctx.accounts.init_fee_receiver_create_context(

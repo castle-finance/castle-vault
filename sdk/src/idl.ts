@@ -129,35 +129,15 @@ export type CastleVault = {
                     };
                 },
                 {
-                    name: "strategyType";
+                    name: "config";
                     type: {
-                        defined: "StrategyType";
+                        defined: "VaultConfigArg";
                     };
-                },
-                {
-                    name: "rebalanceMode";
-                    type: {
-                        defined: "RebalanceMode";
-                    };
-                },
-                {
-                    name: "fees";
-                    type: {
-                        defined: "FeeArgs";
-                    };
-                },
-                {
-                    name: "depositCap";
-                    type: "u64";
-                },
-                {
-                    name: "allocationCapPct";
-                    type: "u8";
                 }
             ];
         },
         {
-            name: "updateDepositCap";
+            name: "updateConfig";
             accounts: [
                 {
                     name: "vault";
@@ -172,30 +152,9 @@ export type CastleVault = {
             ];
             args: [
                 {
-                    name: "depositCapNewValue";
-                    type: "u64";
-                }
-            ];
-        },
-        {
-            name: "updateFees";
-            accounts: [
-                {
-                    name: "vault";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
-                    name: "owner";
-                    isMut: false;
-                    isSigner: true;
-                }
-            ];
-            args: [
-                {
-                    name: "newFees";
+                    name: "newConfig";
                     type: {
-                        defined: "FeeArgs";
+                        defined: "VaultConfigArg";
                     };
                 }
             ];
@@ -750,46 +709,24 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "rebalanceMode";
+                        name: "feeReceiver";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "referralFeeReceiver";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "padding";
                         type: {
-                            defined: "RebalanceMode";
+                            array: ["u8", 6];
                         };
                     },
                     {
-                        name: "strategyType";
+                        name: "value";
                         type: {
-                            defined: "StrategyType";
+                            defined: "SlotTrackedValue";
                         };
-                    },
-                    {
-                        name: "allocationCapPct";
-                        type: "u8";
-                    },
-                    {
-                        name: "padding0";
-                        type: {
-                            array: ["u8", 3];
-                        };
-                    },
-                    {
-                        name: "fees";
-                        type: {
-                            defined: "VaultFees";
-                        };
-                    },
-                    {
-                        name: "lastUpdate";
-                        type: {
-                            defined: "LastUpdate";
-                        };
-                    },
-                    {
-                        name: "totalValue";
-                        type: "u64";
-                    },
-                    {
-                        name: "depositCap";
-                        type: "u64";
                     },
                     {
                         name: "allocations";
@@ -798,9 +735,15 @@ export type CastleVault = {
                         };
                     },
                     {
+                        name: "config";
+                        type: {
+                            defined: "VaultConfig";
+                        };
+                    },
+                    {
                         name: "reserved";
                         type: {
-                            array: ["u64", 24];
+                            array: ["u64", 23];
                         };
                     }
                 ];
@@ -841,10 +784,14 @@ export type CastleVault = {
             };
         },
         {
-            name: "FeeArgs";
+            name: "VaultConfigArg";
             type: {
                 kind: "struct";
                 fields: [
+                    {
+                        name: "depositCap";
+                        type: "u64";
+                    },
                     {
                         name: "feeCarryBps";
                         type: "u32";
@@ -856,6 +803,22 @@ export type CastleVault = {
                     {
                         name: "referralFeePct";
                         type: "u8";
+                    },
+                    {
+                        name: "allocationCapPct";
+                        type: "u8";
+                    },
+                    {
+                        name: "rebalanceMode";
+                        type: {
+                            defined: "RebalanceMode";
+                        };
+                    },
+                    {
+                        name: "strategyType";
+                        type: {
+                            defined: "StrategyType";
+                        };
                     }
                 ];
             };
@@ -881,10 +844,14 @@ export type CastleVault = {
             };
         },
         {
-            name: "VaultFees";
+            name: "VaultConfig";
             type: {
                 kind: "struct";
                 fields: [
+                    {
+                        name: "depositCap";
+                        type: "u64";
+                    },
                     {
                         name: "feeCarryBps";
                         type: "u32";
@@ -898,17 +865,25 @@ export type CastleVault = {
                         type: "u8";
                     },
                     {
-                        name: "feeReceiver";
-                        type: "publicKey";
+                        name: "allocationCapPct";
+                        type: "u8";
                     },
                     {
-                        name: "referralFeeReceiver";
-                        type: "publicKey";
+                        name: "rebalanceMode";
+                        type: {
+                            defined: "RebalanceMode";
+                        };
+                    },
+                    {
+                        name: "strategyType";
+                        type: {
+                            defined: "StrategyType";
+                        };
                     },
                     {
                         name: "padding";
                         type: {
-                            array: ["u8", 7];
+                            array: ["u32", 3];
                         };
                     }
                 ];
@@ -922,26 +897,26 @@ export type CastleVault = {
                     {
                         name: "solend";
                         type: {
-                            defined: "Allocation";
+                            defined: "SlotTrackedValue";
                         };
                     },
                     {
                         name: "port";
                         type: {
-                            defined: "Allocation";
+                            defined: "SlotTrackedValue";
                         };
                     },
                     {
                         name: "jet";
                         type: {
-                            defined: "Allocation";
+                            defined: "SlotTrackedValue";
                         };
                     }
                 ];
             };
         },
         {
-            name: "Allocation";
+            name: "SlotTrackedValue";
             type: {
                 kind: "struct";
                 fields: [
@@ -1131,13 +1106,13 @@ export type CastleVault = {
         },
         {
             code: 306;
-            name: "ReferralFeeError";
-            msg: "Failed to set referral fee share which is greater than 50%";
+            name: "InvalidReferralFeeConfig";
+            msg: "Referral fee split cannot set to be over 50%";
         },
         {
             code: 307;
-            name: "FeeBpsError";
-            msg: "Failed to set fee BPS which is greater than 10000";
+            name: "InvalidFeeConfig";
+            msg: "Fees cannot be set to over 100%";
         },
         {
             code: 308;
@@ -1166,8 +1141,8 @@ export type CastleVault = {
         },
         {
             code: 313;
-            name: "AllocationCapError";
-            msg: "Allocation cap is invalid";
+            name: "InvalidAllocationCap";
+            msg: "Allocation cap cannot set to under 34% or over 100%";
         }
     ];
 };
@@ -1303,35 +1278,15 @@ export const IDL: CastleVault = {
                     },
                 },
                 {
-                    name: "strategyType",
+                    name: "config",
                     type: {
-                        defined: "StrategyType",
+                        defined: "VaultConfigArg",
                     },
-                },
-                {
-                    name: "rebalanceMode",
-                    type: {
-                        defined: "RebalanceMode",
-                    },
-                },
-                {
-                    name: "fees",
-                    type: {
-                        defined: "FeeArgs",
-                    },
-                },
-                {
-                    name: "depositCap",
-                    type: "u64",
-                },
-                {
-                    name: "allocationCapPct",
-                    type: "u8",
                 },
             ],
         },
         {
-            name: "updateDepositCap",
+            name: "updateConfig",
             accounts: [
                 {
                     name: "vault",
@@ -1346,30 +1301,9 @@ export const IDL: CastleVault = {
             ],
             args: [
                 {
-                    name: "depositCapNewValue",
-                    type: "u64",
-                },
-            ],
-        },
-        {
-            name: "updateFees",
-            accounts: [
-                {
-                    name: "vault",
-                    isMut: true,
-                    isSigner: false,
-                },
-                {
-                    name: "owner",
-                    isMut: false,
-                    isSigner: true,
-                },
-            ],
-            args: [
-                {
-                    name: "newFees",
+                    name: "newConfig",
                     type: {
-                        defined: "FeeArgs",
+                        defined: "VaultConfigArg",
                     },
                 },
             ],
@@ -1924,46 +1858,24 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "rebalanceMode",
+                        name: "feeReceiver",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "referralFeeReceiver",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "padding",
                         type: {
-                            defined: "RebalanceMode",
+                            array: ["u8", 6],
                         },
                     },
                     {
-                        name: "strategyType",
+                        name: "value",
                         type: {
-                            defined: "StrategyType",
+                            defined: "SlotTrackedValue",
                         },
-                    },
-                    {
-                        name: "allocationCapPct",
-                        type: "u8",
-                    },
-                    {
-                        name: "padding0",
-                        type: {
-                            array: ["u8", 3],
-                        },
-                    },
-                    {
-                        name: "fees",
-                        type: {
-                            defined: "VaultFees",
-                        },
-                    },
-                    {
-                        name: "lastUpdate",
-                        type: {
-                            defined: "LastUpdate",
-                        },
-                    },
-                    {
-                        name: "totalValue",
-                        type: "u64",
-                    },
-                    {
-                        name: "depositCap",
-                        type: "u64",
                     },
                     {
                         name: "allocations",
@@ -1972,9 +1884,15 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
+                        name: "config",
+                        type: {
+                            defined: "VaultConfig",
+                        },
+                    },
+                    {
                         name: "reserved",
                         type: {
-                            array: ["u64", 24],
+                            array: ["u64", 23],
                         },
                     },
                 ],
@@ -2015,10 +1933,14 @@ export const IDL: CastleVault = {
             },
         },
         {
-            name: "FeeArgs",
+            name: "VaultConfigArg",
             type: {
                 kind: "struct",
                 fields: [
+                    {
+                        name: "depositCap",
+                        type: "u64",
+                    },
                     {
                         name: "feeCarryBps",
                         type: "u32",
@@ -2030,6 +1952,22 @@ export const IDL: CastleVault = {
                     {
                         name: "referralFeePct",
                         type: "u8",
+                    },
+                    {
+                        name: "allocationCapPct",
+                        type: "u8",
+                    },
+                    {
+                        name: "rebalanceMode",
+                        type: {
+                            defined: "RebalanceMode",
+                        },
+                    },
+                    {
+                        name: "strategyType",
+                        type: {
+                            defined: "StrategyType",
+                        },
                     },
                 ],
             },
@@ -2055,10 +1993,14 @@ export const IDL: CastleVault = {
             },
         },
         {
-            name: "VaultFees",
+            name: "VaultConfig",
             type: {
                 kind: "struct",
                 fields: [
+                    {
+                        name: "depositCap",
+                        type: "u64",
+                    },
                     {
                         name: "feeCarryBps",
                         type: "u32",
@@ -2072,17 +2014,25 @@ export const IDL: CastleVault = {
                         type: "u8",
                     },
                     {
-                        name: "feeReceiver",
-                        type: "publicKey",
+                        name: "allocationCapPct",
+                        type: "u8",
                     },
                     {
-                        name: "referralFeeReceiver",
-                        type: "publicKey",
+                        name: "rebalanceMode",
+                        type: {
+                            defined: "RebalanceMode",
+                        },
+                    },
+                    {
+                        name: "strategyType",
+                        type: {
+                            defined: "StrategyType",
+                        },
                     },
                     {
                         name: "padding",
                         type: {
-                            array: ["u8", 7],
+                            array: ["u32", 3],
                         },
                     },
                 ],
@@ -2096,26 +2046,26 @@ export const IDL: CastleVault = {
                     {
                         name: "solend",
                         type: {
-                            defined: "Allocation",
+                            defined: "SlotTrackedValue",
                         },
                     },
                     {
                         name: "port",
                         type: {
-                            defined: "Allocation",
+                            defined: "SlotTrackedValue",
                         },
                     },
                     {
                         name: "jet",
                         type: {
-                            defined: "Allocation",
+                            defined: "SlotTrackedValue",
                         },
                     },
                 ],
             },
         },
         {
-            name: "Allocation",
+            name: "SlotTrackedValue",
             type: {
                 kind: "struct",
                 fields: [
@@ -2305,13 +2255,13 @@ export const IDL: CastleVault = {
         },
         {
             code: 306,
-            name: "ReferralFeeError",
-            msg: "Failed to set referral fee share which is greater than 50%",
+            name: "InvalidReferralFeeConfig",
+            msg: "Referral fee split cannot set to be over 50%",
         },
         {
             code: 307,
-            name: "FeeBpsError",
-            msg: "Failed to set fee BPS which is greater than 10000",
+            name: "InvalidFeeConfig",
+            msg: "Fees cannot be set to over 100%",
         },
         {
             code: 308,
@@ -2340,8 +2290,8 @@ export const IDL: CastleVault = {
         },
         {
             code: 313,
-            name: "AllocationCapError",
-            msg: "Allocation cap is invalid",
+            name: "InvalidAllocationCap",
+            msg: "Allocation cap cannot set to under 34% or over 100%",
         },
     ],
 };

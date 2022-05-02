@@ -20,11 +20,11 @@ pub enum ErrorCode {
     #[msg("Failed to perform a math operation without an overflow")]
     OverflowError,
 
-    #[msg("Failed to set referral fee share which is greater than 50%")]
-    ReferralFeeError,
+    #[msg("Referral fee split cannot set to be over 50%")]
+    InvalidReferralFeeConfig,
 
-    #[msg("Failed to set fee BPS which is greater than 10000")]
-    FeeBpsError,
+    #[msg("Fees cannot be set to over 100%")]
+    InvalidFeeConfig,
 
     #[msg("Proposed weights don't add up to 100%")]
     InvalidProposedWeights,
@@ -41,6 +41,6 @@ pub enum ErrorCode {
     #[msg("Insufficient number of accounts for a given operation")]
     InsufficientAccounts,
 
-    #[msg("Allocation cap is invalid")]
-    AllocationCapError,
+    #[msg("Allocation cap cannot set to under 1/(number of assets) or over 100%")]
+    InvalidAllocationCap,
 }

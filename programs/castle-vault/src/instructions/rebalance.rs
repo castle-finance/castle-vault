@@ -42,7 +42,7 @@ pub struct Rebalance<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
-        constraint = !vault.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
+        constraint = !vault.value.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
         has_one = solend_reserve,
         has_one = port_reserve,
         has_one = jet_reserve,
@@ -81,7 +81,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     #[cfg(feature = "debug")]
     msg!("Rebalancing");
 
-    let vault_value = ctx.accounts.vault.total_value;
+    let vault_value = ctx.accounts.vault.value.value;
     let clock = Clock::get()?;
 
     let assets = Assets {
@@ -95,19 +95,18 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     };
 
     // TODO reduce the duplication between the Enum and Struct
-    let strategy_weights = match ctx.accounts.vault.strategy_type {
-        StrategyType::MaxYield => {
-            MaxYieldStrategy.calculate_weights(&assets, ctx.accounts.vault.allocation_cap_pct)
-        }
+    let strategy_weights = match ctx.accounts.vault.config.strategy_type {
+        StrategyType::MaxYield => MaxYieldStrategy
+            .calculate_weights(&assets, ctx.accounts.vault.config.allocation_cap_pct),
         StrategyType::EqualAllocation => EqualAllocationStrategy
-            .calculate_weights(&assets, ctx.accounts.vault.allocation_cap_pct),
+            .calculate_weights(&assets, ctx.accounts.vault.config.allocation_cap_pct),
     }?;
 
     // Convert weights to allocations
     let strategy_allocations =
         Allocations::try_from_weights(strategy_weights, vault_value, clock.slot)?;
 
-    let final_allocations = match ctx.accounts.vault.rebalance_mode {
+    let final_allocations = match ctx.accounts.vault.config.rebalance_mode {
         RebalanceMode::ProofChecker => {
             let proposed_weights: StrategyWeights = proposed_weights_arg.into();
             let proposed_allocations =
@@ -119,11 +118,15 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                 proposed_weights
             );
 
-            match ctx.accounts.vault.strategy_type {
-                StrategyType::MaxYield => MaxYieldStrategy
-                    .verify_weights(&proposed_weights, ctx.accounts.vault.allocation_cap_pct),
-                StrategyType::EqualAllocation => EqualAllocationStrategy
-                    .verify_weights(&proposed_weights, ctx.accounts.vault.allocation_cap_pct),
+            match ctx.accounts.vault.config.strategy_type {
+                StrategyType::MaxYield => MaxYieldStrategy.verify_weights(
+                    &proposed_weights,
+                    ctx.accounts.vault.config.allocation_cap_pct,
+                ),
+                StrategyType::EqualAllocation => EqualAllocationStrategy.verify_weights(
+                    &proposed_weights,
+                    ctx.accounts.vault.config.allocation_cap_pct,
+                ),
             }?;
 
             let proposed_apr = get_apr(&proposed_weights, &proposed_allocations, &assets)?;

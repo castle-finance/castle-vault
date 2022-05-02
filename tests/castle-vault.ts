@@ -10,6 +10,7 @@ import {
     VaultClient,
     CastleVault,
     ProposedWeightsBps,
+    VaultConfig,
 } from "../sdk/src/index";
 import {
     DeploymentEnvs,
@@ -226,13 +227,7 @@ describe("castle-vault", () => {
         );
     }
 
-    async function initializeVault(
-        strategyType: StrategyType,
-        rebalanceMode: RebalanceMode,
-        feeCarryBps: number = 0,
-        feeMgmtBps: number = 0,
-        referralFeePct: number = 0
-    ) {
+    async function initializeVault(config: VaultConfig) {
         vaultClient = await VaultClient.initialize(
             provider,
             provider.wallet as anchor.Wallet,
@@ -241,12 +236,9 @@ describe("castle-vault", () => {
             solend,
             port,
             jet,
-            strategyType,
-            rebalanceMode,
             owner.publicKey,
-            { feeCarryBps, feeMgmtBps, referralFeeOwner, referralFeePct },
-            vaultDepositCap,
-            vaultAllocationCap,
+            referralFeeOwner,
+            config,
             program
         );
 
@@ -353,10 +345,10 @@ describe("castle-vault", () => {
             assert.isNotNull(vaultClient.getFeeReceiverAccountInfo());
             assert.isNotNull(vaultClient.getReferralFeeReceiverAccountInfo());
             assert.equal(
-                vaultClient.getDepositCap().toNumber(),
-                vaultDepositCap
+                vaultClient.getDepositCap().toString(),
+                "18446744073709551615"
             );
-            assert.equal(vaultClient.getAllocationCap(), vaultAllocationCap);
+            assert.equal(vaultClient.getAllocationCap(), 100);
         });
 
         it("Deposits to vault reserves", async function () {
@@ -416,7 +408,7 @@ describe("castle-vault", () => {
                 vaultClient.getDepositCap().toNumber(),
                 vaultDepositCap
             );
-            assert.equal(vaultClient.getAllocationCap(), vaultAllocationCap);
+            assert.equal(vaultClient.getAllocationCap(), 100);
         });
 
         it("Reject transaction if deposit cap is reached", async function () {
@@ -451,32 +443,36 @@ describe("castle-vault", () => {
         });
 
         it("Update deposit cap", async function () {
-            const newDepositCap = vaultDepositCap * 0.24;
-            const txs = await vaultClient.updateDepositCap(
-                owner,
-                newDepositCap
-            );
-            await provider.connection.confirmTransaction(
-                txs[txs.length - 1],
-                "singleGossip"
-            );
+            const oldConfig = vaultClient.getVaultConfig();
+            const newConfig = {
+                ...oldConfig,
+                depositCap: oldConfig.depositCap.mul(new anchor.BN(24)),
+            };
+            const tx = await vaultClient.updateConfig(owner, newConfig);
+            await provider.connection.confirmTransaction(tx, "singleGossip");
             await vaultClient.reload();
-            assert.equal(newDepositCap, vaultClient.getDepositCap().toNumber());
+            assert.equal(
+                newConfig.depositCap.toString(),
+                vaultClient.getDepositCap().toString()
+            );
         });
 
-        it("Reject unauthorized deposit cap update", async function () {
+        it("Reject unauthorized config update", async function () {
             const noPermissionUser = Keypair.generate();
 
-            const prevDepositCap = vaultClient.getDepositCap().toNumber();
-            const newDepositCap = prevDepositCap * 0.24;
+            const oldConfig = vaultClient.getVaultConfig();
+            const newConfig = {
+                ...oldConfig,
+                depositCap: oldConfig.depositCap.mul(new anchor.BN(24)),
+            };
 
             try {
-                const txs = await vaultClient.updateDepositCap(
+                const tx = await vaultClient.updateConfig(
                     noPermissionUser,
-                    newDepositCap
+                    newConfig
                 );
                 await provider.connection.confirmTransaction(
-                    txs[txs.length - 1],
+                    tx,
                     "singleGossip"
                 );
                 assert.fail("Transaction should be rejected but was not.");
@@ -486,8 +482,8 @@ describe("castle-vault", () => {
 
             await vaultClient.reload();
             assert.equal(
-                prevDepositCap,
-                vaultClient.getDepositCap().toNumber()
+                oldConfig.depositCap.toString(),
+                vaultClient.getDepositCap().toString()
             );
         });
     }
@@ -677,7 +673,7 @@ describe("castle-vault", () => {
         return new Promise((res) => setTimeout(res, t));
     }
 
-    function testFeeComputation(
+    function testFees(
         feeCarryBps: number = 0,
         feeMgmtBps: number = 0,
         referalPct: number = 0
@@ -729,85 +725,70 @@ describe("castle-vault", () => {
         });
 
         it("Update fee rates", async function () {
-            const prevFees = vaultClient.getFees();
-            const newFeeCarryBps = prevFees.feeCarryBps / 2;
-            const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
-            const newReferralFeePct = prevFees.referralFeePct / 2;
-
-            const txs = await vaultClient.updateFees(
-                owner,
-                newFeeCarryBps,
-                newFeeMgmtBps,
-                newReferralFeePct
-            );
-            await provider.connection.confirmTransaction(
-                txs[txs.length - 1],
-                "singleGossip"
-            );
-            await vaultClient.reload();
-            const actualFees = vaultClient.getFees();
-            assert.equal(newFeeCarryBps, actualFees.feeCarryBps);
-            assert.equal(newFeeMgmtBps, actualFees.feeMgmtBps);
-            assert.equal(newReferralFeePct, actualFees.referralFeePct);
-        });
-
-        it("Reject unauthorized fee rate update", async function () {
-            const prevFees = vaultClient.getFees();
-            const newFeeCarryBps = prevFees.feeCarryBps / 2;
-            const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
-            const newReferralFeePct = prevFees.referralFeePct / 2;
-
-            const noPermissionUser = Keypair.generate();
-
-            try {
-                const txs = await vaultClient.updateFees(
-                    noPermissionUser,
-                    newFeeCarryBps,
-                    newFeeMgmtBps,
-                    newReferralFeePct
-                );
-                await provider.connection.confirmTransaction(
-                    txs[txs.length - 1],
-                    "singleGossip"
-                );
-                assert.fail("Transaction should be rejected but was not.");
-            } catch (err) {
-                // TODO check err
-            }
+            const oldConfig = vaultClient.getVaultConfig();
+            const newConfig = {
+                ...oldConfig,
+                feeCarryBps: oldConfig.feeCarryBps / 2,
+                feeMgmtBps: oldConfig.feeMgmtBps / 2,
+                referralFeePct: oldConfig.referralFeePct / 2,
+            };
+            const txSig = await vaultClient.updateConfig(owner, newConfig);
+            await provider.connection.confirmTransaction(txSig, "singleGossip");
 
             await vaultClient.reload();
-            const actualFees = vaultClient.getFees();
-            assert.equal(prevFees.feeCarryBps, actualFees.feeCarryBps);
-            assert.equal(prevFees.feeMgmtBps, actualFees.feeMgmtBps);
-            assert.equal(prevFees.referralFeePct, actualFees.referralFeePct);
+            assert.equal(
+                newConfig.feeCarryBps,
+                vaultClient.getCarryFee() * 10000
+            );
+            assert.equal(
+                newConfig.feeMgmtBps,
+                vaultClient.getManagementFee() * 10000
+            );
+            assert.equal(
+                newConfig.referralFeePct,
+                vaultClient.getReferralFeeSplit() * 100
+            );
         });
 
         it("Reject invalid fee rates", async function () {
-            const prevFees = vaultClient.getFees();
-            const newFeeCarryBps = prevFees.feeCarryBps / 2;
-            const newFeeMgmtBps = prevFees.feeMgmtBps / 2;
-            const newReferralFeePct = 80;
+            const errorCode = program.idl.errors
+                .find((e) => e.name == "InvalidReferralFeeConfig")
+                .code.toString(16);
+
+            const oldConfig = vaultClient.getVaultConfig();
+            const newConfig = {
+                ...oldConfig,
+                feeCarryBps: oldConfig.feeCarryBps / 2,
+                feeMgmtBps: oldConfig.feeMgmtBps / 2,
+                referralFeePct: 110,
+            };
             try {
-                const txs = await vaultClient.updateFees(
-                    owner,
-                    newFeeCarryBps,
-                    newFeeMgmtBps,
-                    newReferralFeePct
-                );
+                const txSig = await vaultClient.updateConfig(owner, newConfig);
                 await provider.connection.confirmTransaction(
-                    txs[txs.length - 1],
+                    txSig,
                     "singleGossip"
                 );
                 assert.fail("Transaction should be rejected but was not.");
             } catch (err) {
-                // TODO check err
+                assert.isTrue(
+                    err.message.includes(errorCode),
+                    `Error code ${errorCode} not included in error message: ${err}`
+                );
             }
 
             await vaultClient.reload();
-            const actualFees = vaultClient.getFees();
-            assert.equal(prevFees.feeCarryBps, actualFees.feeCarryBps);
-            assert.equal(prevFees.feeMgmtBps, actualFees.feeMgmtBps);
-            assert.equal(prevFees.referralFeePct, actualFees.referralFeePct);
+            assert.equal(
+                oldConfig.feeCarryBps,
+                vaultClient.getCarryFee() * 10000
+            );
+            assert.equal(
+                oldConfig.feeMgmtBps,
+                vaultClient.getManagementFee() * 10000
+            );
+            assert.equal(
+                oldConfig.referralFeePct,
+                vaultClient.getReferralFeeSplit() * 100
+            );
         });
     }
 
@@ -815,10 +796,10 @@ describe("castle-vault", () => {
         describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.equalAllocation,
-                    RebalanceModes.calculator
-                );
+                await initializeVault({
+                    strategyType: { [StrategyTypes.equalAllocation]: {} },
+                    rebalanceMode: { [RebalanceModes.calculator]: {} },
+                });
             });
             testDepositAndWithdrawal();
         });
@@ -826,10 +807,11 @@ describe("castle-vault", () => {
         describe("Deposit cap", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.equalAllocation,
-                    RebalanceModes.calculator
-                );
+                await initializeVault({
+                    depositCap: new anchor.BN(vaultDepositCap),
+                    strategyType: { [StrategyTypes.equalAllocation]: {} },
+                    rebalanceMode: { [RebalanceModes.calculator]: {} },
+                });
             });
             testDepositCap();
         });
@@ -837,10 +819,10 @@ describe("castle-vault", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.equalAllocation,
-                    RebalanceModes.calculator
-                );
+                await initializeVault({
+                    strategyType: { [StrategyTypes.equalAllocation]: {} },
+                    rebalanceMode: { [RebalanceModes.calculator]: {} },
+                });
             });
             testRebalance(1 / 3, 1 / 3, 1 / 3);
         });
@@ -852,15 +834,15 @@ describe("castle-vault", () => {
 
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.equalAllocation,
-                    RebalanceModes.calculator,
+                await initializeVault({
                     feeCarryBps,
                     feeMgmtBps,
-                    referralFeePct
-                );
+                    referralFeePct,
+                    strategyType: { [StrategyTypes.equalAllocation]: {} },
+                    rebalanceMode: { [RebalanceModes.calculator]: {} },
+                });
             });
-            testFeeComputation(feeCarryBps, feeMgmtBps, referralFeePct);
+            testFees(feeCarryBps, feeMgmtBps, referralFeePct);
         });
     });
 
@@ -868,10 +850,7 @@ describe("castle-vault", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(
-                    StrategyTypes.maxYield,
-                    RebalanceModes.calculator
-                );
+                await initializeVault({ allocationCapPct: vaultAllocationCap });
             });
 
             testRebalance(
@@ -890,7 +869,11 @@ describe("castle-vault", () => {
             const rebalanceMode = RebalanceModes.proofChecker;
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault(StrategyTypes.maxYield, rebalanceMode);
+                await initializeVault({
+                    allocationCapPct: vaultAllocationCap,
+                    strategyType: { [StrategyTypes.maxYield]: {} },
+                    rebalanceMode: { [RebalanceModes.proofChecker]: {} },
+                });
             });
             testRebalance(
                 1 - vaultAllocationCap / 100,
