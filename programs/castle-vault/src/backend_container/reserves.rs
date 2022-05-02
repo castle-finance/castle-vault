@@ -19,24 +19,24 @@ impl BackendContainer<Reserves> {
         &self,
         allocation_cap_pct: u8,
     ) -> Result<BackendContainer<Rate>, ProgramError> {
-        // TODO is there a cleaner way to do this with combinators?
-        let sorted: Vec<(Provider, &Reserves)> = self
-            .into_iter()
-            .sorted_unstable_by(|(_, alloc_x), (_, alloc_y)| {
+        self.into_iter()
+            .sorted_unstable_by(|(_, alloc_y), (_, alloc_x)| {
                 // TODO: can we remove the unwrap() in any way?
                 self.compare(*alloc_x, *alloc_y).unwrap()
             })
-            .collect();
-
-        let cap = Rate::from_percent(allocation_cap_pct);
-        let mut remaining_weight = Rate::one();
-        let mut strategy_weights = BackendContainer::<Rate>::default();
-        for (p, _) in sorted {
-            let target_weight = remaining_weight.min(cap);
-            remaining_weight = remaining_weight.try_sub(target_weight)?;
-            strategy_weights[p] = target_weight;
-        }
-        Ok(strategy_weights)
+            .try_fold(
+                (BackendContainer::<Rate>::default(), Rate::one()),
+                |(strategy_weights, remaining_weight), (provider, _)| {
+                    let target_weight =
+                        remaining_weight.min(Rate::from_percent(allocation_cap_pct));
+                    strategy_weights[provider] = target_weight;
+                    match remaining_weight.try_sub(target_weight) {
+                        Ok(r) => Ok((strategy_weights, r)),
+                        Err(e) => Err(e),
+                    }
+                },
+            )
+            .and_then(|t| Ok(t.0))
     }
 
     fn calculate_weights_equal(&self) -> Result<BackendContainer<Rate>, ProgramError> {
