@@ -48,14 +48,13 @@ const main = async () => {
         solend,
         port,
         jet,
-        StrategyTypes.maxYield,
-        RebalanceModes.proofChecker,
         wallet.publicKey,
         new PublicKey("jvUsXAgE2Gg92BbEBDAu7h5p8SEZpVjFqURJkzSsLNk"),
-        0,
-        0,
-        0,
-        55
+        {
+            allocationCapPct: 60,
+            rebalanceMode: { [RebalanceModes.proofChecker]: {} },
+            strategyType: { [StrategyTypes.maxYield]: {} },
+        }
     );
     console.log(vaultClient.vaultId.toString());
 };
