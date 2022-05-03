@@ -125,6 +125,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                         proposed_weights.inner
                     );
 
+                    // Check that proposed weights meet necessary constraints
                     proposed_weights
                         .verify_weights(ctx.accounts.vault.config.allocation_cap_pct)?;
 
@@ -138,6 +139,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                         proof_apr
                     );
 
+                    // Return error if APR from proposed weights is not higher than proof weights
                     (proposed_apr >= proof_apr).as_result(
                         proposed_allocations,
                         ErrorCode::RebalanceProofCheckFailed.into(),
