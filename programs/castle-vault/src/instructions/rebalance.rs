@@ -9,7 +9,7 @@ use port_anchor_adaptor::PortReserve;
 use solana_maths::Rate;
 
 use crate::adapters::SolendReserve;
-use crate::backend_container::BackendContainer;
+use crate::asset_container::AssetContainer;
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;
 use crate::reserves::{Provider, Reserves};
@@ -62,9 +62,9 @@ pub struct Rebalance<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl TryFrom<&Rebalance<'_>> for BackendContainer<Reserves> {
+impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
     type Error = ProgramError;
-    fn try_from(r: &Rebalance<'_>) -> Result<BackendContainer<Reserves>, Self::Error> {
+    fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>, Self::Error> {
         // NOTE: I tried pretty hard to get rid of these clones and only use the references.
         // The problem is that these references originate from a deref() (or as_ref())
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
@@ -73,7 +73,7 @@ impl TryFrom<&Rebalance<'_>> for BackendContainer<Reserves> {
         let solend = Some(Reserves::Solend(r.solend_reserve.deref().deref().clone()));
         let port = Some(Reserves::Port(r.port_reserve.deref().deref().clone()));
         let jet = Some(Reserves::Jet(Box::new(*r.jet_reserve.load()?)));
-        Ok(BackendContainer {
+        Ok(AssetContainer {
             inner: [solend, port, jet],
         })
     }
@@ -88,7 +88,7 @@ pub struct StrategyWeightsArg {
 impl_provider_index!(StrategyWeightsArg, u16);
 
 // TODO use existing From impl
-impl From<StrategyWeightsArg> for BackendContainer<Rate> {
+impl From<StrategyWeightsArg> for AssetContainer<Rate> {
     fn from(s: StrategyWeightsArg) -> Self {
         Provider::iter().fold(Self::default(), |mut acc, provider| {
             acc[provider] = Rate::from_bips(s[provider] as u64);
@@ -105,19 +105,19 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     let vault_value = ctx.accounts.vault.value.value;
     let slot = Clock::get()?.slot;
 
-    let assets = Box::new(BackendContainer::try_from(&*ctx.accounts)?);
+    let assets = Box::new(AssetContainer::try_from(&*ctx.accounts)?);
     let strategy_weights = assets.calculate_weights(
         ctx.accounts.vault.config.strategy_type,
         ctx.accounts.vault.config.allocation_cap_pct,
     )?;
 
-    BackendContainer::<u64>::try_from_weights(&strategy_weights, vault_value)
+    AssetContainer::<u64>::try_from_weights(&strategy_weights, vault_value)
         .and_then(
             |strategy_allocations| match ctx.accounts.vault.config.rebalance_mode {
                 RebalanceMode::ProofChecker => {
-                    let proposed_weights = BackendContainer::<Rate>::from(proposed_weights_arg);
+                    let proposed_weights = AssetContainer::<Rate>::from(proposed_weights_arg);
                     let proposed_allocations =
-                        BackendContainer::<u64>::try_from_weights(&strategy_weights, vault_value)?;
+                        AssetContainer::<u64>::try_from_weights(&strategy_weights, vault_value)?;
 
                     #[cfg(feature = "debug")]
                     msg!(

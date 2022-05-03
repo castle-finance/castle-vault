@@ -4,9 +4,9 @@ use solana_maths::{Rate, TryAdd};
 
 use crate::errors::ErrorCode;
 
-use super::BackendContainerGeneric;
+use super::AssetContainerGeneric;
 
-impl<const N: usize> BackendContainerGeneric<Rate, N> {
+impl<const N: usize> AssetContainerGeneric<Rate, N> {
     pub fn verify_weights(&self, allocation_cap_pct: u8) -> Result<(), ProgramError> {
         let cap = &Rate::from_percent(allocation_cap_pct);
         let max = self
@@ -24,8 +24,8 @@ impl<const N: usize> BackendContainerGeneric<Rate, N> {
     }
 }
 
-impl<const N: usize> From<BackendContainerGeneric<u16, N>> for BackendContainerGeneric<Rate, N> {
-    fn from(c: BackendContainerGeneric<u16, N>) -> Self {
+impl<const N: usize> From<AssetContainerGeneric<u16, N>> for AssetContainerGeneric<Rate, N> {
+    fn from(c: AssetContainerGeneric<u16, N>) -> Self {
         c.apply(|_, v| Rate::from_bips(u64::from(*v)))
     }
 }

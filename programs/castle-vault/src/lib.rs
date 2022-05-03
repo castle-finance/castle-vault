@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 pub mod adapters;
-pub mod backend_container;
+pub mod asset_container;
 pub mod errors;
 pub mod instructions;
 pub mod math;

@@ -4,9 +4,9 @@ use strum::IntoEnumIterator;
 
 use crate::reserves::{Provider, ProviderIter};
 
-use super::BackendContainerGeneric;
+use super::AssetContainerGeneric;
 
-impl<'a, T, const N: usize> IntoIterator for &'a BackendContainerGeneric<T, N> {
+impl<'a, T, const N: usize> IntoIterator for &'a AssetContainerGeneric<T, N> {
     type Item = (Provider, &'a T);
     type IntoIter = BackendContainerIterator<'a, T, N>;
 
@@ -18,7 +18,7 @@ impl<'a, T, const N: usize> IntoIterator for &'a BackendContainerGeneric<T, N> {
     }
 }
 
-impl<T, const N: usize> IntoIterator for BackendContainerGeneric<T, N> {
+impl<T, const N: usize> IntoIterator for AssetContainerGeneric<T, N> {
     type Item = (Provider, T);
     type IntoIter = OwnedBackendContainerIterator<T, N>;
 
@@ -31,7 +31,7 @@ impl<T, const N: usize> IntoIterator for BackendContainerGeneric<T, N> {
 }
 
 pub struct BackendContainerIterator<'inner, T, const N: usize> {
-    inner: &'inner BackendContainerGeneric<T, N>,
+    inner: &'inner AssetContainerGeneric<T, N>,
     inner_iter: ProviderIter,
 }
 
@@ -46,7 +46,7 @@ impl<'inner, T, const N: usize> Iterator for BackendContainerIterator<'inner, T,
 }
 
 pub struct OwnedBackendContainerIterator<T, const N: usize> {
-    inner: BackendContainerGeneric<T, N>,
+    inner: AssetContainerGeneric<T, N>,
     inner_iter: ProviderIter,
 }
 
@@ -66,10 +66,10 @@ impl<T, const N: usize> Iterator for OwnedBackendContainerIterator<T, N> {
 }
 
 // Allows us to create a BackendContainerGeneric<T, N> from an Iterator that yields (Provider, T)
-impl<T: Default, const N: usize> FromIterator<(Provider, T)> for BackendContainerGeneric<T, N> {
+impl<T: Default, const N: usize> FromIterator<(Provider, T)> for AssetContainerGeneric<T, N> {
     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
         iter.into_iter().fold(
-            BackendContainerGeneric::default(),
+            AssetContainerGeneric::default(),
             |mut acc, (provider, v)| {
                 acc[provider] = v;
                 acc

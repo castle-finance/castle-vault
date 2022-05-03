@@ -1,11 +1,11 @@
 use anchor_lang::prelude::ProgramError;
 use solana_maths::{Decimal, Rate, TryMul};
 
-use super::BackendContainerGeneric;
+use super::AssetContainerGeneric;
 
-impl<const N: usize> BackendContainerGeneric<u64, N> {
+impl<const N: usize> AssetContainerGeneric<u64, N> {
     pub fn try_from_weights(
-        rates: &BackendContainerGeneric<Rate, N>,
+        rates: &AssetContainerGeneric<Rate, N>,
         vault_value: u64,
     ) -> Result<Self, ProgramError> {
         rates.try_apply(|_provider, rate| {

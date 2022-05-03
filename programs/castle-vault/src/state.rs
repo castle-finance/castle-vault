@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 use strum::IntoEnumIterator;
 use type_layout::TypeLayout;
 
-use crate::backend_container::BackendContainer;
+use crate::asset_container::AssetContainer;
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;
 use crate::instructions::VaultConfigArg;
@@ -211,7 +211,7 @@ pub struct Allocations {
 impl_provider_index!(Allocations, SlotTrackedValue);
 
 impl Allocations {
-    pub fn from_container(c: BackendContainer<u64>, slot: u64) -> Self {
+    pub fn from_container(c: AssetContainer<u64>, slot: u64) -> Self {
         Provider::iter().fold(Self::default(), |mut acc, provider| {
             acc[provider].update(c[provider], slot);
             acc
