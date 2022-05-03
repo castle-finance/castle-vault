@@ -10,6 +10,7 @@ use type_layout::TypeLayout;
 use crate::backend_container::BackendContainer;
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;
+use crate::instructions::VaultConfigArg;
 use crate::reserves::Provider;
 
 /// Number of slots per year
@@ -21,9 +22,11 @@ pub const ONE_AS_BPS: u64 = 10000;
 #[assert_size(768)]
 #[account]
 #[repr(C, align(8))]
-#[derive(TypeLayout, Debug)]
+#[derive(Debug, TypeLayout)]
 pub struct Vault {
-    pub version: u8,
+    /// Program version when initialized: [major, minor, patch]
+    pub version: [u8; 3],
+
     /// Account which is allowed to call restricted instructions
     /// Also the authority of the fee receiver account
     pub owner: Pubkey,
@@ -59,49 +62,37 @@ pub struct Vault {
     /// Mint address of the tokens that are stored in vault
     pub reserve_token_mint: Pubkey,
 
-    /// Whether to run rebalance as a proof check or a calculation
-    pub rebalance_mode: RebalanceMode,
+    pub fee_receiver: Pubkey,
 
-    /// Strategy type that is executed during rebalance
-    pub strategy_type: StrategyType,
+    pub referral_fee_receiver: Pubkey,
 
-    /// Max percentage to allocate to each pool
-    pub allocation_cap_pct: u8,
-
-    /// Explicit padding to guarantee alignment
-    _padding0: [u8; 3],
-
-    pub fees: VaultFees,
-
-    /// Last slot when vault was refreshed
-    pub last_update: LastUpdate,
+    _padding: [u8; 4],
 
     /// Total value of vault denominated in the reserve token
-    pub total_value: u64,
-
-    /// Max num of reserve tokens. If total_value grows higher than this, will stop accepting deposits.
-    pub deposit_cap: u64,
+    pub value: SlotTrackedValue,
 
     /// Prospective allocations set by rebalance, executed by reconciles
     pub allocations: Allocations,
 
-    // 8 * 24 = 192
+    pub config: VaultConfig,
+
+    // 8 * 23 = 184
     /// Reserved space for future upgrades
-    _reserved: [u64; 24],
+    _reserved: [u64; 23],
 }
 
 impl Vault {
     // TODO use a more specific error type
     pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
-        let vault_value_diff = new_vault_value.saturating_sub(self.total_value);
-        let slots_elapsed = self.last_update.slots_elapsed(slot)?;
+        let vault_value_diff = new_vault_value.saturating_sub(self.value.value);
+        let slots_elapsed = self.value.last_update.slots_elapsed(slot)?;
 
         let carry = vault_value_diff
-            .checked_mul(self.fees.fee_carry_bps as u64)
+            .checked_mul(self.config.fee_carry_bps as u64)
             .ok_or(ErrorCode::OverflowError)?
             / ONE_AS_BPS;
 
-        let mgmt = [self.fees.fee_mgmt_bps as u64, slots_elapsed]
+        let mgmt = [self.config.fee_mgmt_bps as u64, slots_elapsed]
             .iter()
             .try_fold(new_vault_value, |acc, r| acc.checked_mul(*r))
             .ok_or(ErrorCode::OverflowError)?
@@ -112,7 +103,7 @@ impl Vault {
         {
             msg!("Slots elapsed: {}", slots_elapsed);
             msg!("New vault value: {}", new_vault_value);
-            msg!("Old vault value: {}", self.total_value);
+            msg!("Old vault value: {}", self.value.value);
             msg!("Carry fee: {}", carry);
             msg!("Mgmt fee: {}", mgmt);
         }
@@ -121,17 +112,77 @@ impl Vault {
         Ok(fees)
     }
 
-    pub fn update_value(&mut self, new_value: u64, slot: u64) {
-        self.total_value = new_value;
-        self.last_update.update_slot(slot);
-    }
-
     pub fn authority_seeds(&self) -> [&[u8]; 3] {
         [
             self.authority_seed.as_ref(),
             b"authority".as_ref(),
             &self.authority_bump,
         ]
+    }
+}
+
+#[assert_size(aligns, 32)]
+#[repr(C, align(8))]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, TypeLayout)]
+pub struct VaultConfig {
+    /// Max num of reserve tokens. If total_value grows higher than this, will stop accepting deposits.
+    pub deposit_cap: u64,
+
+    /// Basis points of the accrued interest that gets sent to the fee_receiver
+    pub fee_carry_bps: u32,
+
+    /// Basis points of the AUM that gets sent to the fee_receiver
+    pub fee_mgmt_bps: u32,
+
+    /// Referral fee share for fee splitting
+    pub referral_fee_pct: u8,
+
+    /// Max percentage to allocate to each pool
+    pub allocation_cap_pct: u8,
+
+    /// Whether to run rebalance as a proof check or a calculation
+    pub rebalance_mode: RebalanceMode,
+
+    /// Strategy type that is executed during rebalance
+    pub strategy_type: StrategyType,
+
+    // 4 * 3 = 12
+    _padding: [u32; 3],
+}
+
+impl VaultConfig {
+    pub fn new(config: VaultConfigArg) -> Result<Self, ProgramError> {
+        // Fee cannot be over 100%
+        if config.fee_carry_bps > 10000 {
+            return Err(ErrorCode::InvalidFeeConfig.into());
+        }
+
+        // Fee cannot be over 100%
+        if config.fee_mgmt_bps > 10000 {
+            return Err(ErrorCode::InvalidFeeConfig.into());
+        }
+
+        // Referral percentage cannot be over 50%
+        if config.referral_fee_pct > 50 {
+            return Err(ErrorCode::InvalidReferralFeeConfig.into());
+        }
+
+        // compute the lower limit of the cap using number of yield sources
+        // TODO get this from MAX const in Chris's changes
+        if !(34..=100).contains(&config.allocation_cap_pct) {
+            return Err(ErrorCode::InvalidAllocationCap.into());
+        }
+
+        Ok(Self {
+            deposit_cap: config.deposit_cap,
+            fee_carry_bps: config.fee_carry_bps,
+            fee_mgmt_bps: config.fee_mgmt_bps,
+            referral_fee_pct: config.referral_fee_pct,
+            allocation_cap_pct: config.allocation_cap_pct,
+            rebalance_mode: config.rebalance_mode,
+            strategy_type: config.strategy_type,
+            _padding: [0; 3],
+        })
     }
 }
 
@@ -149,76 +200,35 @@ pub enum StrategyType {
     EqualAllocation,
 }
 
-#[assert_size(aligns, 80)]
-#[repr(C, align(8))]
-#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
-pub struct VaultFees {
-    /// Basis points of the accrued interest that gets sent to the fee_receiver
-    pub fee_carry_bps: u32,
-
-    /// Basis points of the AUM that gets sent to the fee_receiver
-    pub fee_mgmt_bps: u32,
-
-    /// Referral fee share for fee splitting
-    pub referral_fee_pct: u8,
-
-    /// Account that primary fees from this vault are sent to
-    pub fee_receiver: Pubkey,
-
-    /// Account that referral fees from this vault are sent to
-    pub referral_fee_receiver: Pubkey,
-
-    _padding: [u8; 7],
-}
-
-impl VaultFees {
-    pub fn new(
-        fee_carry_bps: u32,
-        fee_mgmt_bps: u32,
-        referral_fee_pct: u8,
-        fee_receiver: Pubkey,
-        referral_fee_receiver: Pubkey,
-    ) -> Self {
-        Self {
-            fee_carry_bps,
-            fee_mgmt_bps,
-            referral_fee_pct,
-            fee_receiver,
-            referral_fee_receiver,
-            _padding: [0_u8; 7],
-        }
-    }
-}
-
 #[assert_size(aligns, 72)]
 #[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
-    pub solend: Allocation,
-    pub port: Allocation,
-    pub jet: Allocation,
+    pub solend: SlotTrackedValue,
+    pub port: SlotTrackedValue,
+    pub jet: SlotTrackedValue,
 }
-impl_provider_index!(Allocations, Allocation);
+impl_provider_index!(Allocations, SlotTrackedValue);
 
-impl From<BackendContainer<Allocation>> for Allocations {
-    fn from(c: BackendContainer<Allocation>) -> Self {
-        let mut a = Allocations::default();
-        for p in Provider::iter() {
-            a[p] = c[p]
-        }
-        a
+impl From<BackendContainer<SlotTrackedValue>> for Allocations {
+    fn from(c: BackendContainer<SlotTrackedValue>) -> Self {
+        Provider::iter().fold(Self::default(), |mut acc, provider| {
+            acc[provider] = c[provider];
+            acc
+        })
     }
 }
 
-#[assert_size(aligns, 24)]
+// This should be a generic, but anchor doesn't support that yet
+// https://github.com/project-serum/anchor/issues/1849
 #[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
-pub struct Allocation {
+pub struct SlotTrackedValue {
     pub value: u64,
     pub last_update: LastUpdate,
 }
 
-impl Allocation {
+impl SlotTrackedValue {
     pub fn update(&mut self, value: u64, slot: u64) {
         self.value = value;
         self.last_update.update_slot(slot);
@@ -299,5 +309,6 @@ mod tests {
     #[test]
     fn print_vault_layout() {
         println!("{}", Vault::type_layout());
+        println!("{}", VaultConfig::type_layout());
     }
 }

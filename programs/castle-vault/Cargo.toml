@@ -4,10 +4,9 @@ description = "Castle Vault program"
 edition = "2018"
 homepage = "https://castle.finance"
 license = "GPL-3.0-or-later"
-license-file = "../../LICENSE"
 name = "castle-vault"
 repository = "https://github.com/castle-finance/castle-vault/"
-version = "1.7.0"
+version = "2.0.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]

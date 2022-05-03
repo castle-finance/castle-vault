@@ -8,7 +8,6 @@ pub mod math;
 pub mod reserves;
 pub mod state;
 
-use crate::state::{RebalanceMode, StrategyType};
 use adapters::*;
 use instructions::*;
 
@@ -25,32 +24,13 @@ pub mod castle_vault {
     pub fn initialize(
         ctx: Context<Initialize>,
         _bumps: InitBumpSeeds,
-        strategy_type: StrategyType,
-        rebalance_mode: RebalanceMode,
-        fees: FeeArgs,
-        deposit_cap: u64,
-        allocation_cap_pct: u8,
+        config: VaultConfigArg,
     ) -> ProgramResult {
-        instructions::init::handler(
-            ctx,
-            _bumps,
-            strategy_type,
-            rebalance_mode,
-            fees,
-            deposit_cap,
-            allocation_cap_pct,
-        )
+        instructions::init::handler(ctx, _bumps, config)
     }
 
-    pub fn update_deposit_cap(
-        ctx: Context<UpdateDepositCap>,
-        deposit_cap_new_value: u64,
-    ) -> ProgramResult {
-        instructions::update_deposit_cap::handler(ctx, deposit_cap_new_value)
-    }
-
-    pub fn update_fees(ctx: Context<UpdateFees>, new_fees: FeeArgs) -> ProgramResult {
-        instructions::update_fees::handler(ctx, new_fees)
+    pub fn update_config(ctx: Context<UpdateConfig>, new_config: VaultConfigArg) -> ProgramResult {
+        instructions::update_config::handler(ctx, new_config)
     }
 
     pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {

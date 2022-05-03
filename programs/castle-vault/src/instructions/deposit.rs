@@ -19,7 +19,7 @@ pub struct Deposit<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
-        constraint = !vault.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
+        constraint = !vault.value.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
         has_one = lp_token_mint,
         has_one = vault_authority,
         has_one = vault_reserve_token,
@@ -93,18 +93,19 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
     let lp_tokens_to_mint = crate::math::calc_reserve_to_lp(
         reserve_token_amount,
         ctx.accounts.lp_token_mint.supply,
-        vault.total_value,
+        vault.value.value,
     )
     .ok_or(ErrorCode::MathError)?;
 
     let total_value = ctx
         .accounts
         .vault
-        .total_value
+        .value
+        .value
         .checked_add(reserve_token_amount)
         .ok_or(ErrorCode::OverflowError)?;
 
-    if total_value > ctx.accounts.vault.deposit_cap {
+    if total_value > ctx.accounts.vault.config.deposit_cap {
         msg!("Deposit cap reached");
         return Err(ErrorCode::DepositCapError.into());
     }
@@ -122,10 +123,11 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
     )?;
 
     // This is so that the SDK can read an up-to-date total value without calling refresh
-    ctx.accounts.vault.total_value = ctx
+    ctx.accounts.vault.value.value = ctx
         .accounts
         .vault
-        .total_value
+        .value
+        .value
         .checked_add(reserve_token_amount)
         .ok_or(ErrorCode::MathError)?;
 

@@ -46,7 +46,7 @@ pub struct Rebalance<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
-        constraint = !vault.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
+        constraint = !vault.value.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
         has_one = solend_reserve,
         has_one = port_reserve,
         has_one = jet_reserve,
@@ -102,25 +102,26 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     #[cfg(feature = "debug")]
     msg!("Rebalancing");
 
-    let vault_value = ctx.accounts.vault.total_value;
+    let vault_value = ctx.accounts.vault.value.value;
     let slot = Clock::get()?.slot;
 
     let assets = Box::new(BackendContainer::try_from(&*ctx.accounts)?);
     let strategy_weights = assets.calculate_weights(
-        ctx.accounts.vault.strategy_type,
-        ctx.accounts.vault.allocation_cap_pct,
+        ctx.accounts.vault.config.strategy_type,
+        ctx.accounts.vault.config.allocation_cap_pct,
     )?;
 
-    BackendContainer::<Allocation>::try_from_weights(&strategy_weights, vault_value, slot)
+    BackendContainer::<SlotTrackedValue>::try_from_weights(&strategy_weights, vault_value, slot)
         .and_then(
-            |strategy_allocations| match ctx.accounts.vault.rebalance_mode {
+            |strategy_allocations| match ctx.accounts.vault.config.rebalance_mode {
                 RebalanceMode::ProofChecker => {
                     let proposed_weights = BackendContainer::<Rate>::from(proposed_weights_arg);
-                    let proposed_allocations = BackendContainer::<Allocation>::try_from_weights(
-                        &strategy_weights,
-                        vault_value,
-                        slot,
-                    )?;
+                    let proposed_allocations =
+                        BackendContainer::<SlotTrackedValue>::try_from_weights(
+                            &strategy_weights,
+                            vault_value,
+                            slot,
+                        )?;
 
                     #[cfg(feature = "debug")]
                     msg!(
@@ -128,7 +129,8 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                         proposed_weights.inner
                     );
 
-                    proposed_weights.verify_weights(ctx.accounts.vault.allocation_cap_pct)?;
+                    proposed_weights
+                        .verify_weights(ctx.accounts.vault.config.allocation_cap_pct)?;
 
                     let proposed_apr = assets.get_apr(&proposed_weights, &proposed_allocations)?;
                     let proof_apr = assets.get_apr(&strategy_weights, &strategy_allocations)?;

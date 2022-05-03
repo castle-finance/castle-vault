@@ -1,11 +1,11 @@
 use anchor_lang::prelude::ProgramError;
 use solana_maths::{Decimal, Rate, TryMul};
 
-use crate::state::{Allocation, LastUpdate};
+use crate::state::{LastUpdate, SlotTrackedValue};
 
 use super::BackendContainerGeneric;
 
-impl<const N: usize> BackendContainerGeneric<Allocation, N> {
+impl<const N: usize> BackendContainerGeneric<SlotTrackedValue, N> {
     pub fn try_from_weights(
         rates: &BackendContainerGeneric<Rate, N>,
         vault_value: u64,
@@ -15,7 +15,7 @@ impl<const N: usize> BackendContainerGeneric<Allocation, N> {
             rate.try_mul(vault_value).and_then(|product| {
                 Decimal::from(product)
                     .try_floor_u64()
-                    .map(|value| Allocation {
+                    .map(|value| SlotTrackedValue {
                         value,
                         last_update: LastUpdate::new(slot),
                     })

@@ -36,3 +36,13 @@ TODO add instructions on downloading and building integration test dependencies
 ```
 $ anchor test
 ```
+
+## Version semantics
+
+eg. v1.2.3 → (1: major, 2: minor, 3: patch)
+
+Major version bump indicates a backwards-incompatible change in the program API
+
+Minor version bump indicates a backwards-incompatible change in the SDK API
+
+Patch versions are bumped for any backwards-compatible change
