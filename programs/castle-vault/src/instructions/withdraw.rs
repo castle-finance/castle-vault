@@ -20,7 +20,7 @@ pub struct Withdraw<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
-        //constraint = !vault.value.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
+        constraint = !vault.value.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = lp_token_mint,
