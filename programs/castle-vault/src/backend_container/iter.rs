@@ -66,7 +66,7 @@ impl<T, const N: usize> Iterator for OwnedBackendContainerIterator<T, N> {
 }
 
 // Allows us to create a BackendContainerGeneric<T, N> from an Iterator that yields (Provider, T)
-impl<T, const N: usize> FromIterator<(Provider, T)> for BackendContainerGeneric<T, N> {
+impl<T: Default, const N: usize> FromIterator<(Provider, T)> for BackendContainerGeneric<T, N> {
     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
         iter.into_iter().fold(
             BackendContainerGeneric::default(),

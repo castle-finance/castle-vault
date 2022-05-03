@@ -26,7 +26,7 @@ impl BackendContainer<Reserves> {
             })
             .try_fold(
                 (BackendContainer::<Rate>::default(), Rate::one()),
-                |(strategy_weights, remaining_weight), (provider, _)| {
+                |(mut strategy_weights, remaining_weight), (provider, _)| {
                     let target_weight =
                         remaining_weight.min(Rate::from_percent(allocation_cap_pct));
                     strategy_weights[provider] = target_weight;

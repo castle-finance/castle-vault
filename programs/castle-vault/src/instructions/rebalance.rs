@@ -32,11 +32,10 @@ impl_provider_index!(RebalanceDataEvent, u64);
 
 impl From<&Allocations> for RebalanceDataEvent {
     fn from(allocations: &Allocations) -> Self {
-        let mut r = Self::default();
-        for p in Provider::iter() {
-            r[p] = allocations[p].value
-        }
-        r
+        Provider::iter().fold(Self::default(), |mut acc, provider| {
+            acc[provider] = allocations[provider].value;
+            acc
+        })
     }
 }
 
@@ -88,13 +87,13 @@ pub struct StrategyWeightsArg {
 }
 impl_provider_index!(StrategyWeightsArg, u16);
 
+// TODO use existing From impl
 impl From<StrategyWeightsArg> for BackendContainer<Rate> {
     fn from(s: StrategyWeightsArg) -> Self {
-        let mut rate_container = Self::default();
-        for p in Provider::iter() {
-            rate_container[p] = Rate::from_bips(s[p] as u64);
-        }
-        rate_container
+        Provider::iter().fold(Self::default(), |mut acc, provider| {
+            acc[provider] = Rate::from_bips(s[provider] as u64);
+            acc
+        })
     }
 }
 
@@ -126,7 +125,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                     #[cfg(feature = "debug")]
                     msg!(
                         "Running as proof checker with proposed weights: {:?}",
-                        proposed_weights
+                        proposed_weights.inner
                     );
 
                     proposed_weights.verify_weights(ctx.accounts.vault.allocation_cap_pct)?;

@@ -1,4 +1,4 @@
-use anchor_lang::prelude::ProgramError;
+use anchor_lang::prelude::{msg, ProgramError};
 use boolinator::Boolinator;
 use solana_maths::{Rate, TryAdd};
 
@@ -11,7 +11,7 @@ impl<const N: usize> BackendContainerGeneric<Rate, N> {
         let cap = Rate::from_percent(allocation_cap_pct);
         let max = self
             .into_iter()
-            .max()
+            .max_by(|a, b| a.1.cmp(b.1))
             .ok_or(ErrorCode::InvalidProposedWeights)?
             .1;
 
@@ -20,7 +20,8 @@ impl<const N: usize> BackendContainerGeneric<Rate, N> {
             .map(|(_, r)| r)
             .try_fold(Rate::zero(), |acc, x| acc.try_add(*x))?;
 
-        (sum != Rate::one() || max.gt(&cap)).as_result((), ErrorCode::InvalidProposedWeights.into())
+        (sum == Rate::one() && (max.lt(&cap) || max.eq(&cap)))
+            .as_result((), ErrorCode::InvalidProposedWeights.into())
     }
 }
 
@@ -28,4 +29,12 @@ impl<const N: usize> From<BackendContainerGeneric<u16, N>> for BackendContainerG
     fn from(c: BackendContainerGeneric<u16, N>) -> Self {
         c.apply(|_provider, v| Rate::from_bips(u64::from(*v)))
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verify_weights() {}
 }

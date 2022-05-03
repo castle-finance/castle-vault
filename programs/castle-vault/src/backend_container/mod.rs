@@ -41,31 +41,35 @@ impl<T, const N: usize> Index<Provider> for BackendContainerGeneric<T, N> {
     type Output = T;
 
     fn index(&self, index: Provider) -> &Self::Output {
-        self.inner[index as usize]
-            .as_ref()
-            .expect("missing index in BackendContainerGeneric")
+        self.inner[index as usize].as_ref().expect(&format!(
+            "missing index {:?} / {:?} in BackendContainerGeneric",
+            index, index as usize
+        ))
     }
 }
 
 impl<T, const N: usize> IndexMut<Provider> for BackendContainerGeneric<T, N> {
     fn index_mut(&mut self, index: Provider) -> &mut Self::Output {
-        self.inner[index as usize]
-            .as_mut()
-            .expect("missing index in BackendContainerGeneric")
+        self.inner[index as usize].as_mut().expect(&format!(
+            "missing index {:?} / {:?} in BackendContainerGeneric",
+            index, index as usize
+        ))
     }
 }
 
-impl<T, const N: usize> Default for BackendContainerGeneric<T, N> {
+impl<T: Default, const N: usize> Default for BackendContainerGeneric<T, N> {
     fn default() -> Self {
         // TODO: Is there a better way to do this...?
         Self {
-            inner: [(); N].map(|_| None),
+            inner: [(); N].map(|_| Some(T::default())),
         }
     }
 }
 
 impl<'a, T, const N: usize> From<&'a dyn Index<Provider, Output = &'a T>>
     for BackendContainerGeneric<&'a T, N>
+where
+    &'a T: Default,
 {
     fn from(p: &'a dyn Index<Provider, Output = &'a T>) -> Self {
         Provider::iter().fold(BackendContainerGeneric::default(), |mut acc, provider| {
@@ -76,7 +80,7 @@ impl<'a, T, const N: usize> From<&'a dyn Index<Provider, Output = &'a T>>
 }
 
 impl<T, const N: usize> BackendContainerGeneric<T, N> {
-    pub fn apply_owned<U: Clone, F: Fn(Provider, T) -> U>(
+    pub fn apply_owned<U: Clone + Default, F: Fn(Provider, T) -> U>(
         mut self,
         f: F,
     ) -> BackendContainerGeneric<U, N> {
@@ -96,7 +100,10 @@ impl<T, const N: usize> BackendContainerGeneric<T, N> {
     }
 
     /// Applies `f` to each element of the container individually, yielding a new container
-    pub fn apply<U, F: Fn(Provider, &T) -> U>(&self, f: F) -> BackendContainerGeneric<U, N> {
+    pub fn apply<U: Default, F: Fn(Provider, &T) -> U>(
+        &self,
+        f: F,
+    ) -> BackendContainerGeneric<U, N> {
         // Because we have FromIterator<(Provider, T)>, if we yield a tuple of
         // `(Provider, U)` we can `collect()` this into a `BackendContainerGeneric<U>`
         Provider::iter()
@@ -105,7 +112,7 @@ impl<T, const N: usize> BackendContainerGeneric<T, N> {
     }
 
     /// Identical to `apply` but returns a `Result<BackendContainerGeneric<..>>`
-    pub fn try_apply<U, E, F: Fn(Provider, &T) -> Result<U, E>>(
+    pub fn try_apply<U: Default, E, F: Fn(Provider, &T) -> Result<U, E>>(
         &self,
         f: F,
     ) -> Result<BackendContainerGeneric<U, N>, E> {
