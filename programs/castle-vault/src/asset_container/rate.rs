@@ -34,10 +34,4 @@ impl<const N: usize> From<AssetContainerGeneric<u16, N>> for AssetContainerGener
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn verify_weights() {}
-}
+// TODO add tests

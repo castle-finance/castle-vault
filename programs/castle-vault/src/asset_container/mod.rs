@@ -40,19 +40,23 @@ impl<T, const N: usize> Index<Provider> for AssetContainerGeneric<T, N> {
     type Output = T;
 
     fn index(&self, index: Provider) -> &Self::Output {
-        self.inner[index as usize].as_ref().expect(&format!(
-            "missing index {:?} / {:?} in BackendContainerGeneric",
-            index, index as usize
-        ))
+        self.inner[index as usize].as_ref().unwrap_or_else(|| {
+            panic!(
+                "missing index {:?} / {:?} in BackendContainerGeneric",
+                index, index as usize
+            )
+        })
     }
 }
 
 impl<T, const N: usize> IndexMut<Provider> for AssetContainerGeneric<T, N> {
     fn index_mut(&mut self, index: Provider) -> &mut Self::Output {
-        self.inner[index as usize].as_mut().expect(&format!(
-            "missing index {:?} / {:?} in BackendContainerGeneric",
-            index, index as usize
-        ))
+        self.inner[index as usize].as_mut().unwrap_or_else(|| {
+            panic!(
+                "missing index {:?} / {:?} in BackendContainerGeneric",
+                index, index as usize
+            )
+        })
     }
 }
 

@@ -37,7 +37,7 @@ impl AssetContainer<Reserves> {
                     }
                 },
             )
-            .and_then(|t| Ok(t.0))
+            .map(|(r, _)| r)
     }
 
     fn calculate_weights_equal(&self) -> Result<AssetContainer<Rate>, ProgramError> {
@@ -74,16 +74,4 @@ impl AssetContainer<Reserves> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_calculate_weights_equal() {}
-
-    #[test]
-    fn test_calculate_weights_max_yield() {}
-
-    #[test]
-    fn test_get_apr() {}
-}
+// TODO add tests
