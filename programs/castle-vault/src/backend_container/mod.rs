@@ -1,9 +1,9 @@
-mod allocation;
 mod iter;
 mod rate;
 mod reserves;
+mod u64;
 
-pub use allocation::*;
+pub use self::u64::*;
 pub use iter::*;
 pub use rate::*;
 pub use reserves::*;

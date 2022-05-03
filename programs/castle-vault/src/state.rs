@@ -210,10 +210,10 @@ pub struct Allocations {
 }
 impl_provider_index!(Allocations, SlotTrackedValue);
 
-impl From<BackendContainer<SlotTrackedValue>> for Allocations {
-    fn from(c: BackendContainer<SlotTrackedValue>) -> Self {
+impl Allocations {
+    pub fn from_container(c: BackendContainer<u64>, slot: u64) -> Self {
         Provider::iter().fold(Self::default(), |mut acc, provider| {
-            acc[provider] = c[provider];
+            acc[provider].update(c[provider], slot);
             acc
         })
     }

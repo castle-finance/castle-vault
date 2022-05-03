@@ -111,17 +111,13 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
         ctx.accounts.vault.config.allocation_cap_pct,
     )?;
 
-    BackendContainer::<SlotTrackedValue>::try_from_weights(&strategy_weights, vault_value, slot)
+    BackendContainer::<u64>::try_from_weights(&strategy_weights, vault_value)
         .and_then(
             |strategy_allocations| match ctx.accounts.vault.config.rebalance_mode {
                 RebalanceMode::ProofChecker => {
                     let proposed_weights = BackendContainer::<Rate>::from(proposed_weights_arg);
                     let proposed_allocations =
-                        BackendContainer::<SlotTrackedValue>::try_from_weights(
-                            &strategy_weights,
-                            vault_value,
-                            slot,
-                        )?;
+                        BackendContainer::<u64>::try_from_weights(&strategy_weights, vault_value)?;
 
                     #[cfg(feature = "debug")]
                     msg!(
@@ -155,7 +151,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
             },
         )
         .map(|final_allocations_container| {
-            let final_allocations = Allocations::from(final_allocations_container);
+            let final_allocations = Allocations::from_container(final_allocations_container, slot);
 
             #[cfg(feature = "debug")]
             msg!("Final allocations: {:?}", final_allocations);

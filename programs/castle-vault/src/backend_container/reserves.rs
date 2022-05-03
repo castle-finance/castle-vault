@@ -9,7 +9,7 @@ use strum::IntoEnumIterator;
 use crate::{
     errors::ErrorCode,
     reserves::{Provider, Reserves, ReturnCalculator},
-    state::{SlotTrackedValue, StrategyType},
+    state::StrategyType,
 };
 
 use super::BackendContainer;
@@ -62,12 +62,12 @@ impl BackendContainer<Reserves> {
     pub fn get_apr(
         &self,
         weights: &dyn Index<Provider, Output = Rate>,
-        allocations: &dyn Index<Provider, Output = SlotTrackedValue>,
+        allocations: &dyn Index<Provider, Output = u64>,
     ) -> Result<Rate, ProgramError> {
         Provider::iter()
             .map(|p| {
                 self[p]
-                    .calculate_return(allocations[p].value)
+                    .calculate_return(allocations[p])
                     .and_then(|r| weights[p].try_mul(r))
             })
             .try_fold(Rate::zero(), |acc, r| acc.try_add(r?))
