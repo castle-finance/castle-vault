@@ -21,8 +21,9 @@ impl BackendContainer<Reserves> {
     ) -> Result<BackendContainer<Rate>, ProgramError> {
         self.into_iter()
             .sorted_unstable_by(|(_, alloc_y), (_, alloc_x)| {
-                // TODO: can we remove the unwrap() in any way?
-                self.compare(*alloc_x, *alloc_y).unwrap()
+                // TODO: can we remove the expect() in any way?
+                self.compare(*alloc_x, *alloc_y)
+                    .expect("Could not successfully compare allocations")
             })
             .try_fold(
                 (BackendContainer::<Rate>::default(), Rate::one()),
