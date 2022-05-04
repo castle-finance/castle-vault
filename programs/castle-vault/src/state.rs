@@ -101,7 +101,7 @@ impl Vault {
 
         carry
             .checked_add(mgmt)
-            .ok_or(ErrorCode::OverflowError.into())
+            .ok_or_else(|| ErrorCode::OverflowError.into())
     }
 
     pub fn authority_seeds(&self) -> [&[u8]; 3] {

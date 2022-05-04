@@ -63,7 +63,7 @@ pub fn calc_carry_fees(profit: u64, fee_bps: u64) -> Result<u64, ProgramError> {
     profit
         .checked_mul(fee_bps)
         .map(|n| n / ONE_AS_BPS)
-        .ok_or(ErrorCode::OverflowError.into())
+        .ok_or_else(|| ErrorCode::OverflowError.into())
 }
 
 pub fn calc_mgmt_fees(aum: u64, fee_bps: u64, slots_elapsed: u64) -> Result<u64, ProgramError> {
@@ -71,7 +71,7 @@ pub fn calc_mgmt_fees(aum: u64, fee_bps: u64, slots_elapsed: u64) -> Result<u64,
         .iter()
         .try_fold(aum, |acc, r| acc.checked_mul(*r))
         .map(|n| n / ONE_AS_BPS / SLOTS_PER_YEAR)
-        .ok_or(ErrorCode::OverflowError.into())
+        .ok_or_else(|| ErrorCode::OverflowError.into())
 }
 
 #[cfg(test)]
