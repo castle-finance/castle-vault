@@ -1,10 +1,14 @@
+use std::convert::Into;
+
+use boolinator::Boolinator;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 
-use std::convert::Into;
-
-use crate::errors::ErrorCode;
-use crate::state::Vault;
+use crate::{
+    errors::ErrorCode,
+    state::{Vault, VaultFlags},
+};
 
 #[event]
 pub struct WithdrawEvent {
@@ -88,6 +92,14 @@ impl<'info> Withdraw<'info> {
 pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Withdrawing {} lp tokens", lp_token_amount);
+
+    // Check that withdrawals are not halted
+    (!ctx
+        .accounts
+        .vault
+        .flags()
+        .contains(VaultFlags::HALT_DEPOSITS_WITHDRAWS))
+    .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
 
     let vault = &ctx.accounts.vault;
 

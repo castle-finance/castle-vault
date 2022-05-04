@@ -1,13 +1,15 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+use boolinator::Boolinator;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use port_anchor_adaptor::{port_lending_id, PortReserve};
 
 use crate::adapters::{solend, SolendReserve};
 use crate::errors::ErrorCode;
-use crate::state::Vault;
+use crate::state::{Vault, VaultFlags};
 
 // NOTE: having all accounts for each lending market reserve here is not scalable
 // since eventually we will hit into transaction size limits
@@ -188,6 +190,14 @@ pub fn handler<'info>(
 ) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Refreshing vault");
+
+    // Check that refreshes are not halted
+    (!ctx
+        .accounts
+        .vault
+        .flags()
+        .contains(VaultFlags::HALT_REFRESHES))
+    .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
 
     // Refresh lending market reserves
     solend::refresh_reserve(ctx.accounts.solend_refresh_reserve_context())?;

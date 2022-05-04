@@ -28,6 +28,10 @@ pub mod castle_vault {
         instructions::init::handler(ctx, _bumps, config)
     }
 
+    pub fn update_flags(ctx: Context<UpdateFlags>, flags: u32) -> ProgramResult {
+        instructions::update_flags::handler(ctx, flags)
+    }
+
     pub fn update_config(ctx: Context<UpdateConfig>, new_config: VaultConfigArg) -> ProgramResult {
         instructions::update_config::handler(ctx, new_config)
     }

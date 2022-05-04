@@ -1,9 +1,15 @@
+use std::convert::Into;
+
+use boolinator::Boolinator;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
 
-use crate::{errors::ErrorCode, state::Vault};
-use std::convert::Into;
+use crate::{
+    errors::ErrorCode,
+    state::{Vault, VaultFlags},
+};
 
 #[event]
 pub struct DepositEvent {
@@ -87,6 +93,14 @@ impl<'info> Deposit<'info> {
 pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Depositing {} reserve tokens", reserve_token_amount);
+
+    // Check that deposits are not halted
+    (!ctx
+        .accounts
+        .vault
+        .flags()
+        .contains(VaultFlags::HALT_DEPOSITS_WITHDRAWS))
+    .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
 
     let vault = &ctx.accounts.vault;
 

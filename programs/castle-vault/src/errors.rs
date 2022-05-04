@@ -43,4 +43,10 @@ pub enum ErrorCode {
 
     #[msg("Allocation cap cannot set to under 1/(number of assets) or over 100%")]
     InvalidAllocationCap,
+
+    #[msg("Bits passed in do not result in valid vault flags")]
+    InvalidVaultFlags,
+
+    #[msg("Vault is halted")]
+    HaltedVault,
 }

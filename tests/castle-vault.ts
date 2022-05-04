@@ -11,6 +11,7 @@ import {
     CastleVault,
     ProposedWeightsBps,
     VaultConfig,
+    VaultFlags,
 } from "../sdk/src/index";
 import {
     DeploymentEnvs,
@@ -458,6 +459,7 @@ describe("castle-vault", () => {
         });
 
         it("Reject unauthorized config update", async function () {
+            const errorCode = "0x8d";
             const noPermissionUser = Keypair.generate();
 
             const oldConfig = vaultClient.getVaultConfig();
@@ -477,7 +479,10 @@ describe("castle-vault", () => {
                 );
                 assert.fail("Transaction should be rejected but was not.");
             } catch (err) {
-                // TODO check err
+                assert.isTrue(
+                    err.message.includes(errorCode),
+                    `Error code ${errorCode} not included in error message: ${err}`
+                );
             }
 
             await vaultClient.reload();
@@ -485,6 +490,106 @@ describe("castle-vault", () => {
                 oldConfig.depositCap.toString(),
                 vaultClient.getDepositCap().toString()
             );
+        });
+    }
+
+    function testHalting() {
+        it("Reject deposit transaction if vault is halted", async function () {
+            const depositCapErrorCode = program.idl.errors
+                .find((e) => e.name == "HaltedVault")
+                .code.toString(16);
+
+            await vaultClient.updateFlags(owner, VaultFlags.HaltDeposits);
+
+            const qty = 100;
+            await mintReserveToken(userReserveTokenAccount, qty);
+
+            try {
+                await depositToVault(qty);
+                assert.fail("Deposit should be rejected but was not.");
+            } catch (err) {
+                assert.isTrue(
+                    err.message.includes(depositCapErrorCode),
+                    `Error code ${depositCapErrorCode} not included in error message: ${err}`
+                );
+            }
+        });
+
+        it("Reject rebalance transaction if vault is halted", async function () {
+            const errorCode = program.idl.errors
+                .find((e) => e.name == "HaltedVault")
+                .code.toString(16);
+
+            await vaultClient.updateFlags(owner, VaultFlags.HaltReconciles);
+
+            try {
+                await performRebalance();
+                assert.fail("Rebalance should be rejected but was not.");
+            } catch (err) {
+                assert.isTrue(
+                    err.message.includes(errorCode),
+                    `Error code ${errorCode} not included in error message: ${err}`
+                );
+            }
+        });
+
+        it("Update flags", async function () {
+            const flags = 0;
+            const tx = await vaultClient.updateFlags(owner, flags);
+            await provider.connection.confirmTransaction(tx, "singleGossip");
+            await vaultClient.reload();
+            assert.equal(flags, vaultClient.getFlags());
+        });
+
+        it("Reject invalid flags update", async function () {
+            const errorCode = program.idl.errors
+                .find((e) => e.name == "InvalidVaultFlags")
+                .code.toString(16);
+
+            const oldFlags = vaultClient.getFlags();
+
+            try {
+                const tx = await vaultClient.updateFlags(owner, 23);
+                await provider.connection.confirmTransaction(
+                    tx,
+                    "singleGossip"
+                );
+                assert.fail("Transaction should be rejected but was not.");
+            } catch (err) {
+                assert.isTrue(
+                    err.message.includes(errorCode),
+                    `Error code ${errorCode} not included in error message: ${err}`
+                );
+            }
+
+            await vaultClient.reload();
+
+            assert.equal(oldFlags, vaultClient.getFlags());
+        });
+
+        it("Reject unauthorized flags update", async function () {
+            const errorCode = "0x8d";
+
+            const noPermissionUser = Keypair.generate();
+            const oldFlags = vaultClient.getFlags();
+
+            try {
+                const tx = await vaultClient.updateFlags(noPermissionUser, 1);
+                await provider.connection.confirmTransaction(
+                    tx,
+                    "singleGossip"
+                );
+                assert.fail("Transaction should be rejected but was not.");
+            } catch (err) {
+                assert.isTrue(
+                    err.message.includes(errorCode),
+                    `Error code ${errorCode} not included in error message: ${err}`
+                );
+            }
+
+            await vaultClient.reload();
+
+            assert.equal(oldFlags, vaultClient.getFlags());
         });
     }
 
@@ -804,7 +909,7 @@ describe("castle-vault", () => {
             testDepositAndWithdrawal();
         });
 
-        describe("Deposit cap", () => {
+        describe("Deposit cap and halting", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -814,6 +919,7 @@ describe("castle-vault", () => {
                 });
             });
             testDepositCap();
+            testHalting();
         });
 
         describe("Rebalance", () => {
