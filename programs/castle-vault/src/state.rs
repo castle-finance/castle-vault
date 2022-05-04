@@ -1,29 +1,26 @@
-use anchor_lang::prelude::*;
-use anchor_lang::solana_program::clock::{
-    DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
-};
-use jet_proto_proc_macros::assert_size;
-use solana_maths::{Decimal, TryMul};
 use std::cmp::Ordering;
+
 use strum::IntoEnumIterator;
+#[cfg(test)]
 use type_layout::TypeLayout;
 
-use crate::errors::ErrorCode;
-use crate::impl_provider_index;
-use crate::instructions::VaultConfigArg;
-use crate::rebalance::assets::Provider;
-use crate::rebalance::strategies::StrategyWeights;
+use anchor_lang::prelude::*;
+use jet_proto_proc_macros::assert_size;
 
-/// Number of slots per year
-pub const SLOTS_PER_YEAR: u64 =
-    DEFAULT_TICKS_PER_SECOND / DEFAULT_TICKS_PER_SLOT * SECONDS_PER_DAY * 365;
-
-pub const ONE_AS_BPS: u64 = 10000;
+use crate::{
+    asset_container::AssetContainer,
+    errors::ErrorCode,
+    impl_provider_index,
+    instructions::VaultConfigArg,
+    math::{calc_carry_fees, calc_mgmt_fees},
+    reserves::Provider,
+};
 
 #[assert_size(768)]
 #[account]
 #[repr(C, align(8))]
-#[derive(Debug, TypeLayout)]
+#[derive(Debug)]
+#[cfg_attr(test, derive(TypeLayout))]
 pub struct Vault {
     /// Program version when initialized: [major, minor, patch]
     pub version: [u8; 3],
@@ -88,17 +85,12 @@ impl Vault {
         let vault_value_diff = new_vault_value.saturating_sub(self.value.value);
         let slots_elapsed = self.value.last_update.slots_elapsed(slot)?;
 
-        let carry = vault_value_diff
-            .checked_mul(self.config.fee_carry_bps as u64)
-            .ok_or(ErrorCode::OverflowError)?
-            / ONE_AS_BPS;
-
-        let mgmt = [self.config.fee_mgmt_bps as u64, slots_elapsed]
-            .iter()
-            .try_fold(new_vault_value, |acc, r| acc.checked_mul(*r))
-            .ok_or(ErrorCode::OverflowError)?
-            / ONE_AS_BPS
-            / SLOTS_PER_YEAR;
+        let carry = calc_carry_fees(vault_value_diff, self.config.fee_carry_bps as u64)?;
+        let mgmt = calc_mgmt_fees(
+            new_vault_value,
+            self.config.fee_mgmt_bps as u64,
+            slots_elapsed,
+        )?;
 
         #[cfg(feature = "debug")]
         {
@@ -109,8 +101,9 @@ impl Vault {
             msg!("Mgmt fee: {}", mgmt);
         }
 
-        let fees = carry.checked_add(mgmt).ok_or(ErrorCode::OverflowError)?;
-        Ok(fees)
+        carry
+            .checked_add(mgmt)
+            .ok_or_else(|| ErrorCode::OverflowError.into())
     }
 
     pub fn authority_seeds(&self) -> [&[u8]; 3] {
@@ -124,7 +117,8 @@ impl Vault {
 
 #[assert_size(aligns, 32)]
 #[repr(C, align(8))]
-#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, TypeLayout)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
+#[cfg_attr(test, derive(TypeLayout))]
 pub struct VaultConfig {
     /// Max num of reserve tokens. If total_value grows higher than this, will stop accepting deposits.
     pub deposit_cap: u64,
@@ -212,19 +206,11 @@ pub struct Allocations {
 impl_provider_index!(Allocations, SlotTrackedValue);
 
 impl Allocations {
-    pub fn try_from_weights(
-        weights: StrategyWeights,
-        total_value: u64,
-        slot: u64,
-    ) -> Result<Self, ProgramError> {
-        let mut allocations = Self::default();
-        for p in Provider::iter() {
-            let allocation = weights[p]
-                .try_mul(total_value)
-                .and_then(|product| Decimal::from(product).try_floor_u64())?;
-            allocations[p].update(allocation, slot);
-        }
-        Ok(allocations)
+    pub fn from_container(c: AssetContainer<u64>, slot: u64) -> Self {
+        Provider::iter().fold(Self::default(), |mut acc, provider| {
+            acc[provider].update(c[provider], slot);
+            acc
+        })
     }
 }
 
@@ -273,8 +259,8 @@ impl LastUpdate {
 
     /// Return slots elapsed since given slot
     pub fn slots_elapsed(&self, slot: u64) -> Result<u64, ProgramError> {
-        let slots_elapsed = slot.checked_sub(self.slot).ok_or(ErrorCode::MathError)?;
-        Ok(slots_elapsed)
+        slot.checked_sub(self.slot)
+            .ok_or_else(|| ErrorCode::MathError.into())
     }
 
     /// Set last update slot

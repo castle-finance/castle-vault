@@ -5,9 +5,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use port_anchor_adaptor::{port_lending_id, PortReserve};
 
-use crate::adapters::{solend, SolendReserve};
-use crate::errors::ErrorCode;
-use crate::state::Vault;
+use crate::{
+    adapters::{solend, SolendReserve},
+    errors::ErrorCode,
+    state::Vault,
+};
 
 // NOTE: having all accounts for each lending market reserve here is not scalable
 // since eventually we will hit into transaction size limits

@@ -6,7 +6,7 @@ homepage = "https://castle.finance"
 license = "GPL-3.0-or-later"
 name = "castle-vault"
 repository = "https://github.com/castle-finance/castle-vault/"
-version = "2.0.0"
+version = "2.0.1"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -33,6 +33,7 @@ no-idl = []
 anchor-lang = "0.18.2"
 anchor-spl = "0.18.2"
 boolinator = "2.4.0"
+itertools = "0.10"
 jet = {git = "https://github.com/jet-lab/jet-v1/", version = "0.2.0", features = ["no-entrypoint", "cpi"]}
 jet-proto-math = "1.0.1"
 jet-proto-proc-macros = "1.0.3"
@@ -43,6 +44,9 @@ solana-security-txt = "1.0.1"
 spl-math = {version = "0.1", features = ["no-entrypoint"]}
 spl-token-lending = {git = "https://github.com/castle-finance/solana-program-library", version = "0.1.1", features = ["no-entrypoint"]}
 static_assertions = "1.1.0"
-strum = "0.24.0"
-strum_macros = "0.24.0"
-type-layout = "0.2.0"
+strum = "0.24"
+strum_macros = "0.24"
+
+[dev-dependencies]
+mockall = "0.11"
+type-layout = "0.2"
