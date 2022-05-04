@@ -8,14 +8,11 @@ pub use iter::*;
 pub use rate::*;
 pub use reserves::*;
 
-use core::cmp::Ordering;
 use core::ops::{Index, IndexMut};
 
 use strum::{EnumCount, IntoEnumIterator};
 
-use anchor_lang::prelude::*;
-
-use crate::reserves::{Provider, ReturnCalculator};
+use crate::reserves::Provider;
 
 pub type AssetContainer<T> = AssetContainerGeneric<T, { Provider::COUNT }>;
 
@@ -123,11 +120,4 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
     }
 }
 
-impl<T, const N: usize> AssetContainerGeneric<T, N>
-where
-    T: ReturnCalculator,
-{
-    pub fn compare(&self, lhs: &T, rhs: &T) -> Result<Ordering, ProgramError> {
-        Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
-    }
-}
+// TODO add unit tests

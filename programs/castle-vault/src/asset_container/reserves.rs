@@ -1,9 +1,10 @@
-use core::ops::Index;
+use core::{convert::TryFrom, ops::Index};
+use std::cmp::Ordering;
 
-use anchor_lang::prelude::ProgramError;
-use core::convert::TryFrom;
 use itertools::Itertools;
 use solana_maths::{Rate, TryAdd, TryDiv, TryMul, TrySub};
+
+use anchor_lang::prelude::ProgramError;
 
 use crate::{
     errors::ErrorCode,
@@ -13,6 +14,13 @@ use crate::{
 
 use super::AssetContainer;
 
+pub fn compare(
+    lhs: &impl ReturnCalculator,
+    rhs: &impl ReturnCalculator,
+) -> Result<Ordering, ProgramError> {
+    Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
+}
+
 impl AssetContainer<Reserves> {
     fn calculate_weights_max_yield(
         &self,
@@ -21,8 +29,7 @@ impl AssetContainer<Reserves> {
         self.into_iter()
             .sorted_unstable_by(|(_, alloc_y), (_, alloc_x)| {
                 // TODO: can we remove the expect() in any way?
-                self.compare(*alloc_x, *alloc_y)
-                    .expect("Could not successfully compare allocations")
+                compare(*alloc_x, *alloc_y).expect("Could not successfully compare allocations")
             })
             .try_fold(
                 (AssetContainer::<Rate>::default(), Rate::one()),
@@ -72,4 +79,28 @@ impl AssetContainer<Reserves> {
     }
 }
 
-// TODO add tests
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::reserves::MockReturnCalculator;
+    use solana_maths::Rate;
+
+    // TODO
+    #[test]
+    fn test_get_apr() {}
+
+    #[test]
+    fn test_compare() {
+        let mut mock_rc1 = MockReturnCalculator::new();
+        mock_rc1
+            .expect_calculate_return()
+            .return_const(Ok(Rate::from_percent(10)));
+
+        let mut mock_rc2 = MockReturnCalculator::new();
+        mock_rc2
+            .expect_calculate_return()
+            .return_const(Ok(Rate::from_percent(20)));
+
+        assert_eq!(compare(&mock_rc1, &mock_rc2), Ok(Ordering::Less));
+    }
+}
