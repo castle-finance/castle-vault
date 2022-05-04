@@ -1,7 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::clock::{
-    DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
-};
 use jet_proto_proc_macros::assert_size;
 use std::cmp::Ordering;
 use strum::IntoEnumIterator;
@@ -11,13 +8,8 @@ use crate::asset_container::AssetContainer;
 use crate::errors::ErrorCode;
 use crate::impl_provider_index;
 use crate::instructions::VaultConfigArg;
+use crate::math::{calc_carry_fees, calc_mgmt_fees};
 use crate::reserves::Provider;
-
-/// Number of slots per year
-pub const SLOTS_PER_YEAR: u64 =
-    DEFAULT_TICKS_PER_SECOND / DEFAULT_TICKS_PER_SLOT * SECONDS_PER_DAY * 365;
-
-pub const ONE_AS_BPS: u64 = 10000;
 
 #[assert_size(768)]
 #[account]
@@ -87,17 +79,12 @@ impl Vault {
         let vault_value_diff = new_vault_value.saturating_sub(self.value.value);
         let slots_elapsed = self.value.last_update.slots_elapsed(slot)?;
 
-        let carry = vault_value_diff
-            .checked_mul(self.config.fee_carry_bps as u64)
-            .ok_or(ErrorCode::OverflowError)?
-            / ONE_AS_BPS;
-
-        let mgmt = [self.config.fee_mgmt_bps as u64, slots_elapsed]
-            .iter()
-            .try_fold(new_vault_value, |acc, r| acc.checked_mul(*r))
-            .ok_or(ErrorCode::OverflowError)?
-            / ONE_AS_BPS
-            / SLOTS_PER_YEAR;
+        let carry = calc_carry_fees(vault_value_diff, self.config.fee_carry_bps as u64)?;
+        let mgmt = calc_mgmt_fees(
+            new_vault_value,
+            self.config.fee_mgmt_bps as u64,
+            slots_elapsed,
+        )?;
 
         #[cfg(feature = "debug")]
         {
@@ -108,8 +95,9 @@ impl Vault {
             msg!("Mgmt fee: {}", mgmt);
         }
 
-        let fees = carry.checked_add(mgmt).ok_or(ErrorCode::OverflowError)?;
-        Ok(fees)
+        carry
+            .checked_add(mgmt)
+            .ok_or(ErrorCode::OverflowError.into())
     }
 
     pub fn authority_seeds(&self) -> [&[u8]; 3] {

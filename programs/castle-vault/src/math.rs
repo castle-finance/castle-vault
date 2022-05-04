@@ -1,11 +1,14 @@
-use spl_math::precise_number::PreciseNumber;
-
 use std::convert::TryFrom;
 
-pub const INITIAL_COLLATERAL_RATIO: u64 = 1;
+use anchor_lang::prelude::ProgramError;
+use anchor_lang::solana_program::clock::{
+    DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
+};
+use spl_math::precise_number::PreciseNumber;
 
-// TODO move to state.rs as a Calculator?
-// TODO return Results
+use crate::errors::ErrorCode;
+
+pub const INITIAL_COLLATERAL_RATIO: u64 = 1;
 
 pub fn calc_reserve_to_lp(
     reserve_token_amount: u64,
@@ -49,6 +52,28 @@ pub fn calc_lp_to_reserve(
     u64::try_from(reserve_tokens_to_transfer).ok()
 }
 
+/// Number of slots per year
+/// 63072000
+pub const SLOTS_PER_YEAR: u64 =
+    DEFAULT_TICKS_PER_SECOND / DEFAULT_TICKS_PER_SLOT * SECONDS_PER_DAY * 365;
+
+pub const ONE_AS_BPS: u64 = 10000;
+
+pub fn calc_carry_fees(profit: u64, fee_bps: u64) -> Result<u64, ProgramError> {
+    profit
+        .checked_mul(fee_bps)
+        .map(|n| n / ONE_AS_BPS)
+        .ok_or(ErrorCode::OverflowError.into())
+}
+
+pub fn calc_mgmt_fees(aum: u64, fee_bps: u64, slots_elapsed: u64) -> Result<u64, ProgramError> {
+    [fee_bps, slots_elapsed]
+        .iter()
+        .try_fold(aum, |acc, r| acc.checked_mul(*r))
+        .map(|n| n / ONE_AS_BPS / SLOTS_PER_YEAR)
+        .ok_or(ErrorCode::OverflowError.into())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,5 +95,15 @@ mod tests {
         assert_eq!(calc_lp_to_reserve(100, 100, 100), Some(100));
         assert_eq!(calc_lp_to_reserve(10, 100, 200), Some(20));
         assert_eq!(calc_lp_to_reserve(10, 101, 200), Some(19));
+    }
+
+    #[test]
+    fn test_carry_fees() {
+        assert_eq!(calc_carry_fees(50000, 10), Ok(50))
+    }
+
+    #[test]
+    fn test_mgmt_fees() {
+        assert_eq!(calc_mgmt_fees(1261440000, 1000, 100), Ok(200))
     }
 }
