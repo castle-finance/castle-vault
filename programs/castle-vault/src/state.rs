@@ -1,8 +1,11 @@
+use std::cmp::Ordering;
+
+use strum::IntoEnumIterator;
+#[cfg(test)]
+use type_layout::TypeLayout;
+
 use anchor_lang::prelude::*;
 use jet_proto_proc_macros::assert_size;
-use std::cmp::Ordering;
-use strum::IntoEnumIterator;
-use type_layout::TypeLayout;
 
 use crate::asset_container::AssetContainer;
 use crate::errors::ErrorCode;
@@ -14,7 +17,8 @@ use crate::reserves::Provider;
 #[assert_size(768)]
 #[account]
 #[repr(C, align(8))]
-#[derive(Debug, TypeLayout)]
+#[derive(Debug)]
+#[cfg_attr(test, derive(TypeLayout))]
 pub struct Vault {
     /// Program version when initialized: [major, minor, patch]
     pub version: [u8; 3],
@@ -111,7 +115,8 @@ impl Vault {
 
 #[assert_size(aligns, 32)]
 #[repr(C, align(8))]
-#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, TypeLayout)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
+#[cfg_attr(test, derive(TypeLayout))]
 pub struct VaultConfig {
     /// Max num of reserve tokens. If total_value grows higher than this, will stop accepting deposits.
     pub deposit_cap: u64,
