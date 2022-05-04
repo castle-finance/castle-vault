@@ -645,6 +645,7 @@ dependencies = [
  "port-anchor-adaptor",
  "port-variable-rate-lending-instructions",
  "solana-maths",
+ "solana-security-txt",
  "spl-math",
  "spl-token-lending",
  "static_assertions",
@@ -1589,6 +1590,12 @@ dependencies = [
  "rustversion",
  "syn",
 ]
+
+[[package]]
+name = "solana-security-txt"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f14189df19df7f3977a7ea236ccae6cdc40855ab5baf1ab2796a091ef5c490d1"
 
 [[package]]
 name = "spl-associated-token-account"

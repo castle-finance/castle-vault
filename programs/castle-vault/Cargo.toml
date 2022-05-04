@@ -39,6 +39,7 @@ jet-proto-proc-macros = "1.0.3"
 port-anchor-adaptor = {git = "https://github.com/castle-finance/port-anchor-adaptor.git", version = "0.3.5"}
 port-variable-rate-lending-instructions = "0.2.9"
 solana-maths = "0.1.1"
+solana-security-txt = "1.0.1"
 spl-math = {version = "0.1", features = ["no-entrypoint"]}
 spl-token-lending = {git = "https://github.com/castle-finance/solana-program-library", version = "0.1.1", features = ["no-entrypoint"]}
 static_assertions = "1.1.0"

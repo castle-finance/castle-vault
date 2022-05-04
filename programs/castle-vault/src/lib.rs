@@ -66,3 +66,29 @@ pub mod castle_vault {
         instructions::reconcile::handler(ctx, withdraw_option)
     }
 }
+
+solana_security_txt::security_txt! {
+    name: "Castle Vault",
+    project_url: "https://castle.finance",
+    contacts: "telegram: @charlie_you, email:charlie@castle.finance",
+    policy: "https://docs.castle.finance/security-policy",
+    preferred_languages: "en",
+    source_code: "https://github.com/castle-finance/castle-vault/",
+    encryption: "
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mDMEYmQ/fRYJKwYBBAHaRw8BAQdA1biTOwYiyo7PNZATqAFXD3Ve1q0aG9wOHljo
+2akWnRK0JENoYXJsaWUgWW91IDxjaGFybGllQGNhc3RsZS5maW5hbmNlPoiTBBMW
+CgA7FiEEPUI91YfryrzyxGV2FoBM/GlFSGoFAmJkP30CGwMFCwkIBwICIgIGFQoJ
+CAsCBBYCAwECHgcCF4AACgkQFoBM/GlFSGq0sgEA0ANICcpzevxdMDOCKIO50w3j
+BZTSdVvh6coWL8JPiJgA/11V1Hdb/wFznAWLmJgHos3cSJwOoRf6a0pd82drqgMA
+uDgEYmQ/fRIKKwYBBAGXVQEFAQEHQO5aM48xdchjyIc3q3Bu3uE73DV6l8wrdDCn
+0sYB71QiAwEIB4h4BBgWCgAgFiEEPUI91YfryrzyxGV2FoBM/GlFSGoFAmJkP30C
+GwwACgkQFoBM/GlFSGpZnAEAlxxgUQR4Y6q3zmfPW+S+qneZnMj4p8JdzD8B4/aO
+NAgBAJzbmnb6RpW+5zMjjxFKJRjAelqCkuyBUO4Vk5GHaUAO
+=P067
+-----END PGP PUBLIC KEY BLOCK-----
+",
+    auditors: "Bramah Systems",
+    acknowledgements: ""
+}
