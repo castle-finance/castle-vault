@@ -194,7 +194,7 @@ pub fn handler(
     ctx.accounts.validate_referral_token()?;
 
     let vault = &mut ctx.accounts.vault;
-    vault.version = [2, 0, 1];
+    vault.version = get_version_arr();
     vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.owner = ctx.accounts.owner.key();
     vault.authority_seed = vault.key();
@@ -229,4 +229,18 @@ pub fn handler(
     ))?;
 
     Ok(())
+}
+
+fn get_version_arr() -> [u8; 3] {
+    [
+        env!("CARGO_PKG_VERSION_MAJOR")
+            .parse::<u8>()
+            .expect("failed to parse major version"),
+        env!("CARGO_PKG_VERSION_MINOR")
+            .parse::<u8>()
+            .expect("failed to parse minor version"),
+        env!("CARGO_PKG_VERSION_PATCH")
+            .parse::<u8>()
+            .expect("failed to parse patch version"),
+    ]
 }

@@ -638,7 +638,6 @@ version = "2.0.1"
 dependencies = [
  "anchor-lang 0.18.2",
  "anchor-spl 0.18.2",
- "arrayref",
  "boolinator",
  "itertools 0.10.3",
  "jet",

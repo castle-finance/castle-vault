@@ -32,7 +32,6 @@ no-idl = []
 [dependencies]
 anchor-lang = "0.18.2"
 anchor-spl = "0.18.2"
-arrayref = "0.3"
 boolinator = "2.4.0"
 itertools = "0.10"
 jet = {git = "https://github.com/jet-lab/jet-v1/", version = "0.2.0", features = ["no-entrypoint", "cpi"]}

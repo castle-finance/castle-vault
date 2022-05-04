@@ -20,10 +20,10 @@ impl<'a, T, const N: usize> IntoIterator for &'a AssetContainerGeneric<T, N> {
 
 impl<T, const N: usize> IntoIterator for AssetContainerGeneric<T, N> {
     type Item = (Provider, T);
-    type IntoIter = OwnedBackendContainerIterator<T, N>;
+    type IntoIter = OwnedAssetContainerIterator<T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
-        OwnedBackendContainerIterator {
+        OwnedAssetContainerIterator {
             inner: self,
             inner_iter: Provider::iter(),
         }
@@ -45,12 +45,12 @@ impl<'inner, T, const N: usize> Iterator for AssetContainerIterator<'inner, T, N
     }
 }
 
-pub struct OwnedBackendContainerIterator<T, const N: usize> {
+pub struct OwnedAssetContainerIterator<T, const N: usize> {
     inner: AssetContainerGeneric<T, N>,
     inner_iter: ProviderIter,
 }
 
-impl<T, const N: usize> Iterator for OwnedBackendContainerIterator<T, N> {
+impl<T, const N: usize> Iterator for OwnedAssetContainerIterator<T, N> {
     type Item = (Provider, T);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -59,13 +59,13 @@ impl<T, const N: usize> Iterator for OwnedBackendContainerIterator<T, N> {
                 provider,
                 self.inner.inner[provider as usize]
                     .take()
-                    .expect("missing index in OwnedBackendContainerIterator"),
+                    .expect("missing index in OwnedAssetContainerIterator"),
             )
         })
     }
 }
 
-// Allows us to create a BackendContainerGeneric<T, N> from an Iterator that yields (Provider, T)
+// Allows us to create a AssetContainerGeneric<T, N> from an Iterator that yields (Provider, T)
 impl<T: Default, const N: usize> FromIterator<(Provider, T)> for AssetContainerGeneric<T, N> {
     fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
         iter.into_iter().fold(

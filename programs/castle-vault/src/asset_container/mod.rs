@@ -27,8 +27,8 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
         N
     }
 
+    /// Returns if the container is uninitialized
     pub fn is_empty(&self) -> bool {
-        // TODO: Should this just always return `true`, or do we want it to mean "uninitialized"?
         self.inner.iter().all(Option::is_none)
     }
 }
@@ -39,7 +39,7 @@ impl<T, const N: usize> Index<Provider> for AssetContainerGeneric<T, N> {
     fn index(&self, index: Provider) -> &Self::Output {
         self.inner[index as usize].as_ref().unwrap_or_else(|| {
             panic!(
-                "missing index {:?} / {:?} in BackendContainerGeneric",
+                "missing index {:?} / {:?} in AssetContainerGeneric",
                 index, index as usize
             )
         })
@@ -50,7 +50,7 @@ impl<T, const N: usize> IndexMut<Provider> for AssetContainerGeneric<T, N> {
     fn index_mut(&mut self, index: Provider) -> &mut Self::Output {
         self.inner[index as usize].as_mut().unwrap_or_else(|| {
             panic!(
-                "missing index {:?} / {:?} in BackendContainerGeneric",
+                "missing index {:?} / {:?} in AssetContainerGeneric",
                 index, index as usize
             )
         })
@@ -102,13 +102,13 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
     /// Applies `f` to each element of the container individually, yielding a new container
     pub fn apply<U: Default, F: Fn(Provider, &T) -> U>(&self, f: F) -> AssetContainerGeneric<U, N> {
         // Because we have FromIterator<(Provider, T)>, if we yield a tuple of
-        // `(Provider, U)` we can `collect()` this into a `BackendContainerGeneric<U>`
+        // `(Provider, U)` we can `collect()` this into a `AssetContainerGeneric<U>`
         Provider::iter()
             .map(|provider| (provider, f(provider, &self[provider])))
             .collect()
     }
 
-    /// Identical to `apply` but returns a `Result<BackendContainerGeneric<..>>`
+    /// Identical to `apply` but returns a `Result<AssetContainerGeneric<..>>`
     pub fn try_apply<U: Default, E, F: Fn(Provider, &T) -> Result<U, E>>(
         &self,
         f: F,
