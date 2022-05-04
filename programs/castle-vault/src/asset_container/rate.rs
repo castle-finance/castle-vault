@@ -22,7 +22,7 @@ impl<const N: usize> AssetContainerGeneric<Rate, N> {
             .map(|(_, r)| r)
             .try_fold(Rate::zero(), |acc, x| acc.try_add(*x))?;
 
-        (sum == Rate::one() && max <= cap).as_result((), ErrorCode::InvalidProposedWeights.into())
+        (sum == Rate::one() && max <= cap).ok_or_else(|| ErrorCode::InvalidProposedWeights.into())
     }
 }
 
