@@ -89,7 +89,8 @@ impl Vault {
     }
 
     pub fn set_flags(&mut self, bits: u32) -> ProgramResult {
-        VaultFlags::from_bits(bits).ok_or::<ProgramError>(ErrorCode::InvalidVaultFlags.into())?;
+        VaultFlags::from_bits(bits)
+            .ok_or_else::<ProgramError, _>(|| ErrorCode::InvalidVaultFlags.into())?;
         self.bitflags = bits;
         Ok(())
     }
