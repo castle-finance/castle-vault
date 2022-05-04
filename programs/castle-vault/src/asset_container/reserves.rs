@@ -4,7 +4,6 @@ use anchor_lang::prelude::ProgramError;
 use core::convert::TryFrom;
 use itertools::Itertools;
 use solana_maths::{Rate, TryAdd, TryDiv, TryMul, TrySub};
-use strum::IntoEnumIterator;
 
 use crate::{
     errors::ErrorCode,
@@ -64,10 +63,9 @@ impl AssetContainer<Reserves> {
         weights: &dyn Index<Provider, Output = Rate>,
         allocations: &dyn Index<Provider, Output = u64>,
     ) -> Result<Rate, ProgramError> {
-        Provider::iter()
-            .map(|p| {
-                self[p]
-                    .calculate_return(allocations[p])
+        self.into_iter()
+            .map(|(p, r)| {
+                r.calculate_return(allocations[p])
                     .and_then(|r| weights[p].try_mul(r))
             })
             .try_fold(Rate::zero(), |acc, r| acc.try_add(r?))
