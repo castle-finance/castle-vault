@@ -257,8 +257,8 @@ impl LastUpdate {
 
     /// Return slots elapsed since given slot
     pub fn slots_elapsed(&self, slot: u64) -> Result<u64, ProgramError> {
-        let slots_elapsed = slot.checked_sub(self.slot).ok_or(ErrorCode::MathError)?;
-        Ok(slots_elapsed)
+        slot.checked_sub(self.slot)
+            .ok_or(ErrorCode::MathError.into())
     }
 
     /// Set last update slot
