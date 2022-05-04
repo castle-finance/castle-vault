@@ -7,12 +7,14 @@ use type_layout::TypeLayout;
 use anchor_lang::prelude::*;
 use jet_proto_proc_macros::assert_size;
 
-use crate::asset_container::AssetContainer;
-use crate::errors::ErrorCode;
-use crate::impl_provider_index;
-use crate::instructions::VaultConfigArg;
-use crate::math::{calc_carry_fees, calc_mgmt_fees};
-use crate::reserves::Provider;
+use crate::{
+    asset_container::AssetContainer,
+    errors::ErrorCode,
+    impl_provider_index,
+    instructions::VaultConfigArg,
+    math::{calc_carry_fees, calc_mgmt_fees},
+    reserves::Provider,
+};
 
 #[assert_size(768)]
 #[account]

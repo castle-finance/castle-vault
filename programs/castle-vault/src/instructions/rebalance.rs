@@ -1,5 +1,4 @@
-use std::convert::TryFrom;
-use std::ops::Deref;
+use std::{convert::TryFrom, ops::Deref};
 
 use boolinator::Boolinator;
 use strum::IntoEnumIterator;
@@ -8,12 +7,14 @@ use anchor_lang::prelude::*;
 use port_anchor_adaptor::PortReserve;
 use solana_maths::Rate;
 
-use crate::adapters::SolendReserve;
-use crate::asset_container::AssetContainer;
-use crate::errors::ErrorCode;
-use crate::impl_provider_index;
-use crate::reserves::{Provider, Reserves};
-use crate::state::*;
+use crate::{
+    adapters::SolendReserve,
+    asset_container::AssetContainer,
+    errors::ErrorCode,
+    impl_provider_index,
+    reserves::{Provider, Reserves},
+    state::*,
+};
 
 #[event]
 pub struct RebalanceEvent {

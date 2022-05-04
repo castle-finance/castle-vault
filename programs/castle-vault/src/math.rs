@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
 
-use anchor_lang::prelude::ProgramError;
-use anchor_lang::solana_program::clock::{
-    DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
+use anchor_lang::{
+    prelude::ProgramError,
+    solana_program::clock::{DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY},
 };
 use spl_math::precise_number::PreciseNumber;
 
