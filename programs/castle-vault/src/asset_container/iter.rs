@@ -8,10 +8,10 @@ use super::AssetContainerGeneric;
 
 impl<'a, T, const N: usize> IntoIterator for &'a AssetContainerGeneric<T, N> {
     type Item = (Provider, &'a T);
-    type IntoIter = BackendContainerIterator<'a, T, N>;
+    type IntoIter = AssetContainerIterator<'a, T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
-        BackendContainerIterator {
+        AssetContainerIterator {
             inner: self,
             inner_iter: Provider::iter(),
         }
@@ -30,12 +30,12 @@ impl<T, const N: usize> IntoIterator for AssetContainerGeneric<T, N> {
     }
 }
 
-pub struct BackendContainerIterator<'inner, T, const N: usize> {
+pub struct AssetContainerIterator<'inner, T, const N: usize> {
     inner: &'inner AssetContainerGeneric<T, N>,
     inner_iter: ProviderIter,
 }
 
-impl<'inner, T, const N: usize> Iterator for BackendContainerIterator<'inner, T, N> {
+impl<'inner, T, const N: usize> Iterator for AssetContainerIterator<'inner, T, N> {
     type Item = (Provider, &'inner T);
 
     fn next(&mut self) -> Option<Self::Item> {
