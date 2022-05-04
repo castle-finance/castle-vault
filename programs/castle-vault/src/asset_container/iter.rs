@@ -77,3 +77,5 @@ impl<T: Default, const N: usize> FromIterator<(Provider, T)> for AssetContainerG
         )
     }
 }
+
+// TODO add unit tests
