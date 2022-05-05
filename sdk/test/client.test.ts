@@ -22,7 +22,8 @@ describe("VaultClient", () => {
         commitment: "confirmed",
     });
 
-    const depositAmount = (0.1 * LAMPORTS_PER_SOL) / 1000;
+    const depositAmount = (0.05 * LAMPORTS_PER_SOL) / 1000;
+    //const depositAmount = LAMPORTS_PER_SOL;
 
     let vaultClient: VaultClient;
     let jet: JetReserveAsset;
@@ -36,13 +37,8 @@ describe("VaultClient", () => {
 
     it("loads devnet sol vault", async () => {
         const vaultId = new PublicKey(
-            //"3PUZJamT1LAwgkjT58PHoY8izM1Y8jRz2A1UwiV4JTkk"
-            //"FEthCwaa3sGvPTTYV7ZSuYKTm4gaHPGtju4xFxDqv5gJ"
-            //"9n6ekjHHgkPB9fVuWHzH6iNuxBxN22hEBryZXYFg6cNk" // old devnet-parity vault
-            "EDtqJFHksXpdXLDuxgoYpjpxg3LjBpmW4jh3fkz4SX32" // old mainnet vault
-            //"HKnAJ5wX3w7b52wFr4ZFf7fAtiHS3oaFngnkViXGCusf" // new devnet-parity vault
-            //"5zwJzQbw8PzNT2SwkhwrYfriVsLshytWk1UQkkudQv6G" // new devnet-staging vault
-            //"5VsCBvW7CswQfYe5rQdP9W5tSWb2rEZBQZ2C8wU7qrnL" // new mainnet vault
+            //"Bv4d2wWb7myxpjWudHnEMjdJstxjkiWqX61xLhPBrBx" //devnet-staging
+            "7TjwSWXY9bbRfxyCxZqmRp9vBRdP1kRBNjSwqTiyPTxg" //mainnet
         );
         vaultClient = await VaultClient.load(
             provider,
@@ -63,6 +59,7 @@ describe("VaultClient", () => {
 
         console.log("Jet");
         console.log(
+            "value: ",
             (await vaultClient.getVaultJetLpTokenAccountValue()).toString()
         );
         console.log((await jet.getApy()).toString());
@@ -71,6 +68,7 @@ describe("VaultClient", () => {
 
         console.log("Solend");
         console.log(
+            "value: ",
             (await vaultClient.getVaultSolendLpTokenAccountValue()).toString()
         );
         console.log((await solend.getApy()).toString());
@@ -79,6 +77,7 @@ describe("VaultClient", () => {
 
         console.log("Port");
         console.log(
+            "value: ",
             (await vaultClient.getVaultPortLpTokenAccountValue()).toString()
         );
         console.log((await port.getApy()).toString());
@@ -128,8 +127,6 @@ describe("VaultClient", () => {
         assert.isNull(result.value.err);
     });
 
-    // TODO sleep to avoid AlreadyProcessed error
-
     it("withdraws", async () => {
         const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
         console.log("start value: ", startUserValue.toNumber());
@@ -158,7 +155,7 @@ describe("VaultClient", () => {
             Math.abs(
                 startUserValue.sub(endUserValue).sub(depositAmount).toNumber()
             ),
-            1000000
+            1000
         );
     });
 });

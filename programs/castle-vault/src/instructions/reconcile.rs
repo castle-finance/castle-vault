@@ -5,7 +5,7 @@ use boolinator::Boolinator;
 
 use crate::{
     errors::ErrorCode,
-    rebalance::assets::Provider,
+    reserves::Provider,
     state::{Vault, VaultFlags},
 };
 
@@ -118,10 +118,14 @@ pub fn handler<T: LendingMarket + HasVault>(
 
             let tokens_to_redeem = ctx.accounts.convert_amount_reserve_to_lp(withdraw_option)?;
 
-            #[cfg(feature = "debug")]
-            msg!("Redeeming {}", tokens_to_redeem);
+            // Make sure that the amount to redeem is not more than the vault has
+            let tokens_to_redeem_checked =
+                cmp::min(tokens_to_redeem, ctx.accounts.lp_tokens_in_vault());
 
-            ctx.accounts.redeem(tokens_to_redeem)?;
+            #[cfg(feature = "debug")]
+            msg!("Redeeming {}", tokens_to_redeem_checked);
+
+            ctx.accounts.redeem(tokens_to_redeem_checked)?;
         }
     }
     Ok(())

@@ -3,8 +3,7 @@ use std::convert::Into;
 use boolinator::Boolinator;
 
 use anchor_lang::prelude::*;
-use anchor_spl::token::Token;
-use anchor_spl::token::{self, Mint, MintTo, TokenAccount, Transfer};
+use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount, Transfer};
 
 use crate::{
     errors::ErrorCode,

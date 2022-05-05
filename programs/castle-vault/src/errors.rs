@@ -26,7 +26,7 @@ pub enum ErrorCode {
     #[msg("Fees cannot be set to over 100%")]
     InvalidFeeConfig,
 
-    #[msg("Proposed weights don't add up to 100%")]
+    #[msg("Proposed weights do not meet the required constraints")]
     InvalidProposedWeights,
 
     #[msg("Proposed weights failed proof check")]

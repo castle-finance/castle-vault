@@ -977,23 +977,6 @@ export type CastleVault = {
             };
         },
         {
-            name: "Provider";
-            type: {
-                kind: "enum";
-                variants: [
-                    {
-                        name: "Solend";
-                    },
-                    {
-                        name: "Port";
-                    },
-                    {
-                        name: "Jet";
-                    }
-                ];
-            };
-        },
-        {
             name: "RebalanceMode";
             type: {
                 kind: "enum";
@@ -1138,7 +1121,7 @@ export type CastleVault = {
         {
             code: 308;
             name: "InvalidProposedWeights";
-            msg: "Proposed weights don't add up to 100%";
+            msg: "Proposed weights do not meet the required constraints";
         },
         {
             code: 309;
@@ -2157,23 +2140,6 @@ export const IDL: CastleVault = {
             },
         },
         {
-            name: "Provider",
-            type: {
-                kind: "enum",
-                variants: [
-                    {
-                        name: "Solend",
-                    },
-                    {
-                        name: "Port",
-                    },
-                    {
-                        name: "Jet",
-                    },
-                ],
-            },
-        },
-        {
             name: "RebalanceMode",
             type: {
                 kind: "enum",
@@ -2318,7 +2284,7 @@ export const IDL: CastleVault = {
         {
             code: 308,
             name: "InvalidProposedWeights",
-            msg: "Proposed weights don't add up to 100%",
+            msg: "Proposed weights do not meet the required constraints",
         },
         {
             code: 309,

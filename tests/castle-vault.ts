@@ -924,7 +924,6 @@ describe("castle-vault", () => {
             testDepositCap();
             testHalting();
         });
-
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -935,12 +934,10 @@ describe("castle-vault", () => {
             });
             testRebalance(1 / 3, 1 / 3, 1 / 3);
         });
-
         describe("Fees", () => {
             const feeMgmtBps = 10000;
             const feeCarryBps = 10000;
             const referralFeePct = 20;
-
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
