@@ -73,17 +73,19 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
-    let mut vault_value = vault_reserve_token_amount;
-    for p in Provider::iter() {
-        let allocation = ctx.accounts.vault.actual_allocations[p];
-        if allocation.last_update.slots_elapsed(ctx.accounts.clock.slot)? != 0 {
-            return Err(ErrorCode::AllocationIsNotUpdated.into());
-        }
-
-        vault_value = vault_value
-            .checked_add(allocation.value)
-            .ok_or(ErrorCode::OverflowError)?;
-    }
+    let vault_value =
+        Provider::iter().try_fold(ctx.accounts.vault_reserve_token.amount, |acc, p| {
+            let allocation = ctx.accounts.vault.actual_allocations[p];
+            (allocation
+                .last_update
+                .slots_elapsed(ctx.accounts.clock.slot)?
+                == 0)
+                .as_result::<u64, ProgramError>(
+                    acc.checked_add(allocation.value)
+                        .ok_or(ErrorCode::OverflowError)?,
+                    ErrorCode::AllocationIsNotUpdated.into(),
+                )
+        })?;
 
     #[cfg(feature = "debug")]
     {
