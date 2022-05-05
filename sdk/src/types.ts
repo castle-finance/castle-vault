@@ -8,7 +8,7 @@ export type ProgramIdMap = {
 };
 
 export interface Vault {
-    version: number;
+    version: number[];
     owner: PublicKey;
     vaultAuthority: PublicKey;
     authoritySeed: PublicKey;
@@ -24,6 +24,7 @@ export interface Vault {
     reserveTokenMint: PublicKey;
     feeReceiver: PublicKey;
     referralFeeReceiver: PublicKey;
+    bitflags: number;
     value: SlotTrackedValue;
     allocations: Allocations;
     config: VaultConfig;
@@ -65,4 +66,11 @@ export interface RebalanceDataEvent {
     solend: BN;
     port: BN;
     jet: BN;
+}
+
+export enum VaultFlags {
+    HaltReconciles = 1 << 0,
+    HaltRefreshes = 1 << 1,
+    HaltDepositsWithdraws = 1 << 2,
+    HaltAll = HaltReconciles | HaltRefreshes | HaltDepositsWithdraws,
 }

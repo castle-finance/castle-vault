@@ -195,8 +195,8 @@ pub fn handler(
 
     let vault = &mut ctx.accounts.vault;
     vault.version = get_version_arr();
-    vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.owner = ctx.accounts.owner.key();
+    vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.authority_seed = vault.key();
     vault.authority_bump = [bumps.authority];
     vault.solend_reserve = ctx.accounts.solend_reserve.key();
@@ -210,10 +210,10 @@ pub fn handler(
     vault.reserve_token_mint = ctx.accounts.reserve_token_mint.key();
     vault.fee_receiver = ctx.accounts.fee_receiver.key();
     vault.referral_fee_receiver = ctx.accounts.referral_fee_receiver.key();
-
-    vault.value = SlotTrackedValue::default();
-    vault.value.update(0, clock.slot);
-
+    vault.value = SlotTrackedValue {
+        value: 0,
+        last_update: LastUpdate::new(clock.slot),
+    };
     vault.config = VaultConfig::new(config)?;
 
     // Initialize fee receiver account

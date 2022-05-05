@@ -64,7 +64,7 @@ pub struct Vault {
 
     pub referral_fee_receiver: Pubkey,
 
-    _padding: [u8; 4],
+    bitflags: u32,
 
     /// Total value of vault denominated in the reserve token
     pub value: SlotTrackedValue,
@@ -80,7 +80,18 @@ pub struct Vault {
 }
 
 impl Vault {
-    // TODO use a more specific error type
+    pub fn flags(&self) -> VaultFlags {
+        VaultFlags::from_bits(self.bitflags)
+            .unwrap_or_else(|| panic!("{:?} does not resolve to valid VaultFlags", self.bitflags))
+    }
+
+    pub fn set_flags(&mut self, bits: u32) -> ProgramResult {
+        VaultFlags::from_bits(bits)
+            .ok_or_else::<ProgramError, _>(|| ErrorCode::InvalidVaultFlags.into())?;
+        self.bitflags = bits;
+        Ok(())
+    }
+
     pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
         let vault_value_diff = new_vault_value.saturating_sub(self.value.value);
         let slots_elapsed = self.value.last_update.slots_elapsed(slot)?;
@@ -193,6 +204,25 @@ pub enum RebalanceMode {
 pub enum StrategyType {
     MaxYield,
     EqualAllocation,
+}
+
+bitflags::bitflags! {
+    pub struct VaultFlags: u32 {
+        /// Disable reconciles
+        const HALT_RECONCILES = 1 << 0;
+
+        /// Disable refreshes
+        const HALT_REFRESHES = 1 << 1;
+
+        /// Disable deposits + withdrawals
+        const HALT_DEPOSITS_WITHDRAWS = 1 << 2;
+
+        /// Disable all operations
+        const HALT_ALL = Self::HALT_RECONCILES.bits
+                       | Self::HALT_REFRESHES.bits
+                       | Self::HALT_DEPOSITS_WITHDRAWS.bits;
+
+    }
 }
 
 #[assert_size(aligns, 72)]
