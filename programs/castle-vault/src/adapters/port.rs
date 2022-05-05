@@ -171,7 +171,7 @@ impl ReserveAccessor for Reserve {
 }
 
 #[derive(Accounts)]
-pub struct PortRefresher<'info> {
+pub struct RefreshPort<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -199,7 +199,7 @@ pub struct PortRefresher<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl<'info> PortRefresher<'info> {
+impl<'info> RefreshPort<'info> {
     fn port_refresh_reserve_context(
         &self,
         use_oracle: bool,
@@ -220,7 +220,7 @@ impl<'info> PortRefresher<'info> {
     }
 }
 
-impl<'info> Refresher for PortRefresher<'info> {
+impl<'info> Refresher for RefreshPort<'info> {
     fn update_actual_allocation(&mut self, use_oracle: bool) -> ProgramResult {
         port_anchor_adaptor::refresh_port_reserve(self.port_refresh_reserve_context(use_oracle))?;
 

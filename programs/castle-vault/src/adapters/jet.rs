@@ -183,7 +183,7 @@ impl ReserveAccessor for Reserve {
 }
 
 #[derive(Accounts)]
-pub struct JetRefresher<'info> {
+pub struct RefreshJet<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -228,7 +228,7 @@ pub struct JetRefresher<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl<'info> JetRefresher<'info> {
+impl<'info> RefreshJet<'info> {
     fn jet_refresh_reserve_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, jet::cpi::accounts::RefreshReserve<'info>> {
@@ -247,7 +247,7 @@ impl<'info> JetRefresher<'info> {
     }
 }
 
-impl<'info> Refresher for JetRefresher<'info> {
+impl<'info> Refresher for RefreshJet<'info> {
     fn update_actual_allocation(&mut self, _use_oracle: bool) -> ProgramResult {
         jet::cpi::refresh_reserve(self.jet_refresh_reserve_context())?;
 

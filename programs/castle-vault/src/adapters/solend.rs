@@ -338,7 +338,7 @@ impl Deref for SolendReserve {
 }
 
 #[derive(Accounts)]
-pub struct SolendRefresher<'info> {
+pub struct RefreshSolend<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
     #[account(
@@ -369,7 +369,7 @@ pub struct SolendRefresher<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-impl<'info> SolendRefresher<'info> {
+impl<'info> RefreshSolend<'info> {
     fn solend_refresh_reserve_context(
         &self,
     ) -> CpiContext<'_, '_, '_, 'info, RefreshReserve<'info>> {
@@ -386,7 +386,7 @@ impl<'info> SolendRefresher<'info> {
     }
 }
 
-impl<'info> Refresher for SolendRefresher<'info> {
+impl<'info> Refresher for RefreshSolend<'info> {
     fn update_actual_allocation(&mut self, _use_oracle: bool) -> ProgramResult {
         refresh_reserve(self.solend_refresh_reserve_context())?;
 

@@ -13,8 +13,6 @@ use crate::reserves::Provider;
 use crate::state::{Vault, VaultFlags};
 use strum::IntoEnumIterator;
 
-// NOTE: having all accounts for each lending market reserve here is not scalable
-// since eventually we will hit into transaction size limits
 #[derive(Accounts)]
 pub struct ConsolidateRefresh<'info> {
     /// Vault state account
@@ -42,7 +40,6 @@ pub struct ConsolidateRefresh<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-// TODO refactor refresh cpi calls into adapter pattern
 impl<'info> ConsolidateRefresh<'info> {
     /// CpiContext for collecting fees by minting new vault lp tokens
     #[cfg(feature = "fees")]
@@ -78,13 +75,13 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
     let mut vault_value = vault_reserve_token_amount;
     for p in Provider::iter() {
-        let alloc = ctx.accounts.vault.actual_allocations[p];
-        if alloc.last_update.slots_elapsed(ctx.accounts.clock.slot)? != 0 {
+        let allocation = ctx.accounts.vault.actual_allocations[p];
+        if allocation.last_update.slots_elapsed(ctx.accounts.clock.slot)? != 0 {
             return Err(ErrorCode::AllocationIsNotUpdated.into());
         }
 
         vault_value = vault_value
-            .checked_add(alloc.value)
+            .checked_add(allocation.value)
             .ok_or(ErrorCode::OverflowError)?;
     }
 
