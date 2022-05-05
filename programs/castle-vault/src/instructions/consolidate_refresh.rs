@@ -85,8 +85,6 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
             .ok_or(ErrorCode::OverflowError)?;
     }
 
-    msg!("consolidate refresh");
-
     #[cfg(feature = "debug")]
     {
         msg!("Tokens value: {}", vault_reserve_token_amount);
