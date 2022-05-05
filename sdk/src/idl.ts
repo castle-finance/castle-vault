@@ -137,6 +137,27 @@ export type CastleVault = {
             ];
         },
         {
+            name: "updateFlags";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                }
+            ];
+            args: [
+                {
+                    name: "flags";
+                    type: "u32";
+                }
+            ];
+        },
+        {
             name: "updateConfig";
             accounts: [
                 {
@@ -898,10 +919,8 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "padding";
-                        type: {
-                            array: ["u8", 4];
-                        };
+                        name: "bitflags";
+                        type: "u32";
                     },
                     {
                         name: "value";
@@ -1287,7 +1306,7 @@ export type CastleVault = {
         {
             code: 308;
             name: "InvalidProposedWeights";
-            msg: "Proposed weights don't add up to 100%";
+            msg: "Proposed weights do not meet the required constraints";
         },
         {
             code: 309;
@@ -1313,6 +1332,16 @@ export type CastleVault = {
             code: 313;
             name: "InvalidAllocationCap";
             msg: "Allocation cap cannot set to under 1/(number of assets) or over 100%";
+        },
+        {
+            code: 314;
+            name: "InvalidVaultFlags";
+            msg: "Bits passed in do not result in valid vault flags";
+        },
+        {
+            code: 315;
+            name: "HaltedVault";
+            msg: "Vault is halted";
         }
     ];
 };
@@ -1452,6 +1481,27 @@ export const IDL: CastleVault = {
                     type: {
                         defined: "VaultConfigArg",
                     },
+                },
+            ],
+        },
+        {
+            name: "updateFlags",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+            ],
+            args: [
+                {
+                    name: "flags",
+                    type: "u32",
                 },
             ],
         },
@@ -2217,10 +2267,8 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "padding",
-                        type: {
-                            array: ["u8", 4],
-                        },
+                        name: "bitflags",
+                        type: "u32",
                     },
                     {
                         name: "value",
@@ -2606,7 +2654,7 @@ export const IDL: CastleVault = {
         {
             code: 308,
             name: "InvalidProposedWeights",
-            msg: "Proposed weights don't add up to 100%",
+            msg: "Proposed weights do not meet the required constraints",
         },
         {
             code: 309,
@@ -2632,6 +2680,16 @@ export const IDL: CastleVault = {
             code: 313,
             name: "InvalidAllocationCap",
             msg: "Allocation cap cannot set to under 1/(number of assets) or over 100%",
+        },
+        {
+            code: 314,
+            name: "InvalidVaultFlags",
+            msg: "Bits passed in do not result in valid vault flags",
+        },
+        {
+            code: 315,
+            name: "HaltedVault",
+            msg: "Vault is halted",
         },
     ],
 };

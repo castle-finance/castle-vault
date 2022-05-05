@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+use boolinator::Boolinator;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use port_anchor_adaptor::{port_lending_id, PortReserve};
@@ -8,7 +10,7 @@ use port_anchor_adaptor::{port_lending_id, PortReserve};
 use crate::adapters::{solend, SolendReserve};
 use crate::errors::ErrorCode;
 use crate::reserves::Provider;
-use crate::state::Vault;
+use crate::state::{Vault, VaultFlags};
 use strum::IntoEnumIterator;
 
 // NOTE: having all accounts for each lending market reserve here is not scalable
@@ -63,6 +65,14 @@ impl<'info> ConsolidateRefresh<'info> {
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Consolidate vault refreshing");
+
+    // Check that refreshes are not halted
+    (!ctx
+        .accounts
+        .vault
+        .flags()
+        .contains(VaultFlags::HALT_REFRESHES))
+    .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;

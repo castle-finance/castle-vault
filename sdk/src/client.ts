@@ -41,6 +41,7 @@ import {
     RebalanceDataEvent,
     Vault,
     VaultConfig,
+    VaultFlags,
 } from "./types";
 
 export class VaultClient {
@@ -384,6 +385,26 @@ export class VaultClient {
             ),
             keyPair: userReserveKeypair,
         };
+    }
+
+    /**
+     * @param new_value
+     * @returns
+     */
+    async updateFlags(
+        owner: Keypair,
+        flags: number
+    ): Promise<TransactionSignature> {
+        const updateTx = new Transaction();
+        updateTx.add(
+            this.program.instruction.updateFlags(flags, {
+                accounts: {
+                    vault: this.vaultId,
+                    owner: owner.publicKey,
+                },
+            })
+        );
+        return await this.program.provider.send(updateTx, [owner]);
     }
 
     /**
@@ -1083,6 +1104,10 @@ export class VaultClient {
 
     getManagementFee(): number {
         return this.vaultState.config.feeMgmtBps / 10000;
+    }
+
+    getFlags(): VaultFlags {
+        return this.vaultState.bitflags;
     }
 }
 

@@ -1,8 +1,13 @@
 use std::cmp;
 
 use anchor_lang::prelude::*;
+use boolinator::Boolinator;
 
-use crate::{errors::ErrorCode, reserves::Provider, state::Vault};
+use crate::{
+    errors::ErrorCode,
+    reserves::Provider,
+    state::{Vault, VaultFlags},
+};
 
 const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 100;
 
@@ -48,6 +53,14 @@ pub fn handler<T: LendingMarket + HasVault>(
     ctx: Context<T>,
     withdraw_option: u64,
 ) -> ProgramResult {
+    // Check that reconciles are not halted
+    (!ctx
+        .accounts
+        .vault()
+        .flags()
+        .contains(VaultFlags::HALT_RECONCILES))
+    .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
+
     let provider = ctx.accounts.provider();
     match withdraw_option {
         // Normal case where reconcile is being called after rebalance

@@ -5,6 +5,7 @@ pub mod rebalance;
 pub mod reconcile;
 pub mod refresh;
 pub mod update_config;
+pub mod update_flags;
 pub mod withdraw;
 
 pub use consolidate_refresh::*;
@@ -14,4 +15,5 @@ pub use rebalance::*;
 pub use reconcile::*;
 pub use refresh::*;
 pub use update_config::*;
+pub use update_flags::*;
 pub use withdraw::*;

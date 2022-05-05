@@ -8,7 +8,6 @@ use port_anchor_adaptor::{port_lending_id, PortReserve};
 use crate::{
     adapters::{solend, SolendReserve},
     errors::ErrorCode,
-    state::Vault,
 };
 
 pub trait Refresher {
