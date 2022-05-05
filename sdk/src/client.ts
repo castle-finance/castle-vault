@@ -393,9 +393,29 @@ export class VaultClient {
         return await this.program.provider.send(updateTx, [owner]);
     }
 
+    getDepositIx(
+        amount: anchor.BN,
+        userAuthority: PublicKey,
+        userLpTokenAccount: PublicKey,
+        userReserveTokenAccount: PublicKey
+    ) {
+        return this.program.instruction.deposit(amount, {
+            accounts: {
+                vault: this.vaultId,
+                vaultAuthority: this.vaultState.vaultAuthority,
+                vaultReserveToken: this.vaultState.vaultReserveToken,
+                lpTokenMint: this.vaultState.lpTokenMint,
+                userReserveToken: userReserveTokenAccount,
+                userLpToken: userLpTokenAccount,
+                userAuthority: userAuthority,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
+
     /**
      *
-     * TODO refactor to be more clear
      *
      * @param wallet
      * @param amount
@@ -438,19 +458,12 @@ export class VaultClient {
 
         depositTx.add(this.getRefreshIx());
         depositTx.add(
-            this.program.instruction.deposit(new anchor.BN(amount), {
-                accounts: {
-                    vault: this.vaultId,
-                    vaultAuthority: this.vaultState.vaultAuthority,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    lpTokenMint: this.vaultState.lpTokenMint,
-                    userReserveToken: userReserveTokenAccount,
-                    userLpToken: userLpTokenAccount,
-                    userAuthority: wallet.publicKey,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                },
-            })
+            this.getDepositIx(
+                new anchor.BN(amount),
+                wallet.publicKey,
+                userLpTokenAccount,
+                userReserveTokenAccount
+            )
         );
 
         const txs: SendTxRequest[] = [];
@@ -469,6 +482,27 @@ export class VaultClient {
         }
 
         return await this.program.provider.sendAll(txs);
+    }
+
+    getWithdrawIx(
+        amount: anchor.BN,
+        userAuthority: PublicKey,
+        userLpTokenAccount: PublicKey,
+        userReserveTokenAccount: PublicKey
+    ) {
+        return this.program.instruction.withdraw(amount, {
+            accounts: {
+                vault: this.vaultId,
+                vaultAuthority: this.vaultState.vaultAuthority,
+                userAuthority: userAuthority,
+                userLpToken: userLpTokenAccount,
+                userReserveToken: userReserveTokenAccount,
+                vaultReserveToken: this.vaultState.vaultReserveToken,
+                lpTokenMint: this.vaultState.lpTokenMint,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
     }
 
     /**
@@ -520,19 +554,12 @@ export class VaultClient {
 
         withdrawTx.add(this.getRefreshIx());
         withdrawTx.add(
-            this.program.instruction.withdraw(new anchor.BN(amount), {
-                accounts: {
-                    vault: this.vaultId,
-                    vaultAuthority: this.vaultState.vaultAuthority,
-                    userAuthority: wallet.publicKey,
-                    userLpToken: userLpTokenAccount,
-                    userReserveToken: userReserveTokenAccount,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    lpTokenMint: this.vaultState.lpTokenMint,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                },
-            })
+            this.getWithdrawIx(
+                new anchor.BN(amount),
+                wallet.publicKey,
+                userLpTokenAccount,
+                userReserveTokenAccount
+            )
         );
 
         if (wrappedSolIxResponse != null) {
