@@ -17,7 +17,6 @@ import {
     DeploymentEnvs,
     RebalanceMode,
     RebalanceModes,
-    StrategyType,
     StrategyTypes,
 } from "@castlefinance/vault-core";
 
@@ -372,30 +371,19 @@ describe("castle-vault", () => {
         });
 
         it("Withdraw funds from vault", async function () {
-            const vaultReserveBalance0 = await getVaultReserveTokenBalance();
-            const loTokenSupply0 = await getLpTokenSupply();
+            const oldVaultReserveBalance = await getVaultReserveTokenBalance();
+            const oldLpTokenSupply = await getLpTokenSupply();
 
-            const qty1 = 70;
-            await withdrawFromVault(qty1);
+            const qty = 70;
+            await withdrawFromVault(qty);
 
-            const userReserveBalance1 = await getUserReserveTokenBalance();
-            const vaultReserveBalance1 = await getVaultReserveTokenBalance();
-            const loTokenSupply1 = await getLpTokenSupply();
+            const newUserReserveBalance = await getUserReserveTokenBalance();
+            const newVaultReserveBalance = await getVaultReserveTokenBalance();
+            const newLpTokenSupply = await getLpTokenSupply();
 
-            assert.equal(vaultReserveBalance0 - vaultReserveBalance1, qty1);
-            assert.equal(loTokenSupply0 - loTokenSupply1, qty1);
-            assert.equal(userReserveBalance1, qty1);
-
-            const qty2 = 20;
-            await withdrawFromVault(qty2);
-
-            const userReserveBalance2 = await getUserReserveTokenBalance();
-            const vaultReserveBalance2 = await getVaultReserveTokenBalance();
-            const loTokenSupply2 = await getLpTokenSupply();
-
-            assert.equal(vaultReserveBalance1 - vaultReserveBalance2, qty2);
-            assert.equal(loTokenSupply1 - loTokenSupply2, qty2);
-            assert.equal(userReserveBalance2, qty1 + qty2);
+            assert.equal(oldVaultReserveBalance - newVaultReserveBalance, qty);
+            assert.equal(oldLpTokenSupply - newLpTokenSupply, qty);
+            assert.equal(newUserReserveBalance, qty);
         });
     }
 
@@ -596,7 +584,7 @@ describe("castle-vault", () => {
         });
     }
 
-    function testRebalance(
+    function testRebalanceWithdraw(
         expectedSolendRatio: number,
         expectedPortRatio: number,
         expectedJetRatio: number,
@@ -604,11 +592,11 @@ describe("castle-vault", () => {
     ) {
         // NOTE: should not be divisible by the number of markets, 3 in this case
         // The TODO to correct this is below
-        const qty = 1024502;
+        const depositQty = 1024502;
 
         before(async () => {
-            await mintReserveToken(userReserveTokenAccount, qty);
-            await depositToVault(qty);
+            await mintReserveToken(userReserveTokenAccount, depositQty);
+            await depositToVault(depositQty);
         });
 
         if (rebalanceMode == RebalanceModes.proofChecker) {
@@ -759,21 +747,42 @@ describe("castle-vault", () => {
             // However the difference should not exceet 1 token.
             const maxDiffAllowed = 1;
             assert.isAtMost(
-                Math.abs(totalValue - Math.floor(qty)),
+                Math.abs(totalValue - Math.floor(depositQty)),
                 maxDiffAllowed
             );
             assert.isAtMost(
-                Math.abs(solendValue - Math.floor(qty * expectedSolendRatio)),
+                Math.abs(
+                    solendValue - Math.floor(depositQty * expectedSolendRatio)
+                ),
                 maxDiffAllowed
             );
             assert.isAtMost(
-                Math.abs(portValue - Math.floor(qty * expectedPortRatio)),
+                Math.abs(
+                    portValue - Math.floor(depositQty * expectedPortRatio)
+                ),
                 maxDiffAllowed
             );
             assert.isAtMost(
-                Math.abs(jetValue - Math.floor(qty * expectedJetRatio)),
+                Math.abs(jetValue - Math.floor(depositQty * expectedJetRatio)),
                 maxDiffAllowed
             );
+        });
+
+        it("Withdraws", async function () {
+            const oldVaultValue = await getVaultTotalValue();
+            const oldLpTokenSupply = await getLpTokenSupply();
+
+            const withdrawQty = 922051;
+            await withdrawFromVault(withdrawQty);
+
+            const newUserReserveBalance = await getUserReserveTokenBalance();
+            const newVaultValue = await getVaultTotalValue();
+            const newLpTokenSupply = await getLpTokenSupply();
+
+            // Need to subtract 1 from expected vals bc of rounding
+            assert.equal(oldVaultValue - newVaultValue, withdrawQty - 1);
+            assert.equal(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
+            assert.equal(newUserReserveBalance, withdrawQty - 1);
         });
     }
 
@@ -924,6 +933,7 @@ describe("castle-vault", () => {
             testDepositCap();
             testHalting();
         });
+
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -932,8 +942,9 @@ describe("castle-vault", () => {
                     rebalanceMode: { [RebalanceModes.calculator]: {} },
                 });
             });
-            testRebalance(1 / 3, 1 / 3, 1 / 3);
+            testRebalanceWithdraw(1 / 3, 1 / 3, 1 / 3);
         });
+
         describe("Fees", () => {
             const feeMgmtBps = 10000;
             const feeCarryBps = 10000;
@@ -959,7 +970,7 @@ describe("castle-vault", () => {
                 await initializeVault({ allocationCapPct: vaultAllocationCap });
             });
 
-            testRebalance(
+            testRebalanceWithdraw(
                 1 - vaultAllocationCap / 100,
                 0,
                 vaultAllocationCap / 100
@@ -981,7 +992,7 @@ describe("castle-vault", () => {
                     rebalanceMode: { [RebalanceModes.proofChecker]: {} },
                 });
             });
-            testRebalance(
+            testRebalanceWithdraw(
                 1 - vaultAllocationCap / 100,
                 0,
                 vaultAllocationCap / 100,

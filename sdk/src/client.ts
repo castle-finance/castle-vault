@@ -393,9 +393,29 @@ export class VaultClient {
         return await this.program.provider.send(updateTx, [owner]);
     }
 
+    getDepositIx(
+        amount: anchor.BN,
+        userAuthority: PublicKey,
+        userLpTokenAccount: PublicKey,
+        userReserveTokenAccount: PublicKey
+    ) {
+        return this.program.instruction.deposit(amount, {
+            accounts: {
+                vault: this.vaultId,
+                vaultAuthority: this.vaultState.vaultAuthority,
+                vaultReserveToken: this.vaultState.vaultReserveToken,
+                lpTokenMint: this.vaultState.lpTokenMint,
+                userReserveToken: userReserveTokenAccount,
+                userLpToken: userLpTokenAccount,
+                userAuthority: userAuthority,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
+
     /**
      *
-     * TODO refactor to be more clear
      *
      * @param wallet
      * @param amount
@@ -438,19 +458,12 @@ export class VaultClient {
 
         depositTx.add(this.getRefreshIx());
         depositTx.add(
-            this.program.instruction.deposit(new anchor.BN(amount), {
-                accounts: {
-                    vault: this.vaultId,
-                    vaultAuthority: this.vaultState.vaultAuthority,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    lpTokenMint: this.vaultState.lpTokenMint,
-                    userReserveToken: userReserveTokenAccount,
-                    userLpToken: userLpTokenAccount,
-                    userAuthority: wallet.publicKey,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                },
-            })
+            this.getDepositIx(
+                new anchor.BN(amount),
+                wallet.publicKey,
+                userLpTokenAccount,
+                userReserveTokenAccount
+            )
         );
 
         const txs: SendTxRequest[] = [];
@@ -469,6 +482,27 @@ export class VaultClient {
         }
 
         return await this.program.provider.sendAll(txs);
+    }
+
+    getWithdrawIx(
+        amount: anchor.BN,
+        userAuthority: PublicKey,
+        userLpTokenAccount: PublicKey,
+        userReserveTokenAccount: PublicKey
+    ) {
+        return this.program.instruction.withdraw(amount, {
+            accounts: {
+                vault: this.vaultId,
+                vaultAuthority: this.vaultState.vaultAuthority,
+                userAuthority: userAuthority,
+                userLpToken: userLpTokenAccount,
+                userReserveToken: userReserveTokenAccount,
+                vaultReserveToken: this.vaultState.vaultReserveToken,
+                lpTokenMint: this.vaultState.lpTokenMint,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
     }
 
     /**
@@ -520,19 +554,12 @@ export class VaultClient {
 
         withdrawTx.add(this.getRefreshIx());
         withdrawTx.add(
-            this.program.instruction.withdraw(new anchor.BN(amount), {
-                accounts: {
-                    vault: this.vaultId,
-                    vaultAuthority: this.vaultState.vaultAuthority,
-                    userAuthority: wallet.publicKey,
-                    userLpToken: userLpTokenAccount,
-                    userReserveToken: userReserveTokenAccount,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    lpTokenMint: this.vaultState.lpTokenMint,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                },
-            })
+            this.getWithdrawIx(
+                new anchor.BN(amount),
+                wallet.publicKey,
+                userLpTokenAccount,
+                userReserveTokenAccount
+            )
         );
 
         if (wrappedSolIxResponse != null) {
@@ -572,22 +599,39 @@ export class VaultClient {
             .round(0, Big.roundUp);
 
         if (vaultReserveAmount.lt(convertedAmount)) {
-            // Sort reconcile ixs by most to least outflows
-            const reconcileIxs = (
-                await this.newAndOldallocationsWithReconcileIxs()
-            ).sort((a, b) => a[0].sub(a[1]).sub(b[0].sub(b[1])).toNumber());
+            // Sort reconcile ixs by most to least $ to minimize number of TXs sent
+            const reconcileIxs = [
+                [
+                    await this.solend.getLpTokenAccountValue(
+                        this.vaultState.vaultSolendLpToken
+                    ),
+                    this.getReconcileSolendIx.bind(this),
+                ],
+                [
+                    await this.port.getLpTokenAccountValue(
+                        this.vaultState.vaultPortLpToken
+                    ),
+                    this.getReconcilePortIx.bind(this),
+                ],
+                [
+                    await this.jet.getLpTokenAccountValue(
+                        this.vaultState.vaultJetLpToken
+                    ),
+                    this.getReconcileJetIx.bind(this),
+                ],
+            ].sort((a, b) => b[0].sub(a[0]).toNumber());
 
             const toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
             let reconciledAmount = Big(0);
             let n = 0;
             while (reconciledAmount.lt(toReconcileAmount)) {
-                const [, oldAlloc, ix] = reconcileIxs[n];
-                // min of oldAlloc and toWithdrawAmount - withdrawnAmount
-                const reconcileAmount = oldAlloc.gt(
+                const [alloc, ix] = reconcileIxs[n];
+                // min of alloc and toWithdrawAmount - withdrawnAmount
+                const reconcileAmount = alloc.gt(
                     toReconcileAmount.sub(reconciledAmount)
                 )
                     ? toReconcileAmount
-                    : oldAlloc;
+                    : alloc;
 
                 if (!Big(0).eq(reconcileAmount)) {
                     const reconcileTx = new Transaction();
@@ -639,39 +683,7 @@ export class VaultClient {
             );
         }
 
-        const txs: SendTxRequest[] = [
-            { tx: this.getRebalanceTx(proposedWeights), signers: [] },
-        ];
-
         // Sort ixs in descending order of outflows
-        const newAndOldallocationsWithReconcileIxs =
-            await this.newAndOldallocationsWithReconcileIxs(proposedWeights);
-
-        const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
-            newAndOldallocationsWithReconcileIxs.map((e) => [
-                e[0].sub(e[1]),
-                e[2](),
-            ]);
-
-        const reconcileIxs = allocationDiffsWithReconcileIxs
-            .sort((a, b) => a[0].sub(b[0]).toNumber())
-            .map((e) => e[1]);
-
-        for (const ix of reconcileIxs) {
-            const reconcileTx = new Transaction();
-            reconcileTx.add(this.getRefreshIx());
-            reconcileTx.add(ix);
-            txs.push({ tx: reconcileTx, signers: [] });
-        }
-        return this.program.provider.sendAll(txs);
-    }
-
-    // TODO this is probably not the best way to do this?
-    private async newAndOldallocationsWithReconcileIxs(
-        proposedWeights?: ProposedWeightsBps
-    ): Promise<
-        [Big, Big, (withdrawOption?: anchor.BN) => TransactionInstruction][]
-    > {
         const newAllocations = (
             await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
@@ -685,7 +697,7 @@ export class VaultClient {
             })
         ).events[1].data as RebalanceDataEvent;
 
-        return [
+        const newAndOldallocationsWithReconcileIxs = [
             [
                 new Big(newAllocations.solend.toString()),
                 await this.solend.getLpTokenAccountValue(
@@ -708,6 +720,28 @@ export class VaultClient {
                 this.getReconcileJetIx.bind(this),
             ],
         ];
+
+        const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
+            newAndOldallocationsWithReconcileIxs.map((e) => [
+                e[0].sub(e[1]),
+                e[2](),
+            ]);
+
+        const reconcileIxs = allocationDiffsWithReconcileIxs
+            .sort((a, b) => a[0].sub(b[0]).toNumber())
+            .map((e) => e[1]);
+
+        const txs: SendTxRequest[] = [
+            { tx: this.getRebalanceTx(proposedWeights), signers: [] },
+        ];
+
+        for (const ix of reconcileIxs) {
+            const reconcileTx = new Transaction();
+            reconcileTx.add(this.getRefreshIx());
+            reconcileTx.add(ix);
+            txs.push({ tx: reconcileTx, signers: [] });
+        }
+        return this.program.provider.sendAll(txs);
     }
 
     private getReconcilePortIx(
