@@ -63,7 +63,7 @@ impl<'info> ConsolidateRefresh<'info> {
 /// updates the vault total value, and collects fees
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>) -> ProgramResult {
     #[cfg(feature = "debug")]
-    msg!("Refreshing vault");
+    msg!("Consolidate vault refreshing");
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;

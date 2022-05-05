@@ -228,6 +228,7 @@ impl<'info> Refresher for PortRefresher<'info> {
         let port_value =
             port_exchange_rate.collateral_to_liquidity(self.vault_port_lp_token.amount)?;
 
+        #[cfg(feature = "debug")]
         msg!("Refresh port reserve token value: {}", port_value);
 
         self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);

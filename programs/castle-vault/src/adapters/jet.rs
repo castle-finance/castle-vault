@@ -259,6 +259,7 @@ impl<'info> Refresher for JetRefresher<'info> {
         );
         let jet_value = (jet_exchange_rate * self.vault_jet_lp_token.amount).as_u64(0);
 
+        #[cfg(feature = "debug")]
         msg!("Refresh jet reserve token value: {}", jet_value);
 
         self.vault.actual_allocations[Provider::Jet].update(jet_value, self.clock.slot);

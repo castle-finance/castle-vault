@@ -394,6 +394,7 @@ impl<'info> Refresher for SolendRefresher<'info> {
         let solend_value =
             solend_exchange_rate.collateral_to_liquidity(self.vault_solend_lp_token.amount)?;
 
+        #[cfg(feature = "debug")]
         msg!("Refresh solen reserve token value: {}", solend_value);
 
         self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
