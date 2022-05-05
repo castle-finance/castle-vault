@@ -1029,6 +1029,10 @@ export class VaultClient {
         return this.vaultState.config;
     }
 
+    getReserveTokenMint(): PublicKey {
+        return this.vaultState.reserveTokenMint;
+    }
+
     getLpTokenMint(): PublicKey {
         return this.vaultState.lpTokenMint;
     }
