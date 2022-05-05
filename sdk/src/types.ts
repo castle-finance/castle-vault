@@ -8,7 +8,7 @@ export type ProgramIdMap = {
 };
 
 export interface Vault {
-    version: number;
+    version: number[];
     owner: PublicKey;
     vaultAuthority: PublicKey;
     authoritySeed: PublicKey;
