@@ -1,14 +1,18 @@
-use std::ops::Deref;
-use std::{io::Write, ops::DerefMut};
+use std::{
+    io::Write,
+    ops::{Deref, DerefMut},
+};
 
 use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token::{Token, TokenAccount};
 use solana_maths::Rate;
 use spl_token_lending::state::Reserve;
 
-use crate::rebalance::assets::ReserveAccessor;
 use crate::{
-    impl_has_vault, rebalance::assets::Provider, reconcile::LendingMarket, refresh::Refresher,
+    impl_has_vault,
+    reconcile::LendingMarket,
+    refresh::Refresher,
+    reserves::{Provider, ReserveAccessor},
     state::Vault,
 };
 
@@ -119,11 +123,11 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
     }
     fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64, ProgramError> {
         let exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
-        exchange_rate.collateral_to_liquidity(amount)
+        exchange_rate.liquidity_to_collateral(amount)
     }
     fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64, ProgramError> {
         let exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
-        exchange_rate.liquidity_to_collateral(amount)
+        exchange_rate.collateral_to_liquidity(amount)
     }
 
     fn reserve_tokens_in_vault(&self) -> u64 {

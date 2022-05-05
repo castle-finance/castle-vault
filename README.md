@@ -1,21 +1,26 @@
 # Castle Vault
 
-## Build, Deploy and Test
+This repository contains the open-source code for the Castle Vault program and Typescript SDK. More information can be found on [our website here](https://www.castle.finance).
+
+## Documentation
+
+General Castle docs can be found [here](https://docs.castle.finance/).
+
+SDK docs can be found [here](https://github.com/castle-finance/castle-vault/sdk/README.md)
+
+## Getting Help
+
+Join [our Discord channel](https://discord.castle.finance) and post a message in #developers
+
+## Setup, Build, and Test
 
 First, install dependencies:
 
 ```
-$ npm install
+$ yarn install
 ```
 
-Make sure you have your local solana validator running if you want to deploy the program locally:
-
-```
-$ solana-test-validator
-```
-
-> If you are on Apple Sillicon M1 chip, you will have to build Solana from the source. See [this document](https://docs.solana.com/cli/install-solana-cli-tools#build-from-source) for more details
-> Next, we will build and deploy the program via Anchor.
+And install Anchor by following the [instructions here](https://project-serum.github.io/anchor/getting-started/installation.html).
 
 Build the program:
 
@@ -23,19 +28,16 @@ Build the program:
 $ anchor build
 ```
 
-Deploy the program:
+Finally, run the tests:
 
 ```
-$ anchor deploy
-```
-
-Finally, run the test:
-
-TODO add instructions on downloading and building integration test dependencies
-
-```
+$ cargo test
 $ anchor test
 ```
+
+## Security
+
+Our security policy can be found [here](https://docs.castle.finance/security-policy)
 
 ## Version semantics
 

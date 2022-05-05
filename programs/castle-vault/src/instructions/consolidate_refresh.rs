@@ -7,7 +7,7 @@ use port_anchor_adaptor::{port_lending_id, PortReserve};
 
 use crate::adapters::{solend, SolendReserve};
 use crate::errors::ErrorCode;
-use crate::rebalance::assets::Provider;
+use crate::reserves::Provider;
 use crate::state::Vault;
 use strum::IntoEnumIterator;
 

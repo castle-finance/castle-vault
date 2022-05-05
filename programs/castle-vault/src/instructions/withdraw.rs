@@ -3,8 +3,7 @@ use anchor_spl::token::{self, Burn, Mint, Token, TokenAccount, Transfer};
 
 use std::convert::Into;
 
-use crate::errors::ErrorCode;
-use crate::state::Vault;
+use crate::{errors::ErrorCode, state::Vault};
 
 #[event]
 pub struct WithdrawEvent {

@@ -1143,23 +1143,6 @@ export type CastleVault = {
             };
         },
         {
-            name: "Provider";
-            type: {
-                kind: "enum";
-                variants: [
-                    {
-                        name: "Solend";
-                    },
-                    {
-                        name: "Port";
-                    },
-                    {
-                        name: "Jet";
-                    }
-                ];
-            };
-        },
-        {
             name: "RebalanceMode";
             type: {
                 kind: "enum";
@@ -2474,23 +2457,6 @@ export const IDL: CastleVault = {
                         type: {
                             array: ["u8", 7],
                         },
-                    },
-                ],
-            },
-        },
-        {
-            name: "Provider",
-            type: {
-                kind: "enum",
-                variants: [
-                    {
-                        name: "Solend",
-                    },
-                    {
-                        name: "Port",
-                    },
-                    {
-                        name: "Jet",
                     },
                 ],
             },

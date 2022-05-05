@@ -667,12 +667,12 @@ export class VaultClient {
             { tx: this.getRebalanceTx(proposedWeights), signers: [] },
         ];
 
-        // Sort ixs in ascending order of outflows
-        const oldAndNewallocationsWithReconcileIxs =
+        // Sort ixs in descending order of outflows
+        const newAndOldallocationsWithReconcileIxs =
             await this.newAndOldallocationsWithReconcileIxs(proposedWeights);
 
         const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
-            oldAndNewallocationsWithReconcileIxs.map((e) => [
+            newAndOldallocationsWithReconcileIxs.map((e) => [
                 e[0].sub(e[1]),
                 e[2](),
             ]);

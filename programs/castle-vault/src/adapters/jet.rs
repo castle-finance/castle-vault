@@ -10,9 +10,9 @@ use solana_maths::Rate;
 
 use crate::{
     impl_has_vault,
-    rebalance::assets::{Provider, ReserveAccessor},
     reconcile::LendingMarket,
     refresh::Refresher,
+    reserves::{Provider, ReserveAccessor},
     state::Vault,
 };
 

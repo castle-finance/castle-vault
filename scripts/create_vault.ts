@@ -16,21 +16,21 @@ import {
 } from "../sdk/src";
 
 const main = async () => {
-    //const cluster: Cluster = "mainnet-beta";
-    const cluster: Cluster = "devnet";
+    const cluster: Cluster = "mainnet-beta";
+    //const cluster: Cluster = "devnet";
     const connection = new Connection(
-        //"https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
-        "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+        "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
+        //"https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
     );
     const wallet = Wallet.local();
     const provider = new Provider(connection, wallet, {
         commitment: "confirmed",
     });
 
-    const reserveMint = NATIVE_MINT;
-    //const reserveMint = new PublicKey(
-    //    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-    //);
+    //const reserveMint = NATIVE_MINT;
+    const reserveMint = new PublicKey(
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    );
 
     const solend = await SolendReserveAsset.load(
         provider,
@@ -43,7 +43,7 @@ const main = async () => {
     const vaultClient = await VaultClient.initialize(
         provider,
         wallet,
-        DeploymentEnvs.devnetStaging,
+        DeploymentEnvs.mainnet,
         reserveMint,
         solend,
         port,
@@ -52,7 +52,7 @@ const main = async () => {
         new PublicKey("jvUsXAgE2Gg92BbEBDAu7h5p8SEZpVjFqURJkzSsLNk"),
         {
             allocationCapPct: 60,
-            rebalanceMode: { [RebalanceModes.proofChecker]: {} },
+            rebalanceMode: { [RebalanceModes.calculator]: {} },
             strategyType: { [StrategyTypes.maxYield]: {} },
         }
     );
