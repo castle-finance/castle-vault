@@ -249,7 +249,30 @@ export class VaultClient {
         );
     }
 
-    getRefreshIx(): TransactionInstruction {
+    getRefreshIxs(): TransactionInstruction[] {
+        return [
+            this.getRefreshSolendIx(),
+            this.getRefreshPortIx(),
+            this.getRefreshJetIx(),
+            this.getConsolidateRefreshIx(),
+        ];
+    }
+
+    getRefreshSolendIx(): TransactionInstruction {
+        return this.program.instruction.refreshSolend({
+            accounts: {
+                vault: this.vaultId,
+                vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
+                solendProgram: this.solend.accounts.program,
+                solendReserve: this.solend.accounts.reserve,
+                solendPyth: this.solend.accounts.pythPrice,
+                solendSwitchboard: this.solend.accounts.switchboardFeed,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
+
+    getRefreshPortIx(): TransactionInstruction {
         // Port does not accept an oracle as input if the reserve is denominated
         // in the same token as the market quote currency (USDC).
         // We account for this by passing in an argument that indicates whether
@@ -261,6 +284,37 @@ export class VaultClient {
             portOracle = Keypair.generate().publicKey;
         }
 
+        return this.program.instruction.refreshPort(usePortOracle, {
+            accounts: {
+                vault: this.vaultId,
+                vaultPortLpToken: this.vaultState.vaultPortLpToken,
+                portProgram: this.port.accounts.program,
+                portReserve: this.port.accounts.reserve,
+                portOracle: portOracle,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
+
+    getRefreshJetIx(): TransactionInstruction {
+        return this.program.instruction.refreshJet({
+            accounts: {
+                vault: this.vaultId,
+                vaultJetLpToken: this.vaultState.vaultJetLpToken,
+                jetProgram: this.jet.accounts.program,
+                jetMarket: this.jet.accounts.market,
+                jetMarketAuthority: this.jet.accounts.marketAuthority,
+                jetReserve: this.jet.accounts.reserve,
+                jetFeeNoteVault: this.jet.accounts.feeNoteVault,
+                jetDepositNoteMint: this.jet.accounts.depositNoteMint,
+                jetPyth: this.jet.accounts.pythPrice,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
+
+    getConsolidateRefreshIx(): TransactionInstruction {
         const feeAccounts = this.feesEnabled
             ? [
                   {
@@ -276,29 +330,12 @@ export class VaultClient {
               ]
             : [];
 
-        return this.program.instruction.refresh(usePortOracle, {
+        return this.program.instruction.consolidateRefresh({
             accounts: {
                 vault: this.vaultId,
                 vaultAuthority: this.vaultState.vaultAuthority,
                 vaultReserveToken: this.vaultState.vaultReserveToken,
-                vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-                vaultPortLpToken: this.vaultState.vaultPortLpToken,
-                vaultJetLpToken: this.vaultState.vaultJetLpToken,
                 lpTokenMint: this.vaultState.lpTokenMint,
-                solendProgram: this.solend.accounts.program,
-                solendReserve: this.solend.accounts.reserve,
-                solendPyth: this.solend.accounts.pythPrice,
-                solendSwitchboard: this.solend.accounts.switchboardFeed,
-                portProgram: this.port.accounts.program,
-                portReserve: this.port.accounts.reserve,
-                portOracle: portOracle,
-                jetProgram: this.jet.accounts.program,
-                jetMarket: this.jet.accounts.market,
-                jetMarketAuthority: this.jet.accounts.marketAuthority,
-                jetReserve: this.jet.accounts.reserve,
-                jetFeeNoteVault: this.jet.accounts.feeNoteVault,
-                jetDepositNoteMint: this.jet.accounts.depositNoteMint,
-                jetPyth: this.jet.accounts.pythPrice,
                 tokenProgram: TOKEN_PROGRAM_ID,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
@@ -415,7 +452,9 @@ export class VaultClient {
             );
         }
 
-        depositTx.add(this.getRefreshIx());
+        this.getRefreshIxs().forEach((element) => {
+            depositTx.add(element);
+        });
         depositTx.add(
             this.program.instruction.deposit(new anchor.BN(amount), {
                 accounts: {
@@ -497,7 +536,9 @@ export class VaultClient {
             }
         }
 
-        withdrawTx.add(this.getRefreshIx());
+        this.getRefreshIxs().forEach((element) => {
+            withdrawTx.add(element);
+        });
         withdrawTx.add(
             this.program.instruction.withdraw(new anchor.BN(amount), {
                 accounts: {
@@ -570,7 +611,9 @@ export class VaultClient {
 
                 if (!Big(0).eq(reconcileAmount)) {
                     const reconcileTx = new Transaction();
-                    reconcileTx.add(this.getRefreshIx());
+                    this.getRefreshIxs().forEach((element) => {
+                        reconcileTx.add(element);
+                    });
                     reconcileTx.add(
                         ix(new anchor.BN(reconcileAmount.toString()))
                     );
@@ -586,7 +629,9 @@ export class VaultClient {
 
     getRebalanceTx(proposedWeights: ProposedWeightsBps): Transaction {
         const rebalanceTx = new Transaction();
-        rebalanceTx.add(this.getRefreshIx());
+        this.getRefreshIxs().forEach((element) => {
+            rebalanceTx.add(element);
+        });
         rebalanceTx.add(
             this.program.instruction.rebalance(proposedWeights, {
                 accounts: {
@@ -638,7 +683,9 @@ export class VaultClient {
 
         for (const ix of reconcileIxs) {
             const reconcileTx = new Transaction();
-            reconcileTx.add(this.getRefreshIx());
+            this.getRefreshIxs().forEach((element) => {
+                reconcileTx.add(element);
+            });
             reconcileTx.add(ix);
             txs.push({ tx: reconcileTx, signers: [] });
         }
@@ -660,7 +707,7 @@ export class VaultClient {
                     jetReserve: this.jet.accounts.reserve,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
-                instructions: [this.getRefreshIx()],
+                instructions: this.getRefreshIxs(),
             })
         ).events[1].data as RebalanceDataEvent;
 

@@ -11,6 +11,7 @@ use crate::{
     impl_has_vault,
     rebalance::assets::{Provider, ReserveAccessor},
     reconcile::LendingMarket,
+    refresh::Refresher,
     state::Vault,
 };
 
@@ -166,5 +167,71 @@ impl ReserveAccessor for Reserve {
             .checked_add(allocation)
             .ok_or(ErrorCode::OverflowError)?;
         Ok(reserve)
+    }
+}
+
+#[derive(Accounts)]
+pub struct PortRefresher<'info> {
+    /// Vault state account
+    /// Checks that the accounts passed in are correct
+    #[account(
+        mut,
+        has_one = vault_port_lp_token,
+        has_one = port_reserve,
+    )]
+    pub vault: Box<Account<'info, Vault>>,
+
+    /// Token account for the vault's port lp tokens
+    pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        executable,
+        address = port_lending_id(),
+    )]
+    pub port_program: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub port_reserve: Box<Account<'info, PortReserve>>,
+
+    //#[soteria(ignore)]
+    pub port_oracle: AccountInfo<'info>,
+
+    pub clock: Sysvar<'info, Clock>,
+}
+
+impl<'info> PortRefresher<'info> {
+    fn port_refresh_reserve_context(
+        &self,
+        use_oracle: bool,
+    ) -> CpiContext<'_, '_, '_, 'info, port_anchor_adaptor::RefreshReserve<'info>> {
+        let oracle_vec = if use_oracle {
+            vec![self.port_oracle.clone()]
+        } else {
+            vec![]
+        };
+        CpiContext::new(
+            self.port_program.clone(),
+            port_anchor_adaptor::RefreshReserve {
+                reserve: self.port_reserve.to_account_info(),
+                clock: self.clock.to_account_info(),
+            },
+        )
+        .with_remaining_accounts(oracle_vec)
+    }
+}
+
+impl<'info> Refresher for PortRefresher<'info> {
+    fn update_actual_allocation(&mut self, use_oracle: bool) -> ProgramResult {
+        port_anchor_adaptor::refresh_port_reserve(self.port_refresh_reserve_context(use_oracle))?;
+
+        let port_exchange_rate = self.port_reserve.collateral_exchange_rate()?;
+        let port_value =
+            port_exchange_rate.collateral_to_liquidity(self.vault_port_lp_token.amount)?;
+
+        msg!("Refresh port reserve token value: {}", port_value);
+
+        self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
+
+        Ok(())
     }
 }

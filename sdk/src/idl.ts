@@ -436,6 +436,185 @@ export type CastleVault = {
             ];
         },
         {
+            name: "refreshSolend";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultSolendLpToken";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "solendProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "solendReserve";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "solendPyth";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "solendSwitchboard";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "clock";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
+        },
+        {
+            name: "refreshPort";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortLpToken";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portReserve";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portOracle";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "clock";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "usePortOracle";
+                    type: "bool";
+                }
+            ];
+        },
+        {
+            name: "refreshJet";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultJetLpToken";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "jetProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "jetMarket";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "jetMarketAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "jetReserve";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "jetFeeNoteVault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "jetDepositNoteMint";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "jetPyth";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "clock";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
+        },
+        {
+            name: "consolidateRefresh";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultReserveToken";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "lpTokenMint";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "clock";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
+        },
+        {
             name: "reconcileSolend";
             accounts: [
                 {
@@ -652,7 +831,9 @@ export type CastleVault = {
                 fields: [
                     {
                         name: "version";
-                        type: "u8";
+                        type: {
+                            array: ["u8", 3];
+                        };
                     },
                     {
                         name: "owner";
@@ -719,7 +900,7 @@ export type CastleVault = {
                     {
                         name: "padding";
                         type: {
-                            array: ["u8", 6];
+                            array: ["u8", 4];
                         };
                     },
                     {
@@ -741,9 +922,15 @@ export type CastleVault = {
                         };
                     },
                     {
+                        name: "actualAllocations";
+                        type: {
+                            defined: "Allocations";
+                        };
+                    },
+                    {
                         name: "reserved";
                         type: {
-                            array: ["u64", 23];
+                            array: ["u64", 14];
                         };
                     }
                 ];
@@ -1142,7 +1329,7 @@ export type CastleVault = {
         {
             code: 313;
             name: "InvalidAllocationCap";
-            msg: "Allocation cap cannot set to under 34% or over 100%";
+            msg: "Allocation cap cannot set to under 1/(number of assets) or over 100%";
         }
     ];
 };
@@ -1585,6 +1772,185 @@ export const IDL: CastleVault = {
             ],
         },
         {
+            name: "refreshSolend",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultSolendLpToken",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "solendProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "solendReserve",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "solendPyth",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "solendSwitchboard",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "clock",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
+        },
+        {
+            name: "refreshPort",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortLpToken",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portReserve",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portOracle",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "clock",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "usePortOracle",
+                    type: "bool",
+                },
+            ],
+        },
+        {
+            name: "refreshJet",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultJetLpToken",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "jetProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "jetMarket",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "jetMarketAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "jetReserve",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "jetFeeNoteVault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "jetDepositNoteMint",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "jetPyth",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "clock",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
+        },
+        {
+            name: "consolidateRefresh",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultReserveToken",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "lpTokenMint",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "clock",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
+        },
+        {
             name: "reconcileSolend",
             accounts: [
                 {
@@ -1801,7 +2167,9 @@ export const IDL: CastleVault = {
                 fields: [
                     {
                         name: "version",
-                        type: "u8",
+                        type: {
+                            array: ["u8", 3],
+                        },
                     },
                     {
                         name: "owner",
@@ -1868,7 +2236,7 @@ export const IDL: CastleVault = {
                     {
                         name: "padding",
                         type: {
-                            array: ["u8", 6],
+                            array: ["u8", 4],
                         },
                     },
                     {
@@ -1890,9 +2258,15 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
+                        name: "actualAllocations",
+                        type: {
+                            defined: "Allocations",
+                        },
+                    },
+                    {
                         name: "reserved",
                         type: {
-                            array: ["u64", 23],
+                            array: ["u64", 14],
                         },
                     },
                 ],
@@ -2291,7 +2665,7 @@ export const IDL: CastleVault = {
         {
             code: 313,
             name: "InvalidAllocationCap",
-            msg: "Allocation cap cannot set to under 34% or over 100%",
+            msg: "Allocation cap cannot set to under 1/(number of assets) or over 100%",
         },
     ],
 };

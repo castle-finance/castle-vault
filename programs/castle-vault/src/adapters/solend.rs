@@ -7,7 +7,10 @@ use solana_maths::Rate;
 use spl_token_lending::state::Reserve;
 
 use crate::rebalance::assets::ReserveAccessor;
-use crate::{impl_has_vault, rebalance::assets::Provider, reconcile::LendingMarket, state::Vault};
+use crate::{
+    impl_has_vault, rebalance::assets::Provider, reconcile::LendingMarket, refresh::Refresher,
+    state::Vault,
+};
 
 #[derive(Accounts)]
 pub struct SolendAccounts<'info> {
@@ -327,5 +330,70 @@ impl Deref for SolendReserve {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Accounts)]
+pub struct SolendRefresher<'info> {
+    /// Vault state account
+    /// Checks that the accounts passed in are correct
+    #[account(
+        mut,
+        has_one = vault_solend_lp_token,
+        has_one = solend_reserve,
+    )]
+    pub vault: Box<Account<'info, Vault>>,
+
+    /// Token account for the vault's solend lp tokens
+    pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        executable,
+        address = spl_token_lending::ID,
+    )]
+    pub solend_program: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub solend_reserve: Box<Account<'info, SolendReserve>>,
+
+    //#[soteria(ignore)]
+    pub solend_pyth: AccountInfo<'info>,
+
+    //#[soteria(ignore)]
+    pub solend_switchboard: AccountInfo<'info>,
+
+    pub clock: Sysvar<'info, Clock>,
+}
+
+impl<'info> SolendRefresher<'info> {
+    fn solend_refresh_reserve_context(
+        &self,
+    ) -> CpiContext<'_, '_, '_, 'info, RefreshReserve<'info>> {
+        CpiContext::new(
+            self.solend_program.clone(),
+            RefreshReserve {
+                lending_program: self.solend_program.clone(),
+                reserve: self.solend_reserve.to_account_info(),
+                pyth_reserve_liquidity_oracle: self.solend_pyth.clone(),
+                switchboard_reserve_liquidity_oracle: self.solend_switchboard.clone(),
+                clock: self.clock.to_account_info(),
+            },
+        )
+    }
+}
+
+impl<'info> Refresher for SolendRefresher<'info> {
+    fn update_actual_allocation(&mut self, _use_oracle: bool) -> ProgramResult {
+        refresh_reserve(self.solend_refresh_reserve_context())?;
+
+        let solend_exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
+        let solend_value =
+            solend_exchange_rate.collateral_to_liquidity(self.vault_solend_lp_token.amount)?;
+
+        msg!("Refresh solen reserve token value: {}", solend_value);
+
+        self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
+
+        Ok(())
     }
 }

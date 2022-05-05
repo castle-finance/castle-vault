@@ -77,9 +77,12 @@ pub struct Vault {
 
     pub config: VaultConfig,
 
+    // Actual allocation retrieved by refresh
+    pub actual_allocations: Allocations,
+
     // 8 * 23 = 184
     /// Reserved space for future upgrades
-    _reserved: [u64; 23],
+    _reserved: [u64; 14],
 }
 
 impl Vault {
