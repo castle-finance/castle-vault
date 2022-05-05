@@ -499,7 +499,10 @@ describe("castle-vault", () => {
                 .find((e) => e.name == "HaltedVault")
                 .code.toString(16);
 
-            await vaultClient.updateFlags(owner, VaultFlags.HaltDeposits);
+            await vaultClient.updateFlags(
+                owner,
+                VaultFlags.HaltDepositsWithdraws
+            );
 
             const qty = 100;
             await mintReserveToken(userReserveTokenAccount, qty);

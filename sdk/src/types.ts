@@ -71,6 +71,6 @@ export interface RebalanceDataEvent {
 export enum VaultFlags {
     HaltReconciles = 1 << 0,
     HaltRefreshes = 1 << 1,
-    HaltDeposits = 1 << 2,
-    HaltAll = HaltReconciles | HaltRefreshes | HaltDeposits,
+    HaltDepositsWithdraws = 1 << 2,
+    HaltAll = HaltReconciles | HaltRefreshes | HaltDepositsWithdraws,
 }
