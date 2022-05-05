@@ -14,15 +14,16 @@ import { DeploymentEnvs } from "@castlefinance/vault-core";
 
 describe("VaultClient", () => {
     const connection = new Connection(
-        "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
-        //"https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+        //"https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
+        "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
     );
     const wallet = Wallet.local();
     const provider = new Provider(connection, wallet, {
         commitment: "confirmed",
     });
 
-    const depositAmount = (0.1 * LAMPORTS_PER_SOL) / 1000;
+    //const depositAmount = (0.05 * LAMPORTS_PER_SOL) / 1000;
+    const depositAmount = LAMPORTS_PER_SOL;
 
     let vaultClient: VaultClient;
     let jet: JetReserveAsset;
@@ -36,18 +37,12 @@ describe("VaultClient", () => {
 
     it("loads devnet sol vault", async () => {
         const vaultId = new PublicKey(
-            //"3PUZJamT1LAwgkjT58PHoY8izM1Y8jRz2A1UwiV4JTkk"
-            //"FEthCwaa3sGvPTTYV7ZSuYKTm4gaHPGtju4xFxDqv5gJ"
-            //"9n6ekjHHgkPB9fVuWHzH6iNuxBxN22hEBryZXYFg6cNk" // old devnet-parity vault
-            "EDtqJFHksXpdXLDuxgoYpjpxg3LjBpmW4jh3fkz4SX32" // old mainnet vault
-            //"HKnAJ5wX3w7b52wFr4ZFf7fAtiHS3oaFngnkViXGCusf" // new devnet-parity vault
-            //"5zwJzQbw8PzNT2SwkhwrYfriVsLshytWk1UQkkudQv6G" // new devnet-staging vault
-            //"5VsCBvW7CswQfYe5rQdP9W5tSWb2rEZBQZ2C8wU7qrnL" // new mainnet vault
+            "Bv4d2wWb7myxpjWudHnEMjdJstxjkiWqX61xLhPBrBx"
         );
         vaultClient = await VaultClient.load(
             provider,
             vaultId,
-            DeploymentEnvs.mainnet
+            DeploymentEnvs.devnetStaging
         );
         assert.isNotNull(vaultClient);
 
@@ -63,6 +58,7 @@ describe("VaultClient", () => {
 
         console.log("Jet");
         console.log(
+            "value: ",
             (await vaultClient.getVaultJetLpTokenAccountValue()).toString()
         );
         console.log((await jet.getApy()).toString());
@@ -71,6 +67,7 @@ describe("VaultClient", () => {
 
         console.log("Solend");
         console.log(
+            "value: ",
             (await vaultClient.getVaultSolendLpTokenAccountValue()).toString()
         );
         console.log((await solend.getApy()).toString());
@@ -79,6 +76,7 @@ describe("VaultClient", () => {
 
         console.log("Port");
         console.log(
+            "value: ",
             (await vaultClient.getVaultPortLpTokenAccountValue()).toString()
         );
         console.log((await port.getApy()).toString());
@@ -86,38 +84,38 @@ describe("VaultClient", () => {
         console.log((await port.getDepositedAmount()).toString());
     });
 
-    it("deposits", async () => {
-        const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
-        console.log("start value: ", startUserValue.toNumber());
+    //it("deposits", async () => {
+    //    const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
+    //    console.log("start value: ", startUserValue.toNumber());
 
-        //const userReserveTokenAccount = wallet.publicKey;
-        const userReserveTokenAccount =
-            await vaultClient.getUserReserveTokenAccount(wallet.publicKey);
-        try {
-            const sigs = await vaultClient.deposit(
-                wallet,
-                depositAmount,
-                userReserveTokenAccount
-            );
-            await connection.confirmTransaction(
-                sigs[sigs.length - 1],
-                "finalized"
-            );
-        } catch (e) {
-            console.log(e);
-            throw e;
-        }
+    //    //const userReserveTokenAccount = wallet.publicKey;
+    //    const userReserveTokenAccount =
+    //        await vaultClient.getUserReserveTokenAccount(wallet.publicKey);
+    //    try {
+    //        const sigs = await vaultClient.deposit(
+    //            wallet,
+    //            depositAmount,
+    //            userReserveTokenAccount
+    //        );
+    //        await connection.confirmTransaction(
+    //            sigs[sigs.length - 1],
+    //            "finalized"
+    //        );
+    //    } catch (e) {
+    //        console.log(e);
+    //        throw e;
+    //    }
 
-        const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
-        console.log("end value: ", endUserValue.toNumber());
+    //    const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
+    //    console.log("end value: ", endUserValue.toNumber());
 
-        assert.isAtMost(
-            Math.abs(
-                endUserValue.sub(startUserValue).sub(depositAmount).toNumber()
-            ),
-            1000
-        );
-    });
+    //    assert.isAtMost(
+    //        Math.abs(
+    //            endUserValue.sub(startUserValue).sub(depositAmount).toNumber()
+    //        ),
+    //        1000
+    //    );
+    //});
 
     it("rebalances", async () => {
         const sigs = await vaultClient.rebalance();
@@ -128,37 +126,35 @@ describe("VaultClient", () => {
         assert.isNull(result.value.err);
     });
 
-    // TODO sleep to avoid AlreadyProcessed error
+    //it("withdraws", async () => {
+    //    const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
+    //    console.log("start value: ", startUserValue.toNumber());
 
-    it("withdraws", async () => {
-        const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
-        console.log("start value: ", startUserValue.toNumber());
+    //    const exchangeRate = await vaultClient.getLpExchangeRate();
+    //    const withdrawAmount = new Big(depositAmount)
+    //        .div(exchangeRate)
+    //        .round(0, Big.roundDown)
+    //        .toNumber();
 
-        const exchangeRate = await vaultClient.getLpExchangeRate();
-        const withdrawAmount = new Big(depositAmount)
-            .div(exchangeRate)
-            .round(0, Big.roundDown)
-            .toNumber();
+    //    try {
+    //        const sigs = await vaultClient.withdraw(wallet, withdrawAmount);
+    //        await connection.confirmTransaction(
+    //            sigs[sigs.length - 1],
+    //            "finalized"
+    //        );
+    //    } catch (e) {
+    //        console.log(e);
+    //        throw e;
+    //    }
 
-        try {
-            const sigs = await vaultClient.withdraw(wallet, withdrawAmount);
-            await connection.confirmTransaction(
-                sigs[sigs.length - 1],
-                "finalized"
-            );
-        } catch (e) {
-            console.log(e);
-            throw e;
-        }
+    //    const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
+    //    console.log("end value: ", endUserValue.toNumber());
 
-        const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
-        console.log("end value: ", endUserValue.toNumber());
-
-        assert.isAtMost(
-            Math.abs(
-                startUserValue.sub(endUserValue).sub(depositAmount).toNumber()
-            ),
-            1000000
-        );
-    });
+    //    assert.isAtMost(
+    //        Math.abs(
+    //            startUserValue.sub(endUserValue).sub(depositAmount).toNumber()
+    //        ),
+    //        1000
+    //    );
+    //});
 });
