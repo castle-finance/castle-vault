@@ -59,7 +59,6 @@ impl<'info> ConsolidateRefresh<'info> {
     }
 }
 
-/// Refreshes the reserves of downstream lending markets,
 /// updates the vault total value, and collects fees
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>) -> ProgramResult {
     #[cfg(feature = "debug")]

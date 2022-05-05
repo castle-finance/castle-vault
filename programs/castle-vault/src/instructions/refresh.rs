@@ -15,8 +15,7 @@ pub trait Refresher {
     fn update_actual_allocation(&mut self, use_oracle: bool) -> ProgramResult;
 }
 
-/// Refreshes the reserves of downstream lending markets,
-/// updates the vault total value, and collects fees
+/// Refreshes the reserves of downstream lending markets
 pub fn handler<'info, T: Refresher>(
     ctx: Context<'_, '_, '_, 'info, T>,
     use_port_oracle: bool,
