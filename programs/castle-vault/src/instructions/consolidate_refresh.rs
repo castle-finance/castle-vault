@@ -36,8 +36,6 @@ pub struct ConsolidateRefresh<'info> {
     pub lp_token_mint: Box<Account<'info, Mint>>,
 
     pub token_program: Program<'info, Token>,
-
-    pub clock: Sysvar<'info, Clock>,
 }
 
 impl<'info> ConsolidateRefresh<'info> {
@@ -71,6 +69,8 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
         .contains(VaultFlags::HALT_REFRESHES))
     .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
 
+    let clock_slot = Clock::get()?.slot;
+
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
     let vault_value =
@@ -78,7 +78,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
             let allocation = ctx.accounts.vault.actual_allocations[p];
             (allocation
                 .last_update
-                .slots_elapsed(ctx.accounts.clock.slot)?
+                .slots_elapsed(clock_slot)?
                 == 0)
                 .as_result::<u64, ProgramError>(
                     acc.checked_add(allocation.value)
@@ -103,7 +103,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
         let vault = &ctx.accounts.vault;
 
         // Calculate fees
-        let total_fees = vault.calculate_fees(vault_value, ctx.accounts.clock.slot)?;
+        let total_fees = vault.calculate_fees(vault_value, clock_slot)?;
 
         let total_fees_converted = crate::math::calc_reserve_to_lp(
             total_fees,
@@ -177,7 +177,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
     ctx.accounts
         .vault
         .value
-        .update(vault_value, ctx.accounts.clock.slot);
+        .update(vault_value, clock_slot);
 
     Ok(())
 }

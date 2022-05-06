@@ -338,7 +338,6 @@ export class VaultClient {
                 vaultReserveToken: this.vaultState.vaultReserveToken,
                 lpTokenMint: this.vaultState.lpTokenMint,
                 tokenProgram: TOKEN_PROGRAM_ID,
-                clock: SYSVAR_CLOCK_PUBKEY,
             },
             remainingAccounts: feeAccounts,
         });
