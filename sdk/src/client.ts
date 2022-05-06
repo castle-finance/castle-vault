@@ -781,7 +781,9 @@ export class VaultClient {
 
         for (const ix of reconcileIxs) {
             const reconcileTx = new Transaction();
-            reconcileTx.add(this.getRefreshIx());
+            this.getRefreshIxs().forEach((element) => {
+                reconcileTx.add(element);
+            });
             reconcileTx.add(ix);
             txs.push({ tx: reconcileTx, signers: [] });
         }
