@@ -26,8 +26,9 @@ export interface Vault {
     referralFeeReceiver: PublicKey;
     bitflags: number;
     value: SlotTrackedValue;
-    allocations: Allocations;
+    targetAllocations: Allocations;
     config: VaultConfig;
+    actualAllocations: Allocations;
 }
 
 export interface VaultConfig {

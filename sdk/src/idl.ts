@@ -798,7 +798,7 @@ export type CastleVault = {
                         };
                     },
                     {
-                        name: "allocations";
+                        name: "targetAllocations";
                         type: {
                             defined: "Allocations";
                         };
@@ -2015,7 +2015,7 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
-                        name: "allocations",
+                        name: "targetAllocations",
                         type: {
                             defined: "Allocations",
                         },

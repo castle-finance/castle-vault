@@ -69,7 +69,7 @@ pub fn handler<T: LendingMarket + HasVault>(
             let current_value = ctx
                 .accounts
                 .convert_amount_lp_to_reserve(lp_tokens_in_vault)?;
-            let allocation = ctx.accounts.vault().allocations[provider];
+            let allocation = ctx.accounts.vault().target_allocations[provider];
 
             #[cfg(feature = "debug")]
             {
@@ -110,7 +110,7 @@ pub fn handler<T: LendingMarket + HasVault>(
                     ctx.accounts.redeem(tokens_to_redeem)?;
                 }
             }
-            ctx.accounts.vault_mut().allocations[provider].reset();
+            ctx.accounts.vault_mut().target_allocations[provider].reset();
         }
         // Extra case where reconcile is being called in same tx as a withdraw or by vault owner to emergency brake
         _ => {

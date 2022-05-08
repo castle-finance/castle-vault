@@ -70,7 +70,7 @@ pub struct Vault {
     pub value: SlotTrackedValue,
 
     /// Prospective allocations set by rebalance, executed by reconciles
-    pub allocations: Allocations,
+    pub target_allocations: Allocations,
 
     pub config: VaultConfig,
 
