@@ -395,22 +395,12 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portOracle";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
                     name: "clock";
                     isMut: false;
                     isSigner: false;
                 }
             ];
-            args: [
-                {
-                    name: "usePortOracle";
-                    type: "bool";
-                }
-            ];
+            args: [];
         },
         {
             name: "refreshJet";
@@ -1612,22 +1602,12 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "portOracle",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
                     name: "clock",
                     isMut: false,
                     isSigner: false,
                 },
             ],
-            args: [
-                {
-                    name: "usePortOracle",
-                    type: "bool",
-                },
-            ],
+            args: [],
         },
         {
             name: "refreshJet",

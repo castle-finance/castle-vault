@@ -10,17 +10,18 @@ use crate::{
     errors::ErrorCode,
 };
 
-pub trait Refresher {
-    fn update_actual_allocation(&mut self, use_oracle: bool) -> ProgramResult;
+pub trait Refresher<'info> {
+    fn update_actual_allocation(
+        &mut self,
+        remaining_accounts: &[AccountInfo<'info>],
+    ) -> ProgramResult;
 }
 
 /// Refreshes the reserves of downstream lending markets
-pub fn handler<'info, T: Refresher>(
-    ctx: Context<'_, '_, '_, 'info, T>,
-    use_port_oracle: bool,
-) -> ProgramResult {
+pub fn handler<'info, T: Refresher<'info>>(ctx: Context<'_, '_, '_, 'info, T>) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Refreshing lending pool");
 
-    ctx.accounts.update_actual_allocation(use_port_oracle)
+    ctx.accounts
+        .update_actual_allocation(ctx.remaining_accounts)
 }

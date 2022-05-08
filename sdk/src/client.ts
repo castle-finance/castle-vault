@@ -274,26 +274,24 @@ export class VaultClient {
     }
 
     getRefreshPortIx(): TransactionInstruction {
-        // Port does not accept an oracle as input if the reserve is denominated
-        // in the same token as the market quote currency (USDC).
-        // We account for this by passing in an argument that indicates whether
-        // or not to use the given oracle value.
-        let usePortOracle = true;
-        let portOracle = this.port.accounts.oracle;
-        if (portOracle == null) {
-            usePortOracle = false;
-            portOracle = Keypair.generate().publicKey;
-        }
-
-        return this.program.instruction.refreshPort(usePortOracle, {
+        return this.program.instruction.refreshPort({
             accounts: {
                 vault: this.vaultId,
                 vaultPortLpToken: this.vaultState.vaultPortLpToken,
                 portProgram: this.port.accounts.program,
                 portReserve: this.port.accounts.reserve,
-                portOracle: portOracle,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
+            remainingAccounts:
+                this.port.accounts.oracle == null
+                    ? []
+                    : [
+                          {
+                              isSigner: false,
+                              isWritable: false,
+                              pubkey: this.port.accounts.oracle,
+                          },
+                      ],
         });
     }
 

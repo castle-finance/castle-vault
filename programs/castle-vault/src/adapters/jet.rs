@@ -247,8 +247,11 @@ impl<'info> RefreshJet<'info> {
     }
 }
 
-impl<'info> Refresher for RefreshJet<'info> {
-    fn update_actual_allocation(&mut self, _use_oracle: bool) -> ProgramResult {
+impl<'info> Refresher<'info> for RefreshJet<'info> {
+    fn update_actual_allocation(
+        &mut self,
+        _remaining_accounts: &[AccountInfo<'info>],
+    ) -> ProgramResult {
         jet::cpi::refresh_reserve(self.jet_refresh_reserve_context())?;
 
         let jet_reserve = self.jet_reserve.load()?;

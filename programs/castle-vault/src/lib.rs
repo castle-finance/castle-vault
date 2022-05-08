@@ -52,16 +52,20 @@ pub mod castle_vault {
         instructions::rebalance::handler(ctx, proposed_weights)
     }
 
-    pub fn refresh_solend(ctx: Context<RefreshSolend>) -> ProgramResult {
-        instructions::refresh::handler(ctx, false)
+    pub fn refresh_solend<'info>(
+        ctx: Context<'_, '_, '_, 'info, RefreshSolend<'info>>,
+    ) -> ProgramResult {
+        instructions::refresh::handler(ctx)
     }
 
-    pub fn refresh_port(ctx: Context<RefreshPort>, use_port_oracle: bool) -> ProgramResult {
-        instructions::refresh::handler(ctx, use_port_oracle)
+    pub fn refresh_port<'info>(
+        ctx: Context<'_, '_, '_, 'info, RefreshPort<'info>>,
+    ) -> ProgramResult {
+        instructions::refresh::handler(ctx)
     }
 
-    pub fn refresh_jet(ctx: Context<RefreshJet>) -> ProgramResult {
-        instructions::refresh::handler(ctx, false)
+    pub fn refresh_jet<'info>(ctx: Context<'_, '_, '_, 'info, RefreshJet<'info>>) -> ProgramResult {
+        instructions::refresh::handler(ctx)
     }
 
     pub fn consolidate_refresh<'info>(

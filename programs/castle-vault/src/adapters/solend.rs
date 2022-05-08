@@ -386,8 +386,11 @@ impl<'info> RefreshSolend<'info> {
     }
 }
 
-impl<'info> Refresher for RefreshSolend<'info> {
-    fn update_actual_allocation(&mut self, _use_oracle: bool) -> ProgramResult {
+impl<'info> Refresher<'info> for RefreshSolend<'info> {
+    fn update_actual_allocation(
+        &mut self,
+        _remaining_accounts: &[AccountInfo<'info>],
+    ) -> ProgramResult {
         refresh_reserve(self.solend_refresh_reserve_context())?;
 
         let solend_exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
