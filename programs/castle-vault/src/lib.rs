@@ -52,11 +52,26 @@ pub mod castle_vault {
         instructions::rebalance::handler(ctx, proposed_weights)
     }
 
-    pub fn refresh<'info>(
-        ctx: Context<'_, '_, '_, 'info, Refresh<'info>>,
-        use_port_oracle: bool,
+    pub fn refresh_solend<'info>(
+        ctx: Context<'_, '_, '_, 'info, RefreshSolend<'info>>,
     ) -> ProgramResult {
-        instructions::refresh::handler(ctx, use_port_oracle)
+        instructions::refresh::handler(ctx)
+    }
+
+    pub fn refresh_port<'info>(
+        ctx: Context<'_, '_, '_, 'info, RefreshPort<'info>>,
+    ) -> ProgramResult {
+        instructions::refresh::handler(ctx)
+    }
+
+    pub fn refresh_jet<'info>(ctx: Context<'_, '_, '_, 'info, RefreshJet<'info>>) -> ProgramResult {
+        instructions::refresh::handler(ctx)
+    }
+
+    pub fn consolidate_refresh<'info>(
+        ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>,
+    ) -> ProgramResult {
+        instructions::consolidate_refresh::handler(ctx)
     }
 
     pub fn reconcile_solend(ctx: Context<SolendAccounts>, withdraw_option: u64) -> ProgramResult {

@@ -331,7 +331,7 @@ export type CastleVault = {
             ];
         },
         {
-            name: "refresh";
+            name: "refreshSolend";
             accounts: [
                 {
                     name: "vault";
@@ -339,33 +339,8 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "vaultAuthority";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultReserveToken";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
                     name: "vaultSolendLpToken";
                     isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultPortLpToken";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultJetLpToken";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "lpTokenMint";
-                    isMut: true;
                     isSigner: false;
                 },
                 {
@@ -389,6 +364,27 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "clock";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
+        },
+        {
+            name: "refreshPort";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortLpToken";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "portProgram";
                     isMut: false;
                     isSigner: false;
@@ -399,7 +395,23 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portOracle";
+                    name: "clock";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
+        },
+        {
+            name: "refreshJet";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultJetLpToken";
                     isMut: false;
                     isSigner: false;
                 },
@@ -449,12 +461,38 @@ export type CastleVault = {
                     isSigner: false;
                 }
             ];
-            args: [
+            args: [];
+        },
+        {
+            name: "consolidateRefresh";
+            accounts: [
                 {
-                    name: "usePortOracle";
-                    type: "bool";
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultReserveToken";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "lpTokenMint";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
                 }
             ];
+            args: [];
         },
         {
             name: "reconcileSolend";
@@ -750,7 +788,7 @@ export type CastleVault = {
                         };
                     },
                     {
-                        name: "allocations";
+                        name: "targetAllocations";
                         type: {
                             defined: "Allocations";
                         };
@@ -762,9 +800,15 @@ export type CastleVault = {
                         };
                     },
                     {
+                        name: "actualAllocations";
+                        type: {
+                            defined: "Allocations";
+                        };
+                    },
+                    {
                         name: "reserved";
                         type: {
-                            array: ["u64", 23];
+                            array: ["u64", 14];
                         };
                     }
                 ];
@@ -1494,7 +1538,7 @@ export const IDL: CastleVault = {
             ],
         },
         {
-            name: "refresh",
+            name: "refreshSolend",
             accounts: [
                 {
                     name: "vault",
@@ -1502,33 +1546,8 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "vaultAuthority",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultReserveToken",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
                     name: "vaultSolendLpToken",
                     isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultPortLpToken",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultJetLpToken",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "lpTokenMint",
-                    isMut: true,
                     isSigner: false,
                 },
                 {
@@ -1552,6 +1571,27 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
+                    name: "clock",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
+        },
+        {
+            name: "refreshPort",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortLpToken",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
                     name: "portProgram",
                     isMut: false,
                     isSigner: false,
@@ -1562,7 +1602,23 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "portOracle",
+                    name: "clock",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
+        },
+        {
+            name: "refreshJet",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultJetLpToken",
                     isMut: false,
                     isSigner: false,
                 },
@@ -1612,12 +1668,38 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
             ],
-            args: [
+            args: [],
+        },
+        {
+            name: "consolidateRefresh",
+            accounts: [
                 {
-                    name: "usePortOracle",
-                    type: "bool",
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultReserveToken",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "lpTokenMint",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
                 },
             ],
+            args: [],
         },
         {
             name: "reconcileSolend",
@@ -1913,7 +1995,7 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
-                        name: "allocations",
+                        name: "targetAllocations",
                         type: {
                             defined: "Allocations",
                         },
@@ -1925,9 +2007,15 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
+                        name: "actualAllocations",
+                        type: {
+                            defined: "Allocations",
+                        },
+                    },
+                    {
                         name: "reserved",
                         type: {
-                            array: ["u64", 23],
+                            array: ["u64", 14],
                         },
                     },
                 ],

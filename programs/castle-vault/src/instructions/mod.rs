@@ -1,3 +1,4 @@
+pub mod consolidate_refresh;
 pub mod deposit;
 pub mod init;
 pub mod rebalance;
@@ -7,6 +8,7 @@ pub mod update_config;
 pub mod update_flags;
 pub mod withdraw;
 
+pub use consolidate_refresh::*;
 pub use deposit::*;
 pub use init::*;
 pub use rebalance::*;

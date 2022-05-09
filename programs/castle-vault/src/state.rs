@@ -70,13 +70,16 @@ pub struct Vault {
     pub value: SlotTrackedValue,
 
     /// Prospective allocations set by rebalance, executed by reconciles
-    pub allocations: Allocations,
+    pub target_allocations: Allocations,
 
     pub config: VaultConfig,
 
+    // Actual allocation retrieved by refresh
+    pub actual_allocations: Allocations,
+
     // 8 * 23 = 184
     /// Reserved space for future upgrades
-    _reserved: [u64; 23],
+    _reserved: [u64; 14],
 }
 
 impl Vault {
