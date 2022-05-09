@@ -1,47 +1,76 @@
 import { BN } from "@project-serum/anchor";
 import { PublicKey } from "@solana/web3.js";
 
-// TODO change to enum or mapping
-export type StrategyType = { equalAllocation: {} } | { maxYield: {} };
+import { DeploymentEnvs } from "@castlefinance/vault-core";
+
+export type ProgramIdMap = {
+    [E in DeploymentEnvs]: PublicKey;
+};
+
+export interface Vault {
+    version: number[];
+    owner: PublicKey;
+    vaultAuthority: PublicKey;
+    authoritySeed: PublicKey;
+    authorityBump: number[];
+    solendReserve: PublicKey;
+    portReserve: PublicKey;
+    jetReserve: PublicKey;
+    vaultReserveToken: PublicKey;
+    vaultSolendLpToken: PublicKey;
+    vaultPortLpToken: PublicKey;
+    vaultJetLpToken: PublicKey;
+    lpTokenMint: PublicKey;
+    reserveTokenMint: PublicKey;
+    feeReceiver: PublicKey;
+    referralFeeReceiver: PublicKey;
+    bitflags: number;
+    value: SlotTrackedValue;
+    allocations: Allocations;
+    config: VaultConfig;
+}
+
+export interface VaultConfig {
+    depositCap?: BN;
+    feeCarryBps?: number;
+    feeMgmtBps?: number;
+    referralFeePct?: number;
+    allocationCapPct?: number;
+    rebalanceMode?: { [x: string]: {} };
+    strategyType?: { [x: string]: {} };
+}
 
 export interface LastUpdate {
     slot: BN;
     stale: any;
 }
 
-export interface Allocation {
+export interface SlotTrackedValue {
     value: BN;
     lastUpdate: LastUpdate;
 }
 
 export interface Allocations {
-    solend: Allocation;
-    port: Allocation;
-    jet: Allocation;
+    solend: SlotTrackedValue;
+    port: SlotTrackedValue;
+    jet: SlotTrackedValue;
 }
 
-export interface Vault {
-    authorityBump: number[];
-    authoritySeed: PublicKey;
-    lastUpdate: LastUpdate;
-    lpTokenMint: PublicKey;
-    reserveTokenMint: PublicKey;
-    totalValue: BN;
-    vaultAuthority: PublicKey;
-    vaultJetLpToken: PublicKey;
-    vaultPortLpToken: PublicKey;
-    vaultReserveToken: PublicKey;
-    vaultSolendLpToken: PublicKey;
-    allocations: Allocations;
-    strategyType: any;
-    owner: PublicKey;
-    feeReceiver: PublicKey;
-    feeCarryBps: number;
-    feeMgmtBps: number;
+export interface ProposedWeightsBps {
+    solend: number;
+    port: number;
+    jet: number;
 }
 
-export interface RebalanceEvent {
+export interface RebalanceDataEvent {
     solend: BN;
     port: BN;
     jet: BN;
+}
+
+export enum VaultFlags {
+    HaltReconciles = 1 << 0,
+    HaltRefreshes = 1 << 1,
+    HaltDepositsWithdraws = 1 << 2,
+    HaltAll = HaltReconciles | HaltRefreshes | HaltDepositsWithdraws,
 }

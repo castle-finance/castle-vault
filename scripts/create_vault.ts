@@ -1,48 +1,62 @@
-import { Cluster, clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
+import { Cluster, Connection, PublicKey } from "@solana/web3.js";
 import { Program, Provider, Wallet } from "@project-serum/anchor";
 import { NATIVE_MINT } from "@solana/spl-token";
 
 import {
-  CastleLendingAggregator,
-  JetReserveAsset,
-  PortReserveAsset,
-  PROGRAM_ID,
-  SolendReserveAsset,
-  VaultClient,
-} from "vault-sdk";
+    DeploymentEnvs,
+    RebalanceModes,
+    StrategyTypes,
+} from "@castlefinance/vault-core";
 
-//const PROGRAM_ID = new PublicKey("E5xEvrNhrknmgGbRv8iDDqHsgqG1xeMEdfPjL8i4YEVo");
+import {
+    JetReserveAsset,
+    PortReserveAsset,
+    SolendReserveAsset,
+    VaultClient,
+} from "../sdk/src";
 
 const main = async () => {
-  const cluster: Cluster = "devnet";
-  const connection = new Connection(clusterApiUrl(cluster));
-  const wallet = Wallet.local();
-  const provider = new Provider(connection, wallet, { commitment: "confirmed" });
-  const program = (await Program.at(
-    PROGRAM_ID,
-    provider
-  )) as Program<CastleLendingAggregator>;
+    const cluster: Cluster = "mainnet-beta";
+    //const cluster: Cluster = "devnet";
+    const connection = new Connection(
+        "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
+        //"https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+    );
+    const wallet = Wallet.local();
+    const provider = new Provider(connection, wallet, {
+        commitment: "confirmed",
+    });
 
-  const reserveMint = NATIVE_MINT;
+    //const reserveMint = NATIVE_MINT;
+    const reserveMint = new PublicKey(
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    );
 
-  const solend = await SolendReserveAsset.load(provider, cluster, reserveMint);
-  const port = await PortReserveAsset.load(provider, cluster, reserveMint);
-  const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
+    const solend = await SolendReserveAsset.load(
+        provider,
+        cluster,
+        reserveMint
+    );
+    const port = await PortReserveAsset.load(provider, cluster, reserveMint);
+    const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
 
-  const vaultClient = await VaultClient.initialize(
-    program,
-    wallet,
-    reserveMint,
-    solend,
-    port,
-    jet,
-    { maxYield: {} }
-  );
-  console.log(vaultClient.vaultId);
-
-  //const vaultId = new PublicKey("81krfC8ptDbjwY5bkur1SqHYKLPxGQLYBQEUv5zhojUW");
-  //const vaultClient = await VaultClient.load(provider, cluster, reserveMint, vaultId);
-  console.log(vaultClient.vaultState);
+    const vaultClient = await VaultClient.initialize(
+        provider,
+        wallet,
+        DeploymentEnvs.mainnet,
+        reserveMint,
+        solend,
+        port,
+        jet,
+        wallet.publicKey,
+        new PublicKey("jvUsXAgE2Gg92BbEBDAu7h5p8SEZpVjFqURJkzSsLNk"),
+        {
+            allocationCapPct: 60,
+            rebalanceMode: { [RebalanceModes.calculator]: {} },
+            strategyType: { [StrategyTypes.maxYield]: {} },
+        }
+    );
+    console.log(vaultClient.vaultId.toString());
 };
 
 main();

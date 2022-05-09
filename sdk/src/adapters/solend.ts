@@ -26,6 +26,7 @@ import {
 } from "@solendprotocol/solend-sdk";
 
 import { Asset } from "./asset";
+import { WAD } from "@solendprotocol/solend-sdk/dist/examples/common";
 
 export interface SolendAccounts {
     program: PublicKey;
@@ -142,6 +143,14 @@ export class SolendReserveAsset extends Asset {
         return new SolendReserveAsset(provider, accounts, reserve);
     }
 
+    //async borrow(amount: number): Promise<TransactionSignature> {
+    //    const borrowTx = SolendAction.buildBorrowTxns(
+    //        this.provider.connection,
+    //        new anchor.BN(amount),
+    //
+    //    )
+    //}
+
     private async reload() {
         await this.reserve.load();
     }
@@ -160,7 +169,7 @@ export class SolendReserveAsset extends Asset {
         );
         const exchangeRate = new Big(this.reserve.stats.cTokenExchangeRate);
 
-        return lpTokenAmount.mul(exchangeRate);
+        return lpTokenAmount.mul(exchangeRate).round(0, Big.roundDown);
     }
 
     /**
@@ -175,6 +184,24 @@ export class SolendReserveAsset extends Asset {
         const apy = Math.expm1(apr);
 
         return Big(apy);
+    }
+
+    async getBorrowedAmount(): Promise<Big> {
+        await this.reload();
+        return Big(
+            this.reserve.stats.totalBorrowsWads
+                .div(new anchor.BN(WAD))
+                .toString()
+        );
+    }
+
+    async getDepositedAmount(): Promise<Big> {
+        await this.reload();
+        return Big(
+            this.reserve.stats.totalDepositsWads
+                .div(new anchor.BN(WAD))
+                .toString()
+        );
     }
 }
 

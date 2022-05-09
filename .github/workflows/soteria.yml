@@ -1,0 +1,29 @@
+name: Soteria Pro Audit
+on:
+  push:
+    branches:
+      - "main"
+      - "dev"
+    paths:
+      - "**.rs"
+  pull_request:
+    branches: "*"
+    paths:
+      - "**.rs"
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check-out the repository
+        uses: actions/checkout@v2
+      - name: Soteria Pro Audit
+        continue-on-error: true # set to true if you don't want to fail jobs
+        uses: soteria-bc/pro-action-pilot@v1
+        with:
+          soteria-token: ${{ secrets.SOTERIA_TOKEN }}
+          path: programs/castle-vault
+      - name: Upload Sarif Report
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: soteria-report.sarif

@@ -1,6 +1,5 @@
 import Big from "big.js";
 import {
-    Cluster,
     Keypair,
     PublicKey,
     SystemProgram,
@@ -22,38 +21,53 @@ import {
 import * as anchor from "@project-serum/anchor";
 import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 
-import { PROGRAM_ID } from ".";
-import { CastleLendingAggregator } from "./castle_lending_aggregator";
+import {
+    DeploymentEnvs,
+    StrategyType,
+    RebalanceMode,
+    RebalanceModes,
+    DeploymentEnv,
+} from "@castlefinance/vault-core";
+
+import { CLUSTER_MAP, PROGRAM_IDS } from ".";
+import { CastleVault } from "./idl";
 import {
     PortReserveAsset,
     SolendReserveAsset,
     JetReserveAsset,
 } from "./adapters";
-import { StrategyType, RebalanceEvent, Vault } from "./types";
+import {
+    ProposedWeightsBps,
+    RebalanceDataEvent,
+    Vault,
+    VaultConfig,
+    VaultFlags,
+} from "./types";
 
 export class VaultClient {
     private constructor(
-        public program: anchor.Program<CastleLendingAggregator>,
+        public program: anchor.Program<CastleVault>,
         public vaultId: PublicKey,
-        public vaultState: Vault,
-        public solend: SolendReserveAsset,
-        public port: PortReserveAsset,
-        public jet: JetReserveAsset
+        private vaultState: Vault,
+        private solend: SolendReserveAsset,
+        private port: PortReserveAsset,
+        private jet: JetReserveAsset,
+        private feesEnabled: boolean = false
     ) {}
-
-    // TODO add function to change wallet
 
     static async load(
         provider: anchor.Provider,
-        cluster: Cluster,
-        reserveMint: PublicKey,
-        vaultId: PublicKey
+        vaultId: PublicKey,
+        env: DeploymentEnv = DeploymentEnvs.mainnet
     ): Promise<VaultClient> {
         const program = (await anchor.Program.at(
-            PROGRAM_ID,
+            PROGRAM_IDS[env],
             provider
-        )) as anchor.Program<CastleLendingAggregator>;
+        )) as anchor.Program<CastleVault>;
         const vaultState = await program.account.vault.fetch(vaultId);
+
+        const cluster = CLUSTER_MAP[env];
+        const reserveMint = vaultState.reserveTokenMint;
 
         const solend = await SolendReserveAsset.load(
             provider,
@@ -70,23 +84,34 @@ export class VaultClient {
         return new VaultClient(program, vaultId, vaultState, solend, port, jet);
     }
 
-    private async reload() {
+    async reload() {
         this.vaultState = await this.program.account.vault.fetch(this.vaultId);
         // TODO reload underlying asset data also?
     }
 
     static async initialize(
-        program: anchor.Program<CastleLendingAggregator>,
+        provider: anchor.Provider,
         wallet: anchor.Wallet,
+        env: DeploymentEnv,
         reserveTokenMint: PublicKey,
         solend: SolendReserveAsset,
         port: PortReserveAsset,
         jet: JetReserveAsset,
-        strategyType: StrategyType,
         owner: PublicKey,
-        feeCarryBps: number = 0,
-        feeMgmtBps: number = 0
+        referralFeeOwner: PublicKey,
+        config: VaultConfig,
+        program?: anchor.Program<CastleVault>
     ): Promise<VaultClient> {
+        // TODO Once the below issue is resolved, remove this logic
+        // https://github.com/project-serum/anchor/issues/1844
+        // Program should only be passed in during testing
+        if (program == null) {
+            program = (await anchor.Program.at(
+                PROGRAM_IDS[env],
+                provider
+            )) as anchor.Program<CastleVault>;
+        }
+
         const vaultId = Keypair.generate();
 
         const [vaultAuthority, authorityBump] =
@@ -140,28 +165,43 @@ export class VaultClient {
                 program.programId
             );
 
-        const [feeReceiver, feeReceiverBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    vaultId.publicKey.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("fee_receiver"),
-                ],
-                program.programId
-            );
+        const feeReceiver = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            lpTokenMint,
+            owner
+        );
 
-        await program.rpc.initialize(
+        const referralFeeReceiver = await Token.getAssociatedTokenAddress(
+            ASSOCIATED_TOKEN_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            lpTokenMint,
+            referralFeeOwner
+        );
+
+        const defaultConfig: VaultConfig = {
+            depositCap: new anchor.BN("18446744073709551615"), // U64::MAX
+            feeCarryBps: 0,
+            feeMgmtBps: 0,
+            referralFeePct: 0,
+            allocationCapPct: 100,
+            rebalanceMode: { calculator: {} },
+            strategyType: { maxYield: {} },
+        };
+
+        const txSig = await program.rpc.initialize(
+            // Anchor has a bug that decodes nested types incorrectly
+            // https://github.com/project-serum/anchor/pull/1726
+            //@ts-ignore
             {
                 authority: authorityBump,
                 reserve: reserveBump,
                 lpMint: lpTokenMintBump,
-                feeReceiver: feeReceiverBump,
                 solendLp: solendLpBump,
                 portLp: portLpBump,
                 jetLp: jetLpBump,
             },
-            strategyType,
-            new anchor.BN(feeCarryBps),
-            new anchor.BN(feeMgmtBps),
+            { ...defaultConfig, ...config },
             {
                 accounts: {
                     vault: vaultId.publicKey,
@@ -179,10 +219,13 @@ export class VaultClient {
                     portReserve: port.accounts.reserve,
                     jetReserve: jet.accounts.reserve,
                     feeReceiver: feeReceiver,
+                    referralFeeReceiver: referralFeeReceiver,
+                    referralFeeOwner: referralFeeOwner,
                     payer: wallet.payer.publicKey,
                     owner: owner,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID,
+                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
                     rent: SYSVAR_RENT_PUBKEY,
                 },
                 signers: [vaultId, wallet.payer],
@@ -190,6 +233,10 @@ export class VaultClient {
                     await program.account.vault.createInstruction(vaultId),
                 ],
             }
+        );
+        await program.provider.connection.confirmTransaction(
+            txSig,
+            "finalized"
         );
         const vaultState = await program.account.vault.fetch(vaultId.publicKey);
 
@@ -203,8 +250,34 @@ export class VaultClient {
         );
     }
 
-    private getRefreshIx(): TransactionInstruction {
-        return this.program.instruction.refresh({
+    getRefreshIx(): TransactionInstruction {
+        // Port does not accept an oracle as input if the reserve is denominated
+        // in the same token as the market quote currency (USDC).
+        // We account for this by passing in an argument that indicates whether
+        // or not to use the given oracle value.
+        let usePortOracle = true;
+        let portOracle = this.port.accounts.oracle;
+        if (portOracle == null) {
+            usePortOracle = false;
+            portOracle = Keypair.generate().publicKey;
+        }
+
+        const feeAccounts = this.feesEnabled
+            ? [
+                  {
+                      isSigner: false,
+                      isWritable: true,
+                      pubkey: this.vaultState.feeReceiver,
+                  },
+                  {
+                      isSigner: false,
+                      isWritable: true,
+                      pubkey: this.vaultState.referralFeeReceiver,
+                  },
+              ]
+            : [];
+
+        return this.program.instruction.refresh(usePortOracle, {
             accounts: {
                 vault: this.vaultId,
                 vaultAuthority: this.vaultState.vaultAuthority,
@@ -219,7 +292,7 @@ export class VaultClient {
                 solendSwitchboard: this.solend.accounts.switchboardFeed,
                 portProgram: this.port.accounts.program,
                 portReserve: this.port.accounts.reserve,
-                portOracle: this.port.accounts.oracle,
+                portOracle: portOracle,
                 jetProgram: this.jet.accounts.program,
                 jetMarket: this.jet.accounts.market,
                 jetMarketAuthority: this.jet.accounts.marketAuthority,
@@ -227,10 +300,10 @@ export class VaultClient {
                 jetFeeNoteVault: this.jet.accounts.feeNoteVault,
                 jetDepositNoteMint: this.jet.accounts.depositNoteMint,
                 jetPyth: this.jet.accounts.pythPrice,
-                feeReceiver: this.vaultState.feeReceiver,
                 tokenProgram: TOKEN_PROGRAM_ID,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
+            remainingAccounts: feeAccounts,
         });
     }
 
@@ -242,7 +315,7 @@ export class VaultClient {
      */
     private async getWrappedSolIxs(
         wallet: anchor.Wallet,
-        lamports: number = 0
+        lamports = 0
     ): Promise<WrapSolIxResponse> {
         const userReserveKeypair = Keypair.generate();
         const userReserveTokenAccount = userReserveKeypair.publicKey;
@@ -278,8 +351,71 @@ export class VaultClient {
     }
 
     /**
+     * @param new_value
+     * @returns
+     */
+    async updateFlags(
+        owner: Keypair,
+        flags: number
+    ): Promise<TransactionSignature> {
+        const updateTx = new Transaction();
+        updateTx.add(
+            this.program.instruction.updateFlags(flags, {
+                accounts: {
+                    vault: this.vaultId,
+                    owner: owner.publicKey,
+                },
+            })
+        );
+        return await this.program.provider.send(updateTx, [owner]);
+    }
+
+    /**
+     * @param new_value
+     * @returns
+     */
+    async updateConfig(
+        owner: Keypair,
+        config: VaultConfig
+    ): Promise<TransactionSignature> {
+        const updateTx = new Transaction();
+        updateTx.add(
+            // Anchor has a bug that decodes nested types incorrectly
+            // https://github.com/project-serum/anchor/pull/1726
+            //@ts-ignore
+            this.program.instruction.updateConfig(config, {
+                accounts: {
+                    vault: this.vaultId,
+                    owner: owner.publicKey,
+                },
+            })
+        );
+        return await this.program.provider.send(updateTx, [owner]);
+    }
+
+    getDepositIx(
+        amount: anchor.BN,
+        userAuthority: PublicKey,
+        userLpTokenAccount: PublicKey,
+        userReserveTokenAccount: PublicKey
+    ) {
+        return this.program.instruction.deposit(amount, {
+            accounts: {
+                vault: this.vaultId,
+                vaultAuthority: this.vaultState.vaultAuthority,
+                vaultReserveToken: this.vaultState.vaultReserveToken,
+                lpTokenMint: this.vaultState.lpTokenMint,
+                userReserveToken: userReserveTokenAccount,
+                userLpToken: userLpTokenAccount,
+                userAuthority: userAuthority,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
+
+    /**
      *
-     * TODO refactor to be more clear
      *
      * @param wallet
      * @param amount
@@ -313,7 +449,7 @@ export class VaultClient {
         if (userLpTokenAccountInfo == null) {
             createLpAcctTx = new Transaction().add(
                 createAta(
-                    wallet,
+                    wallet.publicKey,
                     this.vaultState.lpTokenMint,
                     userLpTokenAccount
                 )
@@ -322,22 +458,15 @@ export class VaultClient {
 
         depositTx.add(this.getRefreshIx());
         depositTx.add(
-            this.program.instruction.deposit(new anchor.BN(amount), {
-                accounts: {
-                    vault: this.vaultId,
-                    vaultAuthority: this.vaultState.vaultAuthority,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    lpTokenMint: this.vaultState.lpTokenMint,
-                    userReserveToken: userReserveTokenAccount,
-                    userLpToken: userLpTokenAccount,
-                    userAuthority: wallet.publicKey,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                },
-            })
+            this.getDepositIx(
+                new anchor.BN(amount),
+                wallet.publicKey,
+                userLpTokenAccount,
+                userReserveTokenAccount
+            )
         );
 
-        let txs: SendTxRequest[] = [];
+        const txs: SendTxRequest[] = [];
         if (createLpAcctTx != null) {
             txs.push({ tx: createLpAcctTx, signers: [] });
         }
@@ -355,6 +484,27 @@ export class VaultClient {
         return await this.program.provider.sendAll(txs);
     }
 
+    getWithdrawIx(
+        amount: anchor.BN,
+        userAuthority: PublicKey,
+        userLpTokenAccount: PublicKey,
+        userReserveTokenAccount: PublicKey
+    ) {
+        return this.program.instruction.withdraw(amount, {
+            accounts: {
+                vault: this.vaultId,
+                vaultAuthority: this.vaultState.vaultAuthority,
+                userAuthority: userAuthority,
+                userLpToken: userLpTokenAccount,
+                userReserveToken: userReserveTokenAccount,
+                vaultReserveToken: this.vaultState.vaultReserveToken,
+                lpTokenMint: this.vaultState.lpTokenMint,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
+
     /**
      *
      * @param wallet
@@ -369,60 +519,11 @@ export class VaultClient {
             wallet.publicKey
         );
 
-        let txs: SendTxRequest[] = [];
+        const txs: SendTxRequest[] = [];
 
-        // Withdraw from lending markets if not enough reserves in vault
-        const vaultReserveTokenAccountInfo =
-            await this.getReserveTokenAccountInfo(
-                this.vaultState.vaultReserveToken
-            );
-        const vaultReserveAmount = new Big(
-            vaultReserveTokenAccountInfo.amount.toString()
-        ).round(0, Big.roundDown);
-
-        // TODO sdk input should be in lp tokens, not reserve tokens
-
-        // Convert from reserve tokens to LP tokens
-        // NOTE: this rate is slightly lower than what it will be in the transaction
-        //  by about 1/10000th of the current yield (1bp per 100%).
-        //  To avoid a insufficient funds error, we slightly over-correct for this
-        const exchangeRate = await this.getLpExchangeRate();
-        const adjustFactor = (await this.getApy()).mul(0.0001);
-        const convertedAmount = exchangeRate
-            .mul(amount)
-            .mul(new Big(1).add(adjustFactor))
-            .round(0, Big.roundUp);
-
-        if (vaultReserveAmount.lt(convertedAmount)) {
-            // Sort reconcile ixs by most to least outflows
-            const reconcileIxs = (
-                await this.newAndOldallocationsWithReconcileIxs()
-            ).sort((a, b) => a[0].sub(a[1]).sub(b[0].sub(b[1])).toNumber());
-
-            const toWithdrawAmount = convertedAmount
-                .sub(vaultReserveAmount)
-                .toNumber();
-            // TODO use bignumber
-            let withdrawnAmount = 0;
-            let n = 0;
-            while (withdrawnAmount < toWithdrawAmount) {
-                const [_, oldAlloc, ix] = reconcileIxs[n];
-                const reconcileAmount = Math.min(
-                    oldAlloc.toNumber(),
-                    toWithdrawAmount
-                );
-                if (reconcileAmount != 0) {
-                    const reconcileTx = new Transaction();
-                    reconcileTx.add(this.getRefreshIx());
-                    reconcileTx.add(ix(new anchor.BN(reconcileAmount)));
-
-                    txs.push({ tx: reconcileTx, signers: [] });
-                }
-
-                withdrawnAmount += oldAlloc.toNumber();
-                n += 1;
-            }
-        }
+        // Add reconcile txs
+        const reconcileTxs = await this.getReconcileTxs(amount);
+        reconcileTxs.forEach((tx) => txs.push({ tx, signers: [] }));
 
         const withdrawTx = new Transaction();
         let userReserveTokenAccount: PublicKey;
@@ -443,7 +544,7 @@ export class VaultClient {
             if (userReserveTokenAccountInfo == null) {
                 withdrawTx.add(
                     createAta(
-                        wallet,
+                        wallet.publicKey,
                         this.vaultState.reserveTokenMint,
                         userReserveTokenAccount
                     )
@@ -453,21 +554,11 @@ export class VaultClient {
 
         withdrawTx.add(this.getRefreshIx());
         withdrawTx.add(
-            this.program.instruction.withdraw(
-                new anchor.BN(Math.floor(amount)),
-                {
-                    accounts: {
-                        vault: this.vaultId,
-                        vaultAuthority: this.vaultState.vaultAuthority,
-                        userAuthority: wallet.publicKey,
-                        userLpToken: userLpTokenAccount,
-                        userReserveToken: userReserveTokenAccount,
-                        vaultReserveToken: this.vaultState.vaultReserveToken,
-                        lpTokenMint: this.vaultState.lpTokenMint,
-                        tokenProgram: TOKEN_PROGRAM_ID,
-                        clock: SYSVAR_CLOCK_PUBKEY,
-                    },
-                }
+            this.getWithdrawIx(
+                new anchor.BN(amount),
+                wallet.publicKey,
+                userLpTokenAccount,
+                userReserveTokenAccount
             )
         );
 
@@ -483,24 +574,88 @@ export class VaultClient {
         return this.program.provider.sendAll(txs);
     }
 
-    /**
-     *
-     * @param threshold
-     * @returns
-     */
-    async rebalance(threshold: number = 0): Promise<TransactionSignature[]> {
-        const txs: SendTxRequest[] = [];
+    async getReconcileTxs(amount: number) {
+        const txs: Transaction[] = [];
 
+        // Withdraw from lending markets if not enough reserves in vault
+        const vaultReserveTokenAccountInfo =
+            await this.getReserveTokenAccountInfo(
+                this.vaultState.vaultReserveToken
+            );
+        const vaultReserveAmount = new Big(
+            vaultReserveTokenAccountInfo.amount.toString()
+        ).round(0, Big.roundDown);
+
+        // Convert from lp tokens to reserve tokens
+        // NOTE: this rate is slightly lower than what it will be in the transaction
+        //  by about 1/10000th of the current yield (1bp per 100%).
+        //  To avoid a insufficient funds error, we slightly over-correct for this
+        //  This does not work when withdrawing the last tokens from the vault
+        const exchangeRate = await this.getLpExchangeRate();
+        const adjustFactor = (await this.getApy()).mul(0.0001);
+        const convertedAmount = exchangeRate
+            .mul(amount)
+            .mul(new Big(1).add(adjustFactor))
+            .round(0, Big.roundUp);
+
+        if (vaultReserveAmount.lt(convertedAmount)) {
+            // Sort reconcile ixs by most to least $ to minimize number of TXs sent
+            const reconcileIxs = [
+                [
+                    await this.solend.getLpTokenAccountValue(
+                        this.vaultState.vaultSolendLpToken
+                    ),
+                    this.getReconcileSolendIx.bind(this),
+                ],
+                [
+                    await this.port.getLpTokenAccountValue(
+                        this.vaultState.vaultPortLpToken
+                    ),
+                    this.getReconcilePortIx.bind(this),
+                ],
+                [
+                    await this.jet.getLpTokenAccountValue(
+                        this.vaultState.vaultJetLpToken
+                    ),
+                    this.getReconcileJetIx.bind(this),
+                ],
+            ].sort((a, b) => b[0].sub(a[0]).toNumber());
+
+            const toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
+            let reconciledAmount = Big(0);
+            let n = 0;
+            while (reconciledAmount.lt(toReconcileAmount)) {
+                const [alloc, ix] = reconcileIxs[n];
+                // min of alloc and toWithdrawAmount - withdrawnAmount
+                const reconcileAmount = alloc.gt(
+                    toReconcileAmount.sub(reconciledAmount)
+                )
+                    ? toReconcileAmount
+                    : alloc;
+
+                if (!Big(0).eq(reconcileAmount)) {
+                    const reconcileTx = new Transaction();
+                    reconcileTx.add(this.getRefreshIx());
+                    reconcileTx.add(
+                        ix(new anchor.BN(reconcileAmount.toString()))
+                    );
+                    txs.push(reconcileTx);
+                }
+                reconciledAmount = reconciledAmount.add(reconcileAmount);
+                n += 1;
+            }
+        }
+
+        return txs;
+    }
+
+    getRebalanceTx(proposedWeights: ProposedWeightsBps): Transaction {
         const rebalanceTx = new Transaction();
         rebalanceTx.add(this.getRefreshIx());
         rebalanceTx.add(
-            this.program.instruction.rebalance({
+            this.program.instruction.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-                    vaultPortLpToken: this.vaultState.vaultPortLpToken,
-                    vaultJetLpToken: this.vaultState.vaultJetLpToken,
                     solendReserve: this.solend.accounts.reserve,
                     portReserve: this.port.accounts.reserve,
                     jetReserve: this.jet.accounts.reserve,
@@ -508,55 +663,31 @@ export class VaultClient {
                 },
             })
         );
-        txs.push({ tx: rebalanceTx, signers: [] });
-
-        // Sort ixs in ascending order of outflows
-        const oldAndNewallocationsWithReconcileIxs =
-            await this.newAndOldallocationsWithReconcileIxs();
-
-        const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
-            oldAndNewallocationsWithReconcileIxs.map((e, _) => [
-                e[0].sub(e[1]),
-                e[2](),
-            ]);
-
-        const reconcileIxs = allocationDiffsWithReconcileIxs
-            .sort((a, b) => a[0].sub(b[0]).toNumber())
-            .map((e, _) => e[1]);
-
-        for (let ix of reconcileIxs) {
-            const reconcileTx = new Transaction();
-            reconcileTx.add(this.getRefreshIx());
-            reconcileTx.add(ix);
-            txs.push({ tx: reconcileTx, signers: [] });
-        }
-
-        const vaultValue = await this.getTotalValue();
-        const maxAllocationChange = Math.max(
-            ...allocationDiffsWithReconcileIxs.map((e, _) =>
-                vaultValue.eq(0) ? 100 : e[0].abs().div(vaultValue).toNumber()
-            )
-        );
-
-        if (vaultValue.gt(0) && maxAllocationChange > threshold) {
-            return this.program.provider.sendAll(txs);
-        } else {
-            return Promise.resolve([]);
-        }
+        return rebalanceTx;
     }
 
-    // TODO this is probably not the best way to do this?
-    private async newAndOldallocationsWithReconcileIxs(): Promise<
-        [Big, Big, (withdrawOption?: anchor.BN) => TransactionInstruction][]
-    > {
+    /**
+     *
+     * @param proposedWeights
+     * @returns
+     */
+    async rebalance(
+        proposedWeights?: ProposedWeightsBps
+    ): Promise<TransactionSignature[]> {
+        if (
+            this.getRebalanceMode() == RebalanceModes.proofChecker &&
+            proposedWeights == null
+        ) {
+            throw new Error(
+                "Proposed weights must be passed in for a vault running in proofChecker mode"
+            );
+        }
+
+        // Sort ixs in descending order of outflows
         const newAllocations = (
-            await this.program.simulate.rebalance({
+            await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
-                    vaultReserveToken: this.vaultState.vaultReserveToken,
-                    vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-                    vaultPortLpToken: this.vaultState.vaultPortLpToken,
-                    vaultJetLpToken: this.vaultState.vaultJetLpToken,
                     solendReserve: this.solend.accounts.reserve,
                     portReserve: this.port.accounts.reserve,
                     jetReserve: this.jet.accounts.reserve,
@@ -564,9 +695,9 @@ export class VaultClient {
                 },
                 instructions: [this.getRefreshIx()],
             })
-        ).events[0].data as RebalanceEvent;
+        ).events[1].data as RebalanceDataEvent;
 
-        return [
+        const newAndOldallocationsWithReconcileIxs = [
             [
                 new Big(newAllocations.solend.toString()),
                 await this.solend.getLpTokenAccountValue(
@@ -589,6 +720,28 @@ export class VaultClient {
                 this.getReconcileJetIx.bind(this),
             ],
         ];
+
+        const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
+            newAndOldallocationsWithReconcileIxs.map((e) => [
+                e[0].sub(e[1]),
+                e[2](),
+            ]);
+
+        const reconcileIxs = allocationDiffsWithReconcileIxs
+            .sort((a, b) => a[0].sub(b[0]).toNumber())
+            .map((e) => e[1]);
+
+        const txs: SendTxRequest[] = [
+            { tx: this.getRebalanceTx(proposedWeights), signers: [] },
+        ];
+
+        for (const ix of reconcileIxs) {
+            const reconcileTx = new Transaction();
+            reconcileTx.add(this.getRefreshIx());
+            reconcileTx.add(ix);
+            txs.push({ tx: reconcileTx, signers: [] });
+        }
+        return this.program.provider.sendAll(txs);
     }
 
     private getReconcilePortIx(
@@ -744,7 +897,6 @@ export class VaultClient {
                 ).amount.toString()
             ),
         ];
-
         const valueSum = values.reduce((a, b) => a.add(b), new Big(0));
 
         return valueSum;
@@ -766,6 +918,39 @@ export class VaultClient {
         }
     }
 
+    async getVaultReserveTokenAccountValue(): Promise<Big> {
+        return Big(
+            (
+                await this.getReserveTokenAccountInfo(
+                    this.getVaultReserveTokenAccount()
+                )
+            ).amount.toString()
+        );
+    }
+
+    async getVaultSolendLpTokenAccountValue(): Promise<Big> {
+        return this.solend.getLpTokenAccountValue(
+            this.getVaultSolendLpTokenAccount()
+        );
+    }
+
+    async getVaultPortLpTokenAccountValue(): Promise<Big> {
+        return this.port.getLpTokenAccountValue(
+            this.getVaultPortLpTokenAccount()
+        );
+    }
+
+    async getVaultJetLpTokenAccountValue(): Promise<Big> {
+        return this.jet.getLpTokenAccountValue(
+            this.getVaultJetLpTokenAccount()
+        );
+    }
+
+    /**
+     * Calculates the ATA given the user's address and vault mint
+     * @param address Users public key
+     * @returns Users reserve ATA given vault reserve mint
+     */
     async getUserReserveTokenAccount(address: PublicKey): Promise<PublicKey> {
         return await Token.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -790,7 +975,8 @@ export class VaultClient {
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             this.vaultState.lpTokenMint,
-            address
+            address,
+            true
         );
     }
 
@@ -824,46 +1010,111 @@ export class VaultClient {
         return lpToken.getAccountInfo(this.vaultState.feeReceiver);
     }
 
-    async debug_log() {
-        console.log(
-            "solend value: ",
-            (
-                await this.solend.getLpTokenAccountValue(
-                    this.vaultState.vaultSolendLpToken
-                )
-            ).toNumber()
+    async getReferralFeeReceiverAccountInfo(): Promise<AccountInfo> {
+        const lpToken = new Token(
+            this.program.provider.connection,
+            this.vaultState.lpTokenMint,
+            TOKEN_PROGRAM_ID,
+            Keypair.generate() // dummy since we don't need to send txs
         );
-        console.log(
-            "port value: ",
-            (
-                await this.port.getLpTokenAccountValue(
-                    this.vaultState.vaultPortLpToken
-                )
-            ).toNumber()
-        );
-        console.log(
-            "jet value: ",
-            (
-                await this.jet.getLpTokenAccountValue(
-                    this.vaultState.vaultJetLpToken
-                )
-            ).toNumber()
-        );
+        return lpToken.getAccountInfo(this.vaultState.referralFeeReceiver);
+    }
+
+    // TODO remove this
+    getVaultState(): Vault {
+        return this.vaultState;
+    }
+
+    getVaultConfig(): VaultConfig {
+        return this.vaultState.config;
+    }
+
+    getReserveTokenMint(): PublicKey {
+        return this.vaultState.reserveTokenMint;
+    }
+
+    getLpTokenMint(): PublicKey {
+        return this.vaultState.lpTokenMint;
+    }
+
+    getDepositCap(): Big {
+        return new Big(this.vaultState.config.depositCap.toString());
+    }
+
+    getAllocationCap(): number {
+        return this.vaultState.config.allocationCapPct;
+    }
+
+    getVaultReserveTokenAccount(): PublicKey {
+        return this.vaultState.vaultReserveToken;
+    }
+
+    getVaultSolendLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultSolendLpToken;
+    }
+
+    getVaultPortLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultPortLpToken;
+    }
+
+    getVaultJetLpTokenAccount(): PublicKey {
+        return this.vaultState.vaultJetLpToken;
+    }
+
+    getStrategyType(): StrategyType {
+        return Object.keys(
+            this.vaultState.config.strategyType
+        )[0] as StrategyType;
+    }
+
+    getRebalanceMode(): RebalanceMode {
+        return Object.keys(
+            this.vaultState.config.rebalanceMode
+        )[0] as RebalanceMode;
+    }
+
+    getSolend(): SolendReserveAsset {
+        return this.solend;
+    }
+
+    getPort(): PortReserveAsset {
+        return this.port;
+    }
+
+    getJet(): JetReserveAsset {
+        return this.jet;
+    }
+
+    getReferralFeeSplit(): number {
+        return this.vaultState.config.referralFeePct / 100;
+    }
+
+    getCarryFee(): number {
+        return this.vaultState.config.feeCarryBps / 10000;
+    }
+
+    getManagementFee(): number {
+        return this.vaultState.config.feeMgmtBps / 10000;
+    }
+
+    getFlags(): VaultFlags {
+        return this.vaultState.bitflags;
     }
 }
 
 const createAta = (
-    wallet: anchor.Wallet,
+    owner: PublicKey,
     mint: PublicKey,
-    address: PublicKey
+    address: PublicKey,
+    feePayer?: PublicKey
 ): TransactionInstruction => {
     return Token.createAssociatedTokenAccountInstruction(
         ASSOCIATED_TOKEN_PROGRAM_ID,
         TOKEN_PROGRAM_ID,
         mint,
         address,
-        wallet.publicKey,
-        wallet.publicKey
+        owner,
+        feePayer ? feePayer : owner
     );
 };
 
