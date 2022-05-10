@@ -242,6 +242,30 @@ describe("castle-vault", () => {
             program
         );
 
+        await vaultClient.initializeSolend(
+            provider,
+            provider.wallet as anchor.Wallet,
+            solend,
+            owner,
+            program
+        );
+
+        await vaultClient.initializePort(
+            provider,
+            provider.wallet as anchor.Wallet,
+            port,
+            owner,
+            program
+        );
+
+        await vaultClient.initializeJet(
+            provider,
+            provider.wallet as anchor.Wallet,
+            jet,
+            owner,
+            program
+        );
+
         userReserveTokenAccount = await reserveToken.createAccount(
             wallet.publicKey
         );
