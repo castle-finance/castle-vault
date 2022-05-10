@@ -10,6 +10,7 @@ use spl_token_lending::state::Reserve;
 
 use crate::{
     impl_has_vault,
+    init::YieldSourceInitializer,
     reconcile::LendingMarket,
     refresh::Refresher,
     reserves::{Provider, ReserveAccessor},
@@ -334,6 +335,53 @@ impl Deref for SolendReserve {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(bump: u8)]
+pub struct InitializeSolend<'info> {
+    #[account(
+        mut,
+        has_one = owner,
+        has_one = vault_authority,
+    )]
+    pub vault: Box<Account<'info, Vault>>,
+
+    pub vault_authority: AccountInfo<'info>,
+
+    /// Token account for the vault's solend lp tokens
+    #[account(
+        init,
+        payer = payer,
+        seeds = [vault.key().as_ref(), solend_lp_token_mint.key().as_ref()],
+        bump = bump,
+        token::authority = vault_authority,
+        token::mint = solend_lp_token_mint,
+    )]
+    pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
+
+    pub solend_lp_token_mint: AccountInfo<'info>,
+
+    pub solend_reserve: Box<Account<'info, SolendReserve>>,
+
+    pub owner: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub token_program: Program<'info, Token>,
+
+    pub system_program: Program<'info, System>,
+
+    pub rent: Sysvar<'info, Rent>,
+}
+
+impl<'info> YieldSourceInitializer<'info> for InitializeSolend<'info> {
+    fn initialize_yield_srouce(&mut self) -> ProgramResult {
+        self.vault.solend_reserve = self.solend_reserve.key();
+        self.vault.vault_solend_lp_token = self.vault_solend_lp_token.key();
+        Ok(())
     }
 }
 

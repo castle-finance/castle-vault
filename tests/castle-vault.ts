@@ -236,7 +236,7 @@ describe("castle-vault", () => {
             solend,
             port,
             jet,
-            owner.publicKey,
+            owner,
             referralFeeOwner,
             config,
             program

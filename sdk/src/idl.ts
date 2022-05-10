@@ -26,52 +26,7 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "vaultSolendLpToken";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultPortLpToken";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultJetLpToken";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
                     name: "reserveTokenMint";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "solendLpTokenMint";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "portLpTokenMint";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "jetLpTokenMint";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "solendReserve";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "portReserve";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "jetReserve";
                     isMut: false;
                     isSigner: false;
                 },
@@ -133,6 +88,189 @@ export type CastleVault = {
                     type: {
                         defined: "VaultConfigArg";
                     };
+                }
+            ];
+        },
+        {
+            name: "initializeJet";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultJetLpToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "jetLpTokenMint";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "jetReserve";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "rent";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "bump";
+                    type: "u8";
+                }
+            ];
+        },
+        {
+            name: "initializePort";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortLpToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portLpTokenMint";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portReserve";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "rent";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "bump";
+                    type: "u8";
+                }
+            ];
+        },
+        {
+            name: "initializeSolend";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultSolendLpToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "solendLpTokenMint";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "solendReserve";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "rent";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "bump";
+                    type: "u8";
                 }
             ];
         },
@@ -1233,52 +1371,7 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "vaultSolendLpToken",
-                    isMut: true,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultPortLpToken",
-                    isMut: true,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultJetLpToken",
-                    isMut: true,
-                    isSigner: false,
-                },
-                {
                     name: "reserveTokenMint",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "solendLpTokenMint",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "portLpTokenMint",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "jetLpTokenMint",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "solendReserve",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "portReserve",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "jetReserve",
                     isMut: false,
                     isSigner: false,
                 },
@@ -1340,6 +1433,189 @@ export const IDL: CastleVault = {
                     type: {
                         defined: "VaultConfigArg",
                     },
+                },
+            ],
+        },
+        {
+            name: "initializeJet",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultJetLpToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "jetLpTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "jetReserve",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "rent",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "bump",
+                    type: "u8",
+                },
+            ],
+        },
+        {
+            name: "initializePort",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortLpToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portLpTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portReserve",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "rent",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "bump",
+                    type: "u8",
+                },
+            ],
+        },
+        {
+            name: "initializeSolend",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultSolendLpToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "solendLpTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "solendReserve",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "rent",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "bump",
+                    type: "u8",
                 },
             ],
         },

@@ -97,7 +97,7 @@ export class VaultClient {
         solend: SolendReserveAsset,
         port: PortReserveAsset,
         jet: JetReserveAsset,
-        owner: PublicKey,
+        owner: Keypair,
         referralFeeOwner: PublicKey,
         config: VaultConfig,
         program?: anchor.Program<CastleVault>
@@ -169,7 +169,7 @@ export class VaultClient {
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             lpTokenMint,
-            owner
+            owner.publicKey
         );
 
         const referralFeeReceiver = await Token.getAssociatedTokenAddress(
@@ -208,21 +208,12 @@ export class VaultClient {
                     vaultAuthority: vaultAuthority,
                     lpTokenMint: lpTokenMint,
                     vaultReserveToken: vaultReserveTokenAccount,
-                    vaultSolendLpToken: vaultSolendLpTokenAccount,
-                    vaultPortLpToken: vaultPortLpTokenAccount,
-                    vaultJetLpToken: vaultJetLpTokenAccount,
                     reserveTokenMint: reserveTokenMint,
-                    solendLpTokenMint: solend.accounts.collateralMint,
-                    portLpTokenMint: port.accounts.collateralMint,
-                    jetLpTokenMint: jet.accounts.depositNoteMint,
-                    solendReserve: solend.accounts.reserve,
-                    portReserve: port.accounts.reserve,
-                    jetReserve: jet.accounts.reserve,
                     feeReceiver: feeReceiver,
                     referralFeeReceiver: referralFeeReceiver,
                     referralFeeOwner: referralFeeOwner,
                     payer: wallet.payer.publicKey,
-                    owner: owner,
+                    owner: owner.publicKey,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID,
                     associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -238,6 +229,76 @@ export class VaultClient {
             txSig,
             "finalized"
         );
+
+        console.log("initializeJet");
+        const txSig2 = await program.rpc.initializeJet(jetLpBump, {
+            accounts: {
+                vault: vaultId.publicKey,
+                vaultAuthority: vaultAuthority,
+                vaultJetLpToken: vaultJetLpTokenAccount,
+                jetLpTokenMint: jet.accounts.depositNoteMint,
+                jetReserve: jet.accounts.reserve,
+                owner: owner.publicKey,
+                payer: wallet.payer.publicKey,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            },
+            signers: [owner, wallet.payer],
+        });
+        console.log("initializeJet sent tx");
+        await program.provider.connection.confirmTransaction(
+            txSig2,
+            "finalized"
+        );
+        console.log("initializeJet confirmed");
+
+        console.log("initializePort");
+        const txSig3 = await program.rpc.initializePort(portLpBump, {
+            accounts: {
+                vault: vaultId.publicKey,
+                vaultAuthority: vaultAuthority,
+                vaultPortLpToken: vaultPortLpTokenAccount,
+                portLpTokenMint: port.accounts.collateralMint,
+                portReserve: port.accounts.reserve,
+                owner: owner.publicKey,
+                payer: wallet.payer.publicKey,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            },
+            signers: [owner, wallet.payer],
+        });
+        console.log("initializePort sent tx");
+        await program.provider.connection.confirmTransaction(
+            txSig3,
+            "finalized"
+        );
+        console.log("initializePort confirmed");
+
+        console.log("initializeSolend");
+        const txSig4 = await program.rpc.initializeSolend(solendLpBump, {
+            accounts: {
+                vault: vaultId.publicKey,
+                vaultAuthority: vaultAuthority,
+                vaultSolendLpToken: vaultSolendLpTokenAccount,
+                solendReserve: solend.accounts.reserve,
+                solendLpTokenMint: solend.accounts.collateralMint,
+                owner: owner.publicKey,
+                payer: wallet.payer.publicKey,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            },
+            signers: [owner, wallet.payer],
+        });
+        console.log("initializeSolend sent tx");
+        await program.provider.connection.confirmTransaction(
+            txSig4,
+            "finalized"
+        );
+        console.log("initializeSolend confirmed");
+
         const vaultState = await program.account.vault.fetch(vaultId.publicKey);
 
         return new VaultClient(
