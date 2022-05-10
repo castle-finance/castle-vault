@@ -104,9 +104,6 @@ export class VaultClient {
         wallet: anchor.Wallet,
         env: DeploymentEnv,
         reserveTokenMint: PublicKey,
-        solend: SolendReserveAsset,
-        port: PortReserveAsset,
-        jet: JetReserveAsset,
         owner: Keypair,
         referralFeeOwner: PublicKey,
         config: VaultConfig,
@@ -136,33 +133,6 @@ export class VaultClient {
         const [vaultReserveTokenAccount, reserveBump] =
             await PublicKey.findProgramAddress(
                 [vaultId.publicKey.toBuffer(), reserveTokenMint.toBuffer()],
-                program.programId
-            );
-
-        const [vaultSolendLpTokenAccount, solendLpBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    vaultId.publicKey.toBuffer(),
-                    solend.accounts.collateralMint.toBuffer(),
-                ],
-                program.programId
-            );
-
-        const [vaultPortLpTokenAccount, portLpBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    vaultId.publicKey.toBuffer(),
-                    port.accounts.collateralMint.toBuffer(),
-                ],
-                program.programId
-            );
-
-        const [vaultJetLpTokenAccount, jetLpBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    vaultId.publicKey.toBuffer(),
-                    jet.accounts.depositNoteMint.toBuffer(),
-                ],
                 program.programId
             );
 
@@ -207,9 +177,6 @@ export class VaultClient {
                 authority: authorityBump,
                 reserve: reserveBump,
                 lpMint: lpTokenMintBump,
-                solendLp: solendLpBump,
-                portLp: portLpBump,
-                jetLp: jetLpBump,
             },
             { ...defaultConfig, ...config },
             {

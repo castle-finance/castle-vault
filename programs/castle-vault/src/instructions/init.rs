@@ -13,9 +13,6 @@ pub struct InitBumpSeeds {
     authority: u8,
     reserve: u8,
     lp_mint: u8,
-    solend_lp: u8,
-    port_lp: u8,
-    jet_lp: u8,
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]

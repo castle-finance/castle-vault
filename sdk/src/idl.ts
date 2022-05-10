@@ -970,18 +970,6 @@ export type CastleVault = {
                     {
                         name: "lpMint";
                         type: "u8";
-                    },
-                    {
-                        name: "solendLp";
-                        type: "u8";
-                    },
-                    {
-                        name: "portLp";
-                        type: "u8";
-                    },
-                    {
-                        name: "jetLp";
-                        type: "u8";
                     }
                 ];
             };
@@ -2314,18 +2302,6 @@ export const IDL: CastleVault = {
                     },
                     {
                         name: "lpMint",
-                        type: "u8",
-                    },
-                    {
-                        name: "solendLp",
-                        type: "u8",
-                    },
-                    {
-                        name: "portLp",
-                        type: "u8",
-                    },
-                    {
-                        name: "jetLp",
                         type: "u8",
                     },
                 ],
