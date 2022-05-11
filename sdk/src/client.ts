@@ -342,9 +342,11 @@ export class VaultClient {
     getRefreshIxs(): TransactionInstruction[] {
         return Object.keys(this.yieldSources)
             .map((k) => {
-                return this.yieldSources[
-                    k as keyof typeof YieldSources
-                ].getRefreshIx(this.program, this.vaultId, this.vaultState);
+                return this.yieldSources[k].getRefreshIx(
+                    this.program,
+                    this.vaultId,
+                    this.vaultState
+                );
             })
             .concat([this.getConsolidateRefreshIx()]);
     }
@@ -677,9 +679,9 @@ export class VaultClient {
             const reconcileIxs = (
                 await Promise.all(
                     Object.keys(this.yieldSources).map(
-                        async (k): Promise<[]> => {
-                            const alloc = await this.yieldSources[
-                                k as keyof typeof YieldSources
+                        async (k): Promise<[Big, string]> => {
+                            const alloc: Big = await this.yieldSources[
+                                k
                             ].getLpTokenAccountValue2(this.vaultState);
                             return [alloc, k];
                         }
@@ -706,9 +708,7 @@ export class VaultClient {
                         reconcileTx.add(element);
                     });
                     reconcileTx.add(
-                        this.yieldSources[
-                            k as keyof typeof YieldSources
-                        ].getReconcileIx(
+                        this.yieldSources[k].getReconcileIx(
                             this.program,
                             this.vaultId,
                             this.vaultState,
@@ -776,25 +776,25 @@ export class VaultClient {
         ).events[1].data as RebalanceDataEvent;
 
         const newAndOldallocationsWithReconcileIxs = await Promise.all(
-            Object.keys(this.yieldSources).map(async (k): Promise<[]> => {
-                const newAlloc = new Big(
-                    newAllocations[
-                        k as keyof typeof RebalanceDataEvent
-                    ].toString()
-                );
-                const oldAlloc = await this.yieldSources[
-                    k as keyof typeof YieldSources
-                ].getLpTokenAccountValue2(this.vaultState);
-                return [newAlloc, oldAlloc, k];
-            })
+            Object.keys(this.yieldSources).map(
+                async (k): Promise<[Big, Big, string]> => {
+                    const newAlloc = new Big(newAllocations[k].toString());
+                    const oldAlloc = await this.yieldSources[
+                        k
+                    ].getLpTokenAccountValue2(this.vaultState);
+                    return [newAlloc, oldAlloc, k];
+                }
+            )
         );
 
         const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
             newAndOldallocationsWithReconcileIxs.map((e) => [
                 e[0].sub(e[1]),
-                this.yieldSources[
-                    e[2] as keyof typeof YieldSources
-                ].getReconcileIx(this.program, this.vaultId, this.vaultState),
+                this.yieldSources[e[2]].getReconcileIx(
+                    this.program,
+                    this.vaultId,
+                    this.vaultState
+                ),
             ]);
 
         const reconcileIxs = allocationDiffsWithReconcileIxs
