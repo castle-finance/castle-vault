@@ -6,6 +6,7 @@ import {
     PublicKey,
     Signer,
     SystemProgram,
+    TransactionInstruction,
     SYSVAR_CLOCK_PUBKEY,
     SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
@@ -25,6 +26,8 @@ import {
     ReserveConfig,
 } from "@jet-lab/jet-engine";
 
+import { CastleVault } from "../idl";
+import { Vault } from "../types";
 import { Asset } from "./asset";
 
 export interface JetAccounts {

@@ -6,6 +6,7 @@ import {
     PublicKey,
     SystemProgram,
     Transaction,
+    TransactionInstruction,
     SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
@@ -29,6 +30,8 @@ import {
     ReserveId,
 } from "@port.finance/port-sdk";
 
+import { CastleVault } from "../idl";
+import { Vault } from "../types";
 import { Asset } from "./asset";
 
 interface PortAccounts {

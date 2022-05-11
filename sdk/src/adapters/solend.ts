@@ -25,6 +25,8 @@ import {
     SolendMarket,
 } from "@solendprotocol/solend-sdk";
 
+import { CastleVault } from "../idl";
+import { Vault } from "../types";
 import { Asset } from "./asset";
 import { WAD } from "@solendprotocol/solend-sdk/dist/examples/common";
 

@@ -1,6 +1,7 @@
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
 import Big from "big.js";
-import Vault from "../types";
+import { Vault } from "../types";
+import { CastleVault } from "../idl";
 import * as anchor from "@project-serum/anchor";
 
 export abstract class Asset {
