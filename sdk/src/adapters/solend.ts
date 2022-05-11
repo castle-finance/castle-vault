@@ -172,6 +172,10 @@ export class SolendReserveAsset extends Asset {
         return lpTokenAmount.mul(exchangeRate).round(0, Big.roundDown);
     }
 
+    async getLpTokenAccountValue2(vaultState: Vault): Promise<Big> {
+        return this.getLpTokenAccountValue(vaultState.vaultSolendLpToken);
+    }
+
     /**
      *
      * @todo make this the same as program's calculation
@@ -220,6 +224,33 @@ export class SolendReserveAsset extends Asset {
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
         });
+    }
+
+    getReconcileIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault,
+        withdrawOption?: anchor.BN
+    ): TransactionInstruction {
+        return program.instruction.reconcileSolend(
+            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
+            {
+                accounts: {
+                    vault: vaultId,
+                    vaultAuthority: vaultState.vaultAuthority,
+                    vaultReserveToken: vaultState.vaultReserveToken,
+                    vaultSolendLpToken: vaultState.vaultSolendLpToken,
+                    solendProgram: this.accounts.program,
+                    solendMarketAuthority: this.accounts.marketAuthority,
+                    solendMarket: this.accounts.market,
+                    solendReserve: this.accounts.reserve,
+                    solendLpMint: this.accounts.collateralMint,
+                    solendReserveToken: this.accounts.liquiditySupply,
+                    clock: SYSVAR_CLOCK_PUBKEY,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                },
+            }
+        );
     }
 }
 

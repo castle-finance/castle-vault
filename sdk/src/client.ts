@@ -674,32 +674,25 @@ export class VaultClient {
 
         if (vaultReserveAmount.lt(convertedAmount)) {
             // Sort reconcile ixs by most to least $ to minimize number of TXs sent
-            const reconcileIxs = [
-                [
-                    await this.yieldSources.solend.getLpTokenAccountValue(
-                        this.vaultState.vaultSolendLpToken
-                    ),
-                    this.getReconcileSolendIx.bind(this),
-                ],
-                [
-                    await this.yieldSources.port.getLpTokenAccountValue(
-                        this.vaultState.vaultPortLpToken
-                    ),
-                    this.getReconcilePortIx.bind(this),
-                ],
-                [
-                    await this.yieldSources.jet.getLpTokenAccountValue(
-                        this.vaultState.vaultJetLpToken
-                    ),
-                    this.getReconcileJetIx.bind(this),
-                ],
-            ].sort((a, b) => b[0].sub(a[0]).toNumber());
+            const reconcileIxs = (
+                await Promise.all(
+                    Object.keys(this.yieldSources).map(
+                        async (k): Promise<[]> => {
+                            const alloc = await this.yieldSources[
+                                k as keyof typeof YieldSources
+                            ].getLpTokenAccountValue2(this.vaultState);
+                            return [alloc, k];
+                        }
+                    )
+                )
+            ).sort((a, b) => b[0].sub(a[0]).toNumber());
 
             const toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
             let reconciledAmount = Big(0);
             let n = 0;
             while (reconciledAmount.lt(toReconcileAmount)) {
-                const [alloc, ix] = reconcileIxs[n];
+                const [alloc, k] = reconcileIxs[n];
+
                 // min of alloc and toWithdrawAmount - withdrawnAmount
                 const reconcileAmount = alloc.gt(
                     toReconcileAmount.sub(reconciledAmount)
@@ -713,7 +706,14 @@ export class VaultClient {
                         reconcileTx.add(element);
                     });
                     reconcileTx.add(
-                        ix(new anchor.BN(reconcileAmount.toString()))
+                        this.yieldSources[
+                            k as keyof typeof YieldSources
+                        ].getReconcileIx(
+                            this.program,
+                            this.vaultId,
+                            this.vaultState,
+                            new anchor.BN(reconcileAmount.toString())
+                        )
                     );
                     txs.push(reconcileTx);
                 }
@@ -775,34 +775,26 @@ export class VaultClient {
             })
         ).events[1].data as RebalanceDataEvent;
 
-        const newAndOldallocationsWithReconcileIxs = [
-            [
-                new Big(newAllocations.solend.toString()),
-                await this.yieldSources.solend.getLpTokenAccountValue(
-                    this.vaultState.vaultSolendLpToken
-                ),
-                this.getReconcileSolendIx.bind(this),
-            ],
-            [
-                new Big(newAllocations.port.toString()),
-                await this.yieldSources.port.getLpTokenAccountValue(
-                    this.vaultState.vaultPortLpToken
-                ),
-                this.getReconcilePortIx.bind(this),
-            ],
-            [
-                new Big(newAllocations.jet.toString()),
-                await this.yieldSources.jet.getLpTokenAccountValue(
-                    this.vaultState.vaultJetLpToken
-                ),
-                this.getReconcileJetIx.bind(this),
-            ],
-        ];
+        const newAndOldallocationsWithReconcileIxs = await Promise.all(
+            Object.keys(this.yieldSources).map(async (k): Promise<[]> => {
+                const newAlloc = new Big(
+                    newAllocations[
+                        k as keyof typeof RebalanceDataEvent
+                    ].toString()
+                );
+                const oldAlloc = await this.yieldSources[
+                    k as keyof typeof YieldSources
+                ].getLpTokenAccountValue2(this.vaultState);
+                return [newAlloc, oldAlloc, k];
+            })
+        );
 
         const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
             newAndOldallocationsWithReconcileIxs.map((e) => [
                 e[0].sub(e[1]),
-                e[2](),
+                this.yieldSources[
+                    e[2] as keyof typeof YieldSources
+                ].getReconcileIx(this.program, this.vaultId, this.vaultState),
             ]);
 
         const reconcileIxs = allocationDiffsWithReconcileIxs
@@ -822,73 +814,6 @@ export class VaultClient {
             txs.push({ tx: reconcileTx, signers: [] });
         }
         return this.program.provider.sendAll(txs);
-    }
-
-    private getReconcilePortIx(
-        withdrawOption: anchor.BN = new anchor.BN(0)
-    ): TransactionInstruction {
-        return this.program.instruction.reconcilePort(withdrawOption, {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultReserveToken: this.vaultState.vaultReserveToken,
-                vaultPortLpToken: this.vaultState.vaultPortLpToken,
-                portProgram: this.yieldSources.port.accounts.program,
-                portMarketAuthority:
-                    this.yieldSources.port.accounts.marketAuthority,
-                portMarket: this.yieldSources.port.accounts.market,
-                portReserve: this.yieldSources.port.accounts.reserve,
-                portLpMint: this.yieldSources.port.accounts.collateralMint,
-                portReserveToken:
-                    this.yieldSources.port.accounts.liquiditySupply,
-                clock: SYSVAR_CLOCK_PUBKEY,
-                tokenProgram: TOKEN_PROGRAM_ID,
-            },
-        });
-    }
-
-    private getReconcileJetIx(
-        withdrawOption: anchor.BN = new anchor.BN(0)
-    ): TransactionInstruction {
-        return this.program.instruction.reconcileJet(withdrawOption, {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultReserveToken: this.vaultState.vaultReserveToken,
-                vaultJetLpToken: this.vaultState.vaultJetLpToken,
-                jetProgram: this.yieldSources.jet.accounts.program,
-                jetMarket: this.yieldSources.jet.accounts.market,
-                jetMarketAuthority:
-                    this.yieldSources.jet.accounts.marketAuthority,
-                jetReserve: this.yieldSources.jet.accounts.reserve,
-                jetReserveToken: this.yieldSources.jet.accounts.liquiditySupply,
-                jetLpMint: this.yieldSources.jet.accounts.depositNoteMint,
-                tokenProgram: TOKEN_PROGRAM_ID,
-            },
-        });
-    }
-
-    private getReconcileSolendIx(
-        withdrawOption: anchor.BN = new anchor.BN(0)
-    ): TransactionInstruction {
-        return this.program.instruction.reconcileSolend(withdrawOption, {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultReserveToken: this.vaultState.vaultReserveToken,
-                vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-                solendProgram: this.yieldSources.solend.accounts.program,
-                solendMarketAuthority:
-                    this.yieldSources.solend.accounts.marketAuthority,
-                solendMarket: this.yieldSources.solend.accounts.market,
-                solendReserve: this.yieldSources.solend.accounts.reserve,
-                solendLpMint: this.yieldSources.solend.accounts.collateralMint,
-                solendReserveToken:
-                    this.yieldSources.solend.accounts.liquiditySupply,
-                clock: SYSVAR_CLOCK_PUBKEY,
-                tokenProgram: TOKEN_PROGRAM_ID,
-            },
-        });
     }
 
     /**

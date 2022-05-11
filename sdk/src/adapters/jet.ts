@@ -190,6 +190,10 @@ export class JetReserveAsset extends Asset {
         return exchangeRate.mul(lpTokenAmount).round(0, Big.roundDown);
     }
 
+    async getLpTokenAccountValue2(vaultState: Vault): Promise<Big> {
+        return this.getLpTokenAccountValue(vaultState.vaultJetLpToken);
+    }
+
     async getApy(): Promise<Big> {
         await this.reserve.refresh();
         const apr = this.reserve.data.depositApy;
@@ -230,6 +234,32 @@ export class JetReserveAsset extends Asset {
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
         });
+    }
+
+    getReconcileIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault,
+        withdrawOption?: anchor.BN
+    ): TransactionInstruction {
+        return program.instruction.reconcileJet(
+            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
+            {
+                accounts: {
+                    vault: vaultId,
+                    vaultAuthority: vaultState.vaultAuthority,
+                    vaultReserveToken: vaultState.vaultReserveToken,
+                    vaultJetLpToken: vaultState.vaultJetLpToken,
+                    jetProgram: this.accounts.program,
+                    jetMarket: this.accounts.market,
+                    jetMarketAuthority: this.accounts.marketAuthority,
+                    jetReserve: this.accounts.reserve,
+                    jetReserveToken: this.accounts.liquiditySupply,
+                    jetLpMint: this.accounts.depositNoteMint,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                },
+            }
+        );
     }
 }
 

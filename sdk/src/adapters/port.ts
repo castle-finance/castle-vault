@@ -166,6 +166,10 @@ export class PortReserveAsset extends Asset {
             .round(0, Big.roundDown);
     }
 
+    async getLpTokenAccountValue2(vaultState: Vault): Promise<Big> {
+        return this.getLpTokenAccountValue(vaultState.vaultPortLpToken);
+    }
+
     /**
      * @todo make this the same as program's calculation
      *
@@ -221,6 +225,33 @@ export class PortReserveAsset extends Asset {
                           },
                       ],
         });
+    }
+
+    getReconcileIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault,
+        withdrawOption?: anchor.BN
+    ): TransactionInstruction {
+        return program.instruction.reconcilePort(
+            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
+            {
+                accounts: {
+                    vault: vaultId,
+                    vaultAuthority: vaultState.vaultAuthority,
+                    vaultReserveToken: vaultState.vaultReserveToken,
+                    vaultPortLpToken: vaultState.vaultPortLpToken,
+                    portProgram: this.accounts.program,
+                    portMarketAuthority: this.accounts.marketAuthority,
+                    portMarket: this.accounts.market,
+                    portReserve: this.accounts.reserve,
+                    portLpMint: this.accounts.collateralMint,
+                    portReserveToken: this.accounts.liquiditySupply,
+                    clock: SYSVAR_CLOCK_PUBKEY,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                },
+            }
+        );
     }
 }
 
