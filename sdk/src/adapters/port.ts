@@ -6,6 +6,7 @@ import {
     PublicKey,
     SystemProgram,
     Transaction,
+    SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
@@ -194,6 +195,32 @@ export class PortReserveAsset extends Asset {
         // Need to round here because the SDK returns a non-int value
         // and retaining that value might cause problems for the fn caller
         return total.getRaw().round();
+    }
+
+    getRefreshIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ): TransactionInstruction {
+        return program.instruction.refreshPort({
+            accounts: {
+                vault: vaultId,
+                vaultPortLpToken: vaultState.vaultPortLpToken,
+                portProgram: this.accounts.program,
+                portReserve: this.accounts.reserve,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+            remainingAccounts:
+                this.accounts.oracle == null
+                    ? []
+                    : [
+                          {
+                              isSigner: false,
+                              isWritable: false,
+                              pubkey: this.accounts.oracle,
+                          },
+                      ],
+        });
     }
 }
 

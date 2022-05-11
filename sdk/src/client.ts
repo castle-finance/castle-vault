@@ -340,69 +340,13 @@ export class VaultClient {
     }
 
     getRefreshIxs(): TransactionInstruction[] {
-        return [
-            this.getRefreshSolendIx(),
-            this.getRefreshPortIx(),
-            this.getRefreshJetIx(),
-            this.getConsolidateRefreshIx(),
-        ];
-    }
-
-    getRefreshSolendIx(): TransactionInstruction {
-        return this.program.instruction.refreshSolend({
-            accounts: {
-                vault: this.vaultId,
-                vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-                solendProgram: this.yieldSources.solend.accounts.program,
-                solendReserve: this.yieldSources.solend.accounts.reserve,
-                solendPyth: this.yieldSources.solend.accounts.pythPrice,
-                solendSwitchboard:
-                    this.yieldSources.solend.accounts.switchboardFeed,
-                clock: SYSVAR_CLOCK_PUBKEY,
-            },
-        });
-    }
-
-    getRefreshPortIx(): TransactionInstruction {
-        return this.program.instruction.refreshPort({
-            accounts: {
-                vault: this.vaultId,
-                vaultPortLpToken: this.vaultState.vaultPortLpToken,
-                portProgram: this.yieldSources.port.accounts.program,
-                portReserve: this.yieldSources.port.accounts.reserve,
-                clock: SYSVAR_CLOCK_PUBKEY,
-            },
-            remainingAccounts:
-                this.yieldSources.port.accounts.oracle == null
-                    ? []
-                    : [
-                          {
-                              isSigner: false,
-                              isWritable: false,
-                              pubkey: this.yieldSources.port.accounts.oracle,
-                          },
-                      ],
-        });
-    }
-
-    getRefreshJetIx(): TransactionInstruction {
-        return this.program.instruction.refreshJet({
-            accounts: {
-                vault: this.vaultId,
-                vaultJetLpToken: this.vaultState.vaultJetLpToken,
-                jetProgram: this.yieldSources.jet.accounts.program,
-                jetMarket: this.yieldSources.jet.accounts.market,
-                jetMarketAuthority:
-                    this.yieldSources.jet.accounts.marketAuthority,
-                jetReserve: this.yieldSources.jet.accounts.reserve,
-                jetFeeNoteVault: this.yieldSources.jet.accounts.feeNoteVault,
-                jetDepositNoteMint:
-                    this.yieldSources.jet.accounts.depositNoteMint,
-                jetPyth: this.yieldSources.jet.accounts.pythPrice,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                clock: SYSVAR_CLOCK_PUBKEY,
-            },
-        });
+        return Object.keys(this.yieldSources)
+            .map((k) => {
+                return this.yieldSources[
+                    k as keyof typeof YieldSources
+                ].getRefreshIx(this.program, this.vaultId, this.vaultState);
+            })
+            .concat([this.getConsolidateRefreshIx()]);
     }
 
     getConsolidateRefreshIx(): TransactionInstruction {

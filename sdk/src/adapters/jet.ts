@@ -209,6 +209,28 @@ export class JetReserveAsset extends Asset {
         );
         return new Big(borrowed.lamports.toString());
     }
+
+    getRefreshIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ): TransactionInstruction {
+        return program.instruction.refreshJet({
+            accounts: {
+                vault: vaultId,
+                vaultJetLpToken: vaultState.vaultJetLpToken,
+                jetProgram: this.accounts.program,
+                jetMarket: this.accounts.market,
+                jetMarketAuthority: this.accounts.marketAuthority,
+                jetReserve: this.accounts.reserve,
+                jetFeeNoteVault: this.accounts.feeNoteVault,
+                jetDepositNoteMint: this.accounts.depositNoteMint,
+                jetPyth: this.accounts.pythPrice,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
 }
 
 async function createLendingMarket(

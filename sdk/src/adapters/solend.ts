@@ -203,6 +203,24 @@ export class SolendReserveAsset extends Asset {
                 .toString()
         );
     }
+
+    getRefreshIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ): TransactionInstruction {
+        return program.instruction.refreshSolend({
+            accounts: {
+                vault: vaultId,
+                vaultSolendLpToken: vaultState.vaultSolendLpToken,
+                solendProgram: this.accounts.program,
+                solendReserve: this.accounts.reserve,
+                solendPyth: this.accounts.pythPrice,
+                solendSwitchboard: this.accounts.switchboardFeed,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
 }
 
 const DEVNET_PROGRAM_ID = new PublicKey(
