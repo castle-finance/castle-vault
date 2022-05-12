@@ -224,7 +224,7 @@ pub struct InitializeJet<'info> {
 }
 
 impl<'info> YieldSourceInitializer<'info> for InitializeJet<'info> {
-    fn initialize_yield_srouce(&mut self) -> ProgramResult {
+    fn initialize_yield_source(&mut self) -> ProgramResult {
         self.vault.jet_reserve = self.jet_reserve.key();
         self.vault.vault_jet_lp_token = self.vault_jet_lp_token.key();
         Ok(())

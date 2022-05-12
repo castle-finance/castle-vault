@@ -27,14 +27,14 @@ pub struct VaultConfigArg {
 }
 
 pub trait YieldSourceInitializer<'info> {
-    fn initialize_yield_srouce(&mut self) -> ProgramResult;
+    fn initialize_yield_source(&mut self) -> ProgramResult;
 }
 
 pub fn init_yield_src_handler<'info, T: YieldSourceInitializer<'info>>(
     ctx: Context<'_, '_, '_, 'info, T>,
     bump: u8,
 ) -> ProgramResult {
-    ctx.accounts.initialize_yield_srouce()
+    ctx.accounts.initialize_yield_source()
 }
 
 #[derive(Accounts)]

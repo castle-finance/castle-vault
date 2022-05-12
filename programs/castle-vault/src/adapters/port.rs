@@ -212,7 +212,7 @@ pub struct InitializePort<'info> {
 }
 
 impl<'info> YieldSourceInitializer<'info> for InitializePort<'info> {
-    fn initialize_yield_srouce(&mut self) -> ProgramResult {
+    fn initialize_yield_source(&mut self) -> ProgramResult {
         self.vault.port_reserve = self.port_reserve.key();
         self.vault.vault_port_lp_token = self.vault_port_lp_token.key();
         Ok(())
