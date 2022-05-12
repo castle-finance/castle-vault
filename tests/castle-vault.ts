@@ -243,24 +243,21 @@ describe("castle-vault", () => {
             provider,
             provider.wallet as anchor.Wallet,
             solend,
-            owner,
-            program
+            owner
         );
 
         await vaultClient.initializePort(
             provider,
             provider.wallet as anchor.Wallet,
             port,
-            owner,
-            program
+            owner
         );
 
         await vaultClient.initializeJet(
             provider,
             provider.wallet as anchor.Wallet,
             jet,
-            owner,
-            program
+            owner
         );
 
         userReserveTokenAccount = await reserveToken.createAccount(
