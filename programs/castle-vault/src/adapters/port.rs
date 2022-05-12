@@ -9,7 +9,7 @@ use solana_maths::Rate;
 use crate::{
     errors::ErrorCode,
     impl_has_vault,
-    init::YieldSourceInitializer,
+    init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
     refresh::Refresher,
     reserves::{Provider, ReserveAccessor},

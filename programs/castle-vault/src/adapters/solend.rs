@@ -10,7 +10,7 @@ use spl_token_lending::state::Reserve;
 
 use crate::{
     impl_has_vault,
-    init::YieldSourceInitializer,
+    init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
     refresh::Refresher,
     reserves::{Provider, ReserveAccessor},

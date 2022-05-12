@@ -26,17 +26,6 @@ pub struct VaultConfigArg {
     pub strategy_type: StrategyType,
 }
 
-pub trait YieldSourceInitializer<'info> {
-    fn initialize_yield_source(&mut self) -> ProgramResult;
-}
-
-pub fn init_yield_src_handler<'info, T: YieldSourceInitializer<'info>>(
-    ctx: Context<'_, '_, '_, 'info, T>,
-    bump: u8,
-) -> ProgramResult {
-    ctx.accounts.initialize_yield_source()
-}
-
 #[derive(Accounts)]
 #[instruction(bumps: InitBumpSeeds)]
 pub struct Initialize<'info> {
