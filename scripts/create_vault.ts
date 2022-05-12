@@ -16,39 +16,29 @@ import {
 } from "../sdk/src";
 
 const main = async () => {
-    const cluster: Cluster = "mainnet-beta";
-    //const cluster: Cluster = "devnet";
+    // const cluster: Cluster = "mainnet-beta";
+    const cluster: Cluster = "devnet";
     const connection = new Connection(
-        "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
-        //"https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+        // "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
+        "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
     );
     const wallet = Wallet.local();
+    const owner = wallet.payer;
     const provider = new Provider(connection, wallet, {
         commitment: "confirmed",
     });
 
-    //const reserveMint = NATIVE_MINT;
+    // const reserveMint = NATIVE_MINT;
     const reserveMint = new PublicKey(
         "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     );
-
-    const solend = await SolendReserveAsset.load(
-        provider,
-        cluster,
-        reserveMint
-    );
-    const port = await PortReserveAsset.load(provider, cluster, reserveMint);
-    const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
 
     const vaultClient = await VaultClient.initialize(
         provider,
         wallet,
         DeploymentEnvs.mainnet,
         reserveMint,
-        solend,
-        port,
-        jet,
-        wallet.publicKey,
+        owner,
         new PublicKey("jvUsXAgE2Gg92BbEBDAu7h5p8SEZpVjFqURJkzSsLNk"),
         {
             allocationCapPct: 60,
@@ -56,7 +46,33 @@ const main = async () => {
             strategyType: { [StrategyTypes.maxYield]: {} },
         }
     );
-    console.log(vaultClient.vaultId.toString());
+    console.log("Vauld ID: ", vaultClient.vaultId.toString());
+
+    try {
+        const solend = await SolendReserveAsset.load(
+            provider,
+            cluster,
+            reserveMint
+        );
+        await vaultClient.initializeSolend(provider, wallet, solend, owner);
+        console.log("Succesfully initialized Solend");
+    } catch (error) {}
+
+    try {
+        const port = await PortReserveAsset.load(
+            provider,
+            cluster,
+            reserveMint
+        );
+        await vaultClient.initializePort(provider, wallet, port, owner);
+        console.log("Succesfully initialized Port");
+    } catch (error) {}
+
+    try {
+        const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
+        await vaultClient.initializeJet(provider, wallet, jet, owner);
+        console.log("Succesfully initialized Jet");
+    } catch (error) {}
 };
 
 main();
