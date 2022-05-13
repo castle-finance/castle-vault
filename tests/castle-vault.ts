@@ -233,7 +233,7 @@ describe("castle-vault", () => {
             provider.wallet as anchor.Wallet,
             DeploymentEnvs.devnetStaging,
             reserveToken.publicKey,
-            owner,
+            owner.publicKey,
             referralFeeOwner,
             config,
             program

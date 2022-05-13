@@ -38,7 +38,7 @@ const main = async () => {
         wallet,
         DeploymentEnvs.mainnet,
         reserveMint,
-        owner,
+        owner.publicKey,
         new PublicKey("jvUsXAgE2Gg92BbEBDAu7h5p8SEZpVjFqURJkzSsLNk"),
         {
             allocationCapPct: 60,
@@ -48,6 +48,8 @@ const main = async () => {
     );
     console.log("Vauld ID: ", vaultClient.vaultId.toString());
 
+    // When the reserve token is not available on a lending pool, the load instruction will fail.
+    // This is how we detect if we should disable (i.e. not initialize) a lending pool.
     try {
         const solend = await SolendReserveAsset.load(
             provider,
@@ -56,7 +58,9 @@ const main = async () => {
         );
         await vaultClient.initializeSolend(provider, wallet, solend, owner);
         console.log("Succesfully initialized Solend");
-    } catch (error) {}
+    } catch (error) {
+        console.log("The selected reserve token is not available on Solend");
+    }
 
     try {
         const port = await PortReserveAsset.load(
@@ -66,13 +70,17 @@ const main = async () => {
         );
         await vaultClient.initializePort(provider, wallet, port, owner);
         console.log("Succesfully initialized Port");
-    } catch (error) {}
+    } catch (error) {
+        console.log("The selected reserve token is not available on Port");
+    }
 
     try {
         const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
         await vaultClient.initializeJet(provider, wallet, jet, owner);
         console.log("Succesfully initialized Jet");
-    } catch (error) {}
+    } catch (error) {
+        console.log("The selected reserve token is not available on Jet");
+    }
 };
 
 main();

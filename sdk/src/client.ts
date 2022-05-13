@@ -104,7 +104,7 @@ export class VaultClient {
         wallet: anchor.Wallet,
         env: DeploymentEnv,
         reserveTokenMint: PublicKey,
-        owner: Keypair,
+        owner: PublicKey,
         referralFeeOwner: PublicKey,
         config: VaultConfig,
         program?: anchor.Program<CastleVault>
@@ -149,7 +149,7 @@ export class VaultClient {
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             lpTokenMint,
-            owner.publicKey
+            owner
         );
 
         const referralFeeReceiver = await Token.getAssociatedTokenAddress(
@@ -190,7 +190,7 @@ export class VaultClient {
                     referralFeeReceiver: referralFeeReceiver,
                     referralFeeOwner: referralFeeOwner,
                     payer: wallet.payer.publicKey,
-                    owner: owner.publicKey,
+                    owner: owner,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID,
                     associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
