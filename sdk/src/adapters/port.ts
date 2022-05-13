@@ -146,7 +146,7 @@ export class PortReserveAsset extends Asset {
         return new PortReserveAsset(provider, accounts, client);
     }
 
-    async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
+    async getLpTokenAccountValue(vaultState: Vault): Promise<Big> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const exchangeRate = reserve.getExchangeRatio();
 
@@ -160,17 +160,15 @@ export class PortReserveAsset extends Asset {
 
         const lpTokenAmount = AssetPrice.of(
             mint,
-            (await lpToken.getAccountInfo(address)).amount.toNumber()
+            (
+                await lpToken.getAccountInfo(vaultState.vaultPortLpToken)
+            ).amount.toNumber()
         );
 
         return lpTokenAmount
             .divide(exchangeRate.getUnchecked())
             .getRaw()
             .round(0, Big.roundDown);
-    }
-
-    async getLpTokenAccountValue2(vaultState: Vault): Promise<Big> {
-        return this.getLpTokenAccountValue(vaultState.vaultPortLpToken);
     }
 
     /**

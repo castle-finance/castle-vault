@@ -172,7 +172,7 @@ export class JetReserveAsset extends Asset {
         ]);
     }
 
-    async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
+    async getLpTokenAccountValue(vaultState: Vault): Promise<Big> {
         await this.market.refresh();
 
         const reserveInfo = this.market.reserves[this.reserve.data.index];
@@ -187,14 +187,12 @@ export class JetReserveAsset extends Asset {
             Keypair.generate() // dummy signer since we aren't making any txs
         );
 
-        const lpTokenAccountInfo = await lpToken.getAccountInfo(address);
+        const lpTokenAccountInfo = await lpToken.getAccountInfo(
+            vaultState.vaultJetLpToken
+        );
         const lpTokenAmount = new Big(lpTokenAccountInfo.amount.toString());
 
         return exchangeRate.mul(lpTokenAmount).round(0, Big.roundDown);
-    }
-
-    async getLpTokenAccountValue2(vaultState: Vault): Promise<Big> {
-        return this.getLpTokenAccountValue(vaultState.vaultJetLpToken);
     }
 
     async getApy(): Promise<Big> {

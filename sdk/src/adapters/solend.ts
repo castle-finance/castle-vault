@@ -157,7 +157,7 @@ export class SolendReserveAsset extends Asset {
         await this.reserve.load();
     }
 
-    async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
+    async getLpTokenAccountValue(vaultState: Vault): Promise<Big> {
         await this.reload();
 
         const lpToken = new Token(
@@ -167,15 +167,13 @@ export class SolendReserveAsset extends Asset {
             Keypair.generate() // dummy signer since we aren't making any txs
         );
         const lpTokenAmount = new Big(
-            (await lpToken.getAccountInfo(address)).amount.toString()
+            (
+                await lpToken.getAccountInfo(vaultState.vaultSolendLpToken)
+            ).amount.toString()
         );
         const exchangeRate = new Big(this.reserve.stats.cTokenExchangeRate);
 
         return lpTokenAmount.mul(exchangeRate).round(0, Big.roundDown);
-    }
-
-    async getLpTokenAccountValue2(vaultState: Vault): Promise<Big> {
-        return this.getLpTokenAccountValue(vaultState.vaultSolendLpToken);
     }
 
     /**

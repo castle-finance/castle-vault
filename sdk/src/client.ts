@@ -85,7 +85,7 @@ export class VaultClient {
         );
         const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
 
-        let yieldSources = {
+        const yieldSources = {
             solend: solend,
             port: port,
             jet: jet,
@@ -679,7 +679,7 @@ export class VaultClient {
                         async (k): Promise<[Big, string]> => {
                             const alloc: Big = await this.yieldSources[
                                 k
-                            ].getLpTokenAccountValue2(this.vaultState);
+                            ].getLpTokenAccountValue(this.vaultState);
                             return [alloc, k];
                         }
                     )
@@ -778,7 +778,7 @@ export class VaultClient {
                     const newAlloc = new Big(newAllocations[k].toString());
                     const oldAlloc = await this.yieldSources[
                         k
-                    ].getLpTokenAccountValue2(this.vaultState);
+                    ].getLpTokenAccountValue(this.vaultState);
                     return [newAlloc, oldAlloc, k];
                 }
             )
@@ -834,19 +834,19 @@ export class VaultClient {
             [
                 await this.yieldSources.solend.getApy(),
                 await this.yieldSources.solend.getLpTokenAccountValue(
-                    this.vaultState.vaultSolendLpToken
+                    this.vaultState
                 ),
             ],
             [
                 await this.yieldSources.port.getApy(),
                 await this.yieldSources.port.getLpTokenAccountValue(
-                    this.vaultState.vaultPortLpToken
+                    this.vaultState
                 ),
             ],
             [
                 await this.yieldSources.jet.getApy(),
                 await this.yieldSources.jet.getLpTokenAccountValue(
-                    this.vaultState.vaultJetLpToken
+                    this.vaultState
                 ),
             ],
         ];
@@ -888,14 +888,12 @@ export class VaultClient {
 
         const values = [
             await this.yieldSources.solend.getLpTokenAccountValue(
-                this.vaultState.vaultSolendLpToken
+                this.vaultState
             ),
             await this.yieldSources.port.getLpTokenAccountValue(
-                this.vaultState.vaultPortLpToken
+                this.vaultState
             ),
-            await this.yieldSources.jet.getLpTokenAccountValue(
-                this.vaultState.vaultJetLpToken
-            ),
+            await this.yieldSources.jet.getLpTokenAccountValue(this.vaultState),
             new Big(
                 (
                     await this.getReserveTokenAccountInfo(
@@ -936,21 +934,15 @@ export class VaultClient {
     }
 
     async getVaultSolendLpTokenAccountValue(): Promise<Big> {
-        return this.yieldSources.solend.getLpTokenAccountValue(
-            this.getVaultSolendLpTokenAccount()
-        );
+        return this.yieldSources.solend.getLpTokenAccountValue(this.vaultState);
     }
 
     async getVaultPortLpTokenAccountValue(): Promise<Big> {
-        return this.yieldSources.port.getLpTokenAccountValue(
-            this.getVaultPortLpTokenAccount()
-        );
+        return this.yieldSources.port.getLpTokenAccountValue(this.vaultState);
     }
 
     async getVaultJetLpTokenAccountValue(): Promise<Big> {
-        return this.yieldSources.jet.getLpTokenAccountValue(
-            this.getVaultJetLpTokenAccount()
-        );
+        return this.yieldSources.jet.getLpTokenAccountValue(this.vaultState);
     }
 
     /**
@@ -1054,18 +1046,6 @@ export class VaultClient {
 
     getVaultReserveTokenAccount(): PublicKey {
         return this.vaultState.vaultReserveToken;
-    }
-
-    getVaultSolendLpTokenAccount(): PublicKey {
-        return this.vaultState.vaultSolendLpToken;
-    }
-
-    getVaultPortLpTokenAccount(): PublicKey {
-        return this.vaultState.vaultPortLpToken;
-    }
-
-    getVaultJetLpTokenAccount(): PublicKey {
-        return this.vaultState.vaultJetLpToken;
     }
 
     getStrategyType(): StrategyType {
