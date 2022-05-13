@@ -77,9 +77,11 @@ pub struct Vault {
     // Actual allocation retrieved by refresh
     pub actual_allocations: Allocations,
 
+    pub yield_src_availability: u32,
+
     // 8 * 23 = 184
     /// Reserved space for future upgrades
-    _reserved: [u64; 14],
+    _reserved: [u32; 27],
 }
 
 impl Vault {
@@ -93,6 +95,35 @@ impl Vault {
             .ok_or_else::<ProgramError, _>(|| ErrorCode::InvalidVaultFlags.into())?;
         self.bitflags = bits;
         Ok(())
+    }
+
+    pub fn yield_source_flags(&self) -> YieldSourceFlags {
+        YieldSourceFlags::from_bits(self.yield_src_availability).unwrap_or_else(|| {
+            panic!(
+                "{:?} does not resolve to valid YieldSourceFlags",
+                self.yield_src_availability
+            )
+        })
+    }
+
+    pub fn set_yield_source_flag(
+        &mut self,
+        flag: YieldSourceFlags,
+        enabled: bool,
+    ) -> ProgramResult {
+        let mut new_flags = self.yield_source_flags();
+        new_flags.set(flag, enabled);
+        self.yield_src_availability = new_flags.bits();
+        Ok(())
+    }
+
+    pub fn get_yield_source_availability(&self, provider: Provider) -> bool {
+        let flags = self.yield_source_flags();
+        match provider {
+            Provider::Solend => flags.contains(YieldSourceFlags::SOLEND),
+            Provider::Port => flags.contains(YieldSourceFlags::PORT),
+            Provider::Jet => flags.contains(YieldSourceFlags::JET),
+        }
     }
 
     pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
@@ -225,6 +256,14 @@ bitflags::bitflags! {
                        | Self::HALT_REFRESHES.bits
                        | Self::HALT_DEPOSITS_WITHDRAWS.bits;
 
+    }
+}
+
+bitflags::bitflags! {
+    pub struct YieldSourceFlags: u32 {
+        const SOLEND = 1 << 0;
+        const PORT = 1 << 1;
+        const JET = 1 << 2;
     }
 }
 
