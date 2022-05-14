@@ -66,7 +66,7 @@ export class TokenAmount {
 }
 
 export class Rate {
-    constructor(private value: Big) {}
+    constructor(protected value: Big) {}
 
     public static zero(): Rate {
         return new Rate(Big(0));
@@ -104,7 +104,7 @@ export class Rate {
 
     public add(a: Rate | Big): Rate {
         const result =
-            a instanceof Rate ? this.value.add(a.toBig()) : this.value.mul(a);
+            a instanceof Rate ? this.value.add(a.toBig()) : this.value.add(a);
         return new Rate(result);
     }
 
@@ -112,5 +112,40 @@ export class Rate {
         const result =
             d instanceof Rate ? this.value.div(d.toBig()) : this.value.div(d);
         return new Rate(result);
+    }
+}
+
+export class ExchangeRate extends Rate {
+    constructor(value: Big, public baseToken: Token, public quoteToken: Token) {
+        super(value);
+    }
+
+    public convertToQuote(baseAmount: TokenAmount): TokenAmount {
+        if (baseAmount.mint && !baseAmount.mint.equals(this.baseToken.mint)) {
+            throw Error(
+                `Mints do not match: ${this.baseToken.mint} / ${baseAmount.mint}`
+            );
+        }
+
+        return TokenAmount.fromToken(
+            this.quoteToken,
+            baseAmount.lamports.div(this.value)
+        );
+    }
+
+    public convertToBase(quoteAmount: TokenAmount): TokenAmount {
+        if (
+            quoteAmount.mint &&
+            !quoteAmount.mint.equals(this.quoteToken.mint)
+        ) {
+            throw Error(
+                `Mints do not match: ${this.quoteToken.mint} / ${quoteAmount.mint}`
+            );
+        }
+
+        return TokenAmount.fromToken(
+            this.baseToken,
+            quoteAmount.lamports.mul(this.value)
+        );
     }
 }

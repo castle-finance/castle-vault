@@ -46,6 +46,7 @@ describe("VaultClient", () => {
             DeploymentEnvs.mainnet
         );
         assert.isNotNull(vaultClient);
+        console.log("Initialized client");
 
         console.log(
             "Total value: ",
