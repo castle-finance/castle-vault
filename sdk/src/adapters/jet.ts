@@ -27,6 +27,7 @@ import {
 
 import { LendingMarket } from "./asset";
 import { Rate, Token, TokenAmount } from "../utils";
+import { getToken } from "./utils";
 
 export interface JetAccounts {
     program: PublicKey;
@@ -83,26 +84,13 @@ export class JetReserveAsset extends LendingMarket {
             pythPrice: reserve.data.pythOraclePrice,
         };
 
-        const lpSplToken = new SplToken(
+        const lpToken = await getToken(
             provider.connection,
-            reserve.data.depositNoteMint,
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
+            reserve.data.depositNoteMint
         );
-        const lpToken = new Token(
-            reserve.data.depositNoteMint,
-            await lpSplToken.getMintInfo()
-        );
-
-        const reserveSplToken = new SplToken(
+        const reserveToken = await getToken(
             provider.connection,
-            reserve.data.tokenMint,
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
-        );
-        const reserveToken = new Token(
-            reserve.data.tokenMint,
-            await reserveSplToken.getMintInfo()
+            reserve.data.tokenMint
         );
 
         return new JetReserveAsset(
@@ -173,20 +161,13 @@ export class JetReserveAsset extends LendingMarket {
         );
         await provider.send(depositTx, [owner]);
 
-        const lpSplToken = new SplToken(
+        const lpToken = await getToken(
             provider.connection,
-            reserve.data.depositNoteMint,
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
+            reserve.data.depositNoteMint
         );
-        const lpToken = new Token(
-            reserve.data.depositNoteMint,
-            await lpSplToken.getMintInfo()
-        );
-
-        const reserveToken = new Token(
-            reserve.data.tokenMint,
-            await reserveSplToken.getMintInfo()
+        const reserveToken = await getToken(
+            provider.connection,
+            reserve.data.tokenMint
         );
 
         return new JetReserveAsset(

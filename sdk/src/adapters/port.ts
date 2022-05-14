@@ -30,6 +30,7 @@ import {
 
 import { LendingMarket } from "./asset";
 import { Rate, Token, TokenAmount } from "../utils";
+import { getToken } from "./utils";
 
 interface PortAccounts {
     program: PublicKey;
@@ -113,26 +114,13 @@ export class PortReserveAsset extends LendingMarket {
             liquiditySupply: reserve.getAssetBalanceId(),
         };
 
-        const lpSplToken = new SplToken(
+        const lpToken = await getToken(
             provider.connection,
-            new PublicKey(reserve.getShareMintId()),
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
+            new PublicKey(reserve.getShareMintId())
         );
-        const lpToken = new Token(
-            new PublicKey(reserve.getShareMintId()),
-            await lpSplToken.getMintInfo()
-        );
-
-        const reserveSplToken = new SplToken(
+        const reserveToken = await getToken(
             provider.connection,
-            new PublicKey(reserve.getAssetMintId()),
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
-        );
-        const reserveToken = new Token(
-            new PublicKey(reserve.getAssetMintId()),
-            await reserveSplToken.getMintInfo()
+            new PublicKey(reserve.getAssetMintId())
         );
 
         return new PortReserveAsset(
@@ -171,26 +159,13 @@ export class PortReserveAsset extends LendingMarket {
         );
         const client = new Port(provider.connection, env, market.publicKey);
 
-        const lpSplToken = new SplToken(
+        const lpToken = await getToken(
             provider.connection,
-            accounts.collateralMint,
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
+            accounts.collateralMint
         );
-        const lpToken = new Token(
-            accounts.collateralMint,
-            await lpSplToken.getMintInfo()
-        );
-
-        const reserveSplToken = new SplToken(
+        const reserveToken = await getToken(
             provider.connection,
-            reserveTokenMint,
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
-        );
-        const reserveToken = new Token(
-            reserveTokenMint,
-            await reserveSplToken.getMintInfo()
+            reserveTokenMint
         );
 
         return new PortReserveAsset(

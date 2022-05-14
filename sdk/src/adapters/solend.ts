@@ -28,6 +28,7 @@ import { WAD } from "@solendprotocol/solend-sdk/dist/examples/common";
 
 import { LendingMarket } from "./asset";
 import { Rate, Token, TokenAmount } from "../utils";
+import { getToken } from "./utils";
 
 export interface SolendAccounts {
     program: PublicKey;
@@ -89,26 +90,14 @@ export class SolendReserveAsset extends LendingMarket {
             liquiditySupply: new PublicKey(reserve.config.liquidityAddress),
         };
 
-        const lpSplToken = new SplToken(
+        const lpToken = await getToken(
             provider.connection,
-            new PublicKey(reserve.config.collateralMintAddress),
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
-        );
-        const lpToken = new Token(
-            new PublicKey(reserve.config.collateralMintAddress),
-            await lpSplToken.getMintInfo()
+            new PublicKey(reserve.config.collateralMintAddress)
         );
 
-        const reserveSplToken = new SplToken(
+        const reserveToken = await getToken(
             provider.connection,
-            new PublicKey(reserve.config.mintAddress),
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
-        );
-        const reserveToken = new Token(
-            new PublicKey(reserve.config.mintAddress),
-            await reserveSplToken.getMintInfo()
+            new PublicKey(reserve.config.mintAddress)
         );
 
         return new SolendReserveAsset(
@@ -172,26 +161,14 @@ export class SolendReserveAsset extends LendingMarket {
             provider.connection
         );
 
-        const lpSplToken = new SplToken(
+        const lpToken = await getToken(
             provider.connection,
-            new PublicKey(reserve.config.collateralMintAddress),
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
-        );
-        const lpToken = new Token(
-            new PublicKey(reserve.config.collateralMintAddress),
-            await lpSplToken.getMintInfo()
+            new PublicKey(reserve.config.collateralMintAddress)
         );
 
-        const reserveSplToken = new SplToken(
+        const reserveToken = await getToken(
             provider.connection,
-            reserveTokenMint,
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy signer since we aren't making any txs
-        );
-        const reserveToken = new Token(
-            reserveTokenMint,
-            await reserveSplToken.getMintInfo()
+            reserveTokenMint
         );
 
         return new SolendReserveAsset(
