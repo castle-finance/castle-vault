@@ -86,77 +86,77 @@ describe("VaultClient", () => {
         console.log((await port.getDepositedAmount()).getAmount());
     });
 
-    //it("deposits", async () => {
-    //    const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
-    //    console.log("start value: ", startUserValue.getAmount());
+    it("deposits", async () => {
+        const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
+        console.log("start value: ", startUserValue.getAmount());
 
-    //    //const userReserveTokenAccount = wallet.publicKey;
-    //    const userReserveTokenAccount =
-    //        await vaultClient.getUserReserveTokenAccount(wallet.publicKey);
-    //    try {
-    //        const sigs = await vaultClient.deposit(
-    //            wallet,
-    //            depositAmount.lamports.toNumber(),
-    //            userReserveTokenAccount
-    //        );
-    //        await connection.confirmTransaction(
-    //            sigs[sigs.length - 1],
-    //            "finalized"
-    //        );
-    //    } catch (e) {
-    //        console.log(e);
-    //        throw e;
-    //    }
+        //const userReserveTokenAccount = wallet.publicKey;
+        const userReserveTokenAccount =
+            await vaultClient.getUserReserveTokenAccount(wallet.publicKey);
+        try {
+            const sigs = await vaultClient.deposit(
+                wallet,
+                depositAmount.lamports.toNumber(),
+                userReserveTokenAccount
+            );
+            await connection.confirmTransaction(
+                sigs[sigs.length - 1],
+                "finalized"
+            );
+        } catch (e) {
+            console.log(e);
+            throw e;
+        }
 
-    //    const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
-    //    console.log("end value: ", endUserValue.getAmount());
+        const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
+        console.log("end value: ", endUserValue.getAmount());
 
-    //    assert.isAtMost(
-    //        Math.abs(
-    //            endUserValue.sub(startUserValue).sub(depositAmount).getAmount()
-    //        ),
-    //        1000
-    //    );
-    //});
+        assert.isAtMost(
+            Math.abs(
+                endUserValue.sub(startUserValue).sub(depositAmount).getAmount()
+            ),
+            1000
+        );
+    });
 
-    //it("rebalances", async () => {
-    //    const sigs = await vaultClient.rebalance();
-    //    const result = await connection.confirmTransaction(
-    //        sigs[sigs.length - 1],
-    //        "finalized"
-    //    );
-    //    assert.isNull(result.value.err);
-    //});
+    it("rebalances", async () => {
+        const sigs = await vaultClient.rebalance();
+        const result = await connection.confirmTransaction(
+            sigs[sigs.length - 1],
+            "finalized"
+        );
+        assert.isNull(result.value.err);
+    });
 
-    //it("withdraws", async () => {
-    //    const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
-    //    console.log("start value: ", startUserValue.getAmount());
+    it("withdraws", async () => {
+        const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
+        console.log("start value: ", startUserValue.getAmount());
 
-    //    const exchangeRate = await vaultClient.getLpExchangeRate();
-    //    const withdrawAmount = depositAmount.lamports
-    //        .div(exchangeRate)
-    //        .round(0, Big.roundDown)
-    //        .toNumber();
+        const exchangeRate = await vaultClient.getLpExchangeRate();
+        const withdrawAmount = depositAmount.lamports
+            .div(exchangeRate.toBig())
+            .round(0, Big.roundDown)
+            .toNumber();
 
-    //    try {
-    //        const sigs = await vaultClient.withdraw(wallet, withdrawAmount);
-    //        await connection.confirmTransaction(
-    //            sigs[sigs.length - 1],
-    //            "finalized"
-    //        );
-    //    } catch (e) {
-    //        console.log(e);
-    //        throw e;
-    //    }
+        try {
+            const sigs = await vaultClient.withdraw(wallet, withdrawAmount);
+            await connection.confirmTransaction(
+                sigs[sigs.length - 1],
+                "finalized"
+            );
+        } catch (e) {
+            console.log(e);
+            throw e;
+        }
 
-    //    const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
-    //    console.log("end value: ", endUserValue.getAmount());
+        const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
+        console.log("end value: ", endUserValue.getAmount());
 
-    //    assert.isAtMost(
-    //        Math.abs(
-    //            startUserValue.sub(endUserValue).sub(depositAmount).getAmount()
-    //        ),
-    //        1000
-    //    );
-    //});
+        assert.isAtMost(
+            Math.abs(
+                startUserValue.sub(endUserValue).sub(depositAmount).getAmount()
+            ),
+            1000
+        );
+    });
 });

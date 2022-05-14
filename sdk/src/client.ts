@@ -657,21 +657,27 @@ export class VaultClient {
             // Sort reconcile ixs by most to least $ to minimize number of TXs sent
             const reconcileIxs = [
                 [
-                    await this.solend.getLpTokenAccountValue(
-                        this.vaultState.vaultSolendLpToken
-                    ),
+                    (
+                        await this.solend.getLpTokenAccountValue(
+                            this.vaultState.vaultSolendLpToken
+                        )
+                    ).lamports,
                     this.getReconcileSolendIx.bind(this),
                 ],
                 [
-                    await this.port.getLpTokenAccountValue(
-                        this.vaultState.vaultPortLpToken
-                    ),
+                    (
+                        await this.port.getLpTokenAccountValue(
+                            this.vaultState.vaultPortLpToken
+                        )
+                    ).lamports,
                     this.getReconcilePortIx.bind(this),
                 ],
                 [
-                    await this.jet.getLpTokenAccountValue(
-                        this.vaultState.vaultJetLpToken
-                    ),
+                    (
+                        await this.jet.getLpTokenAccountValue(
+                            this.vaultState.vaultJetLpToken
+                        )
+                    ).lamports,
                     this.getReconcileJetIx.bind(this),
                 ],
             ].sort((a, b) => b[0].sub(a[0]).toNumber());
@@ -755,23 +761,29 @@ export class VaultClient {
         const newAndOldallocationsWithReconcileIxs = [
             [
                 new Big(newAllocations.solend.toString()),
-                await this.solend.getLpTokenAccountValue(
-                    this.vaultState.vaultSolendLpToken
-                ),
+                (
+                    await this.solend.getLpTokenAccountValue(
+                        this.vaultState.vaultSolendLpToken
+                    )
+                ).lamports,
                 this.getReconcileSolendIx.bind(this),
             ],
             [
                 new Big(newAllocations.port.toString()),
-                await this.port.getLpTokenAccountValue(
-                    this.vaultState.vaultPortLpToken
-                ),
+                (
+                    await this.port.getLpTokenAccountValue(
+                        this.vaultState.vaultPortLpToken
+                    )
+                ).lamports,
                 this.getReconcilePortIx.bind(this),
             ],
             [
                 new Big(newAllocations.jet.toString()),
-                await this.jet.getLpTokenAccountValue(
-                    this.vaultState.vaultJetLpToken
-                ),
+                (
+                    await this.jet.getLpTokenAccountValue(
+                        this.vaultState.vaultJetLpToken
+                    )
+                ).lamports,
                 this.getReconcileJetIx.bind(this),
             ],
         ];
@@ -914,7 +926,9 @@ export class VaultClient {
     // Denominated in reserve tokens per LP token
     async getLpExchangeRate(): Promise<ExchangeRate> {
         const totalValue = (await this.getTotalValue()).lamports;
-        const lpTokenSupply = new Big(this.lpToken.mintInfo.supply.toString());
+        const lpTokenSupply = new Big(
+            (await this.getLpTokenMintInfo()).supply.toString()
+        );
 
         const bigZero = new Big(0);
         if (lpTokenSupply.eq(bigZero) || totalValue.eq(bigZero)) {
@@ -1056,9 +1070,14 @@ export class VaultClient {
         return lpToken.getAccountInfo(this.vaultState.referralFeeReceiver);
     }
 
-    // TODO remove this
-    getVaultState(): Vault {
-        return this.vaultState;
+    async getLpTokenMintInfo(): Promise<MintInfo> {
+        const lpToken = new SplToken(
+            this.program.provider.connection,
+            this.vaultState.lpTokenMint,
+            TOKEN_PROGRAM_ID,
+            Keypair.generate() // dummy since we don't need to send txs
+        );
+        return lpToken.getMintInfo();
     }
 
     getVaultConfig(): VaultConfig {
@@ -1071,6 +1090,14 @@ export class VaultClient {
 
     getLpTokenMint(): PublicKey {
         return this.vaultState.lpTokenMint;
+    }
+
+    getReserveToken(): Token {
+        return this.reserveToken;
+    }
+
+    getLpToken(): Token {
+        return this.lpToken;
     }
 
     getDepositCap(): TokenAmount {
