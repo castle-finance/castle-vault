@@ -10,6 +10,7 @@ use solana_maths::Rate;
 
 use crate::{
     impl_has_vault,
+    init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
     refresh::Refresher,
     reserves::{Provider, ReserveAccessor},
@@ -183,6 +184,54 @@ impl ReserveAccessor for Reserve {
 }
 
 #[derive(Accounts)]
+#[instruction(bump: u8)]
+pub struct InitializeJet<'info> {
+    #[account(
+        mut,
+        has_one = owner,
+        has_one = vault_authority,
+    )]
+    pub vault: Box<Account<'info, Vault>>,
+
+    pub vault_authority: AccountInfo<'info>,
+
+    /// Token account for the vault's jet lp tokens
+    #[account(
+        init,
+        payer = payer,
+        seeds = [vault.key().as_ref(), jet_lp_token_mint.key().as_ref()],
+        bump = bump,
+        token::authority = vault_authority,
+        token::mint = jet_lp_token_mint,
+    )]
+    pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
+
+    /// Mint of the jet lp token
+    pub jet_lp_token_mint: AccountInfo<'info>,
+
+    pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
+
+    pub owner: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub token_program: Program<'info, Token>,
+
+    pub system_program: Program<'info, System>,
+
+    pub rent: Sysvar<'info, Rent>,
+}
+
+impl<'info> YieldSourceInitializer<'info> for InitializeJet<'info> {
+    fn initialize_yield_source(&mut self) -> ProgramResult {
+        self.vault.jet_reserve = self.jet_reserve.key();
+        self.vault.vault_jet_lp_token = self.vault_jet_lp_token.key();
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
 pub struct RefreshJet<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
@@ -252,6 +301,9 @@ impl<'info> Refresher<'info> for RefreshJet<'info> {
         &mut self,
         _remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
+        #[cfg(feature = "debug")]
+        msg!("Refreshing jet");
+
         jet::cpi::refresh_reserve(self.jet_refresh_reserve_context())?;
 
         let jet_reserve = self.jet_reserve.load()?;
@@ -263,7 +315,7 @@ impl<'info> Refresher<'info> for RefreshJet<'info> {
         let jet_value = (jet_exchange_rate * self.vault_jet_lp_token.amount).as_u64(0);
 
         #[cfg(feature = "debug")]
-        msg!("Refresh jet reserve token value: {}", jet_value);
+        msg!("Value: {}", jet_value);
 
         self.vault.actual_allocations[Provider::Jet].update(jet_value, self.clock.slot);
 

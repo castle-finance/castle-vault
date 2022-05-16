@@ -9,6 +9,7 @@ use solana_maths::Rate;
 use crate::{
     errors::ErrorCode,
     impl_has_vault,
+    init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
     refresh::Refresher,
     reserves::{Provider, ReserveAccessor},
@@ -171,6 +172,54 @@ impl ReserveAccessor for Reserve {
 }
 
 #[derive(Accounts)]
+#[instruction(bump: u8)]
+pub struct InitializePort<'info> {
+    #[account(
+        mut,
+        has_one = owner,
+        has_one = vault_authority,
+    )]
+    pub vault: Box<Account<'info, Vault>>,
+
+    pub vault_authority: AccountInfo<'info>,
+
+    /// Token account for the vault's port lp tokens
+    #[account(
+        init,
+        payer = payer,
+        seeds = [vault.key().as_ref(), port_lp_token_mint.key().as_ref()],
+        bump = bump,
+        token::authority = vault_authority,
+        token::mint = port_lp_token_mint,
+    )]
+    pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
+
+    /// Mint of the port lp token
+    pub port_lp_token_mint: AccountInfo<'info>,
+
+    pub port_reserve: Box<Account<'info, PortReserve>>,
+
+    pub owner: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub token_program: Program<'info, Token>,
+
+    pub system_program: Program<'info, System>,
+
+    pub rent: Sysvar<'info, Rent>,
+}
+
+impl<'info> YieldSourceInitializer<'info> for InitializePort<'info> {
+    fn initialize_yield_source(&mut self) -> ProgramResult {
+        self.vault.port_reserve = self.port_reserve.key();
+        self.vault.vault_port_lp_token = self.vault_port_lp_token.key();
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
 pub struct RefreshPort<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
@@ -217,6 +266,9 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
         &mut self,
         remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
+        #[cfg(feature = "debug")]
+        msg!("Refreshing port");
+
         port_anchor_adaptor::refresh_port_reserve(
             self.port_refresh_reserve_context(remaining_accounts),
         )?;
@@ -226,7 +278,7 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
             port_exchange_rate.collateral_to_liquidity(self.vault_port_lp_token.amount)?;
 
         #[cfg(feature = "debug")]
-        msg!("Refresh port reserve token value: {}", port_value);
+        msg!("Value: {}", port_value);
 
         self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
 

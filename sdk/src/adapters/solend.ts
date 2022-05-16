@@ -26,8 +26,11 @@ import {
 } from "@solendprotocol/solend-sdk";
 import { WAD } from "@solendprotocol/solend-sdk/dist/examples/common";
 
-import { LendingMarket } from "./asset";
+import { CastleVault } from "../idl";
+import { Vault } from "../types";
 import { Rate, Token, TokenAmount } from "../utils";
+
+import { LendingMarket } from "./asset";
 import { getToken } from "./utils";
 
 export interface SolendAccounts {
@@ -192,7 +195,7 @@ export class SolendReserveAsset extends LendingMarket {
         await this.reserve.load();
     }
 
-    async getLpTokenAccountValue(address: PublicKey): Promise<TokenAmount> {
+    async getLpTokenAccountValue(vaultState: Vault): Promise<TokenAmount> {
         await this.reload();
 
         const lpToken = new SplToken(
@@ -202,7 +205,9 @@ export class SolendReserveAsset extends LendingMarket {
             Keypair.generate() // dummy signer since we aren't making any txs
         );
         const lpTokenAmount = new Big(
-            (await lpToken.getAccountInfo(address)).amount.toString()
+            (
+                await lpToken.getAccountInfo(vaultState.vaultSolendLpToken)
+            ).amount.toString()
         );
         const exchangeRate = new Big(this.reserve.stats.cTokenExchangeRate);
 
@@ -248,6 +253,79 @@ export class SolendReserveAsset extends LendingMarket {
                     .toString()
             )
         );
+    }
+
+    getRefreshIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ): TransactionInstruction {
+        return program.instruction.refreshSolend({
+            accounts: {
+                vault: vaultId,
+                vaultSolendLpToken: vaultState.vaultSolendLpToken,
+                solendProgram: this.accounts.program,
+                solendReserve: this.accounts.reserve,
+                solendPyth: this.accounts.pythPrice,
+                solendSwitchboard: this.accounts.switchboardFeed,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
+
+    getReconcileIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault,
+        withdrawOption?: anchor.BN
+    ): TransactionInstruction {
+        return program.instruction.reconcileSolend(
+            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
+            {
+                accounts: {
+                    vault: vaultId,
+                    vaultAuthority: vaultState.vaultAuthority,
+                    vaultReserveToken: vaultState.vaultReserveToken,
+                    vaultSolendLpToken: vaultState.vaultSolendLpToken,
+                    solendProgram: this.accounts.program,
+                    solendMarketAuthority: this.accounts.marketAuthority,
+                    solendMarket: this.accounts.market,
+                    solendReserve: this.accounts.reserve,
+                    solendLpMint: this.accounts.collateralMint,
+                    solendReserveToken: this.accounts.liquiditySupply,
+                    clock: SYSVAR_CLOCK_PUBKEY,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                },
+            }
+        );
+    }
+
+    async getInitializeIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultAuthority: PublicKey,
+        wallet: PublicKey,
+        owner: PublicKey
+    ): Promise<TransactionInstruction> {
+        const [vaultSolendLpTokenAccount, solendLpBump] =
+            await PublicKey.findProgramAddress(
+                [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
+                program.programId
+            );
+        return program.instruction.initializeSolend(solendLpBump, {
+            accounts: {
+                vault: vaultId,
+                vaultAuthority: vaultAuthority,
+                vaultSolendLpToken: vaultSolendLpTokenAccount,
+                solendReserve: this.accounts.reserve,
+                solendLpTokenMint: this.accounts.collateralMint,
+                owner: owner,
+                payer: wallet,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            },
+        });
     }
 }
 

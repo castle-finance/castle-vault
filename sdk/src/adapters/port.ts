@@ -6,6 +6,9 @@ import {
     PublicKey,
     SystemProgram,
     Transaction,
+    TransactionInstruction,
+    SYSVAR_CLOCK_PUBKEY,
+    SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token as SplToken } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
@@ -28,8 +31,11 @@ import {
     ReserveId,
 } from "@port.finance/port-sdk";
 
-import { LendingMarket } from "./asset";
+import { CastleVault } from "../idl";
+import { Vault } from "../types";
 import { Rate, Token, TokenAmount } from "../utils";
+
+import { LendingMarket } from "./asset";
 import { getToken } from "./utils";
 
 interface PortAccounts {
@@ -177,7 +183,7 @@ export class PortReserveAsset extends LendingMarket {
         );
     }
 
-    async getLpTokenAccountValue(address: PublicKey): Promise<TokenAmount> {
+    async getLpTokenAccountValue(vaultState: Vault): Promise<TokenAmount> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const exchangeRate = reserve.getExchangeRatio();
 
@@ -191,7 +197,9 @@ export class PortReserveAsset extends LendingMarket {
 
         const lpTokenAmount = AssetPrice.of(
             mint,
-            (await lpToken.getAccountInfo(address)).amount.toNumber()
+            (
+                await lpToken.getAccountInfo(vaultState.vaultPortLpToken)
+            ).amount.toNumber()
         );
 
         return TokenAmount.fromToken(
@@ -235,6 +243,88 @@ export class PortReserveAsset extends LendingMarket {
         // Need to round here because the SDK returns a non-int value
         // and retaining that value might cause problems for the fn caller
         return TokenAmount.fromToken(this.reserveToken, total.getRaw().round());
+    }
+
+    getRefreshIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ): TransactionInstruction {
+        return program.instruction.refreshPort({
+            accounts: {
+                vault: vaultId,
+                vaultPortLpToken: vaultState.vaultPortLpToken,
+                portProgram: this.accounts.program,
+                portReserve: this.accounts.reserve,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+            remainingAccounts:
+                this.accounts.oracle == null
+                    ? []
+                    : [
+                          {
+                              isSigner: false,
+                              isWritable: false,
+                              pubkey: this.accounts.oracle,
+                          },
+                      ],
+        });
+    }
+
+    getReconcileIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault,
+        withdrawOption?: anchor.BN
+    ): TransactionInstruction {
+        return program.instruction.reconcilePort(
+            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
+            {
+                accounts: {
+                    vault: vaultId,
+                    vaultAuthority: vaultState.vaultAuthority,
+                    vaultReserveToken: vaultState.vaultReserveToken,
+                    vaultPortLpToken: vaultState.vaultPortLpToken,
+                    portProgram: this.accounts.program,
+                    portMarketAuthority: this.accounts.marketAuthority,
+                    portMarket: this.accounts.market,
+                    portReserve: this.accounts.reserve,
+                    portLpMint: this.accounts.collateralMint,
+                    portReserveToken: this.accounts.liquiditySupply,
+                    clock: SYSVAR_CLOCK_PUBKEY,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                },
+            }
+        );
+    }
+
+    async getInitializeIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultAuthority: PublicKey,
+        wallet: PublicKey,
+        owner: PublicKey
+    ): Promise<TransactionInstruction> {
+        const [vaultPortLpTokenAccount, portLpBump] =
+            await PublicKey.findProgramAddress(
+                [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
+                program.programId
+            );
+
+        return program.instruction.initializePort(portLpBump, {
+            accounts: {
+                vault: vaultId,
+                vaultAuthority: vaultAuthority,
+                vaultPortLpToken: vaultPortLpTokenAccount,
+                portLpTokenMint: this.accounts.collateralMint,
+                portReserve: this.accounts.reserve,
+                owner: owner,
+                payer: wallet,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            },
+        });
     }
 }
 

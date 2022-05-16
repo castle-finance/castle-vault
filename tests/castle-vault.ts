@@ -220,14 +220,31 @@ describe("castle-vault", () => {
             provider.wallet as anchor.Wallet,
             DeploymentEnvs.devnetStaging,
             reserveToken.publicKey,
-            solend,
-            port,
-            jet,
             owner.publicKey,
             referralFeeOwner,
             config,
             program
         );
+
+        await Promise.all([
+            await vaultClient.initializeSolend(
+                provider.wallet as anchor.Wallet,
+                solend,
+                owner
+            ),
+            await vaultClient.initializePort(
+                provider.wallet as anchor.Wallet,
+                port,
+                owner
+            ),
+            await vaultClient.initializeJet(
+                provider.wallet as anchor.Wallet,
+                jet,
+                owner
+            ),
+        ]);
+
+        await vaultClient.reload();
 
         userReserveTokenAccount = await reserveToken.createAccount(
             wallet.publicKey

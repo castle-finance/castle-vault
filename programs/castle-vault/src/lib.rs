@@ -26,7 +26,28 @@ pub mod castle_vault {
         _bumps: InitBumpSeeds,
         config: VaultConfigArg,
     ) -> ProgramResult {
-        instructions::init::handler(ctx, _bumps, config)
+        instructions::init_vault::handler(ctx, _bumps, config)
+    }
+
+    pub fn initialize_jet<'info>(
+        ctx: Context<'_, '_, '_, 'info, InitializeJet<'info>>,
+        bump: u8,
+    ) -> ProgramResult {
+        instructions::init_yield_source::handler(ctx, bump)
+    }
+
+    pub fn initialize_port<'info>(
+        ctx: Context<'_, '_, '_, 'info, InitializePort<'info>>,
+        bump: u8,
+    ) -> ProgramResult {
+        instructions::init_yield_source::handler(ctx, bump)
+    }
+
+    pub fn initialize_solend<'info>(
+        ctx: Context<'_, '_, '_, 'info, InitializeSolend<'info>>,
+        bump: u8,
+    ) -> ProgramResult {
+        instructions::init_yield_source::handler(ctx, bump)
     }
 
     pub fn update_flags(ctx: Context<UpdateFlags>, flags: u32) -> ProgramResult {

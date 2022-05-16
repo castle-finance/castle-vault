@@ -6,6 +6,7 @@ import {
     PublicKey,
     Signer,
     SystemProgram,
+    TransactionInstruction,
     SYSVAR_CLOCK_PUBKEY,
     SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
@@ -25,8 +26,11 @@ import {
     ReserveConfig,
 } from "@jet-lab/jet-engine";
 
-import { LendingMarket } from "./asset";
+import { CastleVault } from "../idl";
+import { Vault } from "../types";
 import { Rate, Token, TokenAmount } from "../utils";
+
+import { LendingMarket } from "./asset";
 import { getToken } from "./utils";
 
 export interface JetAccounts {
@@ -206,7 +210,7 @@ export class JetReserveAsset extends LendingMarket {
         ]);
     }
 
-    async getLpTokenAccountValue(address: PublicKey): Promise<TokenAmount> {
+    async getLpTokenAccountValue(vaultState: Vault): Promise<TokenAmount> {
         await this.market.refresh();
 
         const reserveInfo = this.market.reserves[this.reserve.data.index];
@@ -221,7 +225,9 @@ export class JetReserveAsset extends LendingMarket {
             Keypair.generate() // dummy signer since we aren't making any txs
         );
 
-        const lpTokenAccountInfo = await lpToken.getAccountInfo(address);
+        const lpTokenAccountInfo = await lpToken.getAccountInfo(
+            vaultState.vaultJetLpToken
+        );
         const lpTokenAmount = new Big(lpTokenAccountInfo.amount.toString());
 
         return TokenAmount.fromToken(
@@ -254,6 +260,83 @@ export class JetReserveAsset extends LendingMarket {
             this.reserveToken,
             Big(borrowed.lamports.toString())
         );
+    }
+
+    getRefreshIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ): TransactionInstruction {
+        return program.instruction.refreshJet({
+            accounts: {
+                vault: vaultId,
+                vaultJetLpToken: vaultState.vaultJetLpToken,
+                jetProgram: this.accounts.program,
+                jetMarket: this.accounts.market,
+                jetMarketAuthority: this.accounts.marketAuthority,
+                jetReserve: this.accounts.reserve,
+                jetFeeNoteVault: this.accounts.feeNoteVault,
+                jetDepositNoteMint: this.accounts.depositNoteMint,
+                jetPyth: this.accounts.pythPrice,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            },
+        });
+    }
+
+    getReconcileIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault,
+        withdrawOption?: anchor.BN
+    ): TransactionInstruction {
+        return program.instruction.reconcileJet(
+            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
+            {
+                accounts: {
+                    vault: vaultId,
+                    vaultAuthority: vaultState.vaultAuthority,
+                    vaultReserveToken: vaultState.vaultReserveToken,
+                    vaultJetLpToken: vaultState.vaultJetLpToken,
+                    jetProgram: this.accounts.program,
+                    jetMarket: this.accounts.market,
+                    jetMarketAuthority: this.accounts.marketAuthority,
+                    jetReserve: this.accounts.reserve,
+                    jetReserveToken: this.accounts.liquiditySupply,
+                    jetLpMint: this.accounts.depositNoteMint,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                },
+            }
+        );
+    }
+
+    async getInitializeIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultAuthority: PublicKey,
+        wallet: PublicKey,
+        owner: PublicKey
+    ): Promise<TransactionInstruction> {
+        const [vaultJetLpTokenAccount, jetLpBump] =
+            await PublicKey.findProgramAddress(
+                [vaultId.toBuffer(), this.accounts.depositNoteMint.toBuffer()],
+                program.programId
+            );
+
+        return program.instruction.initializeJet(jetLpBump, {
+            accounts: {
+                vault: vaultId,
+                vaultAuthority: vaultAuthority,
+                vaultJetLpToken: vaultJetLpTokenAccount,
+                jetLpTokenMint: this.accounts.depositNoteMint,
+                jetReserve: this.accounts.reserve,
+                owner: owner,
+                payer: wallet,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            },
+        });
     }
 }
 

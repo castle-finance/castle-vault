@@ -33,6 +33,7 @@ import {
 import { CLUSTER_MAP, PROGRAM_IDS } from ".";
 import { CastleVault } from "./idl";
 import {
+    LendingMarket,
     PortReserveAsset,
     SolendReserveAsset,
     JetReserveAsset,
@@ -46,14 +47,19 @@ import {
 } from "./types";
 import { ExchangeRate, Rate, Token, TokenAmount } from "./utils";
 
+//type YieldSources = {[key: string]: LendingMarket}
+interface YieldSources {
+    solend?: SolendReserveAsset;
+    port?: PortReserveAsset;
+    jet?: JetReserveAsset;
+}
+
 export class VaultClient {
     private constructor(
         public program: anchor.Program<CastleVault>,
         public vaultId: PublicKey,
         private vaultState: Vault,
-        private solend: SolendReserveAsset,
-        private port: PortReserveAsset,
-        private jet: JetReserveAsset,
+        private yieldSources: YieldSources,
         private reserveToken: Token,
         private lpToken: Token,
         private feesEnabled: boolean = false
@@ -94,9 +100,11 @@ export class VaultClient {
             program,
             vaultId,
             vaultState,
-            solend,
-            port,
-            jet,
+            {
+                solend: solend,
+                port: port,
+                jet: jet,
+            },
             reserveToken,
             lpToken
         );
@@ -112,9 +120,6 @@ export class VaultClient {
         wallet: anchor.Wallet,
         env: DeploymentEnv,
         reserveTokenMint: PublicKey,
-        solend: SolendReserveAsset,
-        port: PortReserveAsset,
-        jet: JetReserveAsset,
         owner: PublicKey,
         referralFeeOwner: PublicKey,
         config: VaultConfig,
@@ -144,33 +149,6 @@ export class VaultClient {
         const [vaultReserveTokenAccount, reserveBump] =
             await PublicKey.findProgramAddress(
                 [vaultId.publicKey.toBuffer(), reserveTokenMint.toBuffer()],
-                program.programId
-            );
-
-        const [vaultSolendLpTokenAccount, solendLpBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    vaultId.publicKey.toBuffer(),
-                    solend.accounts.collateralMint.toBuffer(),
-                ],
-                program.programId
-            );
-
-        const [vaultPortLpTokenAccount, portLpBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    vaultId.publicKey.toBuffer(),
-                    port.accounts.collateralMint.toBuffer(),
-                ],
-                program.programId
-            );
-
-        const [vaultJetLpTokenAccount, jetLpBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    vaultId.publicKey.toBuffer(),
-                    jet.accounts.depositNoteMint.toBuffer(),
-                ],
                 program.programId
             );
 
@@ -215,9 +193,6 @@ export class VaultClient {
                 authority: authorityBump,
                 reserve: reserveBump,
                 lpMint: lpTokenMintBump,
-                solendLp: solendLpBump,
-                portLp: portLpBump,
-                jetLp: jetLpBump,
             },
             { ...defaultConfig, ...config },
             {
@@ -226,16 +201,7 @@ export class VaultClient {
                     vaultAuthority: vaultAuthority,
                     lpTokenMint: lpTokenMint,
                     vaultReserveToken: vaultReserveTokenAccount,
-                    vaultSolendLpToken: vaultSolendLpTokenAccount,
-                    vaultPortLpToken: vaultPortLpTokenAccount,
-                    vaultJetLpToken: vaultJetLpTokenAccount,
                     reserveTokenMint: reserveTokenMint,
-                    solendLpTokenMint: solend.accounts.collateralMint,
-                    portLpTokenMint: port.accounts.collateralMint,
-                    jetLpTokenMint: jet.accounts.depositNoteMint,
-                    solendReserve: solend.accounts.reserve,
-                    portReserve: port.accounts.reserve,
-                    jetReserve: jet.accounts.reserve,
                     feeReceiver: feeReceiver,
                     referralFeeReceiver: referralFeeReceiver,
                     referralFeeOwner: referralFeeOwner,
@@ -256,6 +222,7 @@ export class VaultClient {
             txSig,
             "finalized"
         );
+
         const vaultState = await program.account.vault.fetch(vaultId.publicKey);
 
         const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
@@ -267,76 +234,105 @@ export class VaultClient {
             program,
             vaultId.publicKey,
             vaultState,
-            solend,
-            port,
-            jet,
+            {},
             reserveToken,
             lpToken
         );
     }
 
+    async initializeSolend(
+        wallet: anchor.Wallet,
+        solend: SolendReserveAsset,
+        owner: Keypair
+    ) {
+        const tx = new Transaction();
+        tx.add(
+            await solend.getInitializeIx(
+                this.program,
+                this.vaultId,
+                this.vaultState.vaultAuthority,
+                wallet.payer.publicKey,
+                owner.publicKey
+            )
+        );
+
+        const txSig = await this.program.provider.send(tx, [
+            owner,
+            wallet.payer,
+        ]);
+        await this.program.provider.connection.confirmTransaction(
+            txSig,
+            "finalized"
+        );
+        this.yieldSources.solend = solend;
+    }
+
+    async initializePort(
+        wallet: anchor.Wallet,
+        port: PortReserveAsset,
+        owner: Keypair
+    ) {
+        const tx = new Transaction();
+        tx.add(
+            await port.getInitializeIx(
+                this.program,
+                this.vaultId,
+                this.vaultState.vaultAuthority,
+                wallet.payer.publicKey,
+                owner.publicKey
+            )
+        );
+
+        const txSig = await this.program.provider.send(tx, [
+            owner,
+            wallet.payer,
+        ]);
+        await this.program.provider.connection.confirmTransaction(
+            txSig,
+            "finalized"
+        );
+        this.yieldSources.port = port;
+    }
+
+    async initializeJet(
+        wallet: anchor.Wallet,
+        jet: JetReserveAsset,
+        owner: Keypair
+    ) {
+        const tx = new Transaction();
+        tx.add(
+            await jet.getInitializeIx(
+                this.program,
+                this.vaultId,
+                this.vaultState.vaultAuthority,
+                wallet.payer.publicKey,
+                owner.publicKey
+            )
+        );
+
+        const txSig = await this.program.provider.send(tx, [
+            owner,
+            wallet.payer,
+        ]);
+        await this.program.provider.connection.confirmTransaction(
+            txSig,
+            "finalized"
+        );
+        this.yieldSources.jet = jet;
+    }
+
     getRefreshIxs(): TransactionInstruction[] {
-        return [
-            this.getRefreshSolendIx(),
-            this.getRefreshPortIx(),
-            this.getRefreshJetIx(),
-            this.getConsolidateRefreshIx(),
-        ];
+        return Object.keys(this.yieldSources)
+            .map((k) => {
+                return this.yieldSources[k].getRefreshIx(
+                    this.program,
+                    this.vaultId,
+                    this.vaultState
+                );
+            })
+            .concat([this.getConsolidateRefreshIx()]);
     }
 
-    getRefreshSolendIx(): TransactionInstruction {
-        return this.program.instruction.refreshSolend({
-            accounts: {
-                vault: this.vaultId,
-                vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-                solendProgram: this.solend.accounts.program,
-                solendReserve: this.solend.accounts.reserve,
-                solendPyth: this.solend.accounts.pythPrice,
-                solendSwitchboard: this.solend.accounts.switchboardFeed,
-                clock: SYSVAR_CLOCK_PUBKEY,
-            },
-        });
-    }
-
-    getRefreshPortIx(): TransactionInstruction {
-        return this.program.instruction.refreshPort({
-            accounts: {
-                vault: this.vaultId,
-                vaultPortLpToken: this.vaultState.vaultPortLpToken,
-                portProgram: this.port.accounts.program,
-                portReserve: this.port.accounts.reserve,
-                clock: SYSVAR_CLOCK_PUBKEY,
-            },
-            remainingAccounts:
-                this.port.accounts.oracle == null
-                    ? []
-                    : [
-                          {
-                              isSigner: false,
-                              isWritable: false,
-                              pubkey: this.port.accounts.oracle,
-                          },
-                      ],
-        });
-    }
-
-    getRefreshJetIx(): TransactionInstruction {
-        return this.program.instruction.refreshJet({
-            accounts: {
-                vault: this.vaultId,
-                vaultJetLpToken: this.vaultState.vaultJetLpToken,
-                jetProgram: this.jet.accounts.program,
-                jetMarket: this.jet.accounts.market,
-                jetMarketAuthority: this.jet.accounts.marketAuthority,
-                jetReserve: this.jet.accounts.reserve,
-                jetFeeNoteVault: this.jet.accounts.feeNoteVault,
-                jetDepositNoteMint: this.jet.accounts.depositNoteMint,
-                jetPyth: this.jet.accounts.pythPrice,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                clock: SYSVAR_CLOCK_PUBKEY,
-            },
-        });
-    }
     private static async getReserveAndLpTokens(
         connection: Connection,
         vaultState: Vault
@@ -692,38 +688,27 @@ export class VaultClient {
 
         if (vaultReserveAmount.lt(convertedAmount)) {
             // Sort reconcile ixs by most to least $ to minimize number of TXs sent
-            const reconcileIxs = [
-                [
-                    (
-                        await this.solend.getLpTokenAccountValue(
-                            this.vaultState.vaultSolendLpToken
-                        )
-                    ).lamports,
-                    this.getReconcileSolendIx.bind(this),
-                ],
-                [
-                    (
-                        await this.port.getLpTokenAccountValue(
-                            this.vaultState.vaultPortLpToken
-                        )
-                    ).lamports,
-                    this.getReconcilePortIx.bind(this),
-                ],
-                [
-                    (
-                        await this.jet.getLpTokenAccountValue(
-                            this.vaultState.vaultJetLpToken
-                        )
-                    ).lamports,
-                    this.getReconcileJetIx.bind(this),
-                ],
-            ].sort((a, b) => b[0].sub(a[0]).toNumber());
+            const reconcileIxs = (
+                await Promise.all(
+                    Object.keys(this.yieldSources).map(
+                        async (k): Promise<[Big, string]> => {
+                            const alloc: Big = (
+                                await this.yieldSources[
+                                    k
+                                ].getLpTokenAccountValue(this.vaultState)
+                            ).lamports;
+                            return [alloc, k];
+                        }
+                    )
+                )
+            ).sort((a, b) => b[0].sub(a[0]).toNumber());
 
             const toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
             let reconciledAmount = Big(0);
             let n = 0;
             while (reconciledAmount.lt(toReconcileAmount)) {
-                const [alloc, ix] = reconcileIxs[n];
+                const [alloc, k] = reconcileIxs[n];
+
                 // min of alloc and toWithdrawAmount - withdrawnAmount
                 const reconcileAmount = alloc.gt(
                     toReconcileAmount.sub(reconciledAmount)
@@ -733,11 +718,18 @@ export class VaultClient {
 
                 if (!Big(0).eq(reconcileAmount)) {
                     const reconcileTx = new Transaction();
-                    this.getRefreshIxs().forEach((element) => {
-                        reconcileTx.add(element);
-                    });
                     reconcileTx.add(
-                        ix(new anchor.BN(reconcileAmount.toString()))
+                        this.yieldSources[k].getRefreshIx(
+                            this.program,
+                            this.vaultId,
+                            this.vaultState
+                        ),
+                        this.yieldSources[k].getReconcileIx(
+                            this.program,
+                            this.vaultId,
+                            this.vaultState,
+                            new anchor.BN(reconcileAmount.toString())
+                        )
                     );
                     txs.push(reconcileTx);
                 }
@@ -758,9 +750,9 @@ export class VaultClient {
             this.program.instruction.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
-                    solendReserve: this.solend.accounts.reserve,
-                    portReserve: this.port.accounts.reserve,
-                    jetReserve: this.jet.accounts.reserve,
+                    solendReserve: this.yieldSources.solend.accounts.reserve,
+                    portReserve: this.yieldSources.port.accounts.reserve,
+                    jetReserve: this.yieldSources.jet.accounts.reserve,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
             })
@@ -790,130 +782,58 @@ export class VaultClient {
             await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
-                    solendReserve: this.solend.accounts.reserve,
-                    portReserve: this.port.accounts.reserve,
-                    jetReserve: this.jet.accounts.reserve,
+                    solendReserve: this.yieldSources.solend.accounts.reserve,
+                    portReserve: this.yieldSources.port.accounts.reserve,
+                    jetReserve: this.yieldSources.jet.accounts.reserve,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
                 instructions: this.getRefreshIxs(),
             })
         ).events[1].data as RebalanceDataEvent;
 
-        const newAndOldallocationsWithReconcileIxs = [
-            [
-                new Big(newAllocations.solend.toString()),
-                (
-                    await this.solend.getLpTokenAccountValue(
-                        this.vaultState.vaultSolendLpToken
-                    )
-                ).lamports,
-                this.getReconcileSolendIx.bind(this),
-            ],
-            [
-                new Big(newAllocations.port.toString()),
-                (
-                    await this.port.getLpTokenAccountValue(
-                        this.vaultState.vaultPortLpToken
-                    )
-                ).lamports,
-                this.getReconcilePortIx.bind(this),
-            ],
-            [
-                new Big(newAllocations.jet.toString()),
-                (
-                    await this.jet.getLpTokenAccountValue(
-                        this.vaultState.vaultJetLpToken
-                    )
-                ).lamports,
-                this.getReconcileJetIx.bind(this),
-            ],
-        ];
+        const newAndOldallocations = await Promise.all(
+            Object.entries(this.yieldSources).map(
+                async ([k, v]): Promise<[LendingMarket, Big, Big]> => {
+                    const newAlloc = new Big(newAllocations[k].toString());
+                    const oldAlloc = (
+                        await this.yieldSources[k].getLpTokenAccountValue(
+                            this.vaultState
+                        )
+                    ).lamports;
+                    return [v, newAlloc, oldAlloc];
+                }
+            )
+        );
 
-        const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
-            newAndOldallocationsWithReconcileIxs.map((e) => [
-                e[0].sub(e[1]),
-                e[2](),
+        const allocationDiffsWithReconcileTxs: [Big, Transaction][] =
+            newAndOldallocations.map(([yieldSource, newAlloc, oldAlloc]) => [
+                newAlloc.sub(oldAlloc),
+                new Transaction().add(
+                    yieldSource.getRefreshIx(
+                        this.program,
+                        this.vaultId,
+                        this.vaultState
+                    ),
+                    yieldSource.getReconcileIx(
+                        this.program,
+                        this.vaultId,
+                        this.vaultState
+                    )
+                ),
             ]);
 
-        const reconcileIxs = allocationDiffsWithReconcileIxs
+        const reconcileTxs = allocationDiffsWithReconcileTxs
             .sort((a, b) => a[0].sub(b[0]).toNumber())
-            .map((e) => e[1]);
+            .map(([, tx]) => {
+                return { tx: tx, signers: [] };
+            });
 
         const txs: SendTxRequest[] = [
             { tx: this.getRebalanceTx(proposedWeights), signers: [] },
+            ...reconcileTxs,
         ];
 
-        for (const ix of reconcileIxs) {
-            const reconcileTx = new Transaction();
-            this.getRefreshIxs().forEach((element) => {
-                reconcileTx.add(element);
-            });
-            reconcileTx.add(ix);
-            txs.push({ tx: reconcileTx, signers: [] });
-        }
         return this.program.provider.sendAll(txs);
-    }
-
-    private getReconcilePortIx(
-        withdrawOption: anchor.BN = new anchor.BN(0)
-    ): TransactionInstruction {
-        return this.program.instruction.reconcilePort(withdrawOption, {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultReserveToken: this.vaultState.vaultReserveToken,
-                vaultPortLpToken: this.vaultState.vaultPortLpToken,
-                portProgram: this.port.accounts.program,
-                portMarketAuthority: this.port.accounts.marketAuthority,
-                portMarket: this.port.accounts.market,
-                portReserve: this.port.accounts.reserve,
-                portLpMint: this.port.accounts.collateralMint,
-                portReserveToken: this.port.accounts.liquiditySupply,
-                clock: SYSVAR_CLOCK_PUBKEY,
-                tokenProgram: TOKEN_PROGRAM_ID,
-            },
-        });
-    }
-
-    private getReconcileJetIx(
-        withdrawOption: anchor.BN = new anchor.BN(0)
-    ): TransactionInstruction {
-        return this.program.instruction.reconcileJet(withdrawOption, {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultReserveToken: this.vaultState.vaultReserveToken,
-                vaultJetLpToken: this.vaultState.vaultJetLpToken,
-                jetProgram: this.jet.accounts.program,
-                jetMarket: this.jet.accounts.market,
-                jetMarketAuthority: this.jet.accounts.marketAuthority,
-                jetReserve: this.jet.accounts.reserve,
-                jetReserveToken: this.jet.accounts.liquiditySupply,
-                jetLpMint: this.jet.accounts.depositNoteMint,
-                tokenProgram: TOKEN_PROGRAM_ID,
-            },
-        });
-    }
-
-    private getReconcileSolendIx(
-        withdrawOption: anchor.BN = new anchor.BN(0)
-    ): TransactionInstruction {
-        return this.program.instruction.reconcileSolend(withdrawOption, {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultReserveToken: this.vaultState.vaultReserveToken,
-                vaultSolendLpToken: this.vaultState.vaultSolendLpToken,
-                solendProgram: this.solend.accounts.program,
-                solendMarketAuthority: this.solend.accounts.marketAuthority,
-                solendMarket: this.solend.accounts.market,
-                solendReserve: this.solend.accounts.reserve,
-                solendLpMint: this.solend.accounts.collateralMint,
-                solendReserveToken: this.solend.accounts.liquiditySupply,
-                clock: SYSVAR_CLOCK_PUBKEY,
-                tokenProgram: TOKEN_PROGRAM_ID,
-            },
-        });
     }
 
     /**
@@ -928,26 +848,26 @@ export class VaultClient {
                 (await this.getVaultReserveTokenAccountValue()).lamports,
             ],
             [
-                await this.solend.getApy(),
+                await this.yieldSources.solend.getApy(),
                 (
-                    await this.solend.getLpTokenAccountValue(
-                        this.vaultState.vaultSolendLpToken
+                    await this.yieldSources.solend.getLpTokenAccountValue(
+                        this.vaultState
                     )
                 ).lamports,
             ],
             [
-                await this.port.getApy(),
+                await this.yieldSources.port.getApy(),
                 (
-                    await this.port.getLpTokenAccountValue(
-                        this.vaultState.vaultPortLpToken
+                    await this.yieldSources.port.getLpTokenAccountValue(
+                        this.vaultState
                     )
                 ).lamports,
             ],
             [
-                await this.jet.getApy(),
+                await this.yieldSources.jet.getApy(),
                 (
-                    await this.jet.getLpTokenAccountValue(
-                        this.vaultState.vaultJetLpToken
+                    await this.yieldSources.jet.getLpTokenAccountValue(
+                        this.vaultState
                     )
                 ).lamports,
             ],
@@ -994,11 +914,9 @@ export class VaultClient {
         await this.reload();
 
         const values = await Promise.all([
-            this.solend.getLpTokenAccountValue(
-                this.vaultState.vaultSolendLpToken
-            ),
-            this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken),
-            this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken),
+            this.yieldSources.solend.getLpTokenAccountValue(this.vaultState),
+            this.yieldSources.port.getLpTokenAccountValue(this.vaultState),
+            this.yieldSources.jet.getLpTokenAccountValue(this.vaultState),
             this.getVaultReserveTokenAccountValue(),
         ]);
 
@@ -1032,21 +950,15 @@ export class VaultClient {
     }
 
     async getVaultSolendLpTokenAccountValue(): Promise<TokenAmount> {
-        return this.solend.getLpTokenAccountValue(
-            this.getVaultSolendLpTokenAccount()
-        );
+        return this.yieldSources.solend.getLpTokenAccountValue(this.vaultState);
     }
 
     async getVaultPortLpTokenAccountValue(): Promise<TokenAmount> {
-        return this.port.getLpTokenAccountValue(
-            this.getVaultPortLpTokenAccount()
-        );
+        return this.yieldSources.port.getLpTokenAccountValue(this.vaultState);
     }
 
     async getVaultJetLpTokenAccountValue(): Promise<TokenAmount> {
-        return this.jet.getLpTokenAccountValue(
-            this.getVaultJetLpTokenAccount()
-        );
+        return this.yieldSources.jet.getLpTokenAccountValue(this.vaultState);
     }
 
     /**
@@ -1158,18 +1070,6 @@ export class VaultClient {
         return this.vaultState.vaultReserveToken;
     }
 
-    getVaultSolendLpTokenAccount(): PublicKey {
-        return this.vaultState.vaultSolendLpToken;
-    }
-
-    getVaultPortLpTokenAccount(): PublicKey {
-        return this.vaultState.vaultPortLpToken;
-    }
-
-    getVaultJetLpTokenAccount(): PublicKey {
-        return this.vaultState.vaultJetLpToken;
-    }
-
     getStrategyType(): StrategyType {
         return Object.keys(
             this.vaultState.config.strategyType
@@ -1183,15 +1083,15 @@ export class VaultClient {
     }
 
     getSolend(): SolendReserveAsset {
-        return this.solend;
+        return this.yieldSources.solend;
     }
 
     getPort(): PortReserveAsset {
-        return this.port;
+        return this.yieldSources.port;
     }
 
     getJet(): JetReserveAsset {
-        return this.jet;
+        return this.yieldSources.jet;
     }
 
     getReferralFeeSplit(): Rate {
