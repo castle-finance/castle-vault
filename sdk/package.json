@@ -1,6 +1,6 @@
 {
     "name": "@castlefinance/vault-sdk",
-    "version": "2.2.0",
+    "version": "3.0.0rc0",
     "license": "MIT",
     "main": "./lib/index.js",
     "typings": "./lib/index.d.ts",

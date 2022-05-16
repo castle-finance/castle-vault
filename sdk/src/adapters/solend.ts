@@ -12,7 +12,7 @@ import {
     TransactionInstruction,
 } from "@solana/web3.js";
 import {
-    Token,
+    Token as SplToken,
     MintLayout,
     AccountLayout,
     TOKEN_PROGRAM_ID,
@@ -24,11 +24,14 @@ import {
     SolendReserve,
     SolendMarket,
 } from "@solendprotocol/solend-sdk";
+import { WAD } from "@solendprotocol/solend-sdk/dist/examples/common";
 
 import { CastleVault } from "../idl";
 import { Vault } from "../types";
-import { Asset } from "./asset";
-import { WAD } from "@solendprotocol/solend-sdk/dist/examples/common";
+import { Rate, Token, TokenAmount } from "../utils";
+
+import { LendingMarket } from "./asset";
+import { getToken } from "./utils";
 
 export interface SolendAccounts {
     program: PublicKey;
@@ -41,11 +44,13 @@ export interface SolendAccounts {
     liquiditySupply: PublicKey;
 }
 
-export class SolendReserveAsset extends Asset {
+export class SolendReserveAsset extends LendingMarket {
     private constructor(
         public provider: anchor.Provider,
         public accounts: SolendAccounts,
-        public reserve: SolendReserve
+        public reserve: SolendReserve,
+        public reserveToken: Token,
+        public lpToken: Token
     ) {
         super();
     }
@@ -87,7 +92,24 @@ export class SolendReserveAsset extends Asset {
             collateralMint: new PublicKey(reserve.config.collateralMintAddress),
             liquiditySupply: new PublicKey(reserve.config.liquidityAddress),
         };
-        return new SolendReserveAsset(provider, accounts, reserve);
+
+        const lpToken = await getToken(
+            provider.connection,
+            new PublicKey(reserve.config.collateralMintAddress)
+        );
+
+        const reserveToken = await getToken(
+            provider.connection,
+            new PublicKey(reserve.config.mintAddress)
+        );
+
+        return new SolendReserveAsset(
+            provider,
+            accounts,
+            reserve,
+            reserveToken,
+            lpToken
+        );
     }
 
     static async initialize(
@@ -142,7 +164,23 @@ export class SolendReserveAsset extends Asset {
             provider.connection
         );
 
-        return new SolendReserveAsset(provider, accounts, reserve);
+        const lpToken = await getToken(
+            provider.connection,
+            new PublicKey(reserve.config.collateralMintAddress)
+        );
+
+        const reserveToken = await getToken(
+            provider.connection,
+            reserveTokenMint
+        );
+
+        return new SolendReserveAsset(
+            provider,
+            accounts,
+            reserve,
+            reserveToken,
+            lpToken
+        );
     }
 
     //async borrow(amount: number): Promise<TransactionSignature> {
@@ -157,12 +195,12 @@ export class SolendReserveAsset extends Asset {
         await this.reserve.load();
     }
 
-    async getLpTokenAccountValue(vaultState: Vault): Promise<Big> {
+    async getLpTokenAccountValue(vaultState: Vault): Promise<TokenAmount> {
         await this.reload();
 
-        const lpToken = new Token(
+        const lpToken = new SplToken(
             this.provider.connection,
-            new PublicKey(this.reserve.config.collateralMintAddress),
+            this.lpToken.mint,
             TOKEN_PROGRAM_ID,
             Keypair.generate() // dummy signer since we aren't making any txs
         );
@@ -173,7 +211,10 @@ export class SolendReserveAsset extends Asset {
         );
         const exchangeRate = new Big(this.reserve.stats.cTokenExchangeRate);
 
-        return lpTokenAmount.mul(exchangeRate).round(0, Big.roundDown);
+        return TokenAmount.fromToken(
+            this.reserveToken,
+            lpTokenAmount.mul(exchangeRate).round(0, Big.roundDown)
+        );
     }
 
     /**
@@ -182,29 +223,35 @@ export class SolendReserveAsset extends Asset {
      *
      * @returns
      */
-    async getApy(): Promise<Big> {
+    async getApy(): Promise<Rate> {
         await this.reload();
         const apr = this.reserve.stats.supplyInterestAPY;
         const apy = Math.expm1(apr);
 
-        return Big(apy);
+        return new Rate(Big(apy));
     }
 
-    async getBorrowedAmount(): Promise<Big> {
+    async getBorrowedAmount(): Promise<TokenAmount> {
         await this.reload();
-        return Big(
-            this.reserve.stats.totalBorrowsWads
-                .div(new anchor.BN(WAD))
-                .toString()
+        return TokenAmount.fromToken(
+            this.reserveToken,
+            Big(
+                this.reserve.stats.totalBorrowsWads
+                    .div(new anchor.BN(WAD))
+                    .toString()
+            )
         );
     }
 
-    async getDepositedAmount(): Promise<Big> {
+    async getDepositedAmount(): Promise<TokenAmount> {
         await this.reload();
-        return Big(
-            this.reserve.stats.totalDepositsWads
-                .div(new anchor.BN(WAD))
-                .toString()
+        return TokenAmount.fromToken(
+            this.reserveToken,
+            Big(
+                this.reserve.stats.totalDepositsWads
+                    .div(new anchor.BN(WAD))
+                    .toString()
+            )
         );
     }
 
@@ -441,7 +488,7 @@ export async function addReserve(
 
     const tx3 = new anchor.web3.Transaction()
         .add(
-            Token.createApproveInstruction(
+            SplToken.createApproveInstruction(
                 TOKEN_PROGRAM_ID,
                 ownerReserveTokenAccount,
                 userTransferAuthority.publicKey,
