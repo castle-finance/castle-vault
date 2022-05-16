@@ -226,27 +226,25 @@ describe("castle-vault", () => {
             program
         );
 
-        // TODO use promise.all
-        await vaultClient.initializeSolend(
-            provider,
-            provider.wallet as anchor.Wallet,
-            solend,
-            owner
-        );
+        await Promise.all([
+            await vaultClient.initializeSolend(
+                provider.wallet as anchor.Wallet,
+                solend,
+                owner
+            ),
+            await vaultClient.initializePort(
+                provider.wallet as anchor.Wallet,
+                port,
+                owner
+            ),
+            await vaultClient.initializeJet(
+                provider.wallet as anchor.Wallet,
+                jet,
+                owner
+            ),
+        ]);
 
-        await vaultClient.initializePort(
-            provider,
-            provider.wallet as anchor.Wallet,
-            port,
-            owner
-        );
-
-        await vaultClient.initializeJet(
-            provider,
-            provider.wallet as anchor.Wallet,
-            jet,
-            owner
-        );
+        await vaultClient.reload();
 
         userReserveTokenAccount = await reserveToken.createAccount(
             wallet.publicKey

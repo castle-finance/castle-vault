@@ -33,6 +33,7 @@ import {
 import { CLUSTER_MAP, PROGRAM_IDS } from ".";
 import { CastleVault } from "./idl";
 import {
+    LendingMarket,
     PortReserveAsset,
     SolendReserveAsset,
     JetReserveAsset,
@@ -90,12 +91,6 @@ export class VaultClient {
         );
         const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
 
-        const yieldSources = {
-            solend: solend,
-            port: port,
-            jet: jet,
-        };
-
         const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
             provider.connection,
             vaultState
@@ -105,7 +100,11 @@ export class VaultClient {
             program,
             vaultId,
             vaultState,
-            yieldSources,
+            {
+                solend: solend,
+                port: port,
+                jet: jet,
+            },
             reserveToken,
             lpToken
         );
@@ -241,9 +240,7 @@ export class VaultClient {
         );
     }
 
-    // TODO remove provider and logs
     async initializeSolend(
-        provider: anchor.Provider,
         wallet: anchor.Wallet,
         solend: SolendReserveAsset,
         owner: Keypair
@@ -268,12 +265,9 @@ export class VaultClient {
             "finalized"
         );
         this.yieldSources.solend = solend;
-        await this.reload();
-        console.log("initializeSolend confirmed");
     }
 
     async initializePort(
-        provider: anchor.Provider,
         wallet: anchor.Wallet,
         port: PortReserveAsset,
         owner: Keypair
@@ -297,13 +291,10 @@ export class VaultClient {
             txSig,
             "finalized"
         );
-        console.log("initializePort confirmed");
         this.yieldSources.port = port;
-        await this.reload();
     }
 
     async initializeJet(
-        provider: anchor.Provider,
         wallet: anchor.Wallet,
         jet: JetReserveAsset,
         owner: Keypair
@@ -327,9 +318,7 @@ export class VaultClient {
             txSig,
             "finalized"
         );
-        console.log("initializeJet confirmed");
         this.yieldSources.jet = jet;
-        await this.reload();
     }
 
     getRefreshIxs(): TransactionInstruction[] {
@@ -343,6 +332,7 @@ export class VaultClient {
             })
             .concat([this.getConsolidateRefreshIx()]);
     }
+
     private static async getReserveAndLpTokens(
         connection: Connection,
         vaultState: Vault
@@ -728,11 +718,12 @@ export class VaultClient {
 
                 if (!Big(0).eq(reconcileAmount)) {
                     const reconcileTx = new Transaction();
-                    // TODO construct tx here with only the one refresh needed
-                    this.getRefreshIxs().forEach((element) => {
-                        reconcileTx.add(element);
-                    });
                     reconcileTx.add(
+                        this.yieldSources[k].getRefreshIx(
+                            this.program,
+                            this.vaultId,
+                            this.vaultState
+                        ),
                         this.yieldSources[k].getReconcileIx(
                             this.program,
                             this.vaultId,
@@ -800,47 +791,48 @@ export class VaultClient {
             })
         ).events[1].data as RebalanceDataEvent;
 
-        const newAndOldallocationsWithReconcileIxs = await Promise.all(
-            Object.keys(this.yieldSources).map(
-                async (k): Promise<[Big, Big, string]> => {
+        const newAndOldallocations = await Promise.all(
+            Object.entries(this.yieldSources).map(
+                async ([k, v]): Promise<[LendingMarket, Big, Big]> => {
                     const newAlloc = new Big(newAllocations[k].toString());
                     const oldAlloc = (
                         await this.yieldSources[k].getLpTokenAccountValue(
                             this.vaultState
                         )
                     ).lamports;
-                    return [newAlloc, oldAlloc, k];
+                    return [v, newAlloc, oldAlloc];
                 }
             )
         );
 
-        // TODO construct tx here with only the one refresh needed
-        const allocationDiffsWithReconcileIxs: [Big, TransactionInstruction][] =
-            newAndOldallocationsWithReconcileIxs.map((e) => [
-                e[0].sub(e[1]),
-                this.yieldSources[e[2]].getReconcileIx(
-                    this.program,
-                    this.vaultId,
-                    this.vaultState
+        const allocationDiffsWithReconcileTxs: [Big, Transaction][] =
+            newAndOldallocations.map(([yieldSource, newAlloc, oldAlloc]) => [
+                newAlloc.sub(oldAlloc),
+                new Transaction().add(
+                    yieldSource.getRefreshIx(
+                        this.program,
+                        this.vaultId,
+                        this.vaultState
+                    ),
+                    yieldSource.getReconcileIx(
+                        this.program,
+                        this.vaultId,
+                        this.vaultState
+                    )
                 ),
             ]);
 
-        const reconcileIxs = allocationDiffsWithReconcileIxs
+        const reconcileTxs = allocationDiffsWithReconcileTxs
             .sort((a, b) => a[0].sub(b[0]).toNumber())
-            .map((e) => e[1]);
+            .map(([, tx]) => {
+                return { tx: tx, signers: [] };
+            });
 
         const txs: SendTxRequest[] = [
             { tx: this.getRebalanceTx(proposedWeights), signers: [] },
+            ...reconcileTxs,
         ];
 
-        for (const ix of reconcileIxs) {
-            const reconcileTx = new Transaction();
-            this.getRefreshIxs().forEach((element) => {
-                reconcileTx.add(element);
-            });
-            reconcileTx.add(ix);
-            txs.push({ tx: reconcileTx, signers: [] });
-        }
         return this.program.provider.sendAll(txs);
     }
 
