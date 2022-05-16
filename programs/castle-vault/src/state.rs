@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 
+use core::convert::TryFrom;
+
 use strum::IntoEnumIterator;
 #[cfg(test)]
 use type_layout::TypeLayout;
@@ -114,6 +116,26 @@ impl Vault {
         let mut new_flags = self.yield_source_flags();
         new_flags.set(flag, enabled);
         self.yield_src_availability = new_flags.bits();
+
+        let cnt: u8 =
+            u8::try_from((0..32).fold(0, |sum, i| sum + ((self.yield_src_availability >> i) & 1)))
+                .unwrap();
+        let new_allocation_cap = (100 as u8)
+            .checked_div(cnt)
+            .ok_or_else::<ProgramError, _>(|| ErrorCode::MathError.into())?
+            .checked_add(1)
+            .ok_or_else::<ProgramError, _>(|| ErrorCode::MathError.into())?
+            .clamp(0, 100);
+        self.config.allocation_cap_pct = self
+            .config
+            .allocation_cap_pct
+            .clamp(new_allocation_cap, 100);
+
+        #[cfg(feature = "debug")]
+        {
+            msg!("num of active pools: {}", cnt);
+            msg!(" new allocation cap: {}", self.config.allocation_cap_pct);
+        }
         Ok(())
     }
 
