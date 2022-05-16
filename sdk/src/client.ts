@@ -1,5 +1,6 @@
 import Big from "big.js";
 import {
+    Connection,
     Keypair,
     PublicKey,
     SystemProgram,
@@ -15,7 +16,7 @@ import {
     ASSOCIATED_TOKEN_PROGRAM_ID,
     MintInfo,
     NATIVE_MINT,
-    Token,
+    Token as SplToken,
     TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import * as anchor from "@project-serum/anchor";
@@ -43,6 +44,7 @@ import {
     VaultConfig,
     VaultFlags,
 } from "./types";
+import { ExchangeRate, Rate, Token, TokenAmount } from "./utils";
 
 export class VaultClient {
     private constructor(
@@ -52,6 +54,8 @@ export class VaultClient {
         private solend: SolendReserveAsset,
         private port: PortReserveAsset,
         private jet: JetReserveAsset,
+        private reserveToken: Token,
+        private lpToken: Token,
         private feesEnabled: boolean = false
     ) {}
 
@@ -81,7 +85,21 @@ export class VaultClient {
         );
         const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
 
-        return new VaultClient(program, vaultId, vaultState, solend, port, jet);
+        const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
+            provider.connection,
+            vaultState
+        );
+
+        return new VaultClient(
+            program,
+            vaultId,
+            vaultState,
+            solend,
+            port,
+            jet,
+            reserveToken,
+            lpToken
+        );
     }
 
     async reload() {
@@ -165,14 +183,14 @@ export class VaultClient {
                 program.programId
             );
 
-        const feeReceiver = await Token.getAssociatedTokenAddress(
+        const feeReceiver = await SplToken.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             lpTokenMint,
             owner
         );
 
-        const referralFeeReceiver = await Token.getAssociatedTokenAddress(
+        const referralFeeReceiver = await SplToken.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
             lpTokenMint,
@@ -240,14 +258,50 @@ export class VaultClient {
         );
         const vaultState = await program.account.vault.fetch(vaultId.publicKey);
 
+        const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
+            provider.connection,
+            vaultState
+        );
+
         return new VaultClient(
             program,
             vaultId.publicKey,
             vaultState,
             solend,
             port,
-            jet
+            jet,
+            reserveToken,
+            lpToken
         );
+    }
+
+    private static async getReserveAndLpTokens(
+        connection: Connection,
+        vaultState: Vault
+    ): Promise<Token[]> {
+        const lpSplToken = new SplToken(
+            connection,
+            vaultState.lpTokenMint,
+            TOKEN_PROGRAM_ID,
+            Keypair.generate() // dummy since we don't need to send txs
+        );
+        const lpToken = new Token(
+            vaultState.lpTokenMint,
+            await lpSplToken.getMintInfo()
+        );
+
+        const reserveSplToken = new SplToken(
+            connection,
+            vaultState.reserveTokenMint,
+            TOKEN_PROGRAM_ID,
+            Keypair.generate() // dummy since we don't need to send txs
+        );
+        const reserveToken = new Token(
+            vaultState.reserveTokenMint,
+            await reserveSplToken.getMintInfo()
+        );
+
+        return [reserveToken, lpToken];
     }
 
     getRefreshIx(): TransactionInstruction {
@@ -320,7 +374,7 @@ export class VaultClient {
         const userReserveKeypair = Keypair.generate();
         const userReserveTokenAccount = userReserveKeypair.publicKey;
 
-        const rent = await Token.getMinBalanceRentForExemptAccount(
+        const rent = await SplToken.getMinBalanceRentForExemptAccount(
             this.program.provider.connection
         );
         return {
@@ -332,14 +386,14 @@ export class VaultClient {
                     space: AccountLayout.span,
                     lamports: lamports + rent,
                 }),
-                Token.createInitAccountInstruction(
+                SplToken.createInitAccountInstruction(
                     TOKEN_PROGRAM_ID,
                     NATIVE_MINT,
                     userReserveTokenAccount,
                     wallet.publicKey
                 ),
             ],
-            closeIx: Token.createCloseAccountInstruction(
+            closeIx: SplToken.createCloseAccountInstruction(
                 TOKEN_PROGRAM_ID,
                 userReserveTokenAccount,
                 wallet.publicKey,
@@ -592,8 +646,9 @@ export class VaultClient {
         //  To avoid a insufficient funds error, we slightly over-correct for this
         //  This does not work when withdrawing the last tokens from the vault
         const exchangeRate = await this.getLpExchangeRate();
-        const adjustFactor = (await this.getApy()).mul(0.0001);
+        const adjustFactor = (await this.getApy()).toBig().div(10000);
         const convertedAmount = exchangeRate
+            .toBig()
             .mul(amount)
             .mul(new Big(1).add(adjustFactor))
             .round(0, Big.roundUp);
@@ -602,21 +657,27 @@ export class VaultClient {
             // Sort reconcile ixs by most to least $ to minimize number of TXs sent
             const reconcileIxs = [
                 [
-                    await this.solend.getLpTokenAccountValue(
-                        this.vaultState.vaultSolendLpToken
-                    ),
+                    (
+                        await this.solend.getLpTokenAccountValue(
+                            this.vaultState.vaultSolendLpToken
+                        )
+                    ).lamports,
                     this.getReconcileSolendIx.bind(this),
                 ],
                 [
-                    await this.port.getLpTokenAccountValue(
-                        this.vaultState.vaultPortLpToken
-                    ),
+                    (
+                        await this.port.getLpTokenAccountValue(
+                            this.vaultState.vaultPortLpToken
+                        )
+                    ).lamports,
                     this.getReconcilePortIx.bind(this),
                 ],
                 [
-                    await this.jet.getLpTokenAccountValue(
-                        this.vaultState.vaultJetLpToken
-                    ),
+                    (
+                        await this.jet.getLpTokenAccountValue(
+                            this.vaultState.vaultJetLpToken
+                        )
+                    ).lamports,
                     this.getReconcileJetIx.bind(this),
                 ],
             ].sort((a, b) => b[0].sub(a[0]).toNumber());
@@ -700,23 +761,29 @@ export class VaultClient {
         const newAndOldallocationsWithReconcileIxs = [
             [
                 new Big(newAllocations.solend.toString()),
-                await this.solend.getLpTokenAccountValue(
-                    this.vaultState.vaultSolendLpToken
-                ),
+                (
+                    await this.solend.getLpTokenAccountValue(
+                        this.vaultState.vaultSolendLpToken
+                    )
+                ).lamports,
                 this.getReconcileSolendIx.bind(this),
             ],
             [
                 new Big(newAllocations.port.toString()),
-                await this.port.getLpTokenAccountValue(
-                    this.vaultState.vaultPortLpToken
-                ),
+                (
+                    await this.port.getLpTokenAccountValue(
+                        this.vaultState.vaultPortLpToken
+                    )
+                ).lamports,
                 this.getReconcilePortIx.bind(this),
             ],
             [
                 new Big(newAllocations.jet.toString()),
-                await this.jet.getLpTokenAccountValue(
-                    this.vaultState.vaultJetLpToken
-                ),
+                (
+                    await this.jet.getLpTokenAccountValue(
+                        this.vaultState.vaultJetLpToken
+                    )
+                ).lamports,
                 this.getReconcileJetIx.bind(this),
             ],
         ];
@@ -807,67 +874,71 @@ export class VaultClient {
     }
 
     /**
-     * @todo account for unallocated tokens
      *
-     * @returns
+     * @returns Weighted average of APYs by allocation
      */
-    async getApy(): Promise<Big> {
-        // Weighted average of APYs by allocation
-        const assetApysAndValues: [Big, Big][] = [
+    async getApy(): Promise<Rate> {
+        // TODO parallelize
+        const assetApysAndValues: [Rate, Big][] = [
             [
-                new Big(0),
-                new Big(
-                    (
-                        await this.getReserveTokenAccountInfo(
-                            this.vaultState.vaultReserveToken
-                        )
-                    ).amount.toString()
-                ),
+                Rate.zero(),
+                (await this.getVaultReserveTokenAccountValue()).lamports,
             ],
             [
                 await this.solend.getApy(),
-                await this.solend.getLpTokenAccountValue(
-                    this.vaultState.vaultSolendLpToken
-                ),
+                (
+                    await this.solend.getLpTokenAccountValue(
+                        this.vaultState.vaultSolendLpToken
+                    )
+                ).lamports,
             ],
             [
                 await this.port.getApy(),
-                await this.port.getLpTokenAccountValue(
-                    this.vaultState.vaultPortLpToken
-                ),
+                (
+                    await this.port.getLpTokenAccountValue(
+                        this.vaultState.vaultPortLpToken
+                    )
+                ).lamports,
             ],
             [
                 await this.jet.getApy(),
-                await this.jet.getLpTokenAccountValue(
-                    this.vaultState.vaultJetLpToken
-                ),
+                (
+                    await this.jet.getLpTokenAccountValue(
+                        this.vaultState.vaultJetLpToken
+                    )
+                ).lamports,
             ],
         ];
         const [valueSum, weightSum] = assetApysAndValues.reduce(
             ([valueSum, weightSum], [value, weight]) => [
-                weight.mul(value).add(valueSum),
+                valueSum.add(value.mul(weight)),
                 weightSum.add(weight),
             ],
-            [new Big(0), new Big(0)]
+            [Rate.zero(), new Big(0)]
         );
         if (weightSum.eq(new Big(0))) {
-            return new Big(0);
+            return Rate.zero();
         } else {
             return valueSum.div(weightSum);
         }
     }
 
     // Denominated in reserve tokens per LP token
-    async getLpExchangeRate(): Promise<Big> {
-        const totalValue = await this.getTotalValue();
-        const lpTokenMintInfo = await this.getLpTokenMintInfo();
-        const lpTokenSupply = new Big(lpTokenMintInfo.supply.toString());
+    async getLpExchangeRate(): Promise<ExchangeRate> {
+        const totalValue = (await this.getTotalValue()).lamports;
+        const lpTokenSupply = new Big(
+            (await this.getLpTokenMintInfo()).supply.toString()
+        );
 
         const bigZero = new Big(0);
         if (lpTokenSupply.eq(bigZero) || totalValue.eq(bigZero)) {
-            return new Big(1);
+            return new ExchangeRate(Big(1), this.reserveToken, this.lpToken);
         } else {
-            return totalValue.div(lpTokenSupply);
+            return new ExchangeRate(
+                totalValue.div(lpTokenSupply),
+                this.reserveToken,
+                this.lpToken
+            );
         }
     }
 
@@ -876,71 +947,60 @@ export class VaultClient {
      *
      * @returns
      */
-    async getTotalValue(): Promise<Big> {
+    async getTotalValue(): Promise<TokenAmount> {
         await this.reload();
 
-        const values = [
-            await this.solend.getLpTokenAccountValue(
+        const values = await Promise.all([
+            this.solend.getLpTokenAccountValue(
                 this.vaultState.vaultSolendLpToken
             ),
-            await this.port.getLpTokenAccountValue(
-                this.vaultState.vaultPortLpToken
-            ),
-            await this.jet.getLpTokenAccountValue(
-                this.vaultState.vaultJetLpToken
-            ),
-            new Big(
-                (
-                    await this.getReserveTokenAccountInfo(
-                        this.vaultState.vaultReserveToken
-                    )
-                ).amount.toString()
-            ),
-        ];
-        const valueSum = values.reduce((a, b) => a.add(b), new Big(0));
+            this.port.getLpTokenAccountValue(this.vaultState.vaultPortLpToken),
+            this.jet.getLpTokenAccountValue(this.vaultState.vaultJetLpToken),
+            this.getVaultReserveTokenAccountValue(),
+        ]);
 
-        return valueSum;
-    }
-
-    async getUserValue(address: PublicKey): Promise<Big> {
-        const userLpTokenAccount = await this.getUserLpTokenAccount(address);
-        try {
-            const userLpTokenAccountInfo = await this.getLpTokenAccountInfo(
-                userLpTokenAccount
-            );
-            const userLpTokenAmount = new Big(
-                userLpTokenAccountInfo.amount.toString()
-            );
-            const exchangeRate = await this.getLpExchangeRate();
-            return userLpTokenAmount.mul(exchangeRate);
-        } catch {
-            return new Big(0);
-        }
-    }
-
-    async getVaultReserveTokenAccountValue(): Promise<Big> {
-        return Big(
-            (
-                await this.getReserveTokenAccountInfo(
-                    this.getVaultReserveTokenAccount()
-                )
-            ).amount.toString()
+        return values.reduce(
+            (a, b) => a.add(b),
+            TokenAmount.zero(this.reserveToken.mintInfo.decimals)
         );
     }
 
-    async getVaultSolendLpTokenAccountValue(): Promise<Big> {
+    async getUserValue(address: PublicKey): Promise<TokenAmount> {
+        const userLpTokenAccount = await this.getUserLpTokenAccount(address);
+        try {
+            const userLpTokenAmount = TokenAmount.fromTokenAccountInfo(
+                await this.getLpTokenAccountInfo(userLpTokenAccount),
+                this.lpToken.mintInfo.decimals
+            );
+            const exchangeRate = await this.getLpExchangeRate();
+            return exchangeRate.convertToBase(userLpTokenAmount);
+        } catch {
+            return TokenAmount.fromToken(this.reserveToken, Big(0));
+        }
+    }
+
+    async getVaultReserveTokenAccountValue(): Promise<TokenAmount> {
+        return TokenAmount.fromTokenAccountInfo(
+            await this.getReserveTokenAccountInfo(
+                this.getVaultReserveTokenAccount()
+            ),
+            this.lpToken.mintInfo.decimals
+        );
+    }
+
+    async getVaultSolendLpTokenAccountValue(): Promise<TokenAmount> {
         return this.solend.getLpTokenAccountValue(
             this.getVaultSolendLpTokenAccount()
         );
     }
 
-    async getVaultPortLpTokenAccountValue(): Promise<Big> {
+    async getVaultPortLpTokenAccountValue(): Promise<TokenAmount> {
         return this.port.getLpTokenAccountValue(
             this.getVaultPortLpTokenAccount()
         );
     }
 
-    async getVaultJetLpTokenAccountValue(): Promise<Big> {
+    async getVaultJetLpTokenAccountValue(): Promise<TokenAmount> {
         return this.jet.getLpTokenAccountValue(
             this.getVaultJetLpTokenAccount()
         );
@@ -952,18 +1012,18 @@ export class VaultClient {
      * @returns Users reserve ATA given vault reserve mint
      */
     async getUserReserveTokenAccount(address: PublicKey): Promise<PublicKey> {
-        return await Token.getAssociatedTokenAddress(
+        return SplToken.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
-            this.vaultState.reserveTokenMint,
+            this.reserveToken.mint,
             address
         );
     }
 
     async getReserveTokenAccountInfo(address: PublicKey): Promise<AccountInfo> {
-        const reserveToken = new Token(
+        const reserveToken = new SplToken(
             this.program.provider.connection,
-            this.vaultState.reserveTokenMint,
+            this.reserveToken.mint,
             TOKEN_PROGRAM_ID,
             Keypair.generate() // dummy since we don't need to send txs
         );
@@ -971,39 +1031,29 @@ export class VaultClient {
     }
 
     async getUserLpTokenAccount(address: PublicKey): Promise<PublicKey> {
-        return await Token.getAssociatedTokenAddress(
+        return SplToken.getAssociatedTokenAddress(
             ASSOCIATED_TOKEN_PROGRAM_ID,
             TOKEN_PROGRAM_ID,
-            this.vaultState.lpTokenMint,
+            this.lpToken.mint,
             address,
             true
         );
     }
 
     async getLpTokenAccountInfo(address: PublicKey): Promise<AccountInfo> {
-        const lpToken = new Token(
+        const lpToken = new SplToken(
             this.program.provider.connection,
-            this.vaultState.lpTokenMint,
+            this.lpToken.mint,
             TOKEN_PROGRAM_ID,
             Keypair.generate() // dummy since we don't need to send txs
         );
         return lpToken.getAccountInfo(address);
     }
 
-    async getLpTokenMintInfo(): Promise<MintInfo> {
-        const lpToken = new Token(
-            this.program.provider.connection,
-            this.vaultState.lpTokenMint,
-            TOKEN_PROGRAM_ID,
-            Keypair.generate() // dummy since we don't need to send txs
-        );
-        return lpToken.getMintInfo();
-    }
-
     async getFeeReceiverAccountInfo(): Promise<AccountInfo> {
-        const lpToken = new Token(
+        const lpToken = new SplToken(
             this.program.provider.connection,
-            this.vaultState.lpTokenMint,
+            this.lpToken.mint,
             TOKEN_PROGRAM_ID,
             Keypair.generate() // dummy since we don't need to send txs
         );
@@ -1011,18 +1061,23 @@ export class VaultClient {
     }
 
     async getReferralFeeReceiverAccountInfo(): Promise<AccountInfo> {
-        const lpToken = new Token(
+        const lpToken = new SplToken(
             this.program.provider.connection,
-            this.vaultState.lpTokenMint,
+            this.lpToken.mint,
             TOKEN_PROGRAM_ID,
             Keypair.generate() // dummy since we don't need to send txs
         );
         return lpToken.getAccountInfo(this.vaultState.referralFeeReceiver);
     }
 
-    // TODO remove this
-    getVaultState(): Vault {
-        return this.vaultState;
+    async getLpTokenMintInfo(): Promise<MintInfo> {
+        const lpToken = new SplToken(
+            this.program.provider.connection,
+            this.vaultState.lpTokenMint,
+            TOKEN_PROGRAM_ID,
+            Keypair.generate() // dummy since we don't need to send txs
+        );
+        return lpToken.getMintInfo();
     }
 
     getVaultConfig(): VaultConfig {
@@ -1037,12 +1092,23 @@ export class VaultClient {
         return this.vaultState.lpTokenMint;
     }
 
-    getDepositCap(): Big {
-        return new Big(this.vaultState.config.depositCap.toString());
+    getReserveToken(): Token {
+        return this.reserveToken;
     }
 
-    getAllocationCap(): number {
-        return this.vaultState.config.allocationCapPct;
+    getLpToken(): Token {
+        return this.lpToken;
+    }
+
+    getDepositCap(): TokenAmount {
+        return TokenAmount.fromToken(
+            this.reserveToken,
+            Big(this.vaultState.config.depositCap.toString())
+        );
+    }
+
+    getAllocationCap(): Rate {
+        return Rate.fromPercent(this.vaultState.config.allocationCapPct);
     }
 
     getVaultReserveTokenAccount(): PublicKey {
@@ -1085,16 +1151,16 @@ export class VaultClient {
         return this.jet;
     }
 
-    getReferralFeeSplit(): number {
-        return this.vaultState.config.referralFeePct / 100;
+    getReferralFeeSplit(): Rate {
+        return Rate.fromPercent(this.vaultState.config.referralFeePct);
     }
 
-    getCarryFee(): number {
-        return this.vaultState.config.feeCarryBps / 10000;
+    getCarryFee(): Rate {
+        return Rate.fromBps(this.vaultState.config.feeCarryBps);
     }
 
-    getManagementFee(): number {
-        return this.vaultState.config.feeMgmtBps / 10000;
+    getManagementFee(): Rate {
+        return Rate.fromBps(this.vaultState.config.feeMgmtBps);
     }
 
     getFlags(): VaultFlags {
@@ -1108,7 +1174,7 @@ const createAta = (
     address: PublicKey,
     feePayer?: PublicKey
 ): TransactionInstruction => {
-    return Token.createAssociatedTokenAccountInstruction(
+    return SplToken.createAssociatedTokenAccountInstruction(
         ASSOCIATED_TOKEN_PROGRAM_ID,
         TOKEN_PROGRAM_ID,
         mint,

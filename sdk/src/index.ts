@@ -7,9 +7,10 @@ import {
     DeploymentEnvToClusters,
 } from "@castlefinance/vault-core";
 
+export * from "./adapters";
 export * from "./client";
 export * from "./types";
-export * from "./adapters";
+export * from "./utils";
 
 export { CastleVault } from "./idl";
 
