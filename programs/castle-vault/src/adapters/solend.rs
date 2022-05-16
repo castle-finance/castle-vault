@@ -14,7 +14,7 @@ use crate::{
     reconcile::LendingMarket,
     refresh::Refresher,
     reserves::{Provider, ReserveAccessor},
-    state::Vault,
+    state::{Vault, YieldSourceFlags},
 };
 
 #[derive(Accounts)]
@@ -381,6 +381,7 @@ impl<'info> YieldSourceInitializer<'info> for InitializeSolend<'info> {
     fn initialize_yield_source(&mut self) -> ProgramResult {
         self.vault.solend_reserve = self.solend_reserve.key();
         self.vault.vault_solend_lp_token = self.vault_solend_lp_token.key();
+        self.vault.set_yield_source_flag(YieldSourceFlags::SOLEND, true)?;
         Ok(())
     }
 }
