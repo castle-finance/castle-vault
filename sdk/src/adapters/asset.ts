@@ -22,4 +22,12 @@ export abstract class Asset {
         vaultState: Vault,
         withdrawOption?: anchor.BN
     ): TransactionInstruction;
+
+    abstract getInitializeIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultAuthority: PublicKey,
+        wallet: PublicKey,
+        owner: PublicKey
+    ): TransactionInstruction;
 }

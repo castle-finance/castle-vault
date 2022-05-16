@@ -262,6 +262,35 @@ export class JetReserveAsset extends Asset {
             }
         );
     }
+
+    async getInitializeIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultAuthority: PublicKey,
+        wallet: PublicKey,
+        owner: PublicKey
+    ): TransactionInstruction {
+        const [vaultJetLpTokenAccount, jetLpBump] =
+            await PublicKey.findProgramAddress(
+                [vaultId.toBuffer(), this.accounts.depositNoteMint.toBuffer()],
+                program.programId
+            );
+
+        return program.instruction.initializeJet(jetLpBump, {
+            accounts: {
+                vault: vaultId,
+                vaultAuthority: vaultAuthority,
+                vaultJetLpToken: vaultJetLpTokenAccount,
+                jetLpTokenMint: this.accounts.depositNoteMint,
+                jetReserve: this.accounts.reserve,
+                owner: owner,
+                payer: wallet,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            },
+        });
+    }
 }
 
 async function createLendingMarket(

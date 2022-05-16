@@ -252,6 +252,34 @@ export class SolendReserveAsset extends Asset {
             }
         );
     }
+
+    async getInitializeIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultAuthority: PublicKey,
+        wallet: PublicKey,
+        owner: PublicKey
+    ): TransactionInstruction {
+        const [vaultSolendLpTokenAccount, solendLpBump] =
+            await PublicKey.findProgramAddress(
+                [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
+                program.programId
+            );
+        return program.instruction.initializeSolend(solendLpBump, {
+            accounts: {
+                vault: vaultId,
+                vaultAuthority: vaultAuthority,
+                vaultSolendLpToken: vaultSolendLpTokenAccount,
+                solendReserve: this.accounts.reserve,
+                solendLpTokenMint: this.accounts.collateralMint,
+                owner: owner,
+                payer: wallet,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            },
+        });
+    }
 }
 
 const DEVNET_PROGRAM_ID = new PublicKey(

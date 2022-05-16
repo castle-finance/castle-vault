@@ -225,30 +225,21 @@ export class VaultClient {
         solend: SolendReserveAsset,
         owner: Keypair
     ) {
-        const [vaultSolendLpTokenAccount, solendLpBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    solend.accounts.collateralMint.toBuffer(),
-                ],
-                this.program.programId
-            );
+        const tx = new Transaction();
+        tx.add(
+            await solend.getInitializeIx(
+                this.program,
+                this.vaultId,
+                this.vaultState.vaultAuthority,
+                wallet.payer.publicKey,
+                owner.publicKey
+            )
+        );
 
-        const txSig = await this.program.rpc.initializeSolend(solendLpBump, {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultSolendLpToken: vaultSolendLpTokenAccount,
-                solendReserve: solend.accounts.reserve,
-                solendLpTokenMint: solend.accounts.collateralMint,
-                owner: owner.publicKey,
-                payer: wallet.payer.publicKey,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                systemProgram: SystemProgram.programId,
-                rent: SYSVAR_RENT_PUBKEY,
-            },
-            signers: [owner, wallet.payer],
-        });
+        const txSig = await this.program.provider.send(tx, [
+            owner,
+            wallet.payer,
+        ]);
         await this.program.provider.connection.confirmTransaction(
             txSig,
             "finalized"
@@ -264,30 +255,21 @@ export class VaultClient {
         port: PortReserveAsset,
         owner: Keypair
     ) {
-        const [vaultPortLpTokenAccount, portLpBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    port.accounts.collateralMint.toBuffer(),
-                ],
-                this.program.programId
-            );
+        const tx = new Transaction();
+        tx.add(
+            await port.getInitializeIx(
+                this.program,
+                this.vaultId,
+                this.vaultState.vaultAuthority,
+                wallet.payer.publicKey,
+                owner.publicKey
+            )
+        );
 
-        const txSig = await this.program.rpc.initializePort(portLpBump, {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultPortLpToken: vaultPortLpTokenAccount,
-                portLpTokenMint: port.accounts.collateralMint,
-                portReserve: port.accounts.reserve,
-                owner: owner.publicKey,
-                payer: wallet.payer.publicKey,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                systemProgram: SystemProgram.programId,
-                rent: SYSVAR_RENT_PUBKEY,
-            },
-            signers: [owner, wallet.payer],
-        });
+        const txSig = await this.program.provider.send(tx, [
+            owner,
+            wallet.payer,
+        ]);
         await this.program.provider.connection.confirmTransaction(
             txSig,
             "finalized"
@@ -303,30 +285,21 @@ export class VaultClient {
         jet: JetReserveAsset,
         owner: Keypair
     ) {
-        const [vaultJetLpTokenAccount, jetLpBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    jet.accounts.depositNoteMint.toBuffer(),
-                ],
-                this.program.programId
-            );
+        const tx = new Transaction();
+        tx.add(
+            await jet.getInitializeIx(
+                this.program,
+                this.vaultId,
+                this.vaultState.vaultAuthority,
+                wallet.payer.publicKey,
+                owner.publicKey
+            )
+        );
 
-        const txSig = await this.program.rpc.initializeJet(jetLpBump, {
-            accounts: {
-                vault: this.vaultId,
-                vaultAuthority: this.vaultState.vaultAuthority,
-                vaultJetLpToken: vaultJetLpTokenAccount,
-                jetLpTokenMint: jet.accounts.depositNoteMint,
-                jetReserve: jet.accounts.reserve,
-                owner: owner.publicKey,
-                payer: wallet.payer.publicKey,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                systemProgram: SystemProgram.programId,
-                rent: SYSVAR_RENT_PUBKEY,
-            },
-            signers: [owner, wallet.payer],
-        });
+        const txSig = await this.program.provider.send(tx, [
+            owner,
+            wallet.payer,
+        ]);
         await this.program.provider.connection.confirmTransaction(
             txSig,
             "finalized"

@@ -8,6 +8,7 @@ import {
     Transaction,
     TransactionInstruction,
     SYSVAR_CLOCK_PUBKEY,
+    SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
@@ -253,6 +254,35 @@ export class PortReserveAsset extends Asset {
                 },
             }
         );
+    }
+
+    async getInitializeIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultAuthority: PublicKey,
+        wallet: PublicKey,
+        owner: PublicKey
+    ): TransactionInstruction {
+        const [vaultPortLpTokenAccount, portLpBump] =
+            await PublicKey.findProgramAddress(
+                [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
+                program.programId
+            );
+
+        return program.instruction.initializePort(portLpBump, {
+            accounts: {
+                vault: vaultId,
+                vaultAuthority: vaultAuthority,
+                vaultPortLpToken: vaultPortLpTokenAccount,
+                portLpTokenMint: this.accounts.collateralMint,
+                portReserve: this.accounts.reserve,
+                owner: owner,
+                payer: wallet,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            },
+        });
     }
 }
 
