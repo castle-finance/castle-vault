@@ -116,7 +116,10 @@ impl Vault {
         let mut new_flags = self.yield_source_flags();
         new_flags.set(flag, enabled);
         self.yield_src_availability = new_flags.bits();
+        self.adjust_allocation_cap()
+    }
 
+    pub fn adjust_allocation_cap(&mut self) -> ProgramResult {
         let cnt: u8 =
             u8::try_from((0..32).fold(0, |sum, i| sum + ((self.yield_src_availability >> i) & 1)))
                 .unwrap();
@@ -136,6 +139,7 @@ impl Vault {
             msg!("num of active pools: {}", cnt);
             msg!(" new allocation cap: {}", self.config.allocation_cap_pct);
         }
+
         Ok(())
     }
 

@@ -22,5 +22,5 @@ pub fn handler(ctx: Context<UpdateConfig>, config: VaultConfigArg) -> ProgramRes
     msg!("New config: {:?}", config);
 
     ctx.accounts.vault.config = VaultConfig::new(config)?;
-    Ok(())
+    ctx.accounts.vault.adjust_allocation_cap()
 }
