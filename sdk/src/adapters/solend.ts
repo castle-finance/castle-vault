@@ -259,7 +259,7 @@ export class SolendReserveAsset extends Asset {
         vaultAuthority: PublicKey,
         wallet: PublicKey,
         owner: PublicKey
-    ): TransactionInstruction {
+    ): Promise<TransactionInstruction> {
         const [vaultSolendLpTokenAccount, solendLpBump] =
             await PublicKey.findProgramAddress(
                 [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],

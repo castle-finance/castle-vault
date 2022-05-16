@@ -29,5 +29,5 @@ export abstract class Asset {
         vaultAuthority: PublicKey,
         wallet: PublicKey,
         owner: PublicKey
-    ): TransactionInstruction;
+    ): Promise<TransactionInstruction>;
 }

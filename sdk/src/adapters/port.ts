@@ -262,7 +262,7 @@ export class PortReserveAsset extends Asset {
         vaultAuthority: PublicKey,
         wallet: PublicKey,
         owner: PublicKey
-    ): TransactionInstruction {
+    ): Promise<TransactionInstruction> {
         const [vaultPortLpTokenAccount, portLpBump] =
             await PublicKey.findProgramAddress(
                 [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],

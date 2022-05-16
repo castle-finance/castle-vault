@@ -269,7 +269,7 @@ export class JetReserveAsset extends Asset {
         vaultAuthority: PublicKey,
         wallet: PublicKey,
         owner: PublicKey
-    ): TransactionInstruction {
+    ): Promise<TransactionInstruction> {
         const [vaultJetLpTokenAccount, jetLpBump] =
             await PublicKey.findProgramAddress(
                 [vaultId.toBuffer(), this.accounts.depositNoteMint.toBuffer()],
