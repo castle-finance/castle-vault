@@ -7,7 +7,7 @@ import {
     SystemProgram,
     Transaction,
 } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, Token as SplToken } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
 import * as anchor from "@project-serum/anchor";
 
@@ -28,7 +28,9 @@ import {
     ReserveId,
 } from "@port.finance/port-sdk";
 
-import { Asset } from "./asset";
+import { LendingMarket } from "./asset";
+import { Rate, Token, TokenAmount } from "../utils";
+import { getToken } from "./utils";
 
 interface PortAccounts {
     program: PublicKey;
@@ -60,11 +62,13 @@ const DEVNET_ASSETS = [
     ),
 ];
 
-export class PortReserveAsset extends Asset {
+export class PortReserveAsset extends LendingMarket {
     private constructor(
         public provider: anchor.Provider,
         public accounts: PortAccounts,
-        public client: Port
+        public client: Port,
+        public reserveToken: Token,
+        public lpToken: Token
     ) {
         super();
     }
@@ -110,7 +114,22 @@ export class PortReserveAsset extends Asset {
             liquiditySupply: reserve.getAssetBalanceId(),
         };
 
-        return new PortReserveAsset(provider, accounts, client);
+        const lpToken = await getToken(
+            provider.connection,
+            new PublicKey(reserve.getShareMintId())
+        );
+        const reserveToken = await getToken(
+            provider.connection,
+            new PublicKey(reserve.getAssetMintId())
+        );
+
+        return new PortReserveAsset(
+            provider,
+            accounts,
+            client,
+            reserveToken,
+            lpToken
+        );
     }
 
     static async initialize(
@@ -139,15 +158,31 @@ export class PortReserveAsset extends Asset {
             []
         );
         const client = new Port(provider.connection, env, market.publicKey);
-        return new PortReserveAsset(provider, accounts, client);
+
+        const lpToken = await getToken(
+            provider.connection,
+            accounts.collateralMint
+        );
+        const reserveToken = await getToken(
+            provider.connection,
+            reserveTokenMint
+        );
+
+        return new PortReserveAsset(
+            provider,
+            accounts,
+            client,
+            reserveToken,
+            lpToken
+        );
     }
 
-    async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
+    async getLpTokenAccountValue(address: PublicKey): Promise<TokenAmount> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const exchangeRate = reserve.getExchangeRatio();
 
         const mint = reserve.getShareMintId();
-        const lpToken = new Token(
+        const lpToken = new SplToken(
             this.provider.connection,
             mint,
             TOKEN_PROGRAM_ID,
@@ -159,10 +194,13 @@ export class PortReserveAsset extends Asset {
             (await lpToken.getAccountInfo(address)).amount.toNumber()
         );
 
-        return lpTokenAmount
-            .divide(exchangeRate.getUnchecked())
-            .getRaw()
-            .round(0, Big.roundDown);
+        return TokenAmount.fromToken(
+            this.reserveToken,
+            lpTokenAmount
+                .divide(exchangeRate.getUnchecked())
+                .getRaw()
+                .round(0, Big.roundDown)
+        );
     }
 
     /**
@@ -172,28 +210,31 @@ export class PortReserveAsset extends Asset {
      *
      * @returns
      */
-    async getApy(): Promise<Big> {
+    async getApy(): Promise<Rate> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const apr = reserve.getSupplyApy().getUnchecked();
         const apy = Math.expm1(apr.toNumber());
 
-        return new Big(apy);
+        return new Rate(Big(apy));
     }
 
-    async getBorrowedAmount(): Promise<Big> {
+    async getBorrowedAmount(): Promise<TokenAmount> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const borrowed = reserve.getBorrowedAsset();
         // Need to round here because the SDK returns a non-int value
         // and retaining that value might cause problems for the fn caller
-        return borrowed.getRaw().round();
+        return TokenAmount.fromToken(
+            this.reserveToken,
+            borrowed.getRaw().round()
+        );
     }
 
-    async getDepositedAmount(): Promise<Big> {
+    async getDepositedAmount(): Promise<TokenAmount> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const total = reserve.getTotalAsset();
         // Need to round here because the SDK returns a non-int value
         // and retaining that value might cause problems for the fn caller
-        return total.getRaw().round();
+        return TokenAmount.fromToken(this.reserveToken, total.getRaw().round());
     }
 }
 
@@ -327,7 +368,7 @@ async function createDefaultReserve(
     const tx = new Transaction();
 
     tx.add(
-        Token.createApproveInstruction(
+        SplToken.createApproveInstruction(
             TOKEN_PROGRAM_ID,
             sourceTokenWallet,
             provider.wallet.publicKey,

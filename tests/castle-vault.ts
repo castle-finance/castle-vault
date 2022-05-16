@@ -46,8 +46,6 @@ describe("castle-vault", () => {
     const vaultDepositCap = 10 * 10 ** 9;
     const vaultAllocationCap = 76;
 
-    let jetReserveAmount: number;
-
     let reserveToken: Token;
 
     let jet: JetReserveAsset;
@@ -56,11 +54,6 @@ describe("castle-vault", () => {
 
     let vaultClient: VaultClient;
     let userReserveTokenAccount: PublicKey;
-
-    let expectedWithdrawAmount: anchor.BN;
-    let lastUpdatedVaultBalance: anchor.BN;
-    let totalFees: { primary: anchor.BN; referral: anchor.BN };
-    let lastUpdatedSlot: number;
 
     async function fetchSlots(txs: string[]): Promise<number[]> {
         const slots = (
@@ -134,11 +127,6 @@ describe("castle-vault", () => {
     }
 
     async function initLendingMarkets() {
-        lastUpdatedVaultBalance = new anchor.BN(0);
-        expectedWithdrawAmount = new anchor.BN(0);
-        totalFees = { primary: new anchor.BN(0), referral: new anchor.BN(0) };
-        lastUpdatedSlot = 0;
-
         const sig = await provider.connection.requestAirdrop(
             owner.publicKey,
             1000000000
@@ -215,7 +203,6 @@ describe("castle-vault", () => {
         );
 
         const jetBorrowedAmt = initialReserveAmount / 2;
-        jetReserveAmount = initialReserveAmount - jetBorrowedAmt;
         const jetBorrowTxs = await jet.borrow(
             owner,
             ownerReserveTokenAccount,
@@ -266,7 +253,7 @@ describe("castle-vault", () => {
     }
 
     async function getVaultTotalValue(): Promise<number> {
-        return (await vaultClient.getTotalValue()).toNumber();
+        return (await vaultClient.getTotalValue()).lamports.toNumber();
     }
 
     async function getUserLpTokenBalance(): Promise<number> {
@@ -345,10 +332,13 @@ describe("castle-vault", () => {
             assert.isNotNull(vaultClient.getFeeReceiverAccountInfo());
             assert.isNotNull(vaultClient.getReferralFeeReceiverAccountInfo());
             assert.equal(
-                vaultClient.getDepositCap().toString(),
+                vaultClient.getDepositCap().lamports.toString(),
                 "18446744073709551615"
             );
-            assert.equal(vaultClient.getAllocationCap(), 100);
+            assert.equal(
+                vaultClient.getAllocationCap().asPercent().toNumber(),
+                100
+            );
         });
 
         it("Deposits to vault reserves", async function () {
@@ -394,10 +384,13 @@ describe("castle-vault", () => {
             assert.isNotNull(vaultClient.getFeeReceiverAccountInfo());
             assert.isNotNull(vaultClient.getReferralFeeReceiverAccountInfo());
             assert.equal(
-                vaultClient.getDepositCap().toNumber(),
+                vaultClient.getDepositCap().lamports.toNumber(),
                 vaultDepositCap
             );
-            assert.equal(vaultClient.getAllocationCap(), 100);
+            assert.equal(
+                vaultClient.getAllocationCap().asPercent().toNumber(),
+                100
+            );
         });
 
         it("Reject transaction if deposit cap is reached", async function () {
@@ -441,8 +434,8 @@ describe("castle-vault", () => {
             await provider.connection.confirmTransaction(tx, "singleGossip");
             await vaultClient.reload();
             assert.equal(
-                newConfig.depositCap.toString(),
-                vaultClient.getDepositCap().toString()
+                newConfig.depositCap.toNumber(),
+                vaultClient.getDepositCap().lamports.toNumber()
             );
         });
 
@@ -475,8 +468,8 @@ describe("castle-vault", () => {
 
             await vaultClient.reload();
             assert.equal(
-                oldConfig.depositCap.toString(),
-                vaultClient.getDepositCap().toString()
+                oldConfig.depositCap.toNumber(),
+                vaultClient.getDepositCap().lamports.toNumber()
             );
         });
     }
@@ -624,19 +617,19 @@ describe("castle-vault", () => {
                 assert.equal(
                     (
                         await vaultClient.getVaultSolendLpTokenAccountValue()
-                    ).toNumber(),
+                    ).lamports.toNumber(),
                     0
                 );
                 assert.equal(
                     (
                         await vaultClient.getVaultPortLpTokenAccountValue()
-                    ).toNumber(),
+                    ).lamports.toNumber(),
                     0
                 );
                 assert.equal(
                     (
                         await vaultClient.getVaultJetLpTokenAccountValue()
-                    ).toNumber(),
+                    ).lamports.toNumber(),
                     0
                 );
             });
@@ -665,19 +658,19 @@ describe("castle-vault", () => {
                 assert.equal(
                     (
                         await vaultClient.getVaultSolendLpTokenAccountValue()
-                    ).toNumber(),
+                    ).lamports.toNumber(),
                     0
                 );
                 assert.equal(
                     (
                         await vaultClient.getVaultPortLpTokenAccountValue()
-                    ).toNumber(),
+                    ).lamports.toNumber(),
                     0
                 );
                 assert.equal(
                     (
                         await vaultClient.getVaultJetLpTokenAccountValue()
-                    ).toNumber(),
+                    ).lamports.toNumber(),
                     0
                 );
             });
@@ -706,19 +699,19 @@ describe("castle-vault", () => {
                 assert.equal(
                     (
                         await vaultClient.getVaultSolendLpTokenAccountValue()
-                    ).toNumber(),
+                    ).lamports.toNumber(),
                     0
                 );
                 assert.equal(
                     (
                         await vaultClient.getVaultPortLpTokenAccountValue()
-                    ).toNumber(),
+                    ).lamports.toNumber(),
                     0
                 );
                 assert.equal(
                     (
                         await vaultClient.getVaultJetLpTokenAccountValue()
-                    ).toNumber(),
+                    ).lamports.toNumber(),
                     0
                 );
             });
@@ -734,13 +727,13 @@ describe("castle-vault", () => {
             const totalValue = await getVaultTotalValue();
             const solendValue = (
                 await vaultClient.getVaultSolendLpTokenAccountValue()
-            ).toNumber();
+            ).lamports.toNumber();
             const portValue = (
                 await vaultClient.getVaultPortLpTokenAccountValue()
-            ).toNumber();
+            ).lamports.toNumber();
             const jetValue = (
                 await vaultClient.getVaultJetLpTokenAccountValue()
-            ).toNumber();
+            ).lamports.toNumber();
 
             // TODO Resolve the difference
             // Use isAtMost because on-chain rust program handles rounding differently than TypeScript.
@@ -855,15 +848,15 @@ describe("castle-vault", () => {
             await vaultClient.reload();
             assert.equal(
                 newConfig.feeCarryBps,
-                vaultClient.getCarryFee() * 10000
+                vaultClient.getCarryFee().asBps().toNumber()
             );
             assert.equal(
                 newConfig.feeMgmtBps,
-                vaultClient.getManagementFee() * 10000
+                vaultClient.getManagementFee().asBps().toNumber()
             );
             assert.equal(
                 newConfig.referralFeePct,
-                vaultClient.getReferralFeeSplit() * 100
+                vaultClient.getReferralFeeSplit().asPercent().toNumber()
             );
         });
 
@@ -896,15 +889,15 @@ describe("castle-vault", () => {
             await vaultClient.reload();
             assert.equal(
                 oldConfig.feeCarryBps,
-                vaultClient.getCarryFee() * 10000
+                vaultClient.getCarryFee().asBps().toNumber()
             );
             assert.equal(
                 oldConfig.feeMgmtBps,
-                vaultClient.getManagementFee() * 10000
+                vaultClient.getManagementFee().asBps().toNumber()
             );
             assert.equal(
                 oldConfig.referralFeePct,
-                vaultClient.getReferralFeeSplit() * 100
+                vaultClient.getReferralFeeSplit().asPercent().toNumber()
             );
         });
     }

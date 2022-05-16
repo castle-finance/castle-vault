@@ -11,6 +11,7 @@ import {
 } from "../src";
 import Big from "big.js";
 import { DeploymentEnvs } from "@castlefinance/vault-core";
+import { TokenAmount } from "../src";
 
 describe("VaultClient", () => {
     const connection = new Connection(
@@ -22,8 +23,7 @@ describe("VaultClient", () => {
         commitment: "confirmed",
     });
 
-    const depositAmount = (0.05 * LAMPORTS_PER_SOL) / 1000;
-    //const depositAmount = LAMPORTS_PER_SOL;
+    const depositAmount = new TokenAmount(Big(0.05), 9);
 
     let vaultClient: VaultClient;
     let jet: JetReserveAsset;
@@ -38,7 +38,7 @@ describe("VaultClient", () => {
     it("loads devnet sol vault", async () => {
         const vaultId = new PublicKey(
             //"Bv4d2wWb7myxpjWudHnEMjdJstxjkiWqX61xLhPBrBx" //devnet-staging
-            "7TjwSWXY9bbRfxyCxZqmRp9vBRdP1kRBNjSwqTiyPTxg" //mainnet
+            "3tBqjyYtf9Utb1NNsx4o7AV1qtzHoxsMXgkmat3rZ3y6" //mainnet
         );
         vaultClient = await VaultClient.load(
             provider,
@@ -46,12 +46,13 @@ describe("VaultClient", () => {
             DeploymentEnvs.mainnet
         );
         assert.isNotNull(vaultClient);
+        console.log("Initialized client");
 
         console.log(
             "Total value: ",
-            (await vaultClient.getTotalValue()).toString()
+            (await vaultClient.getTotalValue()).getAmount()
         );
-        console.log((await vaultClient.getApy()).toString());
+        console.log("APY: ", (await vaultClient.getApy()).toNumber());
 
         jet = vaultClient.getJet();
         solend = vaultClient.getSolend();
@@ -60,34 +61,34 @@ describe("VaultClient", () => {
         console.log("Jet");
         console.log(
             "value: ",
-            (await vaultClient.getVaultJetLpTokenAccountValue()).toString()
+            (await vaultClient.getVaultJetLpTokenAccountValue()).getAmount()
         );
-        console.log((await jet.getApy()).toString());
-        console.log((await jet.getBorrowedAmount()).toString());
-        console.log((await jet.getDepositedAmount()).toString());
+        console.log((await jet.getApy()).toNumber());
+        console.log((await jet.getBorrowedAmount()).getAmount());
+        console.log((await jet.getDepositedAmount()).getAmount());
 
         console.log("Solend");
         console.log(
             "value: ",
-            (await vaultClient.getVaultSolendLpTokenAccountValue()).toString()
+            (await vaultClient.getVaultSolendLpTokenAccountValue()).getAmount()
         );
-        console.log((await solend.getApy()).toString());
-        console.log((await solend.getBorrowedAmount()).toString());
-        console.log((await solend.getDepositedAmount()).toString());
+        console.log((await solend.getApy()).toNumber());
+        console.log((await solend.getBorrowedAmount()).getAmount());
+        console.log((await solend.getDepositedAmount()).getAmount());
 
         console.log("Port");
         console.log(
             "value: ",
-            (await vaultClient.getVaultPortLpTokenAccountValue()).toString()
+            (await vaultClient.getVaultPortLpTokenAccountValue()).getAmount()
         );
-        console.log((await port.getApy()).toString());
-        console.log((await port.getBorrowedAmount()).toString());
-        console.log((await port.getDepositedAmount()).toString());
+        console.log((await port.getApy()).toNumber());
+        console.log((await port.getBorrowedAmount()).getAmount());
+        console.log((await port.getDepositedAmount()).getAmount());
     });
 
     it("deposits", async () => {
         const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
-        console.log("start value: ", startUserValue.toNumber());
+        console.log("start value: ", startUserValue.getAmount());
 
         //const userReserveTokenAccount = wallet.publicKey;
         const userReserveTokenAccount =
@@ -95,7 +96,7 @@ describe("VaultClient", () => {
         try {
             const sigs = await vaultClient.deposit(
                 wallet,
-                depositAmount,
+                depositAmount.lamports.toNumber(),
                 userReserveTokenAccount
             );
             await connection.confirmTransaction(
@@ -108,11 +109,11 @@ describe("VaultClient", () => {
         }
 
         const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
-        console.log("end value: ", endUserValue.toNumber());
+        console.log("end value: ", endUserValue.getAmount());
 
         assert.isAtMost(
             Math.abs(
-                endUserValue.sub(startUserValue).sub(depositAmount).toNumber()
+                endUserValue.sub(startUserValue).sub(depositAmount).getAmount()
             ),
             1000
         );
@@ -129,11 +130,11 @@ describe("VaultClient", () => {
 
     it("withdraws", async () => {
         const startUserValue = await vaultClient.getUserValue(wallet.publicKey);
-        console.log("start value: ", startUserValue.toNumber());
+        console.log("start value: ", startUserValue.getAmount());
 
         const exchangeRate = await vaultClient.getLpExchangeRate();
-        const withdrawAmount = new Big(depositAmount)
-            .div(exchangeRate)
+        const withdrawAmount = depositAmount.lamports
+            .div(exchangeRate.toBig())
             .round(0, Big.roundDown)
             .toNumber();
 
@@ -149,11 +150,11 @@ describe("VaultClient", () => {
         }
 
         const endUserValue = await vaultClient.getUserValue(wallet.publicKey);
-        console.log("end value: ", endUserValue.toNumber());
+        console.log("end value: ", endUserValue.getAmount());
 
         assert.isAtMost(
             Math.abs(
-                startUserValue.sub(endUserValue).sub(depositAmount).toNumber()
+                startUserValue.sub(endUserValue).sub(depositAmount).getAmount()
             ),
             1000
         );

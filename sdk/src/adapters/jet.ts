@@ -9,7 +9,7 @@ import {
     SYSVAR_CLOCK_PUBKEY,
     SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
-import { Token, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { Token as SplToken, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import * as anchor from "@project-serum/anchor";
 
 import {
@@ -25,7 +25,9 @@ import {
     ReserveConfig,
 } from "@jet-lab/jet-engine";
 
-import { Asset } from "./asset";
+import { LendingMarket } from "./asset";
+import { Rate, Token, TokenAmount } from "../utils";
+import { getToken } from "./utils";
 
 export interface JetAccounts {
     program: PublicKey;
@@ -38,12 +40,14 @@ export interface JetAccounts {
     pythPrice: PublicKey;
 }
 
-export class JetReserveAsset extends Asset {
+export class JetReserveAsset extends LendingMarket {
     private constructor(
         public provider: anchor.Provider,
         public accounts: JetAccounts,
         public market: JetMarket,
-        public reserve: JetReserve
+        public reserve: JetReserve,
+        public reserveToken: Token,
+        public lpToken: Token
     ) {
         super();
     }
@@ -79,7 +83,24 @@ export class JetReserveAsset extends Asset {
             liquiditySupply: reserve.data.vault,
             pythPrice: reserve.data.pythOraclePrice,
         };
-        return new JetReserveAsset(provider, accounts, market, reserve);
+
+        const lpToken = await getToken(
+            provider.connection,
+            reserve.data.depositNoteMint
+        );
+        const reserveToken = await getToken(
+            provider.connection,
+            reserve.data.tokenMint
+        );
+
+        return new JetReserveAsset(
+            provider,
+            accounts,
+            market,
+            reserve,
+            reserveToken,
+            lpToken
+        );
     }
 
     /**
@@ -90,7 +111,7 @@ export class JetReserveAsset extends Asset {
      * @param provider
      * @param owner
      * @param marketQuoteTokenMint
-     * @param reserveToken
+     * @param reserveSplToken
      * @param pythPrice
      * @param pythProduct
      * @param ownerReserveTokenAccount
@@ -102,7 +123,7 @@ export class JetReserveAsset extends Asset {
         wallet: anchor.Wallet,
         owner: Signer,
         marketQuoteTokenMint: PublicKey,
-        reserveToken: Token,
+        reserveSplToken: SplToken,
         pythPrice: PublicKey,
         pythProduct: PublicKey,
         ownerReserveTokenAccount: PublicKey,
@@ -120,7 +141,7 @@ export class JetReserveAsset extends Asset {
             client,
             market.address,
             marketQuoteTokenMint,
-            reserveToken,
+            reserveSplToken,
             TOKEN_PROGRAM_ID, // dummy dex market addr
             pythPrice,
             pythProduct
@@ -140,7 +161,23 @@ export class JetReserveAsset extends Asset {
         );
         await provider.send(depositTx, [owner]);
 
-        return new JetReserveAsset(provider, accounts, market, reserve);
+        const lpToken = await getToken(
+            provider.connection,
+            reserve.data.depositNoteMint
+        );
+        const reserveToken = await getToken(
+            provider.connection,
+            reserve.data.tokenMint
+        );
+
+        return new JetReserveAsset(
+            provider,
+            accounts,
+            market,
+            reserve,
+            reserveToken,
+            lpToken
+        );
     }
 
     async borrow(
@@ -169,7 +206,7 @@ export class JetReserveAsset extends Asset {
         ]);
     }
 
-    async getLpTokenAccountValue(address: PublicKey): Promise<Big> {
+    async getLpTokenAccountValue(address: PublicKey): Promise<TokenAmount> {
         await this.market.refresh();
 
         const reserveInfo = this.market.reserves[this.reserve.data.index];
@@ -177,7 +214,7 @@ export class JetReserveAsset extends Asset {
             reserveInfo.depositNoteExchangeRate.toString()
         ).div(new Big(1e15));
 
-        const lpToken = new Token(
+        const lpToken = new SplToken(
             this.provider.connection,
             this.reserve.data.depositNoteMint,
             TOKEN_PROGRAM_ID,
@@ -187,27 +224,36 @@ export class JetReserveAsset extends Asset {
         const lpTokenAccountInfo = await lpToken.getAccountInfo(address);
         const lpTokenAmount = new Big(lpTokenAccountInfo.amount.toString());
 
-        return exchangeRate.mul(lpTokenAmount).round(0, Big.roundDown);
+        return TokenAmount.fromToken(
+            this.reserveToken,
+            exchangeRate.mul(lpTokenAmount).round(0, Big.roundDown)
+        );
     }
 
-    async getApy(): Promise<Big> {
+    async getApy(): Promise<Rate> {
         await this.reserve.refresh();
         const apr = this.reserve.data.depositApy;
         const apy = Math.expm1(apr);
-        return new Big(apy);
+        return new Rate(Big(apy));
     }
 
-    async getDepositedAmount(): Promise<Big> {
+    async getDepositedAmount(): Promise<TokenAmount> {
         await this.reserve.refresh();
-        return new Big(this.reserve.data.marketSize.lamports.toString());
+        return TokenAmount.fromToken(
+            this.reserveToken,
+            Big(this.reserve.data.marketSize.lamports.toString())
+        );
     }
 
-    async getBorrowedAmount(): Promise<Big> {
+    async getBorrowedAmount(): Promise<TokenAmount> {
         await this.reserve.refresh();
         const borrowed = this.reserve.data.marketSize.sub(
             this.reserve.data.availableLiquidity
         );
-        return new Big(borrowed.lamports.toString());
+        return TokenAmount.fromToken(
+            this.reserveToken,
+            Big(borrowed.lamports.toString())
+        );
     }
 }
 
@@ -241,7 +287,7 @@ async function createReserve(
     client: JetClient,
     market: PublicKey,
     quoteTokenMint: PublicKey,
-    tokenMint: Token,
+    tokenMint: SplToken,
     dexMarket: PublicKey,
     pythPrice: PublicKey,
     pythProduct: PublicKey
