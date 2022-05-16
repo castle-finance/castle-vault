@@ -59,7 +59,7 @@ const main = async () => {
         await vaultClient.initializeSolend(provider, wallet, solend, owner);
         console.log("Succesfully initialized Solend");
     } catch (error) {
-        console.log(error);
+        console.log("Failed to initialize Solend: ", error);
     }
 
     try {
@@ -71,7 +71,7 @@ const main = async () => {
         await vaultClient.initializePort(provider, wallet, port, owner);
         console.log("Succesfully initialized Port");
     } catch (error) {
-        console.log(error);
+        console.log("Failed to initialize Port: ", error);
     }
 
     try {
@@ -79,7 +79,7 @@ const main = async () => {
         await vaultClient.initializeJet(provider, wallet, jet, owner);
         console.log("Succesfully initialized Jet");
     } catch (error) {
-        console.log(error);
+        console.log("Failed to initialize Jet: ", error);
     }
 };
 
