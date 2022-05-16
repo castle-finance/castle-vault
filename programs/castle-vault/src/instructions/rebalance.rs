@@ -66,14 +66,28 @@ pub struct Rebalance<'info> {
 impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
     type Error = ProgramError;
     fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>, Self::Error> {
+        let flags = r.vault.yield_source_flags();
+
         // NOTE: I tried pretty hard to get rid of these clones and only use the references.
         // The problem is that these references originate from a deref() (or as_ref())
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
-        let solend = Some(Reserves::Solend(r.solend_reserve.deref().deref().clone()));
-        let port = Some(Reserves::Port(r.port_reserve.deref().deref().clone()));
-        let jet = Some(Reserves::Jet(Box::new(*r.jet_reserve.load()?)));
+        let solend = match flags.contains(YieldSourceFlags::SOLEND){
+            true => Some(Reserves::Solend(r.solend_reserve.deref().deref().clone())),
+            _ => None,
+        };
+
+        let port = match flags.contains(YieldSourceFlags::PORT){
+            true => Some(Reserves::Port(r.port_reserve.deref().deref().clone())),
+            _ => None,
+        };
+
+        let jet = match flags.contains(YieldSourceFlags::JET){
+            true => Some(Reserves::Jet(Box::new(*r.jet_reserve.load()?))),
+            _ => None,
+        };
+
         Ok(AssetContainer {
             inner: [solend, port, jet],
         })
