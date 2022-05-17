@@ -49,11 +49,16 @@ impl AssetContainer<Reserves> {
     }
 
     fn calculate_weights_equal(&self) -> Result<AssetContainer<Rate>, ProgramError> {
-        u8::try_from(self.len())
+        u8::try_from(self.valid_len())
             .map_err(|_| ErrorCode::StrategyError.into())
             .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100))
             .and_then(|r| Rate::one().try_div(r))
-            .map(|equal_allocation| self.apply(|_, _| Some(equal_allocation)))
+            .map(|equal_allocation| self.apply(|_, v| {
+                match v {
+                    Some(_) => Some(equal_allocation),
+                    None => None,
+                }
+            }))
     }
 
     pub fn calculate_weights(

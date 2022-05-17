@@ -27,6 +27,15 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
         N
     }
 
+    pub fn valid_len(&self) -> usize {
+        self.into_iter().fold(0, |sum, (_, value)| {
+            match value {
+                Some(_) => sum+1,
+                None => sum,
+            }
+        })
+    }
+
     /// Returns if the container is uninitialized
     pub fn is_empty(&self) -> bool {
         self.inner.iter().all(Option::is_none)
@@ -51,7 +60,7 @@ impl<T: Default, const N: usize> Default for AssetContainerGeneric<T, N> {
     fn default() -> Self {
         // TODO: Is there a better way to do this...?
         Self {
-            inner: [(); N].map(|_| Some(T::default())),
+            inner: [(); N].map(|_| None),
         }
     }
 }
