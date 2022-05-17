@@ -266,6 +266,9 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
         &mut self,
         remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
+        #[cfg(feature = "debug")]
+        msg!("Refreshing port");
+
         port_anchor_adaptor::refresh_port_reserve(
             self.port_refresh_reserve_context(remaining_accounts),
         )?;
@@ -275,7 +278,7 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
             port_exchange_rate.collateral_to_liquidity(self.vault_port_lp_token.amount)?;
 
         #[cfg(feature = "debug")]
-        msg!("Refresh port reserve token value: {}", port_value);
+        msg!("Value: {}", port_value);
 
         self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
 

@@ -301,6 +301,9 @@ impl<'info> Refresher<'info> for RefreshJet<'info> {
         &mut self,
         _remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
+        #[cfg(feature = "debug")]
+        msg!("Refreshing jet");
+
         jet::cpi::refresh_reserve(self.jet_refresh_reserve_context())?;
 
         let jet_reserve = self.jet_reserve.load()?;
@@ -312,7 +315,7 @@ impl<'info> Refresher<'info> for RefreshJet<'info> {
         let jet_value = (jet_exchange_rate * self.vault_jet_lp_token.amount).as_u64(0);
 
         #[cfg(feature = "debug")]
-        msg!("Refresh jet reserve token value: {}", jet_value);
+        msg!("Value: {}", jet_value);
 
         self.vault.actual_allocations[Provider::Jet].update(jet_value, self.clock.slot);
 

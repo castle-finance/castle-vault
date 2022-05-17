@@ -20,7 +20,7 @@ pub trait Refresher<'info> {
 /// Refreshes the reserves of downstream lending markets
 pub fn handler<'info, T: Refresher<'info>>(ctx: Context<'_, '_, '_, 'info, T>) -> ProgramResult {
     #[cfg(feature = "debug")]
-    msg!("Refreshing lending pool");
+    msg!("Refreshing yield source");
 
     ctx.accounts
         .update_actual_allocation(ctx.remaining_accounts)
