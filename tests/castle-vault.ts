@@ -214,7 +214,10 @@ describe("castle-vault", () => {
         );
     }
 
-    async function initializeVault(config: VaultConfig) {
+    async function initializeVault(
+        config: VaultConfig,
+        missingPool: boolean = false
+    ) {
         vaultClient = await VaultClient.initialize(
             provider,
             provider.wallet as anchor.Wallet,
@@ -232,11 +235,13 @@ describe("castle-vault", () => {
                 solend,
                 owner
             ),
-            await vaultClient.initializePort(
-                provider.wallet as anchor.Wallet,
-                port,
-                owner
-            ),
+            missingPool
+                ? {}
+                : await vaultClient.initializePort(
+                      provider.wallet as anchor.Wallet,
+                      port,
+                      owner
+                  ),
             await vaultClient.initializeJet(
                 provider.wallet as anchor.Wallet,
                 jet,
@@ -1009,6 +1014,27 @@ describe("castle-vault", () => {
                 vaultAllocationCap / 100,
                 rebalanceMode
             );
+        });
+    });
+
+    describe("Disabled pools", () => {
+        describe("Rebalance", () => {
+            const rebalanceMode = RebalanceModes.proofChecker;
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: vaultAllocationCap,
+                        strategyType: { [StrategyTypes.maxYield]: {} },
+                        rebalanceMode: { [RebalanceModes.proofChecker]: {} },
+                    },
+                    true
+                );
+            });
+
+            it("Initialize fewer yield sources", async function () {
+                assert.equal(0b101, vaultClient.getYiledSourceFlags());
+            });
         });
     });
 });
