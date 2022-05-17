@@ -73,17 +73,17 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
-        let solend = match flags.contains(YieldSourceFlags::SOLEND){
+        let solend = match flags.contains(YieldSourceFlags::SOLEND) {
             true => Some(Reserves::Solend(r.solend_reserve.deref().deref().clone())),
             _ => None,
         };
 
-        let port = match flags.contains(YieldSourceFlags::PORT){
+        let port = match flags.contains(YieldSourceFlags::PORT) {
             true => Some(Reserves::Port(r.port_reserve.deref().deref().clone())),
             _ => None,
         };
 
-        let jet = match flags.contains(YieldSourceFlags::JET){
+        let jet = match flags.contains(YieldSourceFlags::JET) {
             true => Some(Reserves::Jet(Box::new(*r.jet_reserve.load()?))),
             _ => None,
         };
@@ -106,7 +106,7 @@ impl_provider_index!(StrategyWeightsArg, u16);
 impl From<StrategyWeightsArg> for AssetContainer<Rate> {
     fn from(s: StrategyWeightsArg) -> Self {
         Provider::iter().fold(Self::default(), |mut acc, provider| {
-            acc[provider] = Rate::from_bips(s[provider] as u64);
+            acc[provider] = Some(Rate::from_bips(s[provider] as u64));
             acc
         })
     }

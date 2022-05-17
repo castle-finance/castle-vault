@@ -13,13 +13,15 @@ impl<const N: usize> AssetContainerGeneric<Rate, N> {
         let cap = &Rate::from_percent(allocation_cap_pct);
         let max = self
             .into_iter()
-            .map(|(_, r)| r)
+            .filter(|(_, r)| !r.is_none())
+            .map(|(_, r)| r.unwrap())
             .max()
             .ok_or(ErrorCode::InvalidProposedWeights)?;
 
         let sum = self
             .into_iter()
-            .map(|(_, r)| r)
+            .filter(|(_, r)| !r.is_none())
+            .map(|(_, r)| r.unwrap())
             .try_fold(Rate::zero(), |acc, x| acc.try_add(*x))?;
 
         (sum == Rate::one() && max <= cap).ok_or_else(|| ErrorCode::InvalidProposedWeights.into())
@@ -30,7 +32,10 @@ impl<const N: usize> AssetContainerGeneric<Rate, N> {
 // Create new type as a wrapper to make this clear
 impl<const N: usize> From<AssetContainerGeneric<u16, N>> for AssetContainerGeneric<Rate, N> {
     fn from(c: AssetContainerGeneric<u16, N>) -> Self {
-        c.apply(|_, v| Rate::from_bips(u64::from(*v)))
+        c.apply(|_, v| match v {
+            Some(r) => Rate::from_bips(u64::from(*r)),
+            None => Rate::zero(),
+        })
     }
 }
 

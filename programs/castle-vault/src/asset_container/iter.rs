@@ -7,7 +7,7 @@ use crate::reserves::{Provider, ProviderIter};
 use super::AssetContainerGeneric;
 
 impl<'a, T, const N: usize> IntoIterator for &'a AssetContainerGeneric<T, N> {
-    type Item = (Provider, &'a T);
+    type Item = (Provider, Option<&'a T>);
     type IntoIter = AssetContainerIterator<'a, T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -19,7 +19,7 @@ impl<'a, T, const N: usize> IntoIterator for &'a AssetContainerGeneric<T, N> {
 }
 
 impl<T, const N: usize> IntoIterator for AssetContainerGeneric<T, N> {
-    type Item = (Provider, T);
+    type Item = (Provider, Option<T>);
     type IntoIter = OwnedAssetContainerIterator<T, N>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -36,12 +36,12 @@ pub struct AssetContainerIterator<'inner, T, const N: usize> {
 }
 
 impl<'inner, T, const N: usize> Iterator for AssetContainerIterator<'inner, T, N> {
-    type Item = (Provider, &'inner T);
+    type Item = (Provider, Option<&'inner T>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner_iter
             .next()
-            .map(|provider| (provider, &self.inner[provider]))
+            .map(|provider| (provider, self.inner[provider].as_ref()))
     }
 }
 
@@ -51,17 +51,12 @@ pub struct OwnedAssetContainerIterator<T, const N: usize> {
 }
 
 impl<T, const N: usize> Iterator for OwnedAssetContainerIterator<T, N> {
-    type Item = (Provider, T);
+    type Item = (Provider, Option<T>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner_iter.next().map(|provider| {
-            (
-                provider,
-                self.inner.inner[provider as usize]
-                    .take()
-                    .expect("missing index in OwnedAssetContainerIterator"),
-            )
-        })
+        self.inner_iter
+            .next()
+            .map(|provider| (provider, self.inner.inner[provider as usize].take()))
     }
 }
 
@@ -71,7 +66,7 @@ impl<T: Default, const N: usize> FromIterator<(Provider, T)> for AssetContainerG
         iter.into_iter().fold(
             AssetContainerGeneric::default(),
             |mut acc, (provider, v)| {
-                acc[provider] = v;
+                acc[provider] = Some(v);
                 acc
             },
         )

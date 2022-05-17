@@ -116,7 +116,7 @@ impl Vault {
         let mut new_flags = self.yield_source_flags();
         new_flags.set(flag, enabled);
         self.yield_src_availability = new_flags.bits();
-        self.adjust_allocation_cap()
+        Ok(())
     }
 
     pub fn adjust_allocation_cap(&mut self) -> ProgramResult {
@@ -306,7 +306,10 @@ impl_provider_index!(Allocations, SlotTrackedValue);
 impl Allocations {
     pub fn from_container(c: AssetContainer<u64>, slot: u64) -> Self {
         Provider::iter().fold(Self::default(), |mut acc, provider| {
-            acc[provider].update(c[provider], slot);
+            match c[provider] {
+                Some(v) => acc[provider].update(v, slot),
+                None => {}
+            };
             acc
         })
     }
