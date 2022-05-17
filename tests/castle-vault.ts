@@ -356,6 +356,7 @@ describe("castle-vault", () => {
                 vaultClient.getAllocationCap().asPercent().toNumber(),
                 100
             );
+            assert.equal(0b111, vaultClient.getYiledSourceFlags());
         });
 
         it("Deposits to vault reserves", async function () {

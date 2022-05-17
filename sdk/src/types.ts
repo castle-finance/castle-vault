@@ -29,6 +29,7 @@ export interface Vault {
     targetAllocations: Allocations;
     config: VaultConfig;
     actualAllocations: Allocations;
+    yieldSourceFlags: number;
 }
 
 export interface VaultConfig {
@@ -74,4 +75,10 @@ export enum VaultFlags {
     HaltRefreshes = 1 << 1,
     HaltDepositsWithdraws = 1 << 2,
     HaltAll = HaltReconciles | HaltRefreshes | HaltDepositsWithdraws,
+}
+
+export enum YieldSourceFlags {
+    Solend = 1 << 0,
+    Port = 1 << 1,
+    Jet = 1 << 2,
 }

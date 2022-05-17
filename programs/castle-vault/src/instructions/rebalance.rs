@@ -66,7 +66,7 @@ pub struct Rebalance<'info> {
 impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
     type Error = ProgramError;
     fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>, Self::Error> {
-        let flags = r.vault.yield_source_flags();
+        let flags = r.vault.get_yield_source_flags();
 
         // NOTE: I tried pretty hard to get rid of these clones and only use the references.
         // The problem is that these references originate from a deref() (or as_ref())

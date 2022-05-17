@@ -944,9 +944,13 @@ export type CastleVault = {
                         };
                     },
                     {
+                        name: "yieldSourceFlags";
+                        type: "u32";
+                    },
+                    {
                         name: "reserved";
                         type: {
-                            array: ["u64", 14];
+                            array: ["u32", 27];
                         };
                     }
                 ];
@@ -2277,9 +2281,13 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
+                        name: "yieldSourceFlags",
+                        type: "u32",
+                    },
+                    {
                         name: "reserved",
                         type: {
-                            array: ["u64", 14],
+                            array: ["u32", 27],
                         },
                     },
                 ],

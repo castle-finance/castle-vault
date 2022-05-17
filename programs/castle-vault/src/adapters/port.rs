@@ -268,7 +268,7 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
         remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
 
-        if self.vault.yield_source_flags().contains(YieldSourceFlags::PORT) {
+        if self.vault.get_yield_source_flags().contains(YieldSourceFlags::PORT) {
             port_anchor_adaptor::refresh_port_reserve(
                 self.port_refresh_reserve_context(remaining_accounts),
             )?;

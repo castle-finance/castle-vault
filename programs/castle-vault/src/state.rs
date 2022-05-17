@@ -79,7 +79,7 @@ pub struct Vault {
     // Actual allocation retrieved by refresh
     pub actual_allocations: Allocations,
 
-    pub yield_src_availability: u32,
+    pub yield_source_flags: u32,
 
     // 8 * 23 = 184
     /// Reserved space for future upgrades
@@ -99,11 +99,11 @@ impl Vault {
         Ok(())
     }
 
-    pub fn yield_source_flags(&self) -> YieldSourceFlags {
-        YieldSourceFlags::from_bits(self.yield_src_availability).unwrap_or_else(|| {
+    pub fn get_yield_source_flags(&self) -> YieldSourceFlags {
+        YieldSourceFlags::from_bits(self.yield_source_flags).unwrap_or_else(|| {
             panic!(
                 "{:?} does not resolve to valid YieldSourceFlags",
-                self.yield_src_availability
+                self.yield_source_flags
             )
         })
     }
@@ -113,15 +113,15 @@ impl Vault {
         flag: YieldSourceFlags,
         enabled: bool,
     ) -> ProgramResult {
-        let mut new_flags = self.yield_source_flags();
+        let mut new_flags = self.get_yield_source_flags();
         new_flags.set(flag, enabled);
-        self.yield_src_availability = new_flags.bits();
+        self.yield_source_flags = new_flags.bits();
         Ok(())
     }
 
     pub fn adjust_allocation_cap(&mut self) -> ProgramResult {
         let cnt: u8 =
-            u8::try_from((0..32).fold(0, |sum, i| sum + ((self.yield_src_availability >> i) & 1)))
+            u8::try_from((0..32).fold(0, |sum, i| sum + ((self.yield_source_flags >> i) & 1)))
                 .unwrap();
         let new_allocation_cap = (100 as u8)
             .checked_div(cnt)
@@ -144,7 +144,7 @@ impl Vault {
     }
 
     pub fn get_yield_source_availability(&self, provider: Provider) -> bool {
-        let flags = self.yield_source_flags();
+        let flags = self.get_yield_source_flags();
         match provider {
             Provider::Solend => flags.contains(YieldSourceFlags::SOLEND),
             Provider::Port => flags.contains(YieldSourceFlags::PORT),

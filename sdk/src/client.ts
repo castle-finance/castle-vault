@@ -1115,6 +1115,10 @@ export class VaultClient {
     getFlags(): VaultFlags {
         return this.vaultState.bitflags;
     }
+
+    getYiledSourceFlags(): YiledSourceFlags {
+        return this.vaultState.yieldSourceFlags;
+    }
 }
 
 const createAta = (
