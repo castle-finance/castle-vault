@@ -79,7 +79,7 @@ where
 }
 
 impl<T, const N: usize> AssetContainerGeneric<T, N> {
-    pub fn apply_owned<U: Clone + Default, F: Fn(Provider, T) -> Option<U>>(
+    pub fn apply_owned<U: Clone + Default, F: Fn(Provider, Option<&T>) -> Option<U>>(
         mut self,
         f: F,
     ) -> AssetContainerGeneric<U, N> {
@@ -91,7 +91,7 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
                         provider,
                         self.inner[provider as usize]
                             .take()
-                            .expect("unable to take() in apply_owned()"),
+                            .as_ref(),
                     ),
                 )
             })
