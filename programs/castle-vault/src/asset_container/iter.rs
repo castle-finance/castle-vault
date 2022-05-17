@@ -61,12 +61,12 @@ impl<T, const N: usize> Iterator for OwnedAssetContainerIterator<T, N> {
 }
 
 // Allows us to create a AssetContainerGeneric<T, N> from an Iterator that yields (Provider, T)
-impl<T: Default, const N: usize> FromIterator<(Provider, T)> for AssetContainerGeneric<T, N> {
-    fn from_iter<U: IntoIterator<Item = (Provider, T)>>(iter: U) -> Self {
+impl<T: Default, const N: usize> FromIterator<(Provider, Option<T>)> for AssetContainerGeneric<T, N> {
+    fn from_iter<U: IntoIterator<Item = (Provider, Option<T>)>>(iter: U) -> Self {
         iter.into_iter().fold(
             AssetContainerGeneric::default(),
             |mut acc, (provider, v)| {
-                acc[provider] = Some(v);
+                acc[provider] = v;
                 acc
             },
         )

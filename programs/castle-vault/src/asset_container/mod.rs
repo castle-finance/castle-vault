@@ -70,7 +70,7 @@ where
 }
 
 impl<T, const N: usize> AssetContainerGeneric<T, N> {
-    pub fn apply_owned<U: Clone + Default, F: Fn(Provider, T) -> U>(
+    pub fn apply_owned<U: Clone + Default, F: Fn(Provider, T) -> Option<U>>(
         mut self,
         f: F,
     ) -> AssetContainerGeneric<U, N> {
@@ -90,7 +90,7 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
     }
 
     /// Applies `f` to each element of the container individually, yielding a new container
-    pub fn apply<U: Default, F: Fn(Provider, Option<&T>) -> U>(
+    pub fn apply<U: Default, F: Fn(Provider, Option<&T>) -> Option<U>>(
         &self,
         f: F,
     ) -> AssetContainerGeneric<U, N> {
@@ -102,7 +102,7 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
     }
 
     /// Identical to `apply` but returns a `Result<AssetContainerGeneric<..>>`
-    pub fn try_apply<U: Default, E, F: Fn(Provider, Option<&T>) -> Result<U, E>>(
+    pub fn try_apply<U: Default, E, F: Fn(Provider, Option<&T>) -> Result<Option<U>, E>>(
         &self,
         f: F,
     ) -> Result<AssetContainerGeneric<U, N>, E> {

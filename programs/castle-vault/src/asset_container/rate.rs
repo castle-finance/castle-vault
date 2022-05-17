@@ -33,8 +33,8 @@ impl<const N: usize> AssetContainerGeneric<Rate, N> {
 impl<const N: usize> From<AssetContainerGeneric<u16, N>> for AssetContainerGeneric<Rate, N> {
     fn from(c: AssetContainerGeneric<u16, N>) -> Self {
         c.apply(|_, v| match v {
-            Some(r) => Rate::from_bips(u64::from(*r)),
-            None => Rate::zero(),
+            Some(r) => Some(Rate::from_bips(u64::from(*r))),
+            None => None,
         })
     }
 }
