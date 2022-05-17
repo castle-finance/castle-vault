@@ -440,6 +440,9 @@ impl<'info> Refresher<'info> for RefreshSolend<'info> {
         &mut self,
         _remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
+        #[cfg(feature = "debug")]
+        msg!("Refreshing solend");
+
         refresh_reserve(self.solend_refresh_reserve_context())?;
 
         let solend_exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
@@ -447,7 +450,7 @@ impl<'info> Refresher<'info> for RefreshSolend<'info> {
             solend_exchange_rate.collateral_to_liquidity(self.vault_solend_lp_token.amount)?;
 
         #[cfg(feature = "debug")]
-        msg!("Refresh solen reserve token value: {}", solend_value);
+        msg!("Value: {}", solend_value);
 
         self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
 

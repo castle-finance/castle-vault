@@ -267,10 +267,14 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
         &mut self,
         remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
+
         if self.vault.yield_source_flags().contains(YieldSourceFlags::PORT) {
             port_anchor_adaptor::refresh_port_reserve(
                 self.port_refresh_reserve_context(remaining_accounts),
             )?;
+
+            #[cfg(feature = "debug")]
+            msg!("Refreshing port");
 
             let port_exchange_rate = self.port_reserve.collateral_exchange_rate()?;
             let port_value =
@@ -278,6 +282,7 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
 
             #[cfg(feature = "debug")]
             msg!("Refresh port reserve token value: {}", port_value);
+
 
             self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
         }

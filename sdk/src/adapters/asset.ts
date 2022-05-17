@@ -1,14 +1,15 @@
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
-import Big from "big.js";
-import { Vault } from "../types";
-import { CastleVault } from "../idl";
 import * as anchor from "@project-serum/anchor";
 
-export abstract class Asset {
-    abstract getApy(): Promise<Big>;
-    abstract getLpTokenAccountValue(vaultState: Vault): Promise<Big>;
-    abstract getDepositedAmount(): Promise<Big>;
-    abstract getBorrowedAmount(): Promise<Big>;
+import { CastleVault } from "../idl";
+import { Vault } from "../types";
+import { Rate, TokenAmount } from "../utils";
+
+export abstract class LendingMarket {
+    abstract getApy(): Promise<Rate>;
+    abstract getLpTokenAccountValue(vaultState: Vault): Promise<TokenAmount>;
+    abstract getDepositedAmount(): Promise<TokenAmount>;
+    abstract getBorrowedAmount(): Promise<TokenAmount>;
 
     abstract getRefreshIx(
         program: anchor.Program<CastleVault>,
@@ -22,4 +23,12 @@ export abstract class Asset {
         vaultState: Vault,
         withdrawOption?: anchor.BN
     ): TransactionInstruction;
+
+    abstract getInitializeIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultAuthority: PublicKey,
+        wallet: PublicKey,
+        owner: PublicKey
+    ): Promise<TransactionInstruction>;
 }
