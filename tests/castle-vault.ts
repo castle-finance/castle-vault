@@ -216,7 +216,9 @@ describe("castle-vault", () => {
 
     async function initializeVault(
         config: VaultConfig,
-        missingPool: boolean = false
+        solendAvailable: boolean = true,
+        portAvailable: boolean = true,
+        jetAvailable: boolean = true
     ) {
         vaultClient = await VaultClient.initialize(
             provider,
@@ -230,23 +232,27 @@ describe("castle-vault", () => {
         );
 
         await Promise.all([
-            await vaultClient.initializeSolend(
-                provider.wallet as anchor.Wallet,
-                solend,
-                owner
-            ),
-            missingPool
-                ? {}
-                : await vaultClient.initializePort(
+            solendAvailable
+                ? await vaultClient.initializeSolend(
+                      provider.wallet as anchor.Wallet,
+                      solend,
+                      owner
+                  )
+                : {},
+            portAvailable
+                ? await vaultClient.initializePort(
                       provider.wallet as anchor.Wallet,
                       port,
                       owner
-                  ),
-            await vaultClient.initializeJet(
-                provider.wallet as anchor.Wallet,
-                jet,
-                owner
-            ),
+                  )
+                : {},
+            jetAvailable
+                ? await vaultClient.initializeJet(
+                      provider.wallet as anchor.Wallet,
+                      jet,
+                      owner
+                  )
+                : {},
         ]);
 
         await vaultClient.reload();

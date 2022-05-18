@@ -788,9 +788,18 @@ export class VaultClient {
             await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
-                    solendReserve: this.yieldSources.solend.accounts.reserve,
-                    portReserve: this.yieldSources.port.accounts.reserve,
-                    jetReserve: this.yieldSources.jet.accounts.reserve,
+                    solendReserve:
+                        this.yieldSources.solend != null
+                            ? this.yieldSources.solend.accounts.reserve
+                            : Keypair.generate().publicKey,
+                    portReserve:
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts.reserve
+                            : Keypair.generate().publicKey,
+                    jetReserve:
+                        this.yieldSources.jet != null
+                            ? this.yieldSources.jet.accounts.reserve
+                            : Keypair.generate().publicKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
                 instructions: this.getRefreshIxs(),
@@ -847,37 +856,28 @@ export class VaultClient {
      * @returns Weighted average of APYs by allocation
      */
     async getApy(): Promise<Rate> {
-        // TODO parallelize
         const assetApysAndValues: [Rate, Big][] = [
             [
                 Rate.zero(),
                 (await this.getVaultReserveTokenAccountValue()).lamports,
             ],
-            [
-                await this.yieldSources.solend.getApy(),
-                (
-                    await this.yieldSources.solend.getLpTokenAccountValue(
-                        this.vaultState
-                    )
-                ).lamports,
-            ],
-            [
-                await this.yieldSources.port.getApy(),
-                (
-                    await this.yieldSources.port.getLpTokenAccountValue(
-                        this.vaultState
-                    )
-                ).lamports,
-            ],
-            [
-                await this.yieldSources.jet.getApy(),
-                (
-                    await this.yieldSources.jet.getLpTokenAccountValue(
-                        this.vaultState
-                    )
-                ).lamports,
-            ],
-        ];
+        ].concat(
+            await Promise.all(
+                Object.entries(this.yieldSources).map(
+                    async ([k, v]): Promise<[Rate, Big]> => {
+                        return [
+                            await this.yieldSources[k].getApy(),
+                            (
+                                await this.yieldSources[
+                                    k
+                                ].getLpTokenAccountValue(this.vaultState)
+                            ).lamports,
+                        ];
+                    }
+                )
+            )
+        );
+
         const [valueSum, weightSum] = assetApysAndValues.reduce(
             ([valueSum, weightSum], [value, weight]) => [
                 valueSum.add(value.mul(weight)),
@@ -919,12 +919,17 @@ export class VaultClient {
     async getTotalValue(): Promise<TokenAmount> {
         await this.reload();
 
-        const values = await Promise.all([
-            this.yieldSources.solend.getLpTokenAccountValue(this.vaultState),
-            this.yieldSources.port.getLpTokenAccountValue(this.vaultState),
-            this.yieldSources.jet.getLpTokenAccountValue(this.vaultState),
-            this.getVaultReserveTokenAccountValue(),
-        ]);
+        const values: [TokenAmount] = (
+            await Promise.all(
+                Object.entries(this.yieldSources).map(
+                    async ([k, v]): Promise<TokenAmount> => {
+                        return await this.yieldSources[
+                            k
+                        ].getLpTokenAccountValue(this.vaultState);
+                    }
+                )
+            )
+        ).concat([await this.getVaultReserveTokenAccountValue()]);
 
         return values.reduce(
             (a, b) => a.add(b),
