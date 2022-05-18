@@ -756,9 +756,18 @@ export class VaultClient {
             this.program.instruction.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
-                    solendReserve: this.yieldSources.solend.accounts.reserve,
-                    portReserve: this.yieldSources.port.accounts.reserve,
-                    jetReserve: this.yieldSources.jet.accounts.reserve,
+                    solendReserve:
+                        this.yieldSources.solend != null
+                            ? this.yieldSources.solend.accounts.reserve
+                            : this.vaultId,
+                    portReserve:
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts.reserve
+                            : this.vaultId,
+                    jetReserve:
+                        this.yieldSources.jet != null
+                            ? this.yieldSources.jet.accounts.reserve
+                            : this.vaultId,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
             })
@@ -791,15 +800,15 @@ export class VaultClient {
                     solendReserve:
                         this.yieldSources.solend != null
                             ? this.yieldSources.solend.accounts.reserve
-                            : Keypair.generate().publicKey,
+                            : this.vaultId,
                     portReserve:
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
-                            : Keypair.generate().publicKey,
+                            : this.vaultId,
                     jetReserve:
                         this.yieldSources.jet != null
                             ? this.yieldSources.jet.accounts.reserve
-                            : Keypair.generate().publicKey,
+                            : this.vaultId,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
                 instructions: this.getRefreshIxs(),
