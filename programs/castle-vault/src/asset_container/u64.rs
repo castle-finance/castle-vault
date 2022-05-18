@@ -36,6 +36,6 @@ mod tests {
         AssetContainerGeneric::<u64, 3>::try_from_weights(&rates, 200)
             .unwrap()
             .into_iter()
-            .for_each(|(p, n)| assert_eq!(n, expected[p as usize]))
+            .for_each(|(p, n)| assert_eq!(n.unwrap(), expected[p as usize]))
     }
 }
