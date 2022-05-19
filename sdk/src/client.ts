@@ -760,15 +760,15 @@ export class VaultClient {
                     solendReserve:
                         this.yieldSources.solend != null
                             ? this.yieldSources.solend.accounts.reserve
-                            : this.vaultId,
+                            : Keypair.generate().publicKey,
                     portReserve:
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
-                            : this.vaultId,
+                            : Keypair.generate().publicKey,
                     jetReserve:
                         this.yieldSources.jet != null
                             ? this.yieldSources.jet.accounts.reserve
-                            : this.vaultId,
+                            : Keypair.generate().publicKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
             })
@@ -801,15 +801,15 @@ export class VaultClient {
                     solendReserve:
                         this.yieldSources.solend != null
                             ? this.yieldSources.solend.accounts.reserve
-                            : this.vaultId,
+                            : Keypair.generate().publicKey,
                     portReserve:
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
-                            : this.vaultId,
+                            : Keypair.generate().publicKey,
                     jetReserve:
                         this.yieldSources.jet != null
                             ? this.yieldSources.jet.accounts.reserve
-                            : this.vaultId,
+                            : Keypair.generate().publicKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
                 instructions: this.getRefreshIxs(),
