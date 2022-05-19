@@ -28,11 +28,9 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
     }
 
     pub fn valid_len(&self) -> usize {
-        self.into_iter().fold(0, |sum, (_, value)| {
-            match value {
-                Some(_) => sum+1,
-                None => sum,
-            }
+        self.into_iter().fold(0, |sum, (_, value)| match value {
+            Some(_) => sum + 1,
+            None => sum,
         })
     }
 
@@ -87,12 +85,7 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
             .map(|provider| {
                 (
                     provider,
-                    f(
-                        provider,
-                        self.inner[provider as usize]
-                            .take()
-                            .as_ref(),
-                    ),
+                    f(provider, self.inner[provider as usize].take().as_ref()),
                 )
             })
             .collect()

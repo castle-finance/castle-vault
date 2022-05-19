@@ -73,17 +73,23 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
         let solend = match flags.contains(YieldSourceFlags::SOLEND) {
-            true => Some(Reserves::Solend(SolendAccount::try_from(&r.solend_reserve)?.deref().clone())),
+            true => Some(Reserves::Solend(
+                SolendAccount::try_from(&r.solend_reserve)?.deref().clone(),
+            )),
             _ => None,
         };
 
         let port = match flags.contains(YieldSourceFlags::PORT) {
-            true => Some(Reserves::Port(PortAccount::try_from(&r.port_reserve)?.deref().clone())),
+            true => Some(Reserves::Port(
+                PortAccount::try_from(&r.port_reserve)?.deref().clone(),
+            )),
             _ => None,
         };
 
         let jet = match flags.contains(YieldSourceFlags::JET) {
-            true => Some(Reserves::Jet(Box::new(*JetAccount::try_from(&r.jet_reserve)?.load()?))),
+            true => Some(Reserves::Jet(Box::new(
+                *JetAccount::try_from(&r.jet_reserve)?.load()?,
+            ))),
             _ => None,
         };
 

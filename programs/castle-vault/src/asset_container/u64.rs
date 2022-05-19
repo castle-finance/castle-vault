@@ -11,9 +11,11 @@ impl<const N: usize> AssetContainerGeneric<u64, N> {
         total_amount: u64,
     ) -> Result<Self, ProgramError> {
         rates.try_apply(|_, rate| match rate {
-            Some(r) => Ok(Some(r
-                .try_mul(total_amount)
-                .and_then(|product| Decimal::from(product).try_floor_u64())?)),
+            Some(r) => {
+                Ok(Some(r.try_mul(total_amount).and_then(|product| {
+                    Decimal::from(product).try_floor_u64()
+                })?))
+            }
             None => Ok(None),
         })
     }

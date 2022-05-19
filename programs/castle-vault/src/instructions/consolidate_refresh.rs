@@ -77,13 +77,13 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
         Provider::iter().try_fold(ctx.accounts.vault_reserve_token.amount, |acc, p| {
             let allocation = ctx.accounts.vault.actual_allocations[p];
             if ctx.accounts.vault.get_yield_source_availability(p) {
-                (allocation.last_update.slots_elapsed(clock_slot)? == 0).as_result::<u64, ProgramError>(
-                    acc.checked_add(allocation.value)
-                    .ok_or(ErrorCode::OverflowError)?,
-                    ErrorCode::AllocationIsNotUpdated.into(),
-                )
-            }
-            else {
+                (allocation.last_update.slots_elapsed(clock_slot)? == 0)
+                    .as_result::<u64, ProgramError>(
+                        acc.checked_add(allocation.value)
+                            .ok_or(ErrorCode::OverflowError)?,
+                        ErrorCode::AllocationIsNotUpdated.into(),
+                    )
+            } else {
                 Ok(acc)
             }
         })?;
