@@ -48,13 +48,6 @@ import {
 } from "./types";
 import { ExchangeRate, Rate, Token, TokenAmount } from "./utils";
 
-//type YieldSources = {[key: string]: LendingMarket}
-interface YieldSources {
-    solend?: SolendReserveAsset;
-    port?: PortReserveAsset;
-    jet?: JetReserveAsset;
-}
-
 interface YieldSources {
     solend?: SolendReserveAsset;
     port?: PortReserveAsset;
@@ -86,17 +79,28 @@ export class VaultClient {
         const cluster = CLUSTER_MAP[env];
         const reserveMint = vaultState.reserveTokenMint;
 
-        const solend = await SolendReserveAsset.load(
-            provider,
-            cluster,
-            reserveMint
-        );
-        const port = await PortReserveAsset.load(
-            provider,
-            cluster,
-            reserveMint
-        );
-        const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
+        let yieldSources: YieldSources = {};
+        if (vaultState.yieldSourceFlags & YieldSourceFlags.Solend) {
+            yieldSources.solend = await SolendReserveAsset.load(
+                provider,
+                cluster,
+                reserveMint
+            );
+        }
+        if (vaultState.yieldSourceFlags & YieldSourceFlags.Port) {
+            yieldSources.port = await PortReserveAsset.load(
+                provider,
+                cluster,
+                reserveMint
+            );
+        }
+        if (vaultState.yieldSourceFlags & YieldSourceFlags.Jet) {
+            yieldSources.jet = await JetReserveAsset.load(
+                provider,
+                cluster,
+                reserveMint
+            );
+        }
 
         const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
             provider.connection,
@@ -107,11 +111,7 @@ export class VaultClient {
             program,
             vaultId,
             vaultState,
-            {
-                solend: solend,
-                port: port,
-                jet: jet,
-            },
+            yieldSources,
             reserveToken,
             lpToken
         );
