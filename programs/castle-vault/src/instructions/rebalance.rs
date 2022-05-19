@@ -48,20 +48,19 @@ pub struct Rebalance<'info> {
     #[account(
         mut,
         constraint = !vault.value.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
-        has_one = solend_reserve,
-        has_one = port_reserve,
-        has_one = jet_reserve,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    pub solend_reserve: Box<Account<'info, SolendReserve>>,
-
-    pub port_reserve: Box<Account<'info, PortReserve>>,
-
-    pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
+    pub solend_reserve: AccountInfo<'info>,
+    pub port_reserve: AccountInfo<'info>,
+    pub jet_reserve: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,
 }
+
+type SolendAccount<'info> = Account<'info, SolendReserve>;
+type PortAccount<'info> = Account<'info, PortReserve>;
+type JetAccount<'info> = AccountLoader<'info, jet::state::Reserve>;
 
 impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
     type Error = ProgramError;
@@ -74,17 +73,17 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
         let solend = match flags.contains(YieldSourceFlags::SOLEND) {
-            true => Some(Reserves::Solend(r.solend_reserve.deref().deref().clone())),
+            true => Some(Reserves::Solend(SolendAccount::try_from(&r.solend_reserve)?.deref().clone())),
             _ => None,
         };
 
         let port = match flags.contains(YieldSourceFlags::PORT) {
-            true => Some(Reserves::Port(r.port_reserve.deref().deref().clone())),
+            true => Some(Reserves::Port(PortAccount::try_from(&r.port_reserve)?.deref().clone())),
             _ => None,
         };
 
         let jet = match flags.contains(YieldSourceFlags::JET) {
-            true => Some(Reserves::Jet(Box::new(*r.jet_reserve.load()?))),
+            true => Some(Reserves::Jet(Box::new(*JetAccount::try_from(&r.jet_reserve)?.load()?))),
             _ => None,
         };
 

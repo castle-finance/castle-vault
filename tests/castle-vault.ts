@@ -1034,6 +1034,8 @@ describe("castle-vault", () => {
                         strategyType: { [StrategyTypes.maxYield]: {} },
                         rebalanceMode: { [RebalanceModes.proofChecker]: {} },
                     },
+                    true,
+                    false,
                     true
                 );
             });
