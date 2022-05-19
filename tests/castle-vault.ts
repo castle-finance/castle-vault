@@ -1024,15 +1024,15 @@ describe("castle-vault", () => {
     });
 
     describe("Disabled pools", () => {
-        describe("Rebalance", () => {
-            const rebalanceMode = RebalanceModes.proofChecker;
+        describe("Rebalance with equal allocation strategy", () => {
+            const rebalanceMode = RebalanceModes.calculator;
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault(
                     {
                         allocationCapPct: vaultAllocationCap,
-                        strategyType: { [StrategyTypes.maxYield]: {} },
-                        rebalanceMode: { [RebalanceModes.proofChecker]: {} },
+                        strategyType: { [StrategyTypes.equalAllocation]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
                     },
                     true,
                     false,
