@@ -44,6 +44,7 @@ import {
     Vault,
     VaultConfig,
     VaultFlags,
+    YieldSourceFlags,
 } from "./types";
 import { ExchangeRate, Rate, Token, TokenAmount } from "./utils";
 

@@ -338,54 +338,6 @@ export class JetReserveAsset extends LendingMarket {
             },
         });
     }
-
-    getRefreshIx(
-        program: anchor.Program<CastleVault>,
-        vaultId: PublicKey,
-        vaultState: Vault
-    ): TransactionInstruction {
-        return program.instruction.refreshJet({
-            accounts: {
-                vault: vaultId,
-                vaultJetLpToken: vaultState.vaultJetLpToken,
-                jetProgram: this.accounts.program,
-                jetMarket: this.accounts.market,
-                jetMarketAuthority: this.accounts.marketAuthority,
-                jetReserve: this.accounts.reserve,
-                jetFeeNoteVault: this.accounts.feeNoteVault,
-                jetDepositNoteMint: this.accounts.depositNoteMint,
-                jetPyth: this.accounts.pythPrice,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                clock: SYSVAR_CLOCK_PUBKEY,
-            },
-        });
-    }
-
-    getReconcileIx(
-        program: anchor.Program<CastleVault>,
-        vaultId: PublicKey,
-        vaultState: Vault,
-        withdrawOption?: anchor.BN
-    ): TransactionInstruction {
-        return program.instruction.reconcileJet(
-            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
-            {
-                accounts: {
-                    vault: vaultId,
-                    vaultAuthority: vaultState.vaultAuthority,
-                    vaultReserveToken: vaultState.vaultReserveToken,
-                    vaultJetLpToken: vaultState.vaultJetLpToken,
-                    jetProgram: this.accounts.program,
-                    jetMarket: this.accounts.market,
-                    jetMarketAuthority: this.accounts.marketAuthority,
-                    jetReserve: this.accounts.reserve,
-                    jetReserveToken: this.accounts.liquiditySupply,
-                    jetLpMint: this.accounts.depositNoteMint,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                },
-            }
-        );
-    }
 }
 
 async function createLendingMarket(
