@@ -1107,5 +1107,36 @@ describe("castle-vault", () => {
 
             testRebalanceWithdraw(1, 0, 0, rebalanceMode, true, false, false);
         });
+
+        describe("Rebalance with max yield strategy", () => {
+            const rebalanceMode = RebalanceModes.calculator;
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: vaultAllocationCap,
+                        strategyType: { [StrategyTypes.maxYield]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                    },
+                    true,
+                    true,
+                    false
+                );
+            });
+
+            it("Initialize fewer yield sources", async function () {
+                assert.equal(0b011, vaultClient.getYieldSourceFlags());
+            });
+
+            testRebalanceWithdraw(
+                vaultAllocationCap / 100,
+                1 - vaultAllocationCap / 100,
+                0,
+                rebalanceMode,
+                true,
+                true,
+                false
+            );
+        });
     });
 });
