@@ -610,7 +610,10 @@ describe("castle-vault", () => {
         expectedSolendRatio: number,
         expectedPortRatio: number,
         expectedJetRatio: number,
-        rebalanceMode: RebalanceMode = RebalanceModes.calculator
+        rebalanceMode: RebalanceMode = RebalanceModes.calculator,
+        solendAvailable: boolean = true,
+        portAvailable: boolean = true,
+        jetAvailable: boolean = true
     ) {
         // NOTE: should not be divisible by the number of markets, 3 in this case
         // The TODO to correct this is below
@@ -643,24 +646,30 @@ describe("castle-vault", () => {
                     );
                 }
 
-                assert.equal(
-                    (
-                        await vaultClient.getVaultSolendLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultPortLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultJetLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
+                if (solendAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultSolendLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (portAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultPortLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (jetAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultJetLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
             });
 
             it("Rejects tx if weights are suboptimal", async () => {
@@ -684,24 +693,30 @@ describe("castle-vault", () => {
                     );
                 }
 
-                assert.equal(
-                    (
-                        await vaultClient.getVaultSolendLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultPortLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultJetLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
+                if (solendAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultSolendLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (portAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultPortLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (jetAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultJetLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
             });
 
             it("Rejects tx if weights exceeds the cap", async () => {
@@ -725,24 +740,30 @@ describe("castle-vault", () => {
                     );
                 }
 
-                assert.equal(
-                    (
-                        await vaultClient.getVaultSolendLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultPortLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultJetLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
+                if (solendAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultSolendLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (portAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultPortLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (jetAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultJetLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
             });
         }
 
@@ -753,41 +774,50 @@ describe("castle-vault", () => {
                 jet: expectedJetRatio * 10000,
             });
 
-            const totalValue = await getVaultTotalValue();
-            const solendValue = (
-                await vaultClient.getVaultSolendLpTokenAccountValue()
-            ).lamports.toNumber();
-            const portValue = (
-                await vaultClient.getVaultPortLpTokenAccountValue()
-            ).lamports.toNumber();
-            const jetValue = (
-                await vaultClient.getVaultJetLpTokenAccountValue()
-            ).lamports.toNumber();
-
             // TODO Resolve the difference
             // Use isAtMost because on-chain rust program handles rounding differently than TypeScript.
             // However the difference should not exceet 1 token.
             const maxDiffAllowed = 1;
+            const totalValue = await getVaultTotalValue();
             assert.isAtMost(
                 Math.abs(totalValue - Math.floor(depositQty)),
                 maxDiffAllowed
             );
-            assert.isAtMost(
-                Math.abs(
-                    solendValue - Math.floor(depositQty * expectedSolendRatio)
-                ),
-                maxDiffAllowed
-            );
-            assert.isAtMost(
-                Math.abs(
-                    portValue - Math.floor(depositQty * expectedPortRatio)
-                ),
-                maxDiffAllowed
-            );
-            assert.isAtMost(
-                Math.abs(jetValue - Math.floor(depositQty * expectedJetRatio)),
-                maxDiffAllowed
-            );
+
+            if (solendAvailable) {
+                const solendValue = (
+                    await vaultClient.getVaultSolendLpTokenAccountValue()
+                ).lamports.toNumber();
+                assert.isAtMost(
+                    Math.abs(
+                        solendValue -
+                            Math.floor(depositQty * expectedSolendRatio)
+                    ),
+                    maxDiffAllowed
+                );
+            }
+            if (portAvailable) {
+                const portValue = (
+                    await vaultClient.getVaultPortLpTokenAccountValue()
+                ).lamports.toNumber();
+                assert.isAtMost(
+                    Math.abs(
+                        portValue - Math.floor(depositQty * expectedPortRatio)
+                    ),
+                    maxDiffAllowed
+                );
+            }
+            if (jetAvailable) {
+                const jetValue = (
+                    await vaultClient.getVaultJetLpTokenAccountValue()
+                ).lamports.toNumber();
+                assert.isAtMost(
+                    Math.abs(
+                        jetValue - Math.floor(depositQty * expectedJetRatio)
+                    ),
+                    maxDiffAllowed
+                );
+            }
         });
 
         it("Withdraws", async function () {
@@ -1024,7 +1054,7 @@ describe("castle-vault", () => {
     });
 
     describe("Disabled pools", () => {
-        describe("Rebalance with equal allocation strategy", () => {
+        describe("Rebalance with equal allocation strategy missing 1 pool", () => {
             const rebalanceMode = RebalanceModes.calculator;
             before(initLendingMarkets);
             before(async function () {
@@ -1044,7 +1074,38 @@ describe("castle-vault", () => {
                 assert.equal(0b101, vaultClient.getYieldSourceFlags());
             });
 
-            testRebalanceWithdraw(1 / 2, 0, 1 / 2, rebalanceMode);
+            testRebalanceWithdraw(
+                1 / 2,
+                0,
+                1 / 2,
+                rebalanceMode,
+                true,
+                false,
+                true
+            );
+        });
+
+        describe("Rebalance with equal allocation strategy missing 2 pools", () => {
+            const rebalanceMode = RebalanceModes.calculator;
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: 100,
+                        strategyType: { [StrategyTypes.equalAllocation]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                    },
+                    true,
+                    false,
+                    false
+                );
+            });
+
+            it("Initialize fewer yield sources", async function () {
+                assert.equal(0b001, vaultClient.getYieldSourceFlags());
+            });
+
+            testRebalanceWithdraw(1, 0, 0, rebalanceMode, true, false, false);
         });
     });
 });
