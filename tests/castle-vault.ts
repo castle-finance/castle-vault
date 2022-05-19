@@ -831,10 +831,18 @@ describe("castle-vault", () => {
             const newVaultValue = await getVaultTotalValue();
             const newLpTokenSupply = await getLpTokenSupply();
 
-            // Need to subtract 1 from expected vals bc of rounding
-            assert.equal(oldVaultValue - newVaultValue, withdrawQty - 1);
+            const actualWithdrawAmount = oldVaultValue - newVaultValue;
+
+            // Allow max different of 1 token because of rounding error.
+            const maxDiffAllowed = 1;
+            assert.isAtMost(
+                Math.abs(actualWithdrawAmount - withdrawQty),
+                maxDiffAllowed
+            );
+            // Actual should <= requested because we rounds down.
+            assert.isAtMost(actualWithdrawAmount, withdrawQty);
             assert.equal(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
-            assert.equal(newUserReserveBalance, withdrawQty - 1);
+            assert.equal(newUserReserveBalance, actualWithdrawAmount);
         });
     }
 
