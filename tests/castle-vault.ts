@@ -367,7 +367,7 @@ describe("castle-vault", () => {
                 vaultClient.getAllocationCap().asPercent().toNumber(),
                 100
             );
-            assert.equal(0b111, vaultClient.getYiledSourceFlags());
+            assert.equal(0b111, vaultClient.getYieldSourceFlags());
         });
 
         it("Deposits to vault reserves", async function () {
@@ -1041,8 +1041,10 @@ describe("castle-vault", () => {
             });
 
             it("Initialize fewer yield sources", async function () {
-                assert.equal(0b101, vaultClient.getYiledSourceFlags());
+                assert.equal(0b101, vaultClient.getYieldSourceFlags());
             });
+
+            testRebalanceWithdraw(1 / 2, 0, 1 / 2, rebalanceMode);
         });
     });
 });

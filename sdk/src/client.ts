@@ -866,12 +866,13 @@ export class VaultClient {
      * @returns Weighted average of APYs by allocation
      */
     async getApy(): Promise<Rate> {
-        const assetApysAndValues: [Rate, Big][] = [
+        let assetApysAndValues: [Rate, Big][] = [
             [
                 Rate.zero(),
                 (await this.getVaultReserveTokenAccountValue()).lamports,
             ],
-        ].concat(
+        ];
+        assetApysAndValues.concat(
             await Promise.all(
                 Object.entries(this.yieldSources).map(
                     async ([k, v]): Promise<[Rate, Big]> => {
@@ -929,7 +930,7 @@ export class VaultClient {
     async getTotalValue(): Promise<TokenAmount> {
         await this.reload();
 
-        const values: [TokenAmount] = (
+        const values: TokenAmount[] = (
             await Promise.all(
                 Object.entries(this.yieldSources).map(
                     async ([k, v]): Promise<TokenAmount> => {
@@ -1131,7 +1132,7 @@ export class VaultClient {
         return this.vaultState.bitflags;
     }
 
-    getYiledSourceFlags(): YiledSourceFlags {
+    getYieldSourceFlags(): YieldSourceFlags {
         return this.vaultState.yieldSourceFlags;
     }
 }
