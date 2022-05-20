@@ -51,8 +51,13 @@ pub struct Rebalance<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    // Account ownership MUST be checked. ATM it's checked by try_from method.
+    // So we can ignore soteria warning.
+    //#[soteria(ignore)]
     pub solend_reserve: AccountInfo<'info>,
+    //#[soteria(ignore)]
     pub port_reserve: AccountInfo<'info>,
+    //#[soteria(ignore)]
     pub jet_reserve: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,

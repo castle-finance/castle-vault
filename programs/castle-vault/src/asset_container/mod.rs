@@ -28,10 +28,7 @@ impl<T, const N: usize> AssetContainerGeneric<T, N> {
     }
 
     pub fn valid_len(&self) -> usize {
-        self.into_iter().fold(0, |sum, (_, value)| match value {
-            Some(_) => sum + 1,
-            None => sum,
-        })
+        self.into_iter().filter(|(_, o)| o.is_some()).count()
     }
 
     /// Returns if the container is uninitialized

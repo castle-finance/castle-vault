@@ -27,8 +27,7 @@ impl AssetContainer<Reserves> {
         allocation_cap_pct: u8,
     ) -> Result<AssetContainer<Rate>, ProgramError> {
         self.into_iter()
-            .filter(|(_, r)| !r.is_none())
-            .map(|(p, r)| (p, r.unwrap()))
+            .flat_map(|(p, r)| r.map(|v| (p, v)))
             .sorted_unstable_by(|(_, alloc_y), (_, alloc_x)| {
                 // TODO: can we remove the expect() in any way?
                 compare(*alloc_x, *alloc_y).expect("Could not successfully compare allocations")
@@ -78,8 +77,7 @@ impl AssetContainer<Reserves> {
         allocations: &dyn Index<Provider, Output = Option<u64>>,
     ) -> Result<Rate, ProgramError> {
         self.into_iter()
-            .filter(|(_, r)| !r.is_none())
-            .map(|(p, r)| (p, r.unwrap()))
+            .flat_map(|(p, r)| r.map(|v| (p, v)))
             .map(|(p, r)| {
                 r.calculate_return(allocations[p].unwrap())
                     .and_then(|r| weights[p].unwrap().try_mul(r))

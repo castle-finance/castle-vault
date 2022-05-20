@@ -13,15 +13,13 @@ impl<const N: usize> AssetContainerGeneric<Rate, N> {
         let cap = &Rate::from_percent(allocation_cap_pct);
         let max = self
             .into_iter()
-            .filter(|(_, r)| !r.is_none())
-            .map(|(_, r)| r.unwrap())
+            .flat_map(|(_, r)| r.map(|v| v))
             .max()
             .ok_or(ErrorCode::InvalidProposedWeights)?;
 
         let sum = self
             .into_iter()
-            .filter(|(_, r)| !r.is_none())
-            .map(|(_, r)| r.unwrap())
+            .flat_map(|(_, r)| r.map(|v| v))
             .try_fold(Rate::zero(), |acc, x| acc.try_add(*x))?;
 
         (sum == Rate::one() && max <= cap).ok_or_else(|| ErrorCode::InvalidProposedWeights.into())
