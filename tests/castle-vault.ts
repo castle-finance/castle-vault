@@ -1082,6 +1082,21 @@ describe("castle-vault", () => {
                 assert.equal(0b101, vaultClient.getYieldSourceFlags());
             });
 
+            it("Update and adjust allocation cap", async function () {
+                const oldConfig = vaultClient.getVaultConfig();
+                const newConfig = {
+                    ...oldConfig,
+                    allocationCapPct: 40,
+                };
+                const tx = await vaultClient.updateConfig(owner, newConfig);
+                await provider.connection.confirmTransaction(
+                    tx,
+                    "singleGossip"
+                );
+                await vaultClient.reload();
+                assert.equal(vaultClient.getVaultConfig().allocationCapPct, 51);
+            });
+
             testRebalanceWithdraw(
                 1 / 2,
                 0,
