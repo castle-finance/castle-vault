@@ -80,7 +80,6 @@ pub struct Vault {
     // Actual allocation retrieved by refresh
     pub actual_allocations: Allocations,
 
-
     // 8 * 23 = 184
     /// Reserved space for future upgrades
     _reserved: [u32; 28],
@@ -119,10 +118,12 @@ impl Vault {
         Ok(())
     }
 
+    // The lower bound of allocation cap is adjusted to 100 / N
+    // Where N is the number of available yield sources according to yield_source_flags
     pub fn adjust_allocation_cap(&mut self) -> ProgramResult {
         let cnt: u8 =
             u8::try_from((0..16).fold(0, |sum, i| sum + ((self.yield_source_flags >> i) & 1)))
-                .unwrap();
+                .map_err::<ProgramError, _>(|_| ErrorCode::MathError.into())?;
         let new_allocation_cap = (100 as u8)
             .checked_div(cnt)
             .ok_or_else::<ProgramError, _>(|| ErrorCode::MathError.into())?

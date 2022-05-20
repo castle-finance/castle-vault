@@ -77,11 +77,12 @@ impl AssetContainer<Reserves> {
         allocations: &dyn Index<Provider, Output = Option<u64>>,
     ) -> Result<Rate, ProgramError> {
         self.into_iter()
-            .flat_map(|(p, r)| r.map(|v| (p, v)))
-            .map(|(p, r)| {
-                r.calculate_return(allocations[p].unwrap())
-                    .and_then(|r| weights[p].unwrap().try_mul(r))
+            .map(|(p, r)| (r, allocations[p], weights[p]))
+            .flat_map(|v| match v {
+                (Some(r), Some(a), Some(w)) => Some((r, a, w)),
+                _ => None,
             })
+            .map(|(r, a, w)| r.calculate_return(a).and_then(|ret| w.try_mul(ret)))
             .try_fold(Rate::zero(), |acc, r| acc.try_add(r?))
     }
 }
