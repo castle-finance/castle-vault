@@ -50,7 +50,7 @@ pub mod castle_vault {
         instructions::init_yield_source::handler(ctx, bump)
     }
 
-    pub fn update_flags(ctx: Context<UpdateFlags>, flags: u32) -> ProgramResult {
+    pub fn update_flags(ctx: Context<UpdateFlags>, flags: u16) -> ProgramResult {
         instructions::update_flags::handler(ctx, flags)
     }
 

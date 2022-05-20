@@ -291,7 +291,7 @@ export type CastleVault = {
             args: [
                 {
                     name: "flags";
-                    type: "u32";
+                    type: "u16";
                 }
             ];
         },
@@ -917,7 +917,11 @@ export type CastleVault = {
                     },
                     {
                         name: "bitflags";
-                        type: "u32";
+                        type: "u16";
+                    },
+                    {
+                        name: "yieldSourceFlags";
+                        type: "u16";
                     },
                     {
                         name: "value";
@@ -944,13 +948,9 @@ export type CastleVault = {
                         };
                     },
                     {
-                        name: "yieldSourceFlags";
-                        type: "u32";
-                    },
-                    {
                         name: "reserved";
                         type: {
-                            array: ["u32", 27];
+                            array: ["u32", 28];
                         };
                     }
                 ];
@@ -1628,7 +1628,7 @@ export const IDL: CastleVault = {
             args: [
                 {
                     name: "flags",
-                    type: "u32",
+                    type: "u16",
                 },
             ],
         },
@@ -2254,7 +2254,11 @@ export const IDL: CastleVault = {
                     },
                     {
                         name: "bitflags",
-                        type: "u32",
+                        type: "u16",
+                    },
+                    {
+                        name: "yieldSourceFlags",
+                        type: "u16",
                     },
                     {
                         name: "value",
@@ -2281,13 +2285,9 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
-                        name: "yieldSourceFlags",
-                        type: "u32",
-                    },
-                    {
                         name: "reserved",
                         type: {
-                            array: ["u32", 27],
+                            array: ["u32", 28],
                         },
                     },
                 ],

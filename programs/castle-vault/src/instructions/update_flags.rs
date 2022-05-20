@@ -15,7 +15,7 @@ pub struct UpdateFlags<'info> {
     pub owner: Signer<'info>,
 }
 
-pub fn handler(ctx: Context<UpdateFlags>, flags: u32) -> ProgramResult {
+pub fn handler(ctx: Context<UpdateFlags>, flags: u16) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("New flags: {:?}", flags);
 

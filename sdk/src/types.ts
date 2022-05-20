@@ -25,11 +25,11 @@ export interface Vault {
     feeReceiver: PublicKey;
     referralFeeReceiver: PublicKey;
     bitflags: number;
+    yieldSourceFlags: number;
     value: SlotTrackedValue;
     targetAllocations: Allocations;
     config: VaultConfig;
     actualAllocations: Allocations;
-    yieldSourceFlags: number;
 }
 
 export interface VaultConfig {

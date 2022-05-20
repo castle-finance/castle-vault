@@ -66,7 +66,8 @@ pub struct Vault {
 
     pub referral_fee_receiver: Pubkey,
 
-    bitflags: u32,
+    bitflags: u16,
+    pub yield_source_flags: u16,
 
     /// Total value of vault denominated in the reserve token
     pub value: SlotTrackedValue,
@@ -79,11 +80,10 @@ pub struct Vault {
     // Actual allocation retrieved by refresh
     pub actual_allocations: Allocations,
 
-    pub yield_source_flags: u32,
 
     // 8 * 23 = 184
     /// Reserved space for future upgrades
-    _reserved: [u32; 27],
+    _reserved: [u32; 28],
 }
 
 impl Vault {
@@ -92,7 +92,7 @@ impl Vault {
             .unwrap_or_else(|| panic!("{:?} does not resolve to valid VaultFlags", self.bitflags))
     }
 
-    pub fn set_flags(&mut self, bits: u32) -> ProgramResult {
+    pub fn set_flags(&mut self, bits: u16) -> ProgramResult {
         VaultFlags::from_bits(bits)
             .ok_or_else::<ProgramError, _>(|| ErrorCode::InvalidVaultFlags.into())?;
         self.bitflags = bits;
@@ -121,7 +121,7 @@ impl Vault {
 
     pub fn adjust_allocation_cap(&mut self) -> ProgramResult {
         let cnt: u8 =
-            u8::try_from((0..32).fold(0, |sum, i| sum + ((self.yield_source_flags >> i) & 1)))
+            u8::try_from((0..16).fold(0, |sum, i| sum + ((self.yield_source_flags >> i) & 1)))
                 .unwrap();
         let new_allocation_cap = (100 as u8)
             .checked_div(cnt)
@@ -267,7 +267,7 @@ pub enum StrategyType {
 }
 
 bitflags::bitflags! {
-    pub struct VaultFlags: u32 {
+    pub struct VaultFlags: u16 {
         /// Disable reconciles
         const HALT_RECONCILES = 1 << 0;
 
@@ -286,7 +286,7 @@ bitflags::bitflags! {
 }
 
 bitflags::bitflags! {
-    pub struct YieldSourceFlags: u32 {
+    pub struct YieldSourceFlags: u16 {
         const SOLEND = 1 << 0;
         const PORT = 1 << 1;
         const JET = 1 << 2;
