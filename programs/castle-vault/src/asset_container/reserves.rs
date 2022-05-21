@@ -48,7 +48,7 @@ impl AssetContainer<Reserves> {
     }
 
     fn calculate_weights_equal(&self) -> Result<AssetContainer<Rate>, ProgramError> {
-        u8::try_from(self.valid_len())
+        u8::try_from(self.len())
             .map_err(|_| ErrorCode::StrategyError.into())
             .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100))
             .and_then(|r| Rate::one().try_div(r))

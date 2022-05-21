@@ -24,10 +24,6 @@ pub struct AssetContainerGeneric<T, const N: usize> {
 
 impl<T, const N: usize> AssetContainerGeneric<T, N> {
     pub fn len(&self) -> usize {
-        N
-    }
-
-    pub fn valid_len(&self) -> usize {
         self.into_iter().filter(|(_, o)| o.is_some()).count()
     }
 
