@@ -124,7 +124,7 @@ impl Vault {
         let cnt: u8 =
             u8::try_from((0..16).fold(0, |sum, i| sum + ((self.yield_source_flags >> i) & 1)))
                 .map_err::<ProgramError, _>(|_| ErrorCode::MathError.into())?;
-        let new_allocation_cap = (100 as u8)
+        let new_allocation_cap = 100_u8
             .checked_div(cnt)
             .ok_or_else::<ProgramError, _>(|| ErrorCode::MathError.into())?
             .checked_add(1)
