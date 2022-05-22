@@ -51,8 +51,8 @@ pub struct Rebalance<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    // Account ownership MUST be checked. ATM it's checked by try_from method.
-    // So we can ignore soteria warning.
+    // The account's identity is explicitly checked before try_from
+    // So it's ok ignore soteria warning here.
     //#[soteria(ignore)]
     pub solend_reserve: AccountInfo<'info>,
     //#[soteria(ignore)]
@@ -77,21 +77,28 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
-        let solend = match flags.contains(YieldSourceFlags::SOLEND) {
+
+        let solend = match flags.contains(YieldSourceFlags::SOLEND)
+            & r.solend_reserve.key.eq(&r.vault.solend_reserve)
+        {
             true => Some(Reserves::Solend(
                 SolendAccount::try_from(&r.solend_reserve)?.deref().clone(),
             )),
             _ => None,
         };
 
-        let port = match flags.contains(YieldSourceFlags::PORT) {
+        let port = match flags.contains(YieldSourceFlags::PORT)
+            & r.port_reserve.key.eq(&r.vault.port_reserve)
+        {
             true => Some(Reserves::Port(
                 PortAccount::try_from(&r.port_reserve)?.deref().clone(),
             )),
             _ => None,
         };
 
-        let jet = match flags.contains(YieldSourceFlags::JET) {
+        let jet = match flags.contains(YieldSourceFlags::JET)
+            & r.jet_reserve.key.eq(&r.vault.jet_reserve)
+        {
             true => Some(Reserves::Jet(Box::new(
                 *JetAccount::try_from(&r.jet_reserve)?.load()?,
             ))),
