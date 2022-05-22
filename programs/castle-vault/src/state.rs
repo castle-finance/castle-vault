@@ -67,7 +67,7 @@ pub struct Vault {
     pub referral_fee_receiver: Pubkey,
 
     halt_flags: u16,
-    pub yield_source_flags: u16,
+    yield_source_flags: u16,
 
     /// Total value of vault denominated in the reserve token
     pub value: SlotTrackedValue,
