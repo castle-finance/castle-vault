@@ -65,7 +65,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
     (!ctx
         .accounts
         .vault
-        .flags()
+        .get_halt_flags()
         .contains(VaultFlags::HALT_REFRESHES))
     .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
 

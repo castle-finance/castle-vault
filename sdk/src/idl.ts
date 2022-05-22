@@ -275,7 +275,7 @@ export type CastleVault = {
             ];
         },
         {
-            name: "updateFlags";
+            name: "updateHaltFlags";
             accounts: [
                 {
                     name: "vault";
@@ -916,7 +916,7 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "bitflags";
+                        name: "haltFlags";
                         type: "u16";
                     },
                     {
@@ -1612,7 +1612,7 @@ export const IDL: CastleVault = {
             ],
         },
         {
-            name: "updateFlags",
+            name: "updateHaltFlags",
             accounts: [
                 {
                     name: "vault",
@@ -2253,7 +2253,7 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "bitflags",
+                        name: "haltFlags",
                         type: "u16",
                     },
                     {

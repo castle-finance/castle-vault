@@ -66,7 +66,7 @@ pub struct Vault {
 
     pub referral_fee_receiver: Pubkey,
 
-    bitflags: u16,
+    halt_flags: u16,
     pub yield_source_flags: u16,
 
     /// Total value of vault denominated in the reserve token
@@ -86,15 +86,15 @@ pub struct Vault {
 }
 
 impl Vault {
-    pub fn flags(&self) -> VaultFlags {
-        VaultFlags::from_bits(self.bitflags)
-            .unwrap_or_else(|| panic!("{:?} does not resolve to valid VaultFlags", self.bitflags))
+    pub fn get_halt_flags(&self) -> VaultFlags {
+        VaultFlags::from_bits(self.halt_flags)
+            .unwrap_or_else(|| panic!("{:?} does not resolve to valid VaultFlags", self.halt_flags))
     }
 
-    pub fn set_flags(&mut self, bits: u16) -> ProgramResult {
+    pub fn set_halt_flags(&mut self, bits: u16) -> ProgramResult {
         VaultFlags::from_bits(bits)
             .ok_or_else::<ProgramError, _>(|| ErrorCode::InvalidVaultFlags.into())?;
-        self.bitflags = bits;
+        self.halt_flags = bits;
         Ok(())
     }
 

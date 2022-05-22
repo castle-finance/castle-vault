@@ -444,13 +444,13 @@ export class VaultClient {
      * @param new_value
      * @returns
      */
-    async updateFlags(
+    async updateHaltFlags(
         owner: Keypair,
         flags: number
     ): Promise<TransactionSignature> {
         const updateTx = new Transaction();
         updateTx.add(
-            this.program.instruction.updateFlags(flags, {
+            this.program.instruction.updateHaltFlags(flags, {
                 accounts: {
                     vault: this.vaultId,
                     owner: owner.publicKey,
@@ -1128,8 +1128,8 @@ export class VaultClient {
         return Rate.fromBps(this.vaultState.config.feeMgmtBps);
     }
 
-    getFlags(): VaultFlags {
-        return this.vaultState.bitflags;
+    getHaltFlags(): VaultFlags {
+        return this.vaultState.haltFlags;
     }
 
     getYieldSourceFlags(): YieldSourceFlags {

@@ -24,7 +24,7 @@ export interface Vault {
     reserveTokenMint: PublicKey;
     feeReceiver: PublicKey;
     referralFeeReceiver: PublicKey;
-    bitflags: number;
+    haltFlags: number;
     yieldSourceFlags: number;
     value: SlotTrackedValue;
     targetAllocations: Allocations;

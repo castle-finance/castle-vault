@@ -509,7 +509,7 @@ describe("castle-vault", () => {
                 .find((e) => e.name == "HaltedVault")
                 .code.toString(16);
 
-            await vaultClient.updateFlags(
+            await vaultClient.updateHaltFlags(
                 owner,
                 VaultFlags.HaltDepositsWithdraws
             );
@@ -533,7 +533,7 @@ describe("castle-vault", () => {
                 .find((e) => e.name == "HaltedVault")
                 .code.toString(16);
 
-            await vaultClient.updateFlags(owner, VaultFlags.HaltReconciles);
+            await vaultClient.updateHaltFlags(owner, VaultFlags.HaltReconciles);
 
             try {
                 await performRebalance();
@@ -548,10 +548,10 @@ describe("castle-vault", () => {
 
         it("Update flags", async function () {
             const flags = 0;
-            const tx = await vaultClient.updateFlags(owner, flags);
+            const tx = await vaultClient.updateHaltFlags(owner, flags);
             await provider.connection.confirmTransaction(tx, "singleGossip");
             await vaultClient.reload();
-            assert.equal(flags, vaultClient.getFlags());
+            assert.equal(flags, vaultClient.getHaltFlags());
         });
 
         it("Reject invalid flags update", async function () {
@@ -559,10 +559,10 @@ describe("castle-vault", () => {
                 .find((e) => e.name == "InvalidVaultFlags")
                 .code.toString(16);
 
-            const oldFlags = vaultClient.getFlags();
+            const oldFlags = vaultClient.getHaltFlags();
 
             try {
-                const tx = await vaultClient.updateFlags(owner, 23);
+                const tx = await vaultClient.updateHaltFlags(owner, 23);
                 await provider.connection.confirmTransaction(
                     tx,
                     "singleGossip"
@@ -577,17 +577,20 @@ describe("castle-vault", () => {
 
             await vaultClient.reload();
 
-            assert.equal(oldFlags, vaultClient.getFlags());
+            assert.equal(oldFlags, vaultClient.getHaltFlags());
         });
 
         it("Reject unauthorized flags update", async function () {
             const errorCode = "0x8d";
 
             const noPermissionUser = Keypair.generate();
-            const oldFlags = vaultClient.getFlags();
+            const oldFlags = vaultClient.getHaltFlags();
 
             try {
-                const tx = await vaultClient.updateFlags(noPermissionUser, 1);
+                const tx = await vaultClient.updateHaltFlags(
+                    noPermissionUser,
+                    1
+                );
                 await provider.connection.confirmTransaction(
                     tx,
                     "singleGossip"
@@ -602,7 +605,7 @@ describe("castle-vault", () => {
 
             await vaultClient.reload();
 
-            assert.equal(oldFlags, vaultClient.getFlags());
+            assert.equal(oldFlags, vaultClient.getHaltFlags());
         });
     }
 

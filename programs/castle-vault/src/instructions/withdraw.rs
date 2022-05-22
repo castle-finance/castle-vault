@@ -97,7 +97,7 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
     (!ctx
         .accounts
         .vault
-        .flags()
+        .get_halt_flags()
         .contains(VaultFlags::HALT_DEPOSITS_WITHDRAWS))
     .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
 
