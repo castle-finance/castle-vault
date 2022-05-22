@@ -78,7 +78,9 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             & r.solend_reserve.key.eq(&r.vault.solend_reserve)
         {
             true => Some(Reserves::Solend(
-                Account::<SolendReserve>::try_from(&r.solend_reserve)?.deref().clone(),
+                Account::<SolendReserve>::try_from(&r.solend_reserve)?
+                    .deref()
+                    .clone(),
             )),
             _ => None,
         };
@@ -87,7 +89,9 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             & r.port_reserve.key.eq(&r.vault.port_reserve)
         {
             true => Some(Reserves::Port(
-                Account::<PortReserve>::try_from(&r.port_reserve)?.deref().clone(),
+                Account::<PortReserve>::try_from(&r.port_reserve)?
+                    .deref()
+                    .clone(),
             )),
             _ => None,
         };

@@ -52,9 +52,7 @@ impl AssetContainer<Reserves> {
             .map_err(|_| ErrorCode::StrategyError.into())
             .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100))
             .and_then(|r| Rate::one().try_div(r))
-            .map(|equal_allocation| {
-                self.apply(|_, v| v.map(|_| equal_allocation))
-            })
+            .map(|equal_allocation| self.apply(|_, v| v.map(|_| equal_allocation)))
     }
 
     pub fn calculate_weights(
