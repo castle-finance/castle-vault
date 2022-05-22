@@ -51,8 +51,8 @@ pub struct Rebalance<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    // The account's identity is explicitly checked before try_from
-    // So it's ok ignore soteria warning here.
+    // DANGER: make sure the owner is as expected (currently done using `try_from`)
+    //         and the keys match the vault (currently explicitly checked before `try_from`)
     //#[soteria(ignore)]
     pub solend_reserve: AccountInfo<'info>,
     //#[soteria(ignore)]
@@ -62,10 +62,6 @@ pub struct Rebalance<'info> {
 
     pub clock: Sysvar<'info, Clock>,
 }
-
-type SolendAccount<'info> = Account<'info, SolendReserve>;
-type PortAccount<'info> = Account<'info, PortReserve>;
-type JetAccount<'info> = AccountLoader<'info, jet::state::Reserve>;
 
 impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
     type Error = ProgramError;
@@ -82,7 +78,7 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             & r.solend_reserve.key.eq(&r.vault.solend_reserve)
         {
             true => Some(Reserves::Solend(
-                SolendAccount::try_from(&r.solend_reserve)?.deref().clone(),
+                Account::<SolendReserve>::try_from(&r.solend_reserve)?.deref().clone(),
             )),
             _ => None,
         };
@@ -91,7 +87,7 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             & r.port_reserve.key.eq(&r.vault.port_reserve)
         {
             true => Some(Reserves::Port(
-                PortAccount::try_from(&r.port_reserve)?.deref().clone(),
+                Account::<PortReserve>::try_from(&r.port_reserve)?.deref().clone(),
             )),
             _ => None,
         };
@@ -100,7 +96,7 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             & r.jet_reserve.key.eq(&r.vault.jet_reserve)
         {
             true => Some(Reserves::Jet(Box::new(
-                *JetAccount::try_from(&r.jet_reserve)?.load()?,
+                *AccountLoader::<jet::state::Reserve>::try_from(&r.jet_reserve)?.load()?,
             ))),
             _ => None,
         };

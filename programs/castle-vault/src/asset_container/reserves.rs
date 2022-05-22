@@ -53,10 +53,7 @@ impl AssetContainer<Reserves> {
             .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100))
             .and_then(|r| Rate::one().try_div(r))
             .map(|equal_allocation| {
-                self.apply(|_, v| match v {
-                    Some(_) => Some(equal_allocation),
-                    None => None,
-                })
+                self.apply(|_, v| v.map(|_| equal_allocation))
             })
     }
 

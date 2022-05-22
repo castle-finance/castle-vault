@@ -110,10 +110,10 @@ impl Vault {
     pub fn set_yield_source_flag(
         &mut self,
         flag: YieldSourceFlags,
-        enabled: bool,
+        initialized: bool,
     ) -> ProgramResult {
         let mut new_flags = self.get_yield_source_flags();
-        new_flags.set(flag, enabled);
+        new_flags.set(flag, initialized);
         self.yield_source_flags = new_flags.bits();
         Ok(())
     }
