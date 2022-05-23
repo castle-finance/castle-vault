@@ -73,29 +73,41 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
+
+        // TODO is there a way to eliminate duplicate code here?
         let solend = flags
             .contains(YieldSourceFlags::SOLEND)
             .as_option()
             .map(|()| {
                 r.solend_reserve.key.eq(&r.vault.solend_reserve).as_result(
-                    Account::<SolendReserve>::try_from(&r.solend_reserve).map(Box::new),
+                    Ok::<_, ProgramError>(Reserves::Solend(
+                        Account::<SolendReserve>::try_from(&r.solend_reserve)
+                            .map(Box::new)?
+                            .deref()
+                            .deref()
+                            .clone(),
+                    )),
                     ErrorCode::InvalidAccount,
                 )?
             })
-            .transpose()?
-            .map(|a| Reserves::Solend(a.deref().deref().clone()));
+            .transpose()?;
 
         let port = flags
             .contains(YieldSourceFlags::PORT)
             .as_option()
             .map(|()| {
                 r.port_reserve.key.eq(&r.vault.port_reserve).as_result(
-                    Account::<PortReserve>::try_from(&r.port_reserve).map(Box::new),
+                    Ok::<_, ProgramError>(Reserves::Port(
+                        Account::<PortReserve>::try_from(&r.port_reserve)
+                            .map(Box::new)?
+                            .deref()
+                            .deref()
+                            .clone(),
+                    )),
                     ErrorCode::InvalidAccount,
                 )?
             })
-            .transpose()?
-            .map(|a| Reserves::Port(a.deref().deref().clone()));
+            .transpose()?;
 
         let jet = flags
             .contains(YieldSourceFlags::JET)
