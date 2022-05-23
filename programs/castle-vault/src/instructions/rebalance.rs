@@ -66,50 +66,50 @@ pub struct Rebalance<'info> {
 impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
     type Error = ProgramError;
     fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>, Self::Error> {
-        let flags = r.vault.get_yield_source_flags();
+        let flags: YieldSourceFlags = r.vault.get_yield_source_flags();
 
         // NOTE: I tried pretty hard to get rid of these clones and only use the references.
         // The problem is that these references originate from a deref() (or as_ref())
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
-
         let solend = flags
             .contains(YieldSourceFlags::SOLEND)
             .as_option()
             .map(|()| {
                 r.solend_reserve.key.eq(&r.vault.solend_reserve).as_result(
-                    Account::<SolendReserve>::try_from(&r.solend_reserve),
+                    Account::<SolendReserve>::try_from(&r.solend_reserve).map(Box::new),
                     ErrorCode::InvalidAccount,
                 )?
             })
             .transpose()?
-            .map(|a| Reserves::Solend(a.deref().clone()));
+            .map(|a| Reserves::Solend(a.deref().deref().clone()));
 
-        if !r.port_reserve.key.eq(&r.vault.port_reserve) {
-            return Err(ErrorCode::InvalidAccount.into());
-        }
-
-        let port = match flags.contains(YieldSourceFlags::PORT) {
-            true => Some(Reserves::Port(
-                Account::<PortReserve>::try_from(&r.port_reserve)?
-                    .deref()
-                    .clone(),
-            )),
-            _ => None,
-        };
+        let port = flags
+            .contains(YieldSourceFlags::PORT)
+            .as_option()
+            .map(|()| {
+                r.port_reserve.key.eq(&r.vault.port_reserve).as_result(
+                    Account::<PortReserve>::try_from(&r.port_reserve).map(Box::new),
+                    ErrorCode::InvalidAccount,
+                )?
+            })
+            .transpose()?
+            .map(|a| Reserves::Port(a.deref().deref().clone()));
 
         let jet = flags
             .contains(YieldSourceFlags::JET)
             .as_option()
             .map(|()| {
                 r.jet_reserve.key.eq(&r.vault.jet_reserve).as_result(
-                    AccountLoader::<jet::state::Reserve>::try_from(&r.jet_reserve),
+                    Ok::<_, ProgramError>(Reserves::Jet(Box::new(
+                        *(AccountLoader::<jet::state::Reserve>::try_from(&r.jet_reserve)?)
+                            .load()?,
+                    ))),
                     ErrorCode::InvalidAccount,
                 )?
             })
-            .transpose()?
-            .map(|a| Reserves::Jet(Box::new(*(a.load().unwrap()))));
+            .transpose()?;
 
         Ok(AssetContainer {
             inner: [solend, port, jet],
