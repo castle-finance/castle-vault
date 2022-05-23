@@ -74,20 +74,23 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
 
-        let solend = match flags.contains(YieldSourceFlags::SOLEND)
-            & r.solend_reserve.key.eq(&r.vault.solend_reserve)
-        {
-            true => Some(Reserves::Solend(
-                Account::<SolendReserve>::try_from(&r.solend_reserve)?
-                    .deref()
-                    .clone(),
-            )),
-            _ => None,
-        };
+        let solend = flags
+            .contains(YieldSourceFlags::SOLEND)
+            .as_option()
+            .map(|()| {
+                r.solend_reserve.key.eq(&r.vault.solend_reserve).as_result(
+                    Account::<SolendReserve>::try_from(&r.solend_reserve),
+                    ErrorCode::InvalidAccount,
+                )?
+            })
+            .transpose()?
+            .map(|a| Reserves::Solend(a.deref().clone()));
 
-        let port = match flags.contains(YieldSourceFlags::PORT)
-            & r.port_reserve.key.eq(&r.vault.port_reserve)
-        {
+        if !r.port_reserve.key.eq(&r.vault.port_reserve) {
+            return Err(ErrorCode::InvalidAccount.into());
+        }
+
+        let port = match flags.contains(YieldSourceFlags::PORT) {
             true => Some(Reserves::Port(
                 Account::<PortReserve>::try_from(&r.port_reserve)?
                     .deref()
@@ -96,14 +99,17 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             _ => None,
         };
 
-        let jet = match flags.contains(YieldSourceFlags::JET)
-            & r.jet_reserve.key.eq(&r.vault.jet_reserve)
-        {
-            true => Some(Reserves::Jet(Box::new(
-                *AccountLoader::<jet::state::Reserve>::try_from(&r.jet_reserve)?.load()?,
-            ))),
-            _ => None,
-        };
+        let jet = flags
+            .contains(YieldSourceFlags::JET)
+            .as_option()
+            .map(|()| {
+                r.jet_reserve.key.eq(&r.vault.jet_reserve).as_result(
+                    AccountLoader::<jet::state::Reserve>::try_from(&r.jet_reserve),
+                    ErrorCode::InvalidAccount,
+                )?
+            })
+            .transpose()?
+            .map(|a| Reserves::Jet(Box::new(*(a.load().unwrap()))));
 
         Ok(AssetContainer {
             inner: [solend, port, jet],
