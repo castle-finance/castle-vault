@@ -861,6 +861,29 @@ export class VaultClient {
         return this.program.provider.sendAll(txs);
     }
 
+    async emergencyBrake(): Promise<TransactionSignature[]> {
+        const value = new anchor.BN(
+            (await this.getTotalValue()).lamports.toString()
+        );
+        return Promise.all(
+            Object.values(this.yieldSources).map((ys: LendingMarket) => {
+                const tx = new Transaction();
+                tx.add(
+                    ys.getRefreshIx(this.program, this.vaultId, this.vaultState)
+                );
+                tx.add(
+                    ys.getReconcileIx(
+                        this.program,
+                        this.vaultId,
+                        this.vaultState,
+                        value
+                    )
+                );
+                return this.program.provider.send(tx);
+            })
+        );
+    }
+
     /**
      *
      * @returns Weighted average of APYs by allocation
