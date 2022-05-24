@@ -144,7 +144,6 @@ impl From<StrategyWeightsArg> for AssetContainer<Rate> {
 }
 
 /// Calculate and store optimal allocations to downstream lending markets
-#[inline(never)]
 pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Rebalancing");
