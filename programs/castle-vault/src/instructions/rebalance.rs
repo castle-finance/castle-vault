@@ -80,13 +80,11 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             .as_option()
             .map(|()| {
                 r.solend_reserve.key.eq(&r.vault.solend_reserve).as_result(
-                    Ok::<_, ProgramError>(Reserves::Solend(
-                        Account::<SolendReserve>::try_from(&r.solend_reserve)
-                            .map(Box::new)?
-                            .deref()
+                    Ok::<_, ProgramError>(Reserves::Solend(Box::new(
+                        Account::<SolendReserve>::try_from(&r.solend_reserve)?
                             .deref()
                             .clone(),
-                    )),
+                    ))),
                     ErrorCode::InvalidAccount,
                 )?
             })
@@ -97,13 +95,11 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             .as_option()
             .map(|()| {
                 r.port_reserve.key.eq(&r.vault.port_reserve).as_result(
-                    Ok::<_, ProgramError>(Reserves::Port(
-                        Account::<PortReserve>::try_from(&r.port_reserve)
-                            .map(Box::new)?
-                            .deref()
+                    Ok::<_, ProgramError>(Reserves::Port(Box::new(
+                        Account::<PortReserve>::try_from(&r.port_reserve)?
                             .deref()
                             .clone(),
-                    )),
+                    ))),
                     ErrorCode::InvalidAccount,
                 )?
             })
@@ -148,6 +144,7 @@ impl From<StrategyWeightsArg> for AssetContainer<Rate> {
 }
 
 /// Calculate and store optimal allocations to downstream lending markets
+#[inline(never)]
 pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
     #[cfg(feature = "debug")]
     msg!("Rebalancing");

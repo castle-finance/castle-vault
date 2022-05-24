@@ -83,8 +83,8 @@ where
 
 #[derive(Clone)]
 pub enum Reserves {
-    Solend(SolendReserve),
-    Port(PortReserve),
+    Solend(Box<SolendReserve>),
+    Port(Box<PortReserve>),
     Jet(Box<jet::state::Reserve>),
 }
 
