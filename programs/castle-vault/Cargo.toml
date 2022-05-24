@@ -6,7 +6,7 @@ homepage = "https://castle.finance"
 license = "GPL-3.0-or-later"
 name = "castle-vault"
 repository = "https://github.com/castle-finance/castle-vault/"
-version = "3.0.0"
+version = "3.1.0"
 
 [lib]
 crate-type = ["cdylib", "lib"]

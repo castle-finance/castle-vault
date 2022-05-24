@@ -48,17 +48,17 @@ pub struct Rebalance<'info> {
     #[account(
         mut,
         constraint = !vault.value.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
-        has_one = solend_reserve,
-        has_one = port_reserve,
-        has_one = jet_reserve,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
-    pub solend_reserve: Box<Account<'info, SolendReserve>>,
-
-    pub port_reserve: Box<Account<'info, PortReserve>>,
-
-    pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
+    // DANGER: make sure the owner is as expected (currently done using `try_from`)
+    //         and the keys match the vault (currently explicitly checked before `try_from`)
+    //#[soteria(ignore)]
+    pub solend_reserve: AccountInfo<'info>,
+    //#[soteria(ignore)]
+    pub port_reserve: AccountInfo<'info>,
+    //#[soteria(ignore)]
+    pub jet_reserve: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,
 }
@@ -66,14 +66,50 @@ pub struct Rebalance<'info> {
 impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
     type Error = ProgramError;
     fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>, Self::Error> {
+        let flags = r.vault.get_yield_source_flags();
+
         // NOTE: I tried pretty hard to get rid of these clones and only use the references.
         // The problem is that these references originate from a deref() (or as_ref())
         // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
         // which means that the lifetimes are shared, preventing any other borrows
         // (in particular the mutable borrow required at the end to save state)
-        let solend = Some(Reserves::Solend(r.solend_reserve.deref().deref().clone()));
-        let port = Some(Reserves::Port(r.port_reserve.deref().deref().clone()));
-        let jet = Some(Reserves::Jet(Box::new(*r.jet_reserve.load()?)));
+
+        let solend = flags
+            .contains(YieldSourceFlags::SOLEND)
+            .as_option()
+            .map(|()| {
+                r.solend_reserve.key.eq(&r.vault.solend_reserve).as_result(
+                    Account::<SolendReserve>::try_from(&r.solend_reserve).map(Box::new),
+                    ErrorCode::InvalidAccount,
+                )?
+            })
+            .transpose()?
+            .map(|a| Reserves::Solend(a.deref().deref().clone()));
+
+        let port = flags
+            .contains(YieldSourceFlags::PORT)
+            .as_option()
+            .map(|()| {
+                r.port_reserve.key.eq(&r.vault.port_reserve).as_result(
+                    Account::<PortReserve>::try_from(&r.port_reserve).map(Box::new),
+                    ErrorCode::InvalidAccount,
+                )?
+            })
+            .transpose()?
+            .map(|a| Reserves::Port(a.deref().deref().clone()));
+
+        let jet = flags
+            .contains(YieldSourceFlags::JET)
+            .as_option()
+            .map(|()| {
+                r.jet_reserve.key.eq(&r.vault.jet_reserve).as_result(
+                    AccountLoader::<jet::state::Reserve>::try_from(&r.jet_reserve),
+                    ErrorCode::InvalidAccount,
+                )?
+            })
+            .transpose()?
+            .map(|a| Reserves::Jet(Box::new(*(a.load().unwrap()))));
+
         Ok(AssetContainer {
             inner: [solend, port, jet],
         })
@@ -92,7 +128,7 @@ impl_provider_index!(StrategyWeightsArg, u16);
 impl From<StrategyWeightsArg> for AssetContainer<Rate> {
     fn from(s: StrategyWeightsArg) -> Self {
         Provider::iter().fold(Self::default(), |mut acc, provider| {
-            acc[provider] = Rate::from_bips(s[provider] as u64);
+            acc[provider] = Some(Rate::from_bips(s[provider] as u64));
             acc
         })
     }

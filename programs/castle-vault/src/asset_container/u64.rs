@@ -10,9 +10,13 @@ impl<const N: usize> AssetContainerGeneric<u64, N> {
         rates: &AssetContainerGeneric<Rate, N>,
         total_amount: u64,
     ) -> Result<Self, ProgramError> {
-        rates.try_apply(|_, rate| {
-            rate.try_mul(total_amount)
-                .and_then(|product| Decimal::from(product).try_floor_u64())
+        rates.try_apply(|_, rate| match rate {
+            Some(r) => {
+                Ok(Some(r.try_mul(total_amount).and_then(|product| {
+                    Decimal::from(product).try_floor_u64()
+                })?))
+            }
+            None => Ok(None),
         })
     }
 }
@@ -34,6 +38,6 @@ mod tests {
         AssetContainerGeneric::<u64, 3>::try_from_weights(&rates, 200)
             .unwrap()
             .into_iter()
-            .for_each(|(p, n)| assert_eq!(n, expected[p as usize]))
+            .for_each(|(p, n)| assert_eq!(n.unwrap(), expected[p as usize]))
     }
 }

@@ -13,7 +13,7 @@ use crate::{
     reconcile::LendingMarket,
     refresh::Refresher,
     reserves::{Provider, ReserveAccessor},
-    state::Vault,
+    state::{Vault, YieldSourceFlags},
 };
 
 #[derive(Accounts)]
@@ -215,6 +215,8 @@ impl<'info> YieldSourceInitializer<'info> for InitializePort<'info> {
     fn initialize_yield_source(&mut self) -> ProgramResult {
         self.vault.port_reserve = self.port_reserve.key();
         self.vault.vault_port_lp_token = self.vault_port_lp_token.key();
+        self.vault
+            .set_yield_source_flag(YieldSourceFlags::PORT, true)?;
         Ok(())
     }
 }
@@ -266,21 +268,27 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
         &mut self,
         remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
-        #[cfg(feature = "debug")]
-        msg!("Refreshing port");
+        if self
+            .vault
+            .get_yield_source_flags()
+            .contains(YieldSourceFlags::PORT)
+        {
+            port_anchor_adaptor::refresh_port_reserve(
+                self.port_refresh_reserve_context(remaining_accounts),
+            )?;
 
-        port_anchor_adaptor::refresh_port_reserve(
-            self.port_refresh_reserve_context(remaining_accounts),
-        )?;
+            #[cfg(feature = "debug")]
+            msg!("Refreshing port");
 
-        let port_exchange_rate = self.port_reserve.collateral_exchange_rate()?;
-        let port_value =
-            port_exchange_rate.collateral_to_liquidity(self.vault_port_lp_token.amount)?;
+            let port_exchange_rate = self.port_reserve.collateral_exchange_rate()?;
+            let port_value =
+                port_exchange_rate.collateral_to_liquidity(self.vault_port_lp_token.amount)?;
 
-        #[cfg(feature = "debug")]
-        msg!("Value: {}", port_value);
+            #[cfg(feature = "debug")]
+            msg!("Refresh port reserve token value: {}", port_value);
 
-        self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
+            self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
+        }
 
         Ok(())
     }

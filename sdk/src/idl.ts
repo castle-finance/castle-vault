@@ -275,7 +275,7 @@ export type CastleVault = {
             ];
         },
         {
-            name: "updateFlags";
+            name: "updateHaltFlags";
             accounts: [
                 {
                     name: "vault";
@@ -291,7 +291,7 @@ export type CastleVault = {
             args: [
                 {
                     name: "flags";
-                    type: "u32";
+                    type: "u16";
                 }
             ];
         },
@@ -916,8 +916,12 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "bitflags";
-                        type: "u32";
+                        name: "haltFlags";
+                        type: "u16";
+                    },
+                    {
+                        name: "yieldSourceFlags";
+                        type: "u16";
                     },
                     {
                         name: "value";
@@ -946,7 +950,7 @@ export type CastleVault = {
                     {
                         name: "reserved";
                         type: {
-                            array: ["u64", 14];
+                            array: ["u32", 28];
                         };
                     }
                 ];
@@ -1608,7 +1612,7 @@ export const IDL: CastleVault = {
             ],
         },
         {
-            name: "updateFlags",
+            name: "updateHaltFlags",
             accounts: [
                 {
                     name: "vault",
@@ -1624,7 +1628,7 @@ export const IDL: CastleVault = {
             args: [
                 {
                     name: "flags",
-                    type: "u32",
+                    type: "u16",
                 },
             ],
         },
@@ -2249,8 +2253,12 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "bitflags",
-                        type: "u32",
+                        name: "haltFlags",
+                        type: "u16",
+                    },
+                    {
+                        name: "yieldSourceFlags",
+                        type: "u16",
                     },
                     {
                         name: "value",
@@ -2279,7 +2287,7 @@ export const IDL: CastleVault = {
                     {
                         name: "reserved",
                         type: {
-                            array: ["u64", 14],
+                            array: ["u32", 28],
                         },
                     },
                 ],

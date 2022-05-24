@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 
+use core::convert::TryFrom;
+
 use strum::IntoEnumIterator;
 #[cfg(test)]
 use type_layout::TypeLayout;
@@ -64,7 +66,8 @@ pub struct Vault {
 
     pub referral_fee_receiver: Pubkey,
 
-    bitflags: u32,
+    halt_flags: u16,
+    yield_source_flags: u16,
 
     /// Total value of vault denominated in the reserve token
     pub value: SlotTrackedValue,
@@ -79,20 +82,75 @@ pub struct Vault {
 
     // 8 * 23 = 184
     /// Reserved space for future upgrades
-    _reserved: [u64; 14],
+    _reserved: [u32; 28],
 }
 
 impl Vault {
-    pub fn flags(&self) -> VaultFlags {
-        VaultFlags::from_bits(self.bitflags)
-            .unwrap_or_else(|| panic!("{:?} does not resolve to valid VaultFlags", self.bitflags))
+    pub fn get_halt_flags(&self) -> VaultFlags {
+        VaultFlags::from_bits(self.halt_flags)
+            .unwrap_or_else(|| panic!("{:?} does not resolve to valid VaultFlags", self.halt_flags))
     }
 
-    pub fn set_flags(&mut self, bits: u32) -> ProgramResult {
+    pub fn set_halt_flags(&mut self, bits: u16) -> ProgramResult {
         VaultFlags::from_bits(bits)
             .ok_or_else::<ProgramError, _>(|| ErrorCode::InvalidVaultFlags.into())?;
-        self.bitflags = bits;
+        self.halt_flags = bits;
         Ok(())
+    }
+
+    pub fn get_yield_source_flags(&self) -> YieldSourceFlags {
+        YieldSourceFlags::from_bits(self.yield_source_flags).unwrap_or_else(|| {
+            panic!(
+                "{:?} does not resolve to valid YieldSourceFlags",
+                self.yield_source_flags
+            )
+        })
+    }
+
+    pub fn set_yield_source_flag(
+        &mut self,
+        flag: YieldSourceFlags,
+        initialized: bool,
+    ) -> ProgramResult {
+        let mut new_flags = self.get_yield_source_flags();
+        new_flags.set(flag, initialized);
+        self.yield_source_flags = new_flags.bits();
+        Ok(())
+    }
+
+    // The lower bound of allocation cap is adjusted to 100 / N
+    // Where N is the number of available yield sources according to yield_source_flags
+    pub fn adjust_allocation_cap(&mut self) -> ProgramResult {
+        let cnt: u8 =
+            u8::try_from((0..16).fold(0, |sum, i| sum + ((self.yield_source_flags >> i) & 1)))
+                .map_err::<ProgramError, _>(|_| ErrorCode::MathError.into())?;
+        let new_allocation_cap = 100_u8
+            .checked_div(cnt)
+            .ok_or_else::<ProgramError, _>(|| ErrorCode::MathError.into())?
+            .checked_add(1)
+            .ok_or_else::<ProgramError, _>(|| ErrorCode::MathError.into())?
+            .clamp(0, 100);
+        self.config.allocation_cap_pct = self
+            .config
+            .allocation_cap_pct
+            .clamp(new_allocation_cap, 100);
+
+        #[cfg(feature = "debug")]
+        {
+            msg!("num of active pools: {}", cnt);
+            msg!(" new allocation cap: {}", self.config.allocation_cap_pct);
+        }
+
+        Ok(())
+    }
+
+    pub fn get_yield_source_availability(&self, provider: Provider) -> bool {
+        let flags = self.get_yield_source_flags();
+        match provider {
+            Provider::Solend => flags.contains(YieldSourceFlags::SOLEND),
+            Provider::Port => flags.contains(YieldSourceFlags::PORT),
+            Provider::Jet => flags.contains(YieldSourceFlags::JET),
+        }
     }
 
     pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
@@ -210,7 +268,7 @@ pub enum StrategyType {
 }
 
 bitflags::bitflags! {
-    pub struct VaultFlags: u32 {
+    pub struct VaultFlags: u16 {
         /// Disable reconciles
         const HALT_RECONCILES = 1 << 0;
 
@@ -228,6 +286,14 @@ bitflags::bitflags! {
     }
 }
 
+bitflags::bitflags! {
+    pub struct YieldSourceFlags: u16 {
+        const SOLEND = 1 << 0;
+        const PORT = 1 << 1;
+        const JET = 1 << 2;
+    }
+}
+
 #[assert_size(aligns, 72)]
 #[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
@@ -241,7 +307,10 @@ impl_provider_index!(Allocations, SlotTrackedValue);
 impl Allocations {
     pub fn from_container(c: AssetContainer<u64>, slot: u64) -> Self {
         Provider::iter().fold(Self::default(), |mut acc, provider| {
-            acc[provider].update(c[provider], slot);
+            match c[provider] {
+                Some(v) => acc[provider].update(v, slot),
+                None => {}
+            };
             acc
         })
     }

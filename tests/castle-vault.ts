@@ -214,7 +214,12 @@ describe("castle-vault", () => {
         );
     }
 
-    async function initializeVault(config: VaultConfig) {
+    async function initializeVault(
+        config: VaultConfig,
+        solendAvailable: boolean = true,
+        portAvailable: boolean = true,
+        jetAvailable: boolean = true
+    ) {
         vaultClient = await VaultClient.initialize(
             provider,
             provider.wallet as anchor.Wallet,
@@ -227,21 +232,27 @@ describe("castle-vault", () => {
         );
 
         await Promise.all([
-            await vaultClient.initializeSolend(
-                provider.wallet as anchor.Wallet,
-                solend,
-                owner
-            ),
-            await vaultClient.initializePort(
-                provider.wallet as anchor.Wallet,
-                port,
-                owner
-            ),
-            await vaultClient.initializeJet(
-                provider.wallet as anchor.Wallet,
-                jet,
-                owner
-            ),
+            solendAvailable
+                ? await vaultClient.initializeSolend(
+                      provider.wallet as anchor.Wallet,
+                      solend,
+                      owner
+                  )
+                : {},
+            portAvailable
+                ? await vaultClient.initializePort(
+                      provider.wallet as anchor.Wallet,
+                      port,
+                      owner
+                  )
+                : {},
+            jetAvailable
+                ? await vaultClient.initializeJet(
+                      provider.wallet as anchor.Wallet,
+                      jet,
+                      owner
+                  )
+                : {},
         ]);
 
         await vaultClient.reload();
@@ -356,6 +367,7 @@ describe("castle-vault", () => {
                 vaultClient.getAllocationCap().asPercent().toNumber(),
                 100
             );
+            assert.equal(0b111, vaultClient.getYieldSourceFlags());
         });
 
         it("Deposits to vault reserves", async function () {
@@ -497,7 +509,7 @@ describe("castle-vault", () => {
                 .find((e) => e.name == "HaltedVault")
                 .code.toString(16);
 
-            await vaultClient.updateFlags(
+            await vaultClient.updateHaltFlags(
                 owner,
                 VaultFlags.HaltDepositsWithdraws
             );
@@ -521,7 +533,7 @@ describe("castle-vault", () => {
                 .find((e) => e.name == "HaltedVault")
                 .code.toString(16);
 
-            await vaultClient.updateFlags(owner, VaultFlags.HaltReconciles);
+            await vaultClient.updateHaltFlags(owner, VaultFlags.HaltReconciles);
 
             try {
                 await performRebalance();
@@ -536,10 +548,10 @@ describe("castle-vault", () => {
 
         it("Update flags", async function () {
             const flags = 0;
-            const tx = await vaultClient.updateFlags(owner, flags);
+            const tx = await vaultClient.updateHaltFlags(owner, flags);
             await provider.connection.confirmTransaction(tx, "singleGossip");
             await vaultClient.reload();
-            assert.equal(flags, vaultClient.getFlags());
+            assert.equal(flags, vaultClient.getHaltFlags());
         });
 
         it("Reject invalid flags update", async function () {
@@ -547,10 +559,10 @@ describe("castle-vault", () => {
                 .find((e) => e.name == "InvalidVaultFlags")
                 .code.toString(16);
 
-            const oldFlags = vaultClient.getFlags();
+            const oldFlags = vaultClient.getHaltFlags();
 
             try {
-                const tx = await vaultClient.updateFlags(owner, 23);
+                const tx = await vaultClient.updateHaltFlags(owner, 23);
                 await provider.connection.confirmTransaction(
                     tx,
                     "singleGossip"
@@ -565,17 +577,20 @@ describe("castle-vault", () => {
 
             await vaultClient.reload();
 
-            assert.equal(oldFlags, vaultClient.getFlags());
+            assert.equal(oldFlags, vaultClient.getHaltFlags());
         });
 
         it("Reject unauthorized flags update", async function () {
             const errorCode = "0x8d";
 
             const noPermissionUser = Keypair.generate();
-            const oldFlags = vaultClient.getFlags();
+            const oldFlags = vaultClient.getHaltFlags();
 
             try {
-                const tx = await vaultClient.updateFlags(noPermissionUser, 1);
+                const tx = await vaultClient.updateHaltFlags(
+                    noPermissionUser,
+                    1
+                );
                 await provider.connection.confirmTransaction(
                     tx,
                     "singleGossip"
@@ -590,7 +605,7 @@ describe("castle-vault", () => {
 
             await vaultClient.reload();
 
-            assert.equal(oldFlags, vaultClient.getFlags());
+            assert.equal(oldFlags, vaultClient.getHaltFlags());
         });
     }
 
@@ -598,7 +613,10 @@ describe("castle-vault", () => {
         expectedSolendRatio: number,
         expectedPortRatio: number,
         expectedJetRatio: number,
-        rebalanceMode: RebalanceMode = RebalanceModes.calculator
+        rebalanceMode: RebalanceMode = RebalanceModes.calculator,
+        solendAvailable: boolean = true,
+        portAvailable: boolean = true,
+        jetAvailable: boolean = true
     ) {
         // NOTE: should not be divisible by the number of markets, 3 in this case
         // The TODO to correct this is below
@@ -631,24 +649,30 @@ describe("castle-vault", () => {
                     );
                 }
 
-                assert.equal(
-                    (
-                        await vaultClient.getVaultSolendLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultPortLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultJetLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
+                if (solendAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultSolendLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (portAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultPortLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (jetAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultJetLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
             });
 
             it("Rejects tx if weights are suboptimal", async () => {
@@ -672,24 +696,30 @@ describe("castle-vault", () => {
                     );
                 }
 
-                assert.equal(
-                    (
-                        await vaultClient.getVaultSolendLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultPortLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultJetLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
+                if (solendAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultSolendLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (portAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultPortLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (jetAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultJetLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
             });
 
             it("Rejects tx if weights exceeds the cap", async () => {
@@ -713,24 +743,30 @@ describe("castle-vault", () => {
                     );
                 }
 
-                assert.equal(
-                    (
-                        await vaultClient.getVaultSolendLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultPortLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
-                assert.equal(
-                    (
-                        await vaultClient.getVaultJetLpTokenAccountValue()
-                    ).lamports.toNumber(),
-                    0
-                );
+                if (solendAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultSolendLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (portAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultPortLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
+                if (jetAvailable) {
+                    assert.equal(
+                        (
+                            await vaultClient.getVaultJetLpTokenAccountValue()
+                        ).lamports.toNumber(),
+                        0
+                    );
+                }
             });
         }
 
@@ -741,41 +777,50 @@ describe("castle-vault", () => {
                 jet: expectedJetRatio * 10000,
             });
 
-            const totalValue = await getVaultTotalValue();
-            const solendValue = (
-                await vaultClient.getVaultSolendLpTokenAccountValue()
-            ).lamports.toNumber();
-            const portValue = (
-                await vaultClient.getVaultPortLpTokenAccountValue()
-            ).lamports.toNumber();
-            const jetValue = (
-                await vaultClient.getVaultJetLpTokenAccountValue()
-            ).lamports.toNumber();
-
             // TODO Resolve the difference
             // Use isAtMost because on-chain rust program handles rounding differently than TypeScript.
             // However the difference should not exceet 1 token.
             const maxDiffAllowed = 1;
+            const totalValue = await getVaultTotalValue();
             assert.isAtMost(
                 Math.abs(totalValue - Math.floor(depositQty)),
                 maxDiffAllowed
             );
-            assert.isAtMost(
-                Math.abs(
-                    solendValue - Math.floor(depositQty * expectedSolendRatio)
-                ),
-                maxDiffAllowed
-            );
-            assert.isAtMost(
-                Math.abs(
-                    portValue - Math.floor(depositQty * expectedPortRatio)
-                ),
-                maxDiffAllowed
-            );
-            assert.isAtMost(
-                Math.abs(jetValue - Math.floor(depositQty * expectedJetRatio)),
-                maxDiffAllowed
-            );
+
+            if (solendAvailable) {
+                const solendValue = (
+                    await vaultClient.getVaultSolendLpTokenAccountValue()
+                ).lamports.toNumber();
+                assert.isAtMost(
+                    Math.abs(
+                        solendValue -
+                            Math.floor(depositQty * expectedSolendRatio)
+                    ),
+                    maxDiffAllowed
+                );
+            }
+            if (portAvailable) {
+                const portValue = (
+                    await vaultClient.getVaultPortLpTokenAccountValue()
+                ).lamports.toNumber();
+                assert.isAtMost(
+                    Math.abs(
+                        portValue - Math.floor(depositQty * expectedPortRatio)
+                    ),
+                    maxDiffAllowed
+                );
+            }
+            if (jetAvailable) {
+                const jetValue = (
+                    await vaultClient.getVaultJetLpTokenAccountValue()
+                ).lamports.toNumber();
+                assert.isAtMost(
+                    Math.abs(
+                        jetValue - Math.floor(depositQty * expectedJetRatio)
+                    ),
+                    maxDiffAllowed
+                );
+            }
         });
 
         it("Withdraws", async function () {
@@ -789,10 +834,18 @@ describe("castle-vault", () => {
             const newVaultValue = await getVaultTotalValue();
             const newLpTokenSupply = await getLpTokenSupply();
 
-            // Need to subtract 1 from expected vals bc of rounding
-            assert.equal(oldVaultValue - newVaultValue, withdrawQty - 1);
+            const actualWithdrawAmount = oldVaultValue - newVaultValue;
+
+            // Allow max different of 1 token because of rounding error.
+            const maxDiffAllowed = 1;
+            assert.isAtMost(
+                Math.abs(actualWithdrawAmount - withdrawQty),
+                maxDiffAllowed
+            );
+            // Actual should <= requested because we rounds down.
+            assert.isAtMost(actualWithdrawAmount, withdrawQty);
             assert.equal(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
-            assert.equal(newUserReserveBalance, withdrawQty - 1);
+            assert.equal(newUserReserveBalance, actualWithdrawAmount);
         });
     }
 
@@ -1007,6 +1060,108 @@ describe("castle-vault", () => {
                 0,
                 vaultAllocationCap / 100,
                 rebalanceMode
+            );
+        });
+    });
+
+    describe("Disabled pools", () => {
+        describe("Rebalance with equal allocation strategy missing 1 pool", () => {
+            const rebalanceMode = RebalanceModes.calculator;
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: vaultAllocationCap,
+                        strategyType: { [StrategyTypes.equalAllocation]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                    },
+                    true,
+                    false,
+                    true
+                );
+            });
+
+            it("Initialize fewer yield sources", async function () {
+                assert.equal(0b101, vaultClient.getYieldSourceFlags());
+            });
+
+            it("Update and adjust allocation cap", async function () {
+                const oldConfig = vaultClient.getVaultConfig();
+                const newConfig = {
+                    ...oldConfig,
+                    allocationCapPct: 40,
+                };
+                const tx = await vaultClient.updateConfig(owner, newConfig);
+                await provider.connection.confirmTransaction(
+                    tx,
+                    "singleGossip"
+                );
+                await vaultClient.reload();
+                assert.equal(vaultClient.getVaultConfig().allocationCapPct, 51);
+            });
+
+            testRebalanceWithdraw(
+                1 / 2,
+                0,
+                1 / 2,
+                rebalanceMode,
+                true,
+                false,
+                true
+            );
+        });
+
+        describe("Rebalance with equal allocation strategy missing 2 pools", () => {
+            const rebalanceMode = RebalanceModes.calculator;
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: 100,
+                        strategyType: { [StrategyTypes.equalAllocation]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                    },
+                    true,
+                    false,
+                    false
+                );
+            });
+
+            it("Initialize fewer yield sources", async function () {
+                assert.equal(0b001, vaultClient.getYieldSourceFlags());
+            });
+
+            testRebalanceWithdraw(1, 0, 0, rebalanceMode, true, false, false);
+        });
+
+        describe("Rebalance with max yield strategy", () => {
+            const rebalanceMode = RebalanceModes.calculator;
+            before(initLendingMarkets);
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: vaultAllocationCap,
+                        strategyType: { [StrategyTypes.maxYield]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                    },
+                    true,
+                    true,
+                    false
+                );
+            });
+
+            it("Initialize fewer yield sources", async function () {
+                assert.equal(0b011, vaultClient.getYieldSourceFlags());
+            });
+
+            testRebalanceWithdraw(
+                vaultAllocationCap / 100,
+                1 - vaultAllocationCap / 100,
+                0,
+                rebalanceMode,
+                true,
+                true,
+                false
             );
         });
     });

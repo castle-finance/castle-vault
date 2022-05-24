@@ -44,10 +44,10 @@ import {
     Vault,
     VaultConfig,
     VaultFlags,
+    YieldSourceFlags,
 } from "./types";
 import { ExchangeRate, Rate, Token, TokenAmount } from "./utils";
 
-//type YieldSources = {[key: string]: LendingMarket}
 interface YieldSources {
     solend?: SolendReserveAsset;
     port?: PortReserveAsset;
@@ -79,17 +79,28 @@ export class VaultClient {
         const cluster = CLUSTER_MAP[env];
         const reserveMint = vaultState.reserveTokenMint;
 
-        const solend = await SolendReserveAsset.load(
-            provider,
-            cluster,
-            reserveMint
-        );
-        const port = await PortReserveAsset.load(
-            provider,
-            cluster,
-            reserveMint
-        );
-        const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
+        let yieldSources: YieldSources = {};
+        if (vaultState.yieldSourceFlags & YieldSourceFlags.Solend) {
+            yieldSources.solend = await SolendReserveAsset.load(
+                provider,
+                cluster,
+                reserveMint
+            );
+        }
+        if (vaultState.yieldSourceFlags & YieldSourceFlags.Port) {
+            yieldSources.port = await PortReserveAsset.load(
+                provider,
+                cluster,
+                reserveMint
+            );
+        }
+        if (vaultState.yieldSourceFlags & YieldSourceFlags.Jet) {
+            yieldSources.jet = await JetReserveAsset.load(
+                provider,
+                cluster,
+                reserveMint
+            );
+        }
 
         const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
             provider.connection,
@@ -100,11 +111,7 @@ export class VaultClient {
             program,
             vaultId,
             vaultState,
-            {
-                solend: solend,
-                port: port,
-                jet: jet,
-            },
+            yieldSources,
             reserveToken,
             lpToken
         );
@@ -437,13 +444,13 @@ export class VaultClient {
      * @param new_value
      * @returns
      */
-    async updateFlags(
+    async updateHaltFlags(
         owner: Keypair,
         flags: number
     ): Promise<TransactionSignature> {
         const updateTx = new Transaction();
         updateTx.add(
-            this.program.instruction.updateFlags(flags, {
+            this.program.instruction.updateHaltFlags(flags, {
                 accounts: {
                     vault: this.vaultId,
                     owner: owner.publicKey,
@@ -750,9 +757,18 @@ export class VaultClient {
             this.program.instruction.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
-                    solendReserve: this.yieldSources.solend.accounts.reserve,
-                    portReserve: this.yieldSources.port.accounts.reserve,
-                    jetReserve: this.yieldSources.jet.accounts.reserve,
+                    solendReserve:
+                        this.yieldSources.solend != null
+                            ? this.yieldSources.solend.accounts.reserve
+                            : Keypair.generate().publicKey,
+                    portReserve:
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts.reserve
+                            : Keypair.generate().publicKey,
+                    jetReserve:
+                        this.yieldSources.jet != null
+                            ? this.yieldSources.jet.accounts.reserve
+                            : Keypair.generate().publicKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
             })
@@ -782,9 +798,18 @@ export class VaultClient {
             await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
-                    solendReserve: this.yieldSources.solend.accounts.reserve,
-                    portReserve: this.yieldSources.port.accounts.reserve,
-                    jetReserve: this.yieldSources.jet.accounts.reserve,
+                    solendReserve:
+                        this.yieldSources.solend != null
+                            ? this.yieldSources.solend.accounts.reserve
+                            : Keypair.generate().publicKey,
+                    portReserve:
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts.reserve
+                            : Keypair.generate().publicKey,
+                    jetReserve:
+                        this.yieldSources.jet != null
+                            ? this.yieldSources.jet.accounts.reserve
+                            : Keypair.generate().publicKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
                 instructions: this.getRefreshIxs(),
@@ -841,37 +866,29 @@ export class VaultClient {
      * @returns Weighted average of APYs by allocation
      */
     async getApy(): Promise<Rate> {
-        // TODO parallelize
-        const assetApysAndValues: [Rate, Big][] = [
+        let assetApysAndValues: [Rate, Big][] = [
             [
                 Rate.zero(),
                 (await this.getVaultReserveTokenAccountValue()).lamports,
             ],
-            [
-                await this.yieldSources.solend.getApy(),
-                (
-                    await this.yieldSources.solend.getLpTokenAccountValue(
-                        this.vaultState
-                    )
-                ).lamports,
-            ],
-            [
-                await this.yieldSources.port.getApy(),
-                (
-                    await this.yieldSources.port.getLpTokenAccountValue(
-                        this.vaultState
-                    )
-                ).lamports,
-            ],
-            [
-                await this.yieldSources.jet.getApy(),
-                (
-                    await this.yieldSources.jet.getLpTokenAccountValue(
-                        this.vaultState
-                    )
-                ).lamports,
-            ],
         ];
+        assetApysAndValues.concat(
+            await Promise.all(
+                Object.entries(this.yieldSources).map(
+                    async ([k, v]): Promise<[Rate, Big]> => {
+                        return [
+                            await this.yieldSources[k].getApy(),
+                            (
+                                await this.yieldSources[
+                                    k
+                                ].getLpTokenAccountValue(this.vaultState)
+                            ).lamports,
+                        ];
+                    }
+                )
+            )
+        );
+
         const [valueSum, weightSum] = assetApysAndValues.reduce(
             ([valueSum, weightSum], [value, weight]) => [
                 valueSum.add(value.mul(weight)),
@@ -913,12 +930,17 @@ export class VaultClient {
     async getTotalValue(): Promise<TokenAmount> {
         await this.reload();
 
-        const values = await Promise.all([
-            this.yieldSources.solend.getLpTokenAccountValue(this.vaultState),
-            this.yieldSources.port.getLpTokenAccountValue(this.vaultState),
-            this.yieldSources.jet.getLpTokenAccountValue(this.vaultState),
-            this.getVaultReserveTokenAccountValue(),
-        ]);
+        const values: TokenAmount[] = (
+            await Promise.all(
+                Object.entries(this.yieldSources).map(
+                    async ([k, v]): Promise<TokenAmount> => {
+                        return await this.yieldSources[
+                            k
+                        ].getLpTokenAccountValue(this.vaultState);
+                    }
+                )
+            )
+        ).concat([await this.getVaultReserveTokenAccountValue()]);
 
         return values.reduce(
             (a, b) => a.add(b),
@@ -1106,8 +1128,12 @@ export class VaultClient {
         return Rate.fromBps(this.vaultState.config.feeMgmtBps);
     }
 
-    getFlags(): VaultFlags {
-        return this.vaultState.bitflags;
+    getHaltFlags(): VaultFlags {
+        return this.vaultState.haltFlags;
+    }
+
+    getYieldSourceFlags(): YieldSourceFlags {
+        return this.vaultState.yieldSourceFlags;
     }
 }
 

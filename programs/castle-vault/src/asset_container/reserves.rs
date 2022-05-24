@@ -27,6 +27,7 @@ impl AssetContainer<Reserves> {
         allocation_cap_pct: u8,
     ) -> Result<AssetContainer<Rate>, ProgramError> {
         self.into_iter()
+            .flat_map(|(p, r)| r.map(|v| (p, v)))
             .sorted_unstable_by(|(_, alloc_y), (_, alloc_x)| {
                 // TODO: can we remove the expect() in any way?
                 compare(*alloc_x, *alloc_y).expect("Could not successfully compare allocations")
@@ -36,7 +37,7 @@ impl AssetContainer<Reserves> {
                 |(mut strategy_weights, remaining_weight), (provider, _)| {
                     let target_weight =
                         remaining_weight.min(Rate::from_percent(allocation_cap_pct));
-                    strategy_weights[provider] = target_weight;
+                    strategy_weights[provider] = Some(target_weight);
                     match remaining_weight.try_sub(target_weight) {
                         Ok(r) => Ok((strategy_weights, r)),
                         Err(e) => Err(e),
@@ -51,7 +52,7 @@ impl AssetContainer<Reserves> {
             .map_err(|_| ErrorCode::StrategyError.into())
             .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100))
             .and_then(|r| Rate::one().try_div(r))
-            .map(|equal_allocation| self.apply(|_, _| equal_allocation))
+            .map(|equal_allocation| self.apply(|_, v| v.map(|_| equal_allocation)))
     }
 
     pub fn calculate_weights(
@@ -67,14 +68,16 @@ impl AssetContainer<Reserves> {
 
     pub fn get_apr(
         &self,
-        weights: &dyn Index<Provider, Output = Rate>,
-        allocations: &dyn Index<Provider, Output = u64>,
+        weights: &dyn Index<Provider, Output = Option<Rate>>,
+        allocations: &dyn Index<Provider, Output = Option<u64>>,
     ) -> Result<Rate, ProgramError> {
         self.into_iter()
-            .map(|(p, r)| {
-                r.calculate_return(allocations[p])
-                    .and_then(|r| weights[p].try_mul(r))
+            .map(|(p, r)| (r, allocations[p], weights[p]))
+            .flat_map(|v| match v {
+                (Some(r), Some(a), Some(w)) => Some((r, a, w)),
+                _ => None,
             })
+            .map(|(r, a, w)| r.calculate_return(a).and_then(|ret| w.try_mul(ret)))
             .try_fold(Rate::zero(), |acc, r| acc.try_add(r?))
     }
 }

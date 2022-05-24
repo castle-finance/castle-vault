@@ -24,13 +24,12 @@ import {
     SolendReserve,
     SolendMarket,
 } from "@solendprotocol/solend-sdk";
-import { WAD } from "@solendprotocol/solend-sdk/dist/examples/common";
 
 import { CastleVault } from "../idl";
 import { Vault } from "../types";
-import { Rate, Token, TokenAmount } from "../utils";
-
 import { LendingMarket } from "./asset";
+import { WAD } from "@solendprotocol/solend-sdk/dist/examples/common";
+import { Rate, Token, TokenAmount } from "../utils";
 import { getToken } from "./utils";
 
 export interface SolendAccounts {

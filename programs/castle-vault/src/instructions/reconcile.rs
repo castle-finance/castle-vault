@@ -57,7 +57,7 @@ pub fn handler<T: LendingMarket + HasVault>(
     (!ctx
         .accounts
         .vault()
-        .flags()
+        .get_halt_flags()
         .contains(VaultFlags::HALT_RECONCILES))
     .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
 

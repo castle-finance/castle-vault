@@ -56,7 +56,7 @@ const main = async () => {
             cluster,
             reserveMint
         );
-        await vaultClient.initializeSolend(provider, wallet, solend, owner);
+        await vaultClient.initializeSolend(wallet, solend, owner);
         console.log("Succesfully initialized Solend");
     } catch (error) {
         console.log("Failed to initialize Solend: ", error);
@@ -68,7 +68,7 @@ const main = async () => {
             cluster,
             reserveMint
         );
-        await vaultClient.initializePort(provider, wallet, port, owner);
+        await vaultClient.initializePort(wallet, port, owner);
         console.log("Succesfully initialized Port");
     } catch (error) {
         console.log("Failed to initialize Port: ", error);
@@ -76,7 +76,7 @@ const main = async () => {
 
     try {
         const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
-        await vaultClient.initializeJet(provider, wallet, jet, owner);
+        await vaultClient.initializeJet(wallet, jet, owner);
         console.log("Succesfully initialized Jet");
     } catch (error) {
         console.log("Failed to initialize Jet: ", error);
