@@ -82,6 +82,11 @@ where
 }
 
 #[derive(Clone)]
+pub enum ReservesBoxes {
+    Solend(Box<SolendReserve>),
+}
+
+#[derive(Clone)]
 pub enum Reserves {
     Solend(SolendReserve),
     Port(PortReserve),

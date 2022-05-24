@@ -12,7 +12,7 @@ use crate::{
     asset_container::AssetContainer,
     errors::ErrorCode,
     impl_provider_index,
-    reserves::{Provider, Reserves},
+    reserves::{Provider, Reserves, ReservesBoxes},
     state::*,
 };
 
@@ -75,6 +75,19 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
         // (in particular the mutable borrow required at the end to save state)
 
         // TODO is there a way to eliminate duplicate code here?
+
+        let _solend = (flags.contains(YieldSourceFlags::SOLEND)
+            && r.solend_reserve.key.eq(&r.vault.solend_reserve))
+        .as_result(
+            ReservesBoxes::Solend(Box::new(
+                Account::<SolendReserve>::try_from(&r.solend_reserve)?
+                    .deref()
+                    .clone(),
+            )),
+            ErrorCode::InvalidAccount,
+        )
+        .map(Option::Some)?;
+
         let solend = flags
             .contains(YieldSourceFlags::SOLEND)
             .as_option()
