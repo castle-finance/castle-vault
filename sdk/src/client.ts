@@ -460,6 +460,22 @@ export class VaultClient {
         return await this.program.provider.send(updateTx, [owner]);
     }
 
+    async updateYieldSourceFlags(
+        owner: Keypair,
+        flags: number
+    ): Promise<TransactionSignature> {
+        const updateTx = new Transaction();
+        updateTx.add(
+            this.program.instruction.updateYieldSourceFlags(flags, {
+                accounts: {
+                    vault: this.vaultId,
+                    owner: owner.publicKey,
+                },
+            })
+        );
+        return await this.program.provider.send(updateTx, [owner]);
+    }
+
     /**
      * @param new_value
      * @returns

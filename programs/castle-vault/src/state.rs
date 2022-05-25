@@ -107,6 +107,13 @@ impl Vault {
         })
     }
 
+    pub fn set_yield_source_flags(&mut self, flags: u16) -> ProgramResult {
+        YieldSourceFlags::from_bits(flags)
+            .ok_or_else::<ProgramError, _>(|| ErrorCode::InvalidVaultFlags.into())?;
+        self.yield_source_flags = flags;
+        Ok(())
+    }
+
     pub fn set_yield_source_flag(
         &mut self,
         flag: YieldSourceFlags,

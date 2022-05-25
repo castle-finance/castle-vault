@@ -503,7 +503,7 @@ describe("castle-vault", () => {
         });
     }
 
-    function testHalting() {
+    function testVaultFlags() {
         it("Reject deposit transaction if vault is halted", async function () {
             const depositCapErrorCode = program.idl.errors
                 .find((e) => e.name == "HaltedVault")
@@ -546,12 +546,20 @@ describe("castle-vault", () => {
             }
         });
 
-        it("Update flags", async function () {
+        it("Update halt flags", async function () {
             const flags = 0;
             const tx = await vaultClient.updateHaltFlags(owner, flags);
             await provider.connection.confirmTransaction(tx, "singleGossip");
             await vaultClient.reload();
             assert.equal(flags, vaultClient.getHaltFlags());
+        });
+
+        it("Update yield source flags", async function () {
+            const flags = 1 | (1 << 2);
+            const tx = await vaultClient.updateYieldSourceFlags(owner, flags);
+            await provider.connection.confirmTransaction(tx, "singleGossip");
+            await vaultClient.reload();
+            assert.equal(flags, vaultClient.getYieldSourceFlags());
         });
 
         it("Reject invalid flags update", async function () {
@@ -984,7 +992,7 @@ describe("castle-vault", () => {
             testDepositAndWithdrawal();
         });
 
-        describe("Deposit cap and halting", () => {
+        describe("Deposit cap and vault flags", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -994,7 +1002,7 @@ describe("castle-vault", () => {
                 });
             });
             testDepositCap();
-            testHalting();
+            testVaultFlags();
         });
 
         describe("Rebalance", () => {

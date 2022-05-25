@@ -54,6 +54,13 @@ pub mod castle_vault {
         instructions::update_halt_flags::handler(ctx, flags)
     }
 
+    pub fn update_yield_source_flags(
+        ctx: Context<UpdateYieldSourceFlags>,
+        flags: u16,
+    ) -> ProgramResult {
+        instructions::update_yield_source_flags::handler(ctx, flags)
+    }
+
     pub fn update_config(ctx: Context<UpdateConfig>, new_config: VaultConfigArg) -> ProgramResult {
         instructions::update_config::handler(ctx, new_config)
     }

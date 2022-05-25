@@ -296,6 +296,27 @@ export type CastleVault = {
             ];
         },
         {
+            name: "updateYieldSourceFlags";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                }
+            ];
+            args: [
+                {
+                    name: "flags";
+                    type: "u16";
+                }
+            ];
+        },
+        {
             name: "updateConfig";
             accounts: [
                 {
@@ -1613,6 +1634,27 @@ export const IDL: CastleVault = {
         },
         {
             name: "updateHaltFlags",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+            ],
+            args: [
+                {
+                    name: "flags",
+                    type: "u16",
+                },
+            ],
+        },
+        {
+            name: "updateYieldSourceFlags",
             accounts: [
                 {
                     name: "vault",
