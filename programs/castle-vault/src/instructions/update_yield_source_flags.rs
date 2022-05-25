@@ -17,7 +17,7 @@ pub struct UpdateYieldSourceFlags<'info> {
 
 pub fn handler(ctx: Context<UpdateYieldSourceFlags>, flags: u16) -> ProgramResult {
     #[cfg(feature = "debug")]
-    msg!("New flags: {:?}", flags);
+    msg!("New yield source flags: {:?}", flags);
 
     ctx.accounts.vault.set_yield_source_flags(flags)
 }
