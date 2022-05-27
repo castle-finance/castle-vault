@@ -114,17 +114,6 @@ impl Vault {
         Ok(())
     }
 
-    pub fn set_yield_source_flag(
-        &mut self,
-        flag: YieldSourceFlags,
-        initialized: bool,
-    ) -> ProgramResult {
-        let mut new_flags = self.get_yield_source_flags();
-        new_flags.set(flag, initialized);
-        self.yield_source_flags = new_flags.bits();
-        Ok(())
-    }
-
     // The lower bound of allocation cap is adjusted to 100 / N
     // Where N is the number of available yield sources according to yield_source_flags
     pub fn adjust_allocation_cap(&mut self) -> ProgramResult {
