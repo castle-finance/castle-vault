@@ -215,9 +215,10 @@ impl<'info> YieldSourceInitializer<'info> for InitializePort<'info> {
     fn initialize_yield_source(&mut self) -> ProgramResult {
         self.vault.port_reserve = self.port_reserve.key();
         self.vault.vault_port_lp_token = self.vault_port_lp_token.key();
-        self.vault
-            .set_yield_source_flag(YieldSourceFlags::PORT, true)?;
-        Ok(())
+
+        let mut new_flags = self.vault.get_yield_source_flags();
+        new_flags.set(YieldSourceFlags::PORT, true);
+        self.vault.set_yield_source_flags(new_flags.bits())
     }
 }
 
