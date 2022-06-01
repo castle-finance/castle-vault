@@ -159,10 +159,12 @@ impl ReserveAccessor for Reserve {
 
     fn reserve_with_deposit(
         &self,
-        allocation: u64,
+        new_allocation: u64,
+        old_allocation: u64,
     ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
         let mut reserve = Box::new(self.clone());
-        reserve.liquidity.deposit(allocation)?;
+        reserve.liquidity.deposit(new_allocation)?;
+        reserve.liquidity.withdraw(old_allocation)?;
         Ok(reserve)
     }
 }

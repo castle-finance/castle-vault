@@ -175,8 +175,21 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                     proposed_weights
                         .verify_weights(ctx.accounts.vault.config.allocation_cap_pct)?;
 
-                    let proposed_apr = assets.get_apr(&proposed_weights, &proposed_allocations)?;
-                    let proof_apr = assets.get_apr(&strategy_weights, &strategy_allocations)?;
+                    let actual_allocations = ctx
+                        .accounts
+                        .vault
+                        .actual_allocations
+                        .to_container(ctx.accounts.vault.get_yield_source_flags());
+                    let proposed_apr = assets.get_apr(
+                        &proposed_weights,
+                        &proposed_allocations,
+                        &actual_allocations,
+                    )?;
+                    let proof_apr = assets.get_apr(
+                        &strategy_weights,
+                        &strategy_allocations,
+                        &actual_allocations,
+                    )?;
 
                     #[cfg(feature = "debug")]
                     msg!(

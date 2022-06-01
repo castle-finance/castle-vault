@@ -159,13 +159,16 @@ impl ReserveAccessor for Reserve {
 
     fn reserve_with_deposit(
         &self,
-        allocation: u64,
+        new_allocation: u64,
+        old_allocation: u64,
     ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
         let mut reserve = Box::new(self.clone());
         reserve.liquidity.available_amount = reserve
             .liquidity
             .available_amount
-            .checked_add(allocation)
+            .checked_add(new_allocation)
+            .ok_or(ErrorCode::OverflowError)?
+            .checked_sub(old_allocation)
             .ok_or(ErrorCode::OverflowError)?;
         Ok(reserve)
     }

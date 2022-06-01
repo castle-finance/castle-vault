@@ -18,7 +18,7 @@ pub fn compare(
     lhs: &impl ReturnCalculator,
     rhs: &impl ReturnCalculator,
 ) -> Result<Ordering, ProgramError> {
-    Ok(lhs.calculate_return(0)?.cmp(&rhs.calculate_return(0)?))
+    Ok(lhs.calculate_return(0, 0)?.cmp(&rhs.calculate_return(0, 0)?))
 }
 
 impl AssetContainer<Reserves> {
@@ -69,15 +69,16 @@ impl AssetContainer<Reserves> {
     pub fn get_apr(
         &self,
         weights: &dyn Index<Provider, Output = Option<Rate>>,
-        allocations: &dyn Index<Provider, Output = Option<u64>>,
+        new_allocations: &dyn Index<Provider, Output = Option<u64>>,
+        actual_allocations: &dyn Index<Provider, Output = Option<u64>>,
     ) -> Result<Rate, ProgramError> {
         self.into_iter()
-            .map(|(p, r)| (r, allocations[p], weights[p]))
+            .map(|(p, r)| (r, new_allocations[p], actual_allocations[p], weights[p]))
             .flat_map(|v| match v {
-                (Some(r), Some(a), Some(w)) => Some((r, a, w)),
+                (Some(r), Some(a1), Some(a0), Some(w)) => Some((r, a1, a0, w)),
                 _ => None,
             })
-            .map(|(r, a, w)| r.calculate_return(a).and_then(|ret| w.try_mul(ret)))
+            .map(|(r, a1, a0, w)| r.calculate_return(a1, a0).and_then(|ret| w.try_mul(ret)))
             .try_fold(Rate::zero(), |acc, r| acc.try_add(r?))
     }
 }
