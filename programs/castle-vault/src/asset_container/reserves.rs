@@ -18,7 +18,9 @@ pub fn compare(
     lhs: &impl ReturnCalculator,
     rhs: &impl ReturnCalculator,
 ) -> Result<Ordering, ProgramError> {
-    Ok(lhs.calculate_return(0, 0)?.cmp(&rhs.calculate_return(0, 0)?))
+    Ok(lhs
+        .calculate_return(0, 0)?
+        .cmp(&rhs.calculate_return(0, 0)?))
 }
 
 impl AssetContainer<Reserves> {
