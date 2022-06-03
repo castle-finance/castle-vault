@@ -147,7 +147,7 @@ mod test {
         let mut mock_ra = MockReserveAccessor::new();
         mock_ra
             .expect_reserve_with_deposit()
-            .return_once(|_| Ok(Box::new(mock_ra_inner)));
+            .return_once(|_, _| Ok(Box::new(mock_ra_inner)));
 
         assert_eq!(mock_ra.calculate_return(10, 0), Ok(Rate::from_percent(40)));
     }
