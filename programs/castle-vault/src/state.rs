@@ -310,6 +310,20 @@ impl Allocations {
             acc
         })
     }
+
+    pub fn to_container(&self, flags: YieldSourceFlags) -> AssetContainer<u64> {
+        let mut retval = AssetContainer::<u64>::default();
+        Provider::iter().for_each(|p| {
+            retval[p] = flags
+                .contains(match p {
+                    Provider::Solend => YieldSourceFlags::SOLEND,
+                    Provider::Port => YieldSourceFlags::PORT,
+                    Provider::Jet => YieldSourceFlags::JET,
+                })
+                .then(|| self[p].value);
+        });
+        retval
+    }
 }
 
 // This should be a generic, but anchor doesn't support that yet
