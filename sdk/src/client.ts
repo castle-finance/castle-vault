@@ -464,16 +464,13 @@ export class VaultClient {
         owner: Keypair,
         flags: number
     ): Promise<TransactionSignature> {
-        const updateTx = new Transaction();
-        updateTx.add(
-            this.program.instruction.updateYieldSourceFlags(flags, {
-                accounts: {
-                    vault: this.vaultId,
-                    owner: owner.publicKey,
-                },
-            })
-        );
-        return await this.program.provider.send(updateTx, [owner]);
+        return this.program.rpc.updateYieldSourceFlags(flags, {
+            accounts: {
+                vault: this.vaultId,
+                owner: owner.publicKey,
+            },
+            signers: [owner],
+        });
     }
 
     /**
@@ -905,16 +902,16 @@ export class VaultClient {
      * @returns Weighted average of APYs by allocation
      */
     async getApy(): Promise<Rate> {
-        let assetApysAndValues: [Rate, Big][] = [
+        const reserveApyAndValue: [Rate, Big][] = [
             [
                 Rate.zero(),
                 (await this.getVaultReserveTokenAccountValue()).lamports,
             ],
         ];
-        assetApysAndValues.concat(
+        const assetApysAndValues = reserveApyAndValue.concat(
             await Promise.all(
                 Object.entries(this.yieldSources).map(
-                    async ([k, v]): Promise<[Rate, Big]> => {
+                    async ([k]): Promise<[Rate, Big]> => {
                         return [
                             await this.yieldSources[k].getApy(),
                             (
