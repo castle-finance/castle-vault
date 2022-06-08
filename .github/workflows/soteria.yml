@@ -1,4 +1,4 @@
-name: Soteria Pro Audit
+name: Sec3 Pro Audit
 on:
   push:
     branches:
@@ -17,13 +17,13 @@ jobs:
     steps:
       - name: Check-out the repository
         uses: actions/checkout@v2
-      - name: Soteria Pro Audit
+      - name: Sec3 Pro Audit
         continue-on-error: true # set to true if you don't want to fail jobs
-        uses: soteria-bc/pro-action-pilot@v1
+        uses: sec3dev/pro-action@v1
         with:
-          soteria-token: ${{ secrets.SOTERIA_TOKEN }}
+          sec3-token: ${{ secrets.SOTERIA_TOKEN }}
           path: programs/castle-vault
       - name: Upload Sarif Report
         uses: github/codeql-action/upload-sarif@v1
         with:
-          sarif_file: soteria-report.sarif
+          sarif_file: sec3-report.sarif
