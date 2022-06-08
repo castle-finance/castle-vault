@@ -23,10 +23,10 @@ pub mod castle_vault {
 
     pub fn initialize(
         ctx: Context<Initialize>,
-        _bumps: InitBumpSeeds,
+        bumps: InitBumpSeeds,
         config: VaultConfigArg,
     ) -> ProgramResult {
-        instructions::init_vault::handler(ctx, _bumps, config)
+        instructions::init_vault::handler(ctx, bumps, config)
     }
 
     pub fn initialize_jet<'info>(
