@@ -83,7 +83,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
     let vault_value =
-        Provider::iter().try_fold(ctx.accounts.vault_reserve_token.amount, |acc, p| {
+        Provider::iter().try_fold(vault_reserve_token_amount, |acc, p| {
             let allocation = ctx.accounts.vault.actual_allocations[p];
             if ctx.accounts.vault.get_yield_source_availability(p) {
                 // We skip pools where we have zero allocation
