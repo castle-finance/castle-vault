@@ -82,68 +82,60 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
-    let vault_value =
-        Provider::iter().try_fold(vault_reserve_token_amount, |acc, p| {
-            let allocation = ctx.accounts.vault.actual_allocations[p];
-            if ctx.accounts.vault.get_yield_source_availability(p) {
-                // We skip pools where we have zero allocation
-                // Must do it inside the if block because we have to check yield source flags first
-                let lp_token_value = match p {
-                    Provider::Solend => {
-                        ctx.accounts
-                            .vault_solend_lp_token
-                            .key
-                            .eq(&ctx.accounts.vault.vault_solend_lp_token)
-                            .as_result(
-                                Account::<TokenAccount>::try_from(
-                                    &ctx.accounts.vault_solend_lp_token,
-                                )?,
-                                ErrorCode::InvalidAccount,
-                            )?
-                            .amount
-                    }
-                    Provider::Port => {
-                        ctx.accounts
-                            .vault_port_lp_token
-                            .key
-                            .eq(&ctx.accounts.vault.vault_port_lp_token)
-                            .as_result(
-                                Account::<TokenAccount>::try_from(
-                                    &ctx.accounts.vault_port_lp_token,
-                                )?,
-                                ErrorCode::InvalidAccount,
-                            )?
-                            .amount
-                    }
-                    Provider::Jet => {
-                        ctx.accounts
-                            .vault_jet_lp_token
-                            .key
-                            .eq(&ctx.accounts.vault.vault_jet_lp_token)
-                            .as_result(
-                                Account::<TokenAccount>::try_from(
-                                    &ctx.accounts.vault_jet_lp_token,
-                                )?,
-                                ErrorCode::InvalidAccount,
-                            )?
-                            .amount
-                    }
-                };
-                if lp_token_value == 0 {
-                    return Ok(acc);
+    let vault_value = Provider::iter().try_fold(vault_reserve_token_amount, |acc, p| {
+        let allocation = ctx.accounts.vault.actual_allocations[p];
+        if ctx.accounts.vault.get_yield_source_availability(p) {
+            // We skip pools where we have zero allocation
+            // Must do it inside the if block because we have to check yield source flags first
+            let lp_token_value = match p {
+                Provider::Solend => {
+                    ctx.accounts
+                        .vault_solend_lp_token
+                        .key
+                        .eq(&ctx.accounts.vault.vault_solend_lp_token)
+                        .as_result(
+                            Account::<TokenAccount>::try_from(&ctx.accounts.vault_solend_lp_token)?,
+                            ErrorCode::InvalidAccount,
+                        )?
+                        .amount
                 }
-
-                // Ensure that we have refreshed all the lending pools where we have non-zero allocation
-                (allocation.last_update.slots_elapsed(clock_slot)? == 0)
-                    .as_result::<u64, ProgramError>(
-                        acc.checked_add(allocation.value)
-                            .ok_or(ErrorCode::OverflowError)?,
-                        ErrorCode::AllocationIsNotUpdated.into(),
-                    )
-            } else {
-                Ok(acc)
+                Provider::Port => {
+                    ctx.accounts
+                        .vault_port_lp_token
+                        .key
+                        .eq(&ctx.accounts.vault.vault_port_lp_token)
+                        .as_result(
+                            Account::<TokenAccount>::try_from(&ctx.accounts.vault_port_lp_token)?,
+                            ErrorCode::InvalidAccount,
+                        )?
+                        .amount
+                }
+                Provider::Jet => {
+                    ctx.accounts
+                        .vault_jet_lp_token
+                        .key
+                        .eq(&ctx.accounts.vault.vault_jet_lp_token)
+                        .as_result(
+                            Account::<TokenAccount>::try_from(&ctx.accounts.vault_jet_lp_token)?,
+                            ErrorCode::InvalidAccount,
+                        )?
+                        .amount
+                }
+            };
+            if lp_token_value == 0 {
+                return Ok(acc);
             }
-        })?;
+
+            // Ensure that we refreshed all the lending pools where we have non-zero allocation in the same slot
+            (allocation.last_update.slots_elapsed(clock_slot)? == 0).as_result::<u64, ProgramError>(
+                acc.checked_add(allocation.value)
+                    .ok_or(ErrorCode::OverflowError)?,
+                ErrorCode::AllocationIsNotUpdated.into(),
+            )
+        } else {
+            Ok(acc)
+        }
+    })?;
 
     #[cfg(feature = "debug")]
     {
