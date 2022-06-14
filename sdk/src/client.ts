@@ -328,6 +328,13 @@ export class VaultClient {
         this.yieldSources.jet = jet;
     }
 
+    // Solana transaction size limits that we can refresh at most 3(or 4) pools atomically (in a single tx)
+    // We must atomically refresh the pools in which we have non-zero allocation.
+    // So if we have M pools (M>3), we can allocate to at most 3 pools. Other pools must have zero allocation.
+    // However for on-chain proof-checker to work, all pools must be `recently` refreshed.
+    // To achieve this, we do the following:
+    //  1. We refresh all the pools in separate transactions (pre-refresh), can be non-atomic
+    //  2. We perform atomic refresh + rebalance for pools with non-zero allocation.
     getPreRefreshTxs(): Transaction[] {
         const preRefreshTx = new Transaction();
         Object.keys(this.yieldSources).map((k) => {
@@ -343,6 +350,7 @@ export class VaultClient {
     }
 
     async getRefreshIxs(): Promise<TransactionInstruction[]> {
+        // Get the current LP token value of all pools
         const lpTokenValues = (
             await Promise.all(
                 Object.keys(this.yieldSources).map(
@@ -360,7 +368,8 @@ export class VaultClient {
             )
         ).reduce((prev, next) => ({ ...prev, [next[0]]: next[1] }), {});
 
-        let retval = Object.keys(this.yieldSources)
+        // Generate refresh Ix only for pools with non-zero LP token value
+        return Object.keys(this.yieldSources)
             .map((k) => {
                 if (lpTokenValues[k] > 0) {
                     return this.yieldSources[k].getRefreshIx(
@@ -372,17 +381,8 @@ export class VaultClient {
                     return null;
                 }
             })
-            .concat([this.getConsolidateRefreshIx()]);
-
-        retval = retval.reduce((prev, next) => {
-            if (next != null) {
-                return [...prev, next];
-            } else {
-                return prev;
-            }
-        }, []);
-
-        return retval;
+            .concat([this.getConsolidateRefreshIx()])
+            .filter((value) => value != null);
     }
 
     private static async getReserveAndLpTokens(
