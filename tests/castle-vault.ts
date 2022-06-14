@@ -341,8 +341,17 @@ describe("castle-vault", () => {
         let txSigs = null;
 
         if (rebalanceOnly) {
-            const tx = vaultClient.getRebalanceTx(proposedWeights);
-            txSigs = [await provider.send(tx)];
+            const preRefresh = vaultClient.getPreRefreshTxs().map((tx) => {
+                return { tx: tx, signers: [] };
+            });
+            const txs: SendTxRequest[] = [
+                ...preRefresh,
+                {
+                    tx: await vaultClient.getRebalanceTx(proposedWeights),
+                    signers: [],
+                },
+            ];
+            txSigs = await provider.sendAll(txs);
         } else {
             txSigs = await vaultClient.rebalance(proposedWeights);
         }

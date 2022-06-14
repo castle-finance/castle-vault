@@ -328,16 +328,61 @@ export class VaultClient {
         this.yieldSources.jet = jet;
     }
 
-    getRefreshIxs(): TransactionInstruction[] {
-        return Object.keys(this.yieldSources)
-            .map((k) => {
-                return this.yieldSources[k].getRefreshIx(
+    // Solana transaction size limits that we can refresh at most 3(or 4) pools atomically (in a single tx)
+    // We must atomically refresh the pools in which we have non-zero allocation.
+    // So if we have M pools (M>3), we can allocate to at most 3 pools. Other pools must have zero allocation.
+    // However for on-chain proof-checker to work, all pools must be `recently` refreshed.
+    // To achieve this, we do the following:
+    //  1. We refresh all the pools in separate transactions (pre-refresh), can be non-atomic
+    //  2. We perform atomic refresh + rebalance for pools with non-zero allocation.
+    getPreRefreshTxs(): Transaction[] {
+        const preRefreshTx = new Transaction();
+        Object.keys(this.yieldSources).map((k) => {
+            preRefreshTx.add(
+                this.yieldSources[k].getRefreshIx(
                     this.program,
                     this.vaultId,
                     this.vaultState
-                );
+                )
+            );
+        });
+        return [preRefreshTx];
+    }
+
+    async getRefreshIxs(): Promise<TransactionInstruction[]> {
+        // Get the current LP token value of all pools
+        const lpTokenValues = (
+            await Promise.all(
+                Object.keys(this.yieldSources).map(
+                    async (k): Promise<[string, number]> => {
+                        return [
+                            k,
+                            (
+                                await this.yieldSources[
+                                    k
+                                ].getLpTokenAccountValue(this.vaultState)
+                            ).lamports.toNumber(),
+                        ];
+                    }
+                )
+            )
+        ).reduce((prev, next) => ({ ...prev, [next[0]]: next[1] }), {});
+
+        // Generate refresh Ix only for pools with non-zero LP token value
+        return Object.keys(this.yieldSources)
+            .map((k) => {
+                if (lpTokenValues[k] > 0) {
+                    return this.yieldSources[k].getRefreshIx(
+                        this.program,
+                        this.vaultId,
+                        this.vaultState
+                    );
+                } else {
+                    return null;
+                }
             })
-            .concat([this.getConsolidateRefreshIx()]);
+            .concat([this.getConsolidateRefreshIx()])
+            .filter((value) => value != null);
     }
 
     private static async getReserveAndLpTokens(
@@ -385,11 +430,25 @@ export class VaultClient {
               ]
             : [];
 
+        // We include the vault lp token account for ALL lending pools here
+        // Because we use them to make sure on-chain that all lending pools with non-zero allocation are refreshed.
         return this.program.instruction.consolidateRefresh({
             accounts: {
                 vault: this.vaultId,
                 vaultAuthority: this.vaultState.vaultAuthority,
                 vaultReserveToken: this.vaultState.vaultReserveToken,
+                vaultSolendLpToken:
+                    this.yieldSources.solend != null
+                        ? this.vaultState.vaultSolendLpToken
+                        : Keypair.generate().publicKey,
+                vaultPortLpToken:
+                    this.yieldSources.port != null
+                        ? this.vaultState.vaultPortLpToken
+                        : Keypair.generate().publicKey,
+                vaultJetLpToken:
+                    this.yieldSources.jet != null
+                        ? this.vaultState.vaultJetLpToken
+                        : Keypair.generate().publicKey,
                 lpTokenMint: this.vaultState.lpTokenMint,
                 tokenProgram: TOKEN_PROGRAM_ID,
             },
@@ -559,7 +618,7 @@ export class VaultClient {
             );
         }
 
-        this.getRefreshIxs().forEach((element) => {
+        (await this.getRefreshIxs()).forEach((element) => {
             depositTx.add(element);
         });
         depositTx.add(
@@ -657,7 +716,7 @@ export class VaultClient {
             }
         }
 
-        this.getRefreshIxs().forEach((element) => {
+        (await this.getRefreshIxs()).forEach((element) => {
             withdrawTx.add(element);
         });
         withdrawTx.add(
@@ -761,9 +820,11 @@ export class VaultClient {
         return txs;
     }
 
-    getRebalanceTx(proposedWeights: ProposedWeightsBps): Transaction {
+    async getRebalanceTx(
+        proposedWeights: ProposedWeightsBps
+    ): Promise<Transaction> {
         const rebalanceTx = new Transaction();
-        this.getRefreshIxs().forEach((element) => {
+        (await this.getRefreshIxs()).forEach((element) => {
             rebalanceTx.add(element);
         });
         rebalanceTx.add(
@@ -806,6 +867,16 @@ export class VaultClient {
             );
         }
 
+        const simIx = Object.values(this.yieldSources)
+            .map((v) => {
+                return v.getRefreshIx(
+                    this.program,
+                    this.vaultId,
+                    this.vaultState
+                );
+            })
+            .concat([this.getConsolidateRefreshIx()]);
+
         // Sort ixs in descending order of outflows
         const newAllocations = (
             await this.program.simulate.rebalance(proposedWeights, {
@@ -825,7 +896,7 @@ export class VaultClient {
                             : Keypair.generate().publicKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
-                instructions: this.getRefreshIxs(),
+                instructions: simIx,
             })
         ).events[1].data as RebalanceDataEvent;
 
@@ -866,8 +937,13 @@ export class VaultClient {
                 return { tx: tx, signers: [] };
             });
 
+        const preRefresh = this.getPreRefreshTxs().map((tx) => {
+            return { tx: tx, signers: [] };
+        });
+
         const txs: SendTxRequest[] = [
-            { tx: this.getRebalanceTx(proposedWeights), signers: [] },
+            ...preRefresh,
+            { tx: await this.getRebalanceTx(proposedWeights), signers: [] },
             ...reconcileTxs,
         ];
 
