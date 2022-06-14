@@ -867,9 +867,9 @@ export class VaultClient {
             );
         }
 
-        const simIx = Object.keys(this.yieldSources)
-            .map((k) => {
-                return this.yieldSources[k].getRefreshIx(
+        const simIx = Object.values(this.yieldSources)
+            .map((v) => {
+                return v.getRefreshIx(
                     this.program,
                     this.vaultId,
                     this.vaultState
