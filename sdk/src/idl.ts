@@ -92,6 +92,67 @@ export type CastleVault = {
             ];
         },
         {
+            name: "initializeRewardAccount";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortRewardToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portNativeTokenMint";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "associatedTokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "rent";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "bump";
+                    type: "u8";
+                }
+            ];
+        },
+        {
             name: "initializeJet";
             accounts: [
                 {
@@ -984,9 +1045,13 @@ export type CastleVault = {
                         };
                     },
                     {
+                        name: "vaultPortRewardToken";
+                        type: "publicKey";
+                    },
+                    {
                         name: "reserved";
                         type: {
-                            array: ["u32", 28];
+                            array: ["u32", 20];
                         };
                     }
                 ];
@@ -1461,6 +1526,67 @@ export const IDL: CastleVault = {
                     type: {
                         defined: "VaultConfigArg",
                     },
+                },
+            ],
+        },
+        {
+            name: "initializeRewardAccount",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortRewardToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portNativeTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "associatedTokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "rent",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "bump",
+                    type: "u8",
                 },
             ],
         },
@@ -2357,9 +2483,13 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
+                        name: "vaultPortRewardToken",
+                        type: "publicKey",
+                    },
+                    {
                         name: "reserved",
                         type: {
-                            array: ["u32", 28],
+                            array: ["u32", 20],
                         },
                     },
                 ],

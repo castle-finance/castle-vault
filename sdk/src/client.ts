@@ -247,6 +247,50 @@ export class VaultClient {
         );
     }
 
+    async initializeRewardAccount(
+        wallet: anchor.Wallet,
+        port: PortReserveAsset,
+        owner: Keypair
+    ) {
+        // devnet
+        let portNativeTokenMint = new PublicKey(
+            "fp42UaS3fXwees97JuHnqpr4SY5QfAQYyqELhr1TxuY"
+        );
+
+        const [vaultPortNativeTokenAccount, portBump] =
+            await PublicKey.findProgramAddress(
+                [this.vaultId.toBuffer(), portNativeTokenMint.toBuffer()],
+                this.program.programId
+            );
+
+        const tx = new Transaction();
+        tx.add(
+            this.program.instruction.initializeRewardAccount(portBump, {
+                accounts: {
+                    vault: this.vaultId,
+                    vaultAuthority: this.vaultState.vaultAuthority,
+                    vaultPortRewardToken: vaultPortNativeTokenAccount,
+                    portNativeTokenMint: portNativeTokenMint,
+                    owner: owner,
+                    payer: wallet,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                    systemProgram: SystemProgram.programId,
+                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                    rent: SYSVAR_RENT_PUBKEY,
+                },
+            })
+        );
+
+        const txSig = await this.program.provider.send(tx, [
+            owner,
+            wallet.payer,
+        ]);
+        await this.program.provider.connection.confirmTransaction(
+            txSig,
+            "finalized"
+        );
+    }
+
     async initializeSolend(
         wallet: anchor.Wallet,
         solend: SolendReserveAsset,

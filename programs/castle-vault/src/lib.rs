@@ -29,6 +29,13 @@ pub mod castle_vault {
         instructions::init_vault::handler(ctx, bumps, config)
     }
 
+    pub fn initialize_reward_account(
+        ctx: Context<InitializeRewardAccount>,
+        bump: u8,
+    ) -> ProgramResult {
+        instructions::init_reward_account::handler(ctx, bump)
+    }
+
     pub fn initialize_jet<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializeJet<'info>>,
         bump: u8,
