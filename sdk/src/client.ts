@@ -1169,8 +1169,17 @@ export class VaultClient {
         return lpToken.getMintInfo();
     }
 
-    getVaultLpTokenSupply(): anchor.BN {
-        return this.vaultState.lpTokenSupply;
+    // This should only be used for tests
+    getVaultState(): Vault {
+        return this.vaultState;
+    }
+
+    async getVaultLpTokenSupply(): Promise<TokenAmount> {
+        await this.reload();
+        return TokenAmount.fromToken(
+            this.lpToken,
+            Big(this.vaultState.lpTokenSupply.toString())
+        );
     }
 
     getVaultConfig(): VaultConfig {
