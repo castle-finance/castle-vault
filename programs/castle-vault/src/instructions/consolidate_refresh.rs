@@ -7,12 +7,10 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 use port_anchor_adaptor::{port_lending_id, PortReserve};
 
-use crate::{
-    adapters::{solend, SolendReserve},
-    errors::ErrorCode,
-    reserves::Provider,
-    state::{SlotTrackedValue, Vault, VaultFlags},
-};
+use crate::adapters::{solend, SolendReserve};
+use crate::errors::ErrorCode;
+use crate::reserves::Provider;
+use crate::state::{Vault, VaultFlags};
 use strum::IntoEnumIterator;
 
 #[derive(Accounts)]
@@ -84,8 +82,8 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
 
     // Calculate new vault value
     let vault_reserve_token_amount = ctx.accounts.vault_reserve_token.amount;
-    let vault_value = Provider::iter().try_fold(vault_reserve_token_amount, |acc: u64, p| {
-        let allocation: SlotTrackedValue = ctx.accounts.vault.actual_allocations[p];
+    let vault_value = Provider::iter().try_fold(vault_reserve_token_amount, |acc, p| {
+        let allocation = ctx.accounts.vault.actual_allocations[p];
         if ctx.accounts.vault.get_yield_source_availability(p) {
             // We skip pools where we have zero allocation
             // Must do it inside the if block because we have to check yield source flags first
@@ -223,15 +221,6 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
                 .with_signer(&[&vault.authority_seeds()]),
             referral_fees_converted,
         )?;
-
-        // increment token supply
-        ctx.accounts.vault.lp_token_supply = ctx
-            .accounts
-            .vault
-            .lp_token_supply
-            .checked_add(primary_fees_converted)
-            .and_then(|val| val.checked_add(primary_fees_converted))
-            .ok_or(ErrorCode::MathError)?;
     }
 
     // Update vault total value

@@ -103,10 +103,9 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
 
     let vault = &ctx.accounts.vault;
 
-    // Use vault token supply
     let lp_tokens_to_mint = crate::math::calc_reserve_to_lp(
         reserve_token_amount,
-        ctx.accounts.vault.lp_token_supply,
+        ctx.accounts.lp_token_mint.supply,
         vault.value.value,
     )
     .ok_or(ErrorCode::MathError)?;
@@ -135,13 +134,6 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
             .with_signer(&[&vault.authority_seeds()]),
         lp_tokens_to_mint,
     )?;
-
-    ctx.accounts.vault.lp_token_supply = ctx
-        .accounts
-        .vault
-        .lp_token_supply
-        .checked_add(lp_tokens_to_mint)
-        .ok_or(ErrorCode::MathError)?;
 
     // This is so that the SDK can read an up-to-date total value without calling refresh
     ctx.accounts.vault.value.value = ctx

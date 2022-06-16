@@ -30,7 +30,6 @@ export interface Vault {
     targetAllocations: Allocations;
     config: VaultConfig;
     actualAllocations: Allocations;
-    lpTokenSupply: BN;
 }
 
 export interface VaultConfig {

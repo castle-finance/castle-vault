@@ -984,13 +984,9 @@ export type CastleVault = {
                         };
                     },
                     {
-                        name: "lpTokenSupply";
-                        type: "u64";
-                    },
-                    {
                         name: "reserved";
                         type: {
-                            array: ["u32", 26];
+                            array: ["u32", 28];
                         };
                     }
                 ];
@@ -2361,13 +2357,9 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
-                        name: "lpTokenSupply",
-                        type: "u64",
-                    },
-                    {
                         name: "reserved",
                         type: {
-                            array: ["u32", 26],
+                            array: ["u32", 28],
                         },
                     },
                 ],

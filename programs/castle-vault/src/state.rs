@@ -80,11 +80,9 @@ pub struct Vault {
     // Actual allocation retrieved by refresh
     pub actual_allocations: Allocations,
 
-    pub lp_token_supply: u64,
-
-    // 4 * 26 = 104
+    // 8 * 23 = 184
     /// Reserved space for future upgrades
-    _reserved: [u32; 26],
+    _reserved: [u32; 28],
 }
 
 impl Vault {
@@ -350,7 +348,7 @@ impl SlotTrackedValue {
 }
 
 /// Number of slots to consider stale after
-pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 1;
+pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 2;
 
 #[assert_size(aligns, 16)]
 #[repr(C, align(8))]
