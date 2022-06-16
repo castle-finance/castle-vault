@@ -344,7 +344,7 @@ describe("castle-vault", () => {
             const preRefresh = vaultClient.getPreRefreshTxs().map((tx) => {
                 return { tx: tx, signers: [] };
             });
-            const txs: SendTxRequest[] = [
+            const txs = [
                 ...preRefresh,
                 {
                     tx: await vaultClient.getRebalanceTx(proposedWeights),

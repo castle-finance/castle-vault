@@ -157,6 +157,7 @@ pub fn handler(
         last_update: LastUpdate::new(clock.slot),
     };
     vault.config = VaultConfig::new(config)?;
+    vault.lp_token_supply = 0;
 
     // Initialize fee receiver account
     associated_token::create(ctx.accounts.init_fee_receiver_create_context(
