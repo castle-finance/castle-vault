@@ -230,7 +230,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
             .vault
             .lp_token_supply
             .checked_add(primary_fees_converted)
-            .and_then(|val| val.checked_add(primary_fees_converted))
+            .and_then(|val| val.checked_add(referral_fees_converted))
             .ok_or(ErrorCode::MathError)?;
     }
 
