@@ -80,12 +80,14 @@ pub struct Vault {
     // Actual allocation retrieved by refresh
     pub actual_allocations: Allocations,
 
-    // Account used to receive Port reward
+    /// Port staking account
+    pub vault_port_staking_pool: Pubkey,
+
+    /// Account used to receive Port staking reward
     pub vault_port_reward_token: Pubkey,
 
-    // 8 * 23 = 184
     /// Reserved space for future upgrades
-    _reserved: [u32; 20],
+    _reserved: [u32; 12],
 }
 
 impl Vault {

@@ -1045,13 +1045,17 @@ export type CastleVault = {
                         };
                     },
                     {
+                        name: "vaultPortStakingPool";
+                        type: "publicKey";
+                    },
+                    {
                         name: "vaultPortRewardToken";
                         type: "publicKey";
                     },
                     {
                         name: "reserved";
                         type: {
-                            array: ["u32", 20];
+                            array: ["u32", 12];
                         };
                     }
                 ];
@@ -2483,13 +2487,17 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
+                        name: "vaultPortStakingPool",
+                        type: "publicKey",
+                    },
+                    {
                         name: "vaultPortRewardToken",
                         type: "publicKey",
                     },
                     {
                         name: "reserved",
                         type: {
-                            array: ["u32", 20],
+                            array: ["u32", 12],
                         },
                     },
                 ],
