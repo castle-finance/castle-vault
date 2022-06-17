@@ -29,6 +29,7 @@ import {
     PORT_STAKING,
     ReserveConfigProto,
     ReserveId,
+    TokenAccount,
 } from "@port.finance/port-sdk";
 
 import { CastleVault } from "../idl";
@@ -46,6 +47,9 @@ interface PortAccounts {
     collateralMint: PublicKey;
     oracle: PublicKey;
     liquiditySupply: PublicKey;
+    stakingPool: PublicKey;
+    stakingReward: PublicKey;
+    stakingRewardTokenMint: PublicKey;
 }
 
 // TODO use constant from port sdk
@@ -106,6 +110,18 @@ export class PortReserveAsset extends LendingMarket {
         const client = new Port(provider.connection, env, market);
         const reserveContext = await client.getReserveContext();
         const reserve = reserveContext.getByAssetMintId(MintId.of(reserveMint));
+
+        const stakingPools = await client.getStakingPoolContext();
+        const stakingPoolId = await reserve.getStakingPoolId();
+        const targetStakingPool = stakingPools.getStakingPool(stakingPoolId);
+        const rewardMintRaw = await provider.connection.getAccountInfo(
+            targetStakingPool.getRewardTokenPool()
+        );
+        const rewardTokenMint = TokenAccount.fromRaw({
+            pubkey: targetStakingPool.getRewardTokenPool(),
+            account: rewardMintRaw,
+        });
+
         const [authority, _] = await PublicKey.findProgramAddress(
             [market.toBuffer()],
             env.getLendingProgramPk()
@@ -118,6 +134,9 @@ export class PortReserveAsset extends LendingMarket {
             collateralMint: reserve.getShareMintId(),
             oracle: reserve.getOracleId(),
             liquiditySupply: reserve.getAssetBalanceId(),
+            stakingPool: targetStakingPool.getId(),
+            stakingReward: targetStakingPool.getRewardTokenPool(),
+            stakingRewardTokenMint: rewardTokenMint.getMintId(),
         };
 
         const lpToken = await getToken(
@@ -500,5 +519,9 @@ async function createDefaultReserve(
         oracle: oracle,
         collateralMint: collateralMintAccount.publicKey,
         liquiditySupply: liquiditySupplyTokenAccount.publicKey,
+        // TODO create mock staking pool
+        stakingPool: new PublicKey(""),
+        stakingReward: new PublicKey(""),
+        stakingRewardTokenMint: new PublicKey(""),
     };
 }
