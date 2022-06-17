@@ -52,7 +52,7 @@ pub struct InitializeRewardAccount<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-pub fn handler(ctx: Context<InitializeRewardAccount>, bump: u8) -> ProgramResult {
+pub fn handler(ctx: Context<InitializeRewardAccount>, _bump: u8) -> ProgramResult {
     ctx.accounts.vault.vault_port_reward_token = ctx.accounts.vault_port_reward_token.key();
     Ok(())
 }
