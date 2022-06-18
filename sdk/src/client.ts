@@ -852,7 +852,7 @@ export class VaultClient {
         });
     }
 
-    private getReconcileSolendIx(
+    getReconcileSolendIx(
         withdrawOption: anchor.BN = new anchor.BN(0)
     ): TransactionInstruction {
         return this.program.instruction.reconcileSolend(withdrawOption, {
