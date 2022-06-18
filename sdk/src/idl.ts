@@ -105,12 +105,27 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "vaultPortStakeAccount";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "vaultPortRewardToken";
                     isMut: true;
                     isSigner: false;
                 },
                 {
                     name: "portNativeTokenMint";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingPool";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakeProgram";
                     isMut: false;
                     isSigner: false;
                 },
@@ -147,7 +162,11 @@ export type CastleVault = {
             ];
             args: [
                 {
-                    name: "bump";
+                    name: "rewardBump";
+                    type: "u8";
+                },
+                {
+                    name: "stakeBump";
                     type: "u8";
                 }
             ];
@@ -940,6 +959,13 @@ export type CastleVault = {
     ];
     accounts: [
         {
+            name: "dummy";
+            type: {
+                kind: "struct";
+                fields: [];
+            };
+        },
+        {
             name: "vault";
             type: {
                 kind: "struct";
@@ -1045,7 +1071,7 @@ export type CastleVault = {
                         };
                     },
                     {
-                        name: "vaultPortStakingPool";
+                        name: "vaultPortStakeAccount";
                         type: "publicKey";
                     },
                     {
@@ -1547,12 +1573,27 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
+                    name: "vaultPortStakeAccount",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
                     name: "vaultPortRewardToken",
                     isMut: true,
                     isSigner: false,
                 },
                 {
                     name: "portNativeTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingPool",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakeProgram",
                     isMut: false,
                     isSigner: false,
                 },
@@ -1589,7 +1630,11 @@ export const IDL: CastleVault = {
             ],
             args: [
                 {
-                    name: "bump",
+                    name: "rewardBump",
+                    type: "u8",
+                },
+                {
+                    name: "stakeBump",
                     type: "u8",
                 },
             ],
@@ -2382,6 +2427,13 @@ export const IDL: CastleVault = {
     ],
     accounts: [
         {
+            name: "dummy",
+            type: {
+                kind: "struct",
+                fields: [],
+            },
+        },
+        {
             name: "vault",
             type: {
                 kind: "struct",
@@ -2487,7 +2539,7 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
-                        name: "vaultPortStakingPool",
+                        name: "vaultPortStakeAccount",
                         type: "publicKey",
                     },
                     {

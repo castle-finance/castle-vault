@@ -15,7 +15,8 @@ use instructions::*;
 declare_id!("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn");
 
 #[cfg(feature = "devnet-castle-addr")]
-declare_id!("4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK");
+declare_id!("J3Q5tokVSSv8xmXYL4go1qUVLrDS61rejzXFLsaKkDdW");
+// declare_id!("4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK");
 
 #[program]
 pub mod castle_vault {
@@ -31,9 +32,10 @@ pub mod castle_vault {
 
     pub fn initialize_reward_account(
         ctx: Context<InitializeRewardAccount>,
-        bump: u8,
+        reward_bump: u8,
+        stake_bump: u8,
     ) -> ProgramResult {
-        instructions::init_reward_account::handler(ctx, bump)
+        instructions::init_reward_account::handler(ctx, reward_bump, stake_bump)
     }
 
     pub fn initialize_jet<'info>(

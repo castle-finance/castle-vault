@@ -81,7 +81,7 @@ pub struct Vault {
     pub actual_allocations: Allocations,
 
     /// Port staking account
-    pub vault_port_staking_pool: Pubkey,
+    pub vault_port_stake_account: Pubkey,
 
     /// Account used to receive Port staking reward
     pub vault_port_reward_token: Pubkey,

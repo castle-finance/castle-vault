@@ -22,6 +22,8 @@ import {
 import * as anchor from "@project-serum/anchor";
 import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 
+import { PORT_STAKING, STAKE_ACCOUNT_DATA_SIZE } from "@port.finance/port-sdk";
+
 import {
     DeploymentEnvs,
     StrategyType,
@@ -247,44 +249,80 @@ export class VaultClient {
         );
     }
 
-    async initializeRewardAccount(
-        wallet: anchor.Wallet,
-        port: PortReserveAsset,
-        owner: Keypair
-    ) {
-        // devnet
-        let portNativeTokenMint = new PublicKey(
-            "fp42UaS3fXwees97JuHnqpr4SY5QfAQYyqELhr1TxuY"
-        );
+    async initializeRewardAccount(wallet: anchor.Wallet, owner: Keypair) {
+        const portNativeTokenMint =
+            this.yieldSources.port.accounts.stakingRewardTokenMint;
+        const portStakingPool = this.yieldSources.port.accounts.stakingPool;
 
-        const [vaultPortNativeTokenAccount, portBump] =
+        const [vaultPortRewardTokenAccount, portRewardBump] =
             await PublicKey.findProgramAddress(
-                [this.vaultId.toBuffer(), portNativeTokenMint.toBuffer()],
+                [
+                    this.vaultId.toBuffer(),
+                    portNativeTokenMint.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_reward"),
+                ],
                 this.program.programId
             );
 
+        const [vaultPortStakeAccount2, portStakeBump] =
+            await PublicKey.findProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    portNativeTokenMint.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_stake"),
+                ],
+                PORT_STAKING
+            );
+
+        let vaultPortStakeAccount = Keypair.generate();
+        console.log("reward token mint: ", portNativeTokenMint.toString());
+        console.log("stake acct: ", vaultPortStakeAccount.publicKey.toString());
+        console.log(
+            "reward token acct: ",
+            vaultPortRewardTokenAccount.toString()
+        );
+
         const tx = new Transaction();
         tx.add(
-            this.program.instruction.initializeRewardAccount(portBump, {
-                accounts: {
-                    vault: this.vaultId,
-                    vaultAuthority: this.vaultState.vaultAuthority,
-                    vaultPortRewardToken: vaultPortNativeTokenAccount,
-                    portNativeTokenMint: portNativeTokenMint,
-                    owner: owner,
-                    payer: wallet,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    systemProgram: SystemProgram.programId,
-                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                    rent: SYSVAR_RENT_PUBKEY,
-                },
+            SystemProgram.createAccount({
+                fromPubkey: owner.publicKey,
+                newAccountPubkey: vaultPortStakeAccount.publicKey,
+                space: STAKE_ACCOUNT_DATA_SIZE,
+                lamports: 20000000,
+                programId: PORT_STAKING,
             })
+        );
+        tx.add(
+            this.program.instruction.initializeRewardAccount(
+                portRewardBump,
+                portStakeBump,
+                {
+                    accounts: {
+                        vault: this.vaultId,
+                        vaultAuthority: this.vaultState.vaultAuthority,
+                        vaultPortStakeAccount: vaultPortStakeAccount.publicKey,
+                        vaultPortRewardToken: vaultPortRewardTokenAccount,
+                        portNativeTokenMint: portNativeTokenMint,
+                        portStakingPool: portStakingPool,
+                        portStakeProgram: PORT_STAKING,
+                        owner: owner.publicKey,
+                        payer: wallet.payer.publicKey,
+                        tokenProgram: TOKEN_PROGRAM_ID,
+                        systemProgram: SystemProgram.programId,
+                        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                        rent: SYSVAR_RENT_PUBKEY,
+                    },
+                }
+            )
         );
 
         const txSig = await this.program.provider.send(tx, [
             owner,
             wallet.payer,
+            vaultPortStakeAccount,
         ]);
+        console.log("initializeRewardAccount sig: ", txSig);
+
         await this.program.provider.connection.confirmTransaction(
             txSig,
             "finalized"
@@ -862,6 +900,34 @@ export class VaultClient {
         }
 
         return txs;
+    }
+
+    async MyReconcile(
+        p: string,
+        amount: number
+    ): Promise<TransactionSignature> {
+        const reconcileTx = new Transaction();
+        reconcileTx.add(
+            this.yieldSources[p].getRefreshIx(
+                this.program,
+                this.vaultId,
+                this.vaultState
+            ),
+            this.yieldSources[p].getReconcileIx(
+                this.program,
+                this.vaultId,
+                this.vaultState,
+                new anchor.BN(amount.toString())
+            )
+        );
+        return this.program.provider.send(reconcileTx);
+    }
+
+    async MyRefresh(): Promise<TransactionSignature[]> {
+        const txs = this.getPreRefreshTxs().map((tx) => {
+            return { tx: tx, signers: [] };
+        });
+        return this.program.provider.sendAll(txs);
     }
 
     async getRebalanceTx(
