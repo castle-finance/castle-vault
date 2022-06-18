@@ -164,10 +164,6 @@ export type CastleVault = {
                 {
                     name: "rewardBump";
                     type: "u8";
-                },
-                {
-                    name: "stakeBump";
-                    type: "u8";
                 }
             ];
         },
@@ -1631,10 +1627,6 @@ export const IDL: CastleVault = {
             args: [
                 {
                     name: "rewardBump",
-                    type: "u8",
-                },
-                {
-                    name: "stakeBump",
                     type: "u8",
                 },
             ],

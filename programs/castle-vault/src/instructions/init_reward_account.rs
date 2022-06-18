@@ -14,7 +14,7 @@ pub struct Dummy {
 }
 
 #[derive(Accounts)]
-#[instruction(_reward_bump: u8, _stake_bump: u8)]
+#[instruction(_reward_bump: u8)]
 pub struct InitializeRewardAccount<'info> {
     #[account(
         mut,
@@ -68,7 +68,7 @@ pub struct InitializeRewardAccount<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-pub fn handler(ctx: Context<InitializeRewardAccount>, _reward_bump: u8, _stake_bump: u8) -> ProgramResult {
+pub fn handler(ctx: Context<InitializeRewardAccount>, _reward_bump: u8) -> ProgramResult {
 
     let context = CpiContext::new(
         ctx.accounts.port_stake_program.clone(),

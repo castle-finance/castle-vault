@@ -264,16 +264,6 @@ export class VaultClient {
                 this.program.programId
             );
 
-        const [vaultPortStakeAccount2, portStakeBump] =
-            await PublicKey.findProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    portNativeTokenMint.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_stake"),
-                ],
-                PORT_STAKING
-            );
-
         let vaultPortStakeAccount = Keypair.generate();
         console.log("reward token mint: ", portNativeTokenMint.toString());
         console.log("stake acct: ", vaultPortStakeAccount.publicKey.toString());
@@ -293,27 +283,23 @@ export class VaultClient {
             })
         );
         tx.add(
-            this.program.instruction.initializeRewardAccount(
-                portRewardBump,
-                portStakeBump,
-                {
-                    accounts: {
-                        vault: this.vaultId,
-                        vaultAuthority: this.vaultState.vaultAuthority,
-                        vaultPortStakeAccount: vaultPortStakeAccount.publicKey,
-                        vaultPortRewardToken: vaultPortRewardTokenAccount,
-                        portNativeTokenMint: portNativeTokenMint,
-                        portStakingPool: portStakingPool,
-                        portStakeProgram: PORT_STAKING,
-                        owner: owner.publicKey,
-                        payer: wallet.payer.publicKey,
-                        tokenProgram: TOKEN_PROGRAM_ID,
-                        systemProgram: SystemProgram.programId,
-                        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                        rent: SYSVAR_RENT_PUBKEY,
-                    },
-                }
-            )
+            this.program.instruction.initializeRewardAccount(portRewardBump, {
+                accounts: {
+                    vault: this.vaultId,
+                    vaultAuthority: this.vaultState.vaultAuthority,
+                    vaultPortStakeAccount: vaultPortStakeAccount.publicKey,
+                    vaultPortRewardToken: vaultPortRewardTokenAccount,
+                    portNativeTokenMint: portNativeTokenMint,
+                    portStakingPool: portStakingPool,
+                    portStakeProgram: PORT_STAKING,
+                    owner: owner.publicKey,
+                    payer: wallet.payer.publicKey,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                    systemProgram: SystemProgram.programId,
+                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                    rent: SYSVAR_RENT_PUBKEY,
+                },
+            })
         );
 
         const txSig = await this.program.provider.send(tx, [
