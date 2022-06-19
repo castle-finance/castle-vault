@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
-use port_anchor_adaptor::{port_lending_id, PortReserve};
+use port_anchor_adaptor::{port_lending_id, port_staking_id, PortReserve};
 use port_variable_rate_lending_instructions::state::Reserve;
 use solana_maths::Rate;
 
@@ -20,12 +20,14 @@ use crate::{
 pub struct PortAccounts<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
+    /// TODO check if we should verify has_one for the staking accounts and staking pool ID
     #[account(
         mut,
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_port_lp_token,
         has_one = port_reserve,
+        has_one = vault_port_obligation,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -40,11 +42,27 @@ pub struct PortAccounts<'info> {
     #[account(mut)]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    pub vault_port_obligation: AccountInfo<'info>,
+
+    pub vault_port_stake_account: AccountInfo<'info>,
+
+    /// ID of the staking pool
+    pub port_staking_pool: AccountInfo<'info>,
+
     #[account(
         executable,
         address = port_lending_id(),
     )]
     pub port_lend_program: AccountInfo<'info>,
+
+    #[account(
+        executable,
+        address = port_staking_id(),
+    )]
+    pub port_stake_program: AccountInfo<'info>,
+
+    // Account to which the token should be transfered for the purpose of staking
+    pub port_lp_token_account: AccountInfo<'info>,
 
     //#[soteria(ignore)]
     pub port_market_authority: AccountInfo<'info>,
@@ -72,28 +90,58 @@ impl_has_vault!(PortAccounts<'_>);
 
 impl<'info> LendingMarket for PortAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
+
         let context = CpiContext::new(
             self.port_lend_program.clone(),
-            port_anchor_adaptor::Deposit {
+            port_anchor_adaptor::DepositAndCollateralize {
                 source_liquidity: self.vault_reserve_token.to_account_info(),
-                destination_collateral: self.vault_port_lp_token.to_account_info(),
+                user_collateral: self.vault_port_lp_token.to_account_info(),
                 reserve: self.port_reserve.to_account_info(),
-                reserve_collateral_mint: self.port_lp_mint.clone(),
                 reserve_liquidity_supply: self.port_reserve_token.clone(),
+                reserve_collateral_mint: self.port_lp_mint.clone(),
                 lending_market: self.port_market.clone(),
                 lending_market_authority: self.port_market_authority.clone(),
+                destination_collateral: self.port_lp_token_account.clone(),
+                obligation: self.vault_port_obligation.to_account_info(),
+                obligation_owner: self.vault_authority.to_account_info(),
+                stake_account: self.vault_port_stake_account.to_account_info(),
+                staking_pool: self.port_staking_pool.to_account_info(),
                 transfer_authority: self.vault_authority.clone(),
                 clock: self.clock.to_account_info(),
                 token_program: self.token_program.to_account_info(),
+                port_staking_program: self.port_stake_program.to_account_info(),
             },
         );
         match amount {
             0 => Ok(()),
-            _ => port_anchor_adaptor::deposit_reserve(
+            _ => port_anchor_adaptor::deposit_and_collateralize(
                 context.with_signer(&[&self.vault.authority_seeds()]),
                 amount,
             ),
         }
+
+        // let context = CpiContext::new(
+        //     self.port_lend_program.clone(),
+        //     port_anchor_adaptor::Deposit {
+        //         source_liquidity: self.vault_reserve_token.to_account_info(),
+        //         destination_collateral: self.vault_port_lp_token.to_account_info(),
+        //         reserve: self.port_reserve.to_account_info(),
+        //         reserve_collateral_mint: self.port_lp_mint.clone(),
+        //         reserve_liquidity_supply: self.port_reserve_token.clone(),
+        //         lending_market: self.port_market.clone(),
+        //         lending_market_authority: self.port_market_authority.clone(),
+        //         transfer_authority: self.vault_authority.clone(),
+        //         clock: self.clock.to_account_info(),
+        //         token_program: self.token_program.to_account_info(),
+        //     },
+        // );
+        // match amount {
+        //     0 => Ok(()),
+        //     _ => port_anchor_adaptor::deposit_reserve(
+        //         context.with_signer(&[&self.vault.authority_seeds()]),
+        //         amount,
+        //     ),
+        // }
     }
 
     fn redeem(&self, amount: u64) -> ProgramResult {

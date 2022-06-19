@@ -859,7 +859,32 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "vaultPortObligation";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortStakeAccount";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingPool";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "portLendProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakeProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portLpTokenAccount";
                     isMut: false;
                     isSigner: false;
                 },
@@ -2347,7 +2372,32 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
+                    name: "vaultPortObligation",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortStakeAccount",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingPool",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
                     name: "portLendProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakeProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portLpTokenAccount",
                     isMut: false,
                     isSigner: false,
                 },
