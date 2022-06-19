@@ -525,9 +525,9 @@ async function createDefaultReserve(
         collateralMint: collateralMintAccount.publicKey,
         liquiditySupply: liquiditySupplyTokenAccount.publicKey,
         // TODO create mock staking pool
-        stakingPool: new PublicKey(""),
-        stakingRewardPool: new PublicKey(""),
-        stakingRewardTokenMint: new PublicKey(""),
+        stakingPool: Keypair.generate().publicKey,
+        stakingRewardPool: Keypair.generate().publicKey,
+        stakingRewardTokenMint: Keypair.generate().publicKey,
         stakingProgram: DEVNET_STAKING_PROGRAM_ID,
     };
 }
