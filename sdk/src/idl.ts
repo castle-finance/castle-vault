@@ -640,7 +640,7 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portProgram";
+                    name: "portLendProgram";
                     isMut: false;
                     isSigner: false;
                 },
@@ -859,7 +859,7 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portProgram";
+                    name: "portLendProgram";
                     isMut: false;
                     isSigner: false;
                 },
@@ -2128,7 +2128,7 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "portProgram",
+                    name: "portLendProgram",
                     isMut: false,
                     isSigner: false,
                 },
@@ -2347,7 +2347,7 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "portProgram",
+                    name: "portLendProgram",
                     isMut: false,
                     isSigner: false,
                 },

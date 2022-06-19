@@ -275,7 +275,7 @@ export class PortReserveAsset extends LendingMarket {
             accounts: {
                 vault: vaultId,
                 vaultPortLpToken: vaultState.vaultPortLpToken,
-                portProgram: this.accounts.program,
+                portLendProgram: this.accounts.program,
                 portReserve: this.accounts.reserve,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
@@ -306,7 +306,7 @@ export class PortReserveAsset extends LendingMarket {
                     vaultAuthority: vaultState.vaultAuthority,
                     vaultReserveToken: vaultState.vaultReserveToken,
                     vaultPortLpToken: vaultState.vaultPortLpToken,
-                    portProgram: this.accounts.program,
+                    portLendProgram: this.accounts.program,
                     portMarketAuthority: this.accounts.marketAuthority,
                     portMarket: this.accounts.market,
                     portReserve: this.accounts.reserve,

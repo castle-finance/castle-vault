@@ -44,7 +44,7 @@ pub struct PortAccounts<'info> {
         executable,
         address = port_lending_id(),
     )]
-    pub port_program: AccountInfo<'info>,
+    pub port_lend_program: AccountInfo<'info>,
 
     //#[soteria(ignore)]
     pub port_market_authority: AccountInfo<'info>,
@@ -73,7 +73,7 @@ impl_has_vault!(PortAccounts<'_>);
 impl<'info> LendingMarket for PortAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
-            self.port_program.clone(),
+            self.port_lend_program.clone(),
             port_anchor_adaptor::Deposit {
                 source_liquidity: self.vault_reserve_token.to_account_info(),
                 destination_collateral: self.vault_port_lp_token.to_account_info(),
@@ -98,7 +98,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
 
     fn redeem(&self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
-            self.port_program.clone(),
+            self.port_lend_program.clone(),
             port_anchor_adaptor::Redeem {
                 source_collateral: self.vault_port_lp_token.to_account_info(),
                 destination_liquidity: self.vault_reserve_token.to_account_info(),
@@ -243,7 +243,7 @@ pub struct RefreshPort<'info> {
         executable,
         address = port_lending_id(),
     )]
-    pub port_program: AccountInfo<'info>,
+    pub port_lend_program: AccountInfo<'info>,
 
     #[account(mut)]
     pub port_reserve: Box<Account<'info, PortReserve>>,
@@ -257,7 +257,7 @@ impl<'info> RefreshPort<'info> {
         remaining_accounts: &[AccountInfo<'info>],
     ) -> CpiContext<'_, '_, '_, 'info, port_anchor_adaptor::RefreshReserve<'info>> {
         CpiContext::new(
-            self.port_program.clone(),
+            self.port_lend_program.clone(),
             port_anchor_adaptor::RefreshReserve {
                 reserve: self.port_reserve.to_account_info(),
                 clock: self.clock.to_account_info(),
