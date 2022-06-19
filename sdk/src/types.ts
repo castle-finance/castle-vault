@@ -30,7 +30,9 @@ export interface Vault {
     targetAllocations: Allocations;
     config: VaultConfig;
     actualAllocations: Allocations;
+    vaultPortStakeAccount: PublicKey;
     vaultPortRewardToken: PublicKey;
+    vaultPortObligation: PublicKey;
 }
 
 export interface VaultConfig {
