@@ -3,18 +3,13 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Token, TokenAccount},
 };
-use port_anchor_adaptor::{port_staking_id, port_lending_id};
+use port_anchor_adaptor::{port_staking_id, port_lending_id, PortObligation, PortStakeAccount};
 use std::convert::Into;
 
 use crate::state::*;
 
-#[account]
-#[derive(Default)]
-pub struct Dummy {
-}
-
 #[derive(Accounts)]
-#[instruction(_reward_bump: u8)]
+#[instruction(_obligation_bump:u8, _stake_bump:u8, _reward_bump: u8)]
 pub struct InitializeRewardAccount<'info> {
     #[account(
         mut,
@@ -25,8 +20,24 @@ pub struct InitializeRewardAccount<'info> {
 
     pub vault_authority: AccountInfo<'info>,
 
+    #[account(
+        init,
+        payer = payer,
+        seeds = [vault.key().as_ref(), port_reward_token_mint.key().as_ref(), b"port_obligation".as_ref()],
+        bump = _obligation_bump,
+        space = PortObligation::LEN,
+        owner = port_lend_program.key(),
+    )]
     pub vault_port_obligation: AccountInfo<'info>,
 
+    #[account(
+        init,
+        payer = payer,
+        seeds = [vault.key().as_ref(), port_reward_token_mint.key().as_ref(), b"port_stake".as_ref()],
+        bump = _stake_bump,
+        space = PortStakeAccount::LEN,
+        owner = port_stake_program.key(),
+    )]
     pub vault_port_stake_account: AccountInfo<'info>,
 
     /// Token account for storing Port liquidity mining reward
@@ -80,7 +91,7 @@ pub struct InitializeRewardAccount<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-pub fn handler(ctx: Context<InitializeRewardAccount>, _reward_bump: u8) -> ProgramResult {
+pub fn handler(ctx: Context<InitializeRewardAccount>,_obligation_bump: u8, _stake_bump: u8, _reward_bump: u8) -> ProgramResult {
 
     let init_obligation_ctx = CpiContext::new(
         ctx.accounts.port_lend_program.clone(),

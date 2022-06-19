@@ -106,12 +106,12 @@ export type CastleVault = {
                 },
                 {
                     name: "vaultPortObligation";
-                    isMut: false;
+                    isMut: true;
                     isSigner: false;
                 },
                 {
                     name: "vaultPortStakeAccount";
-                    isMut: false;
+                    isMut: true;
                     isSigner: false;
                 },
                 {
@@ -181,6 +181,14 @@ export type CastleVault = {
                 }
             ];
             args: [
+                {
+                    name: "obligationBump";
+                    type: "u8";
+                },
+                {
+                    name: "stakeBump";
+                    type: "u8";
+                },
                 {
                     name: "rewardBump";
                     type: "u8";
@@ -1619,12 +1627,12 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "vaultPortObligation",
-                    isMut: false,
+                    isMut: true,
                     isSigner: false,
                 },
                 {
                     name: "vaultPortStakeAccount",
-                    isMut: false,
+                    isMut: true,
                     isSigner: false,
                 },
                 {
@@ -1694,6 +1702,14 @@ export const IDL: CastleVault = {
                 },
             ],
             args: [
+                {
+                    name: "obligationBump",
+                    type: "u8",
+                },
+                {
+                    name: "stakeBump",
+                    type: "u8",
+                },
                 {
                     name: "rewardBump",
                     type: "u8",

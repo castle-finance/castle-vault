@@ -259,6 +259,26 @@ export class VaultClient {
             this.yieldSources.port.accounts.stakingRewardTokenMint;
         const portStakingPool = this.yieldSources.port.accounts.stakingPool;
 
+        const [vaultPortObligationAccount, portObligationBump] =
+            await PublicKey.findProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    portNativeTokenMint.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_obligation"),
+                ],
+                this.program.programId
+            );
+
+        const [vaultPortStakeAccount, portStakeBump] =
+            await PublicKey.findProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    portNativeTokenMint.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_stake"),
+                ],
+                this.program.programId
+            );
+
         const [vaultPortRewardTokenAccount, portRewardBump] =
             await PublicKey.findProgramAddress(
                 [
@@ -269,79 +289,50 @@ export class VaultClient {
                 this.program.programId
             );
 
-        let vaultPortStakeAccount = Keypair.generate();
-        let vaultPortObligation = Keypair.generate();
-
-        const obligationRent =
-            await this.program.provider.connection.getMinimumBalanceForRentExemption(
-                ObligationLayout.span
-            );
-        const stakeAccountRent =
-            await this.program.provider.connection.getMinimumBalanceForRentExemption(
-                STAKE_ACCOUNT_DATA_SIZE
-            );
-
         console.log("reward token mint: ", portNativeTokenMint.toString());
-        console.log("stake acct: ", vaultPortStakeAccount.publicKey.toString());
-        console.log(
-            "obligation acct: ",
-            vaultPortObligation.publicKey.toString()
-        );
+        console.log("stake acct: ", vaultPortStakeAccount.toString());
+        console.log("obligation acct: ", vaultPortObligationAccount.toString());
         console.log(
             "reward token acct: ",
             vaultPortRewardTokenAccount.toString()
         );
-        console.log("rents: ", obligationRent, ", ", stakeAccountRent);
 
         const tx = new Transaction();
         tx.add(
-            SystemProgram.createAccount({
-                fromPubkey: owner.publicKey,
-                newAccountPubkey: vaultPortObligation.publicKey,
-                space: ObligationLayout.span,
-                lamports: obligationRent,
-                programId: this.yieldSources.port.accounts.program,
-            })
-        );
-        tx.add(
-            SystemProgram.createAccount({
-                fromPubkey: owner.publicKey,
-                newAccountPubkey: vaultPortStakeAccount.publicKey,
-                space: STAKE_ACCOUNT_DATA_SIZE,
-                lamports: stakeAccountRent,
-                programId: this.yieldSources.port.accounts.stakingProgram,
-            })
-        );
-        tx.add(
-            this.program.instruction.initializeRewardAccount(portRewardBump, {
-                accounts: {
-                    vault: this.vaultId,
-                    vaultAuthority: this.vaultState.vaultAuthority,
-                    vaultPortObligation: vaultPortObligation.publicKey,
-                    vaultPortStakeAccount: vaultPortStakeAccount.publicKey,
-                    vaultPortRewardToken: vaultPortRewardTokenAccount,
-                    portRewardTokenMint: portNativeTokenMint,
-                    portStakingPool: portStakingPool,
-                    portStakeProgram:
-                        this.yieldSources.port.accounts.stakingProgram,
-                    portLendProgram: this.yieldSources.port.accounts.program,
-                    portLendingMarket: this.yieldSources.port.accounts.market,
-                    payer: wallet.payer.publicKey,
-                    owner: owner.publicKey,
-                    systemProgram: SystemProgram.programId,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                    rent: SYSVAR_RENT_PUBKEY,
-                },
-            })
+            this.program.instruction.initializeRewardAccount(
+                portObligationBump,
+                portStakeBump,
+                portRewardBump,
+                {
+                    accounts: {
+                        vault: this.vaultId,
+                        vaultAuthority: this.vaultState.vaultAuthority,
+                        vaultPortObligation: vaultPortObligationAccount,
+                        vaultPortStakeAccount: vaultPortStakeAccount,
+                        vaultPortRewardToken: vaultPortRewardTokenAccount,
+                        portRewardTokenMint: portNativeTokenMint,
+                        portStakingPool: portStakingPool,
+                        portStakeProgram:
+                            this.yieldSources.port.accounts.stakingProgram,
+                        portLendProgram:
+                            this.yieldSources.port.accounts.program,
+                        portLendingMarket:
+                            this.yieldSources.port.accounts.market,
+                        payer: wallet.payer.publicKey,
+                        owner: owner.publicKey,
+                        systemProgram: SystemProgram.programId,
+                        tokenProgram: TOKEN_PROGRAM_ID,
+                        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                        clock: SYSVAR_CLOCK_PUBKEY,
+                        rent: SYSVAR_RENT_PUBKEY,
+                    },
+                }
+            )
         );
 
         const txSig = await this.program.provider.send(tx, [
             owner,
             wallet.payer,
-            vaultPortObligation,
-            vaultPortStakeAccount,
         ]);
         console.log("initializeRewardAccount sig: ", txSig);
 
