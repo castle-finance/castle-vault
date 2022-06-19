@@ -47,6 +47,7 @@ interface PortAccounts {
     collateralMint: PublicKey;
     oracle: PublicKey;
     liquiditySupply: PublicKey;
+    lpTokenAccount: PublicKey;
     stakingPool: PublicKey;
     stakingRewardPool: PublicKey;
     stakingRewardTokenMint: PublicKey;
@@ -135,6 +136,7 @@ export class PortReserveAsset extends LendingMarket {
             collateralMint: reserve.getShareMintId(),
             oracle: reserve.getOracleId(),
             liquiditySupply: reserve.getAssetBalanceId(),
+            lpTokenAccount: reserve.getShareBalanceId(),
             stakingPool: targetStakingPool.getId(),
             stakingRewardPool: targetStakingPool.getRewardTokenPool(),
             stakingRewardTokenMint: rewardTokenMint.getMintId(),
@@ -524,6 +526,7 @@ async function createDefaultReserve(
         oracle: oracle,
         collateralMint: collateralMintAccount.publicKey,
         liquiditySupply: liquiditySupplyTokenAccount.publicKey,
+        lpTokenAccount: collateralSupplyTokenAccount.publicKey,
         // TODO create mock staking pool
         stakingPool: Keypair.generate().publicKey,
         stakingRewardPool: Keypair.generate().publicKey,
