@@ -86,8 +86,11 @@ pub struct Vault {
     /// Account used to receive Port staking reward
     pub vault_port_reward_token: Pubkey,
 
+    /// Account used for the port staking program
+    pub vault_port_obligation: Pubkey,
+
     /// Reserved space for future upgrades
-    _reserved: [u32; 12],
+    _reserved: [u32; 4],
 }
 
 impl Vault {

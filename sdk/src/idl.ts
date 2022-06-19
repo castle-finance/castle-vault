@@ -105,6 +105,11 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "vaultPortObligation";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "vaultPortStakeAccount";
                     isMut: false;
                     isSigner: false;
@@ -115,7 +120,7 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portNativeTokenMint";
+                    name: "portRewardTokenMint";
                     isMut: false;
                     isSigner: false;
                 },
@@ -126,6 +131,16 @@ export type CastleVault = {
                 },
                 {
                     name: "portStakeProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portLendProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portLendingMarket";
                     isMut: false;
                     isSigner: false;
                 },
@@ -151,6 +166,11 @@ export type CastleVault = {
                 },
                 {
                     name: "associatedTokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "clock";
                     isMut: false;
                     isSigner: false;
                 },
@@ -1075,9 +1095,13 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
+                        name: "vaultPortObligation";
+                        type: "publicKey";
+                    },
+                    {
                         name: "reserved";
                         type: {
-                            array: ["u32", 12];
+                            array: ["u32", 4];
                         };
                     }
                 ];
@@ -1569,6 +1593,11 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
+                    name: "vaultPortObligation",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
                     name: "vaultPortStakeAccount",
                     isMut: false,
                     isSigner: false,
@@ -1579,7 +1608,7 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "portNativeTokenMint",
+                    name: "portRewardTokenMint",
                     isMut: false,
                     isSigner: false,
                 },
@@ -1590,6 +1619,16 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "portStakeProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portLendProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portLendingMarket",
                     isMut: false,
                     isSigner: false,
                 },
@@ -1615,6 +1654,11 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "associatedTokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "clock",
                     isMut: false,
                     isSigner: false,
                 },
@@ -2539,9 +2583,13 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
+                        name: "vaultPortObligation",
+                        type: "publicKey",
+                    },
+                    {
                         name: "reserved",
                         type: {
-                            array: ["u32", 12],
+                            array: ["u32", 4],
                         },
                     },
                 ],

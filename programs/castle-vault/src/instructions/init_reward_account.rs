@@ -3,7 +3,7 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Token, TokenAccount},
 };
-use port_anchor_adaptor::{port_staking_id};
+use port_anchor_adaptor::{port_staking_id, port_lending_id};
 use std::convert::Into;
 
 use crate::state::*;
@@ -25,21 +25,23 @@ pub struct InitializeRewardAccount<'info> {
 
     pub vault_authority: AccountInfo<'info>,
 
+    pub vault_port_obligation: AccountInfo<'info>,
+
     pub vault_port_stake_account: AccountInfo<'info>,
 
     /// Token account for storing Port liquidity mining reward
     #[account(
         init,
         payer = payer,
-        seeds = [vault.key().as_ref(), port_native_token_mint.key().as_ref(), b"port_reward".as_ref()],
+        seeds = [vault.key().as_ref(), port_reward_token_mint.key().as_ref(), b"port_reward".as_ref()],
         bump = _reward_bump,
         token::authority = vault_authority,
-        token::mint = port_native_token_mint,
+        token::mint = port_reward_token_mint,
     )]
     pub vault_port_reward_token: Box<Account<'info, TokenAccount>>,
 
     /// Mint of the port finance token (liquidity reward will be issued by this one)
-    pub port_native_token_mint: AccountInfo<'info>,
+    pub port_reward_token_mint: AccountInfo<'info>,
 
     /// ID of the staking pool
     pub port_staking_pool: AccountInfo<'info>,
@@ -49,6 +51,14 @@ pub struct InitializeRewardAccount<'info> {
         address = port_staking_id(),
     )]
     pub port_stake_program: AccountInfo<'info>,
+
+    #[account(
+        executable,
+        address = port_lending_id(),
+    )]
+    pub port_lend_program: AccountInfo<'info>,
+
+    pub port_lending_market: AccountInfo<'info>,
 
     /// Account that pays for above account inits
     #[account(mut)]
@@ -65,12 +75,26 @@ pub struct InitializeRewardAccount<'info> {
 
     pub associated_token_program: Program<'info, AssociatedToken>,
 
+    pub clock: Sysvar<'info, Clock>,
+
     pub rent: Sysvar<'info, Rent>,
 }
 
 pub fn handler(ctx: Context<InitializeRewardAccount>, _reward_bump: u8) -> ProgramResult {
 
-    let context = CpiContext::new(
+    let init_obligation_ctx = CpiContext::new(
+        ctx.accounts.port_lend_program.clone(),
+        port_anchor_adaptor::InitObligation {
+            obligation: ctx.accounts.vault_port_obligation.to_account_info(),
+            lending_market: ctx.accounts.port_lending_market.to_account_info(),
+            obligation_owner: ctx.accounts.vault_authority.to_account_info(),
+            clock: ctx.accounts.clock.to_account_info(),
+            rent: ctx.accounts.rent.to_account_info(),
+            spl_token_id: ctx.accounts.token_program.to_account_info(),
+        },
+    );
+
+    let init_stake_ctx = CpiContext::new(
         ctx.accounts.port_stake_program.clone(),
         port_anchor_adaptor::CreateStakeAccount {
             staking_pool: ctx.accounts.port_staking_pool.to_account_info(),
@@ -80,11 +104,16 @@ pub fn handler(ctx: Context<InitializeRewardAccount>, _reward_bump: u8) -> Progr
         },
     );
 
+    port_anchor_adaptor::init_obligation(
+        init_obligation_ctx.with_signer(&[&ctx.accounts.vault.authority_seeds()])
+    )?;
+
     port_anchor_adaptor::create_stake_account(
-        context.with_signer(&[&ctx.accounts.vault.authority_seeds()])
+        init_stake_ctx.with_signer(&[&ctx.accounts.vault.authority_seeds()])
     )?;
 
     ctx.accounts.vault.vault_port_stake_account = ctx.accounts.vault_port_stake_account.key();
     ctx.accounts.vault.vault_port_reward_token = ctx.accounts.vault_port_reward_token.key();
+    ctx.accounts.vault.vault_port_obligation = ctx.accounts.vault_port_obligation.key();
     Ok(())
 }

@@ -50,6 +50,7 @@ interface PortAccounts {
     stakingPool: PublicKey;
     stakingRewardPool: PublicKey;
     stakingRewardTokenMint: PublicKey;
+    stakingProgram: PublicKey;
 }
 
 // TODO use constant from port sdk
@@ -137,6 +138,7 @@ export class PortReserveAsset extends LendingMarket {
             stakingPool: targetStakingPool.getId(),
             stakingRewardPool: targetStakingPool.getRewardTokenPool(),
             stakingRewardTokenMint: rewardTokenMint.getMintId(),
+            stakingProgram: env.getStakingProgramPk(),
         };
 
         const lpToken = await getToken(
@@ -347,6 +349,9 @@ export class PortReserveAsset extends LendingMarket {
     }
 }
 
+export const DEVNET_STAKING_PROGRAM_ID = new PublicKey(
+    "stkarvwmSzv2BygN5e2LeTwimTczLWHCKPKGC2zVLiq"
+);
 const DEVNET_LENDING_PROGRAM_ID = new PublicKey(
     "pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4"
 );
@@ -523,5 +528,6 @@ async function createDefaultReserve(
         stakingPool: new PublicKey(""),
         stakingRewardPool: new PublicKey(""),
         stakingRewardTokenMint: new PublicKey(""),
+        stakingProgram: DEVNET_STAKING_PROGRAM_ID,
     };
 }

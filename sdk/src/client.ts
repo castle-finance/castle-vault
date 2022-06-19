@@ -22,7 +22,12 @@ import {
 import * as anchor from "@project-serum/anchor";
 import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 
-import { PORT_STAKING, STAKE_ACCOUNT_DATA_SIZE } from "@port.finance/port-sdk";
+import {
+    PORT_LENDING,
+    PORT_STAKING,
+    STAKE_ACCOUNT_DATA_SIZE,
+    ObligationLayout,
+} from "@port.finance/port-sdk";
 
 import {
     DeploymentEnvs,
@@ -265,21 +270,46 @@ export class VaultClient {
             );
 
         let vaultPortStakeAccount = Keypair.generate();
+        let vaultPortObligation = Keypair.generate();
+
+        const obligationRent =
+            await this.program.provider.connection.getMinimumBalanceForRentExemption(
+                ObligationLayout.span
+            );
+        const stakeAccountRent =
+            await this.program.provider.connection.getMinimumBalanceForRentExemption(
+                STAKE_ACCOUNT_DATA_SIZE
+            );
+
         console.log("reward token mint: ", portNativeTokenMint.toString());
         console.log("stake acct: ", vaultPortStakeAccount.publicKey.toString());
+        console.log(
+            "obligation acct: ",
+            vaultPortObligation.publicKey.toString()
+        );
         console.log(
             "reward token acct: ",
             vaultPortRewardTokenAccount.toString()
         );
+        console.log("rents: ", obligationRent, ", ", stakeAccountRent);
 
         const tx = new Transaction();
         tx.add(
             SystemProgram.createAccount({
                 fromPubkey: owner.publicKey,
+                newAccountPubkey: vaultPortObligation.publicKey,
+                space: ObligationLayout.span,
+                lamports: obligationRent,
+                programId: this.yieldSources.port.accounts.program,
+            })
+        );
+        tx.add(
+            SystemProgram.createAccount({
+                fromPubkey: owner.publicKey,
                 newAccountPubkey: vaultPortStakeAccount.publicKey,
                 space: STAKE_ACCOUNT_DATA_SIZE,
-                lamports: 20000000,
-                programId: PORT_STAKING,
+                lamports: stakeAccountRent,
+                programId: this.yieldSources.port.accounts.stakingProgram,
             })
         );
         tx.add(
@@ -287,16 +317,21 @@ export class VaultClient {
                 accounts: {
                     vault: this.vaultId,
                     vaultAuthority: this.vaultState.vaultAuthority,
+                    vaultPortObligation: vaultPortObligation.publicKey,
                     vaultPortStakeAccount: vaultPortStakeAccount.publicKey,
                     vaultPortRewardToken: vaultPortRewardTokenAccount,
-                    portNativeTokenMint: portNativeTokenMint,
+                    portRewardTokenMint: portNativeTokenMint,
                     portStakingPool: portStakingPool,
-                    portStakeProgram: PORT_STAKING,
-                    owner: owner.publicKey,
+                    portStakeProgram:
+                        this.yieldSources.port.accounts.stakingProgram,
+                    portLendProgram: this.yieldSources.port.accounts.program,
+                    portLendingMarket: this.yieldSources.port.accounts.market,
                     payer: wallet.payer.publicKey,
-                    tokenProgram: TOKEN_PROGRAM_ID,
+                    owner: owner.publicKey,
                     systemProgram: SystemProgram.programId,
+                    tokenProgram: TOKEN_PROGRAM_ID,
                     associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                    clock: SYSVAR_CLOCK_PUBKEY,
                     rent: SYSVAR_RENT_PUBKEY,
                 },
             })
@@ -305,6 +340,7 @@ export class VaultClient {
         const txSig = await this.program.provider.send(tx, [
             owner,
             wallet.payer,
+            vaultPortObligation,
             vaultPortStakeAccount,
         ]);
         console.log("initializeRewardAccount sig: ", txSig);
