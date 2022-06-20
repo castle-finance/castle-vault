@@ -37,12 +37,13 @@ describe("VaultClient", () => {
 
     it("loads devnet sol vault", async () => {
         const vaultId = new PublicKey(
-            //"Bv4d2wWb7myxpjWudHnEMjdJstxjkiWqX61xLhPBrBx" //devnet-staging
+            //"7MXreZLSP1Xm9EiLvEf2gZKsQqeuyUHuL54vVSyvFfZi" //devnet-staging
             "3tBqjyYtf9Utb1NNsx4o7AV1qtzHoxsMXgkmat3rZ3y6" //mainnet
         );
         vaultClient = await VaultClient.load(
             provider,
             vaultId,
+            //DeploymentEnvs.devnetStaging
             DeploymentEnvs.mainnet
         );
         assert.isNotNull(vaultClient);
