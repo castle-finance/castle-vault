@@ -263,7 +263,6 @@ export class VaultClient {
             await PublicKey.findProgramAddress(
                 [
                     this.vaultId.toBuffer(),
-                    portNativeTokenMint.toBuffer(),
                     anchor.utils.bytes.utf8.encode("port_obligation"),
                 ],
                 this.program.programId
@@ -273,7 +272,6 @@ export class VaultClient {
             await PublicKey.findProgramAddress(
                 [
                     this.vaultId.toBuffer(),
-                    portNativeTokenMint.toBuffer(),
                     anchor.utils.bytes.utf8.encode("port_stake"),
                 ],
                 this.program.programId
@@ -283,7 +281,6 @@ export class VaultClient {
             await PublicKey.findProgramAddress(
                 [
                     this.vaultId.toBuffer(),
-                    portNativeTokenMint.toBuffer(),
                     anchor.utils.bytes.utf8.encode("port_reward"),
                 ],
                 this.program.programId

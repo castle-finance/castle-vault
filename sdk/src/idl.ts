@@ -868,17 +868,17 @@ export type CastleVault = {
                 },
                 {
                     name: "vaultPortObligation";
-                    isMut: false;
+                    isMut: true;
                     isSigner: false;
                 },
                 {
                     name: "vaultPortStakeAccount";
-                    isMut: false;
+                    isMut: true;
                     isSigner: false;
                 },
                 {
                     name: "portStakingPool";
-                    isMut: false;
+                    isMut: true;
                     isSigner: false;
                 },
                 {
@@ -893,7 +893,7 @@ export type CastleVault = {
                 },
                 {
                     name: "portLpTokenAccount";
-                    isMut: false;
+                    isMut: true;
                     isSigner: false;
                 },
                 {
@@ -1007,13 +1007,6 @@ export type CastleVault = {
         }
     ];
     accounts: [
-        {
-            name: "dummy";
-            type: {
-                kind: "struct";
-                fields: [];
-            };
-        },
         {
             name: "vault";
             type: {
@@ -2389,17 +2382,17 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "vaultPortObligation",
-                    isMut: false,
+                    isMut: true,
                     isSigner: false,
                 },
                 {
                     name: "vaultPortStakeAccount",
-                    isMut: false,
+                    isMut: true,
                     isSigner: false,
                 },
                 {
                     name: "portStakingPool",
-                    isMut: false,
+                    isMut: true,
                     isSigner: false,
                 },
                 {
@@ -2414,7 +2407,7 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "portLpTokenAccount",
-                    isMut: false,
+                    isMut: true,
                     isSigner: false,
                 },
                 {
@@ -2528,13 +2521,6 @@ export const IDL: CastleVault = {
         },
     ],
     accounts: [
-        {
-            name: "dummy",
-            type: {
-                kind: "struct",
-                fields: [],
-            },
-        },
         {
             name: "vault",
             type: {

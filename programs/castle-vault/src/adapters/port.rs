@@ -42,11 +42,14 @@ pub struct PortAccounts<'info> {
     #[account(mut)]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    #[account(mut)]
     pub vault_port_obligation: AccountInfo<'info>,
 
+    #[account(mut)]
     pub vault_port_stake_account: AccountInfo<'info>,
 
     /// ID of the staking pool
+    #[account(mut)]
     pub port_staking_pool: AccountInfo<'info>,
 
     #[account(
@@ -62,6 +65,7 @@ pub struct PortAccounts<'info> {
     pub port_stake_program: AccountInfo<'info>,
 
     // Account to which the token should be transfered for the purpose of staking
+    #[account(mut)]
     pub port_lp_token_account: AccountInfo<'info>,
 
     //#[soteria(ignore)]
@@ -90,7 +94,6 @@ impl_has_vault!(PortAccounts<'_>);
 
 impl<'info> LendingMarket for PortAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
-
         let context = CpiContext::new(
             self.port_lend_program.clone(),
             port_anchor_adaptor::DepositAndCollateralize {
@@ -102,10 +105,10 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                 lending_market: self.port_market.clone(),
                 lending_market_authority: self.port_market_authority.clone(),
                 destination_collateral: self.port_lp_token_account.clone(),
-                obligation: self.vault_port_obligation.to_account_info(),
-                obligation_owner: self.vault_authority.to_account_info(),
-                stake_account: self.vault_port_stake_account.to_account_info(),
-                staking_pool: self.port_staking_pool.to_account_info(),
+                obligation: self.vault_port_obligation.clone(),
+                obligation_owner: self.vault_authority.clone(),
+                stake_account: self.vault_port_stake_account.clone(),
+                staking_pool: self.port_staking_pool.clone(),
                 transfer_authority: self.vault_authority.clone(),
                 clock: self.clock.to_account_info(),
                 token_program: self.token_program.to_account_info(),

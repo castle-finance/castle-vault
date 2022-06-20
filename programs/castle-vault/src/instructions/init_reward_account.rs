@@ -3,7 +3,7 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Token, TokenAccount},
 };
-use port_anchor_adaptor::{port_staking_id, port_lending_id, PortObligation, PortStakeAccount};
+use port_anchor_adaptor::{port_lending_id, port_staking_id, PortObligation, PortStakeAccount};
 use std::convert::Into;
 
 use crate::state::*;
@@ -23,7 +23,7 @@ pub struct InitializeRewardAccount<'info> {
     #[account(
         init,
         payer = payer,
-        seeds = [vault.key().as_ref(), port_reward_token_mint.key().as_ref(), b"port_obligation".as_ref()],
+        seeds = [vault.key().as_ref(), b"port_obligation".as_ref()],
         bump = _obligation_bump,
         space = PortObligation::LEN,
         owner = port_lend_program.key(),
@@ -33,7 +33,7 @@ pub struct InitializeRewardAccount<'info> {
     #[account(
         init,
         payer = payer,
-        seeds = [vault.key().as_ref(), port_reward_token_mint.key().as_ref(), b"port_stake".as_ref()],
+        seeds = [vault.key().as_ref(), b"port_stake".as_ref()],
         bump = _stake_bump,
         space = PortStakeAccount::LEN,
         owner = port_stake_program.key(),
@@ -44,7 +44,7 @@ pub struct InitializeRewardAccount<'info> {
     #[account(
         init,
         payer = payer,
-        seeds = [vault.key().as_ref(), port_reward_token_mint.key().as_ref(), b"port_reward".as_ref()],
+        seeds = [vault.key().as_ref(), b"port_reward".as_ref()],
         bump = _reward_bump,
         token::authority = vault_authority,
         token::mint = port_reward_token_mint,
@@ -91,8 +91,12 @@ pub struct InitializeRewardAccount<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-pub fn handler(ctx: Context<InitializeRewardAccount>,_obligation_bump: u8, _stake_bump: u8, _reward_bump: u8) -> ProgramResult {
-
+pub fn handler(
+    ctx: Context<InitializeRewardAccount>,
+    _obligation_bump: u8,
+    _stake_bump: u8,
+    _reward_bump: u8,
+) -> ProgramResult {
     let init_obligation_ctx = CpiContext::new(
         ctx.accounts.port_lend_program.clone(),
         port_anchor_adaptor::InitObligation {
@@ -116,11 +120,11 @@ pub fn handler(ctx: Context<InitializeRewardAccount>,_obligation_bump: u8, _stak
     );
 
     port_anchor_adaptor::init_obligation(
-        init_obligation_ctx.with_signer(&[&ctx.accounts.vault.authority_seeds()])
+        init_obligation_ctx.with_signer(&[&ctx.accounts.vault.authority_seeds()]),
     )?;
 
     port_anchor_adaptor::create_stake_account(
-        init_stake_ctx.with_signer(&[&ctx.accounts.vault.authority_seeds()])
+        init_stake_ctx.with_signer(&[&ctx.accounts.vault.authority_seeds()]),
     )?;
 
     ctx.accounts.vault.vault_port_stake_account = ctx.accounts.vault_port_stake_account.key();
