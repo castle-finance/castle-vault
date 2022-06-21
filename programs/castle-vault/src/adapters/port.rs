@@ -29,6 +29,7 @@ pub struct PortAccounts<'info> {
         has_one = port_reserve,
         has_one = vault_port_stake_account,
         has_one = vault_port_obligation,
+        has_one = vault_port_reward_token
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -49,6 +50,9 @@ pub struct PortAccounts<'info> {
     #[account(mut)]
     pub vault_port_stake_account: AccountInfo<'info>,
 
+    #[account(mut)]
+    pub vault_port_reward_token: AccountInfo<'info>,
+
     /// ID of the staking pool
     #[account(mut)]
     pub port_staking_pool: AccountInfo<'info>,
@@ -64,6 +68,12 @@ pub struct PortAccounts<'info> {
         address = port_staking_id(),
     )]
     pub port_stake_program: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub port_staking_reward_pool: AccountInfo<'info>,
+
+    //#[soteria(ignore)]
+    pub port_staking_authority: AccountInfo<'info>,
 
     // Account to which the token should be transfered for the purpose of staking
     #[account(mut)]
@@ -92,6 +102,27 @@ pub struct PortAccounts<'info> {
 }
 
 impl_has_vault!(PortAccounts<'_>);
+
+impl<'info> PortAccounts<'info> {
+    pub fn claim_reward(&self) -> ProgramResult {
+        let claim_reward_context = CpiContext::new(
+            self.port_lend_program.clone(),
+            port_anchor_adaptor::ClaimReward {
+                stake_account_owner: self.vault_authority.clone(),
+                stake_account: self.vault_port_stake_account.clone(),
+                staking_pool: self.port_staking_pool.clone(),
+                reward_token_pool: self.port_staking_reward_pool.clone(),
+                reward_dest: self.vault_port_reward_token.clone(),
+                staking_program_authority: self.port_staking_authority.clone(),
+                clock: self.clock.to_account_info(),
+                token_program: self.port_lend_program.clone(),
+            },
+        );
+        port_anchor_adaptor::claim_reward(
+            claim_reward_context.with_signer(&[&self.vault.authority_seeds()]),
+        )
+    }
+}
 
 impl<'info> LendingMarket for PortAccounts<'info> {
     fn deposit(&self, amount: u64) -> ProgramResult {
@@ -167,6 +198,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                 token_program: self.token_program.to_account_info(),
             },
         );
+
         match amount {
             0 => Ok(()),
             _ => port_anchor_adaptor::refresh_port_obligation(
@@ -174,18 +206,19 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                     .with_remaining_accounts(vec![self.port_reserve.to_account_info()])
                     .with_signer(&[&self.vault.authority_seeds()]),
             )
-            .map(|_| {
+            .and_then(|_| {
                 port_anchor_adaptor::withdraw(
                     withdraw_context.with_signer(&[&self.vault.authority_seeds()]),
                     amount,
                 )
-            })?
-            .map(|_| {
+            })
+            .and_then(|_| {
                 port_anchor_adaptor::redeem(
                     redeem_context.with_signer(&[&self.vault.authority_seeds()]),
                     amount,
                 )
-            })?,
+            })
+            .and_then(|_| self.claim_reward()),
         }
     }
 

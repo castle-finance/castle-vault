@@ -52,6 +52,7 @@ interface PortAccounts {
     stakingRewardPool: PublicKey;
     stakingRewardTokenMint: PublicKey;
     stakingProgram: PublicKey;
+    stakingProgamAuthority: PublicKey;
 }
 
 // TODO use constant from port sdk
@@ -123,15 +124,20 @@ export class PortReserveAsset extends LendingMarket {
             pubkey: targetStakingPool.getRewardTokenPool(),
             account: rewardMintRaw,
         });
+        const [stakingProgamAuthority, bump] =
+            await PublicKey.findProgramAddress(
+                [targetStakingPool.getId().toBuffer()],
+                env.getStakingProgramPk()
+            );
 
-        const [authority, _] = await PublicKey.findProgramAddress(
+        const [marketAuthority, _] = await PublicKey.findProgramAddress(
             [market.toBuffer()],
             env.getLendingProgramPk()
         );
         const accounts: PortAccounts = {
             program: env.getLendingProgramPk(),
             market: market,
-            marketAuthority: authority,
+            marketAuthority: marketAuthority,
             reserve: reserve.getReserveId(),
             collateralMint: reserve.getShareMintId(),
             oracle: reserve.getOracleId(),
@@ -141,6 +147,7 @@ export class PortReserveAsset extends LendingMarket {
             stakingRewardPool: targetStakingPool.getRewardTokenPool(),
             stakingRewardTokenMint: rewardTokenMint.getMintId(),
             stakingProgram: env.getStakingProgramPk(),
+            stakingProgamAuthority: stakingProgamAuthority,
         };
 
         const lpToken = await getToken(
@@ -310,9 +317,12 @@ export class PortReserveAsset extends LendingMarket {
                     vaultPortLpToken: vaultState.vaultPortLpToken,
                     vaultPortObligation: vaultState.vaultPortObligation,
                     vaultPortStakeAccount: vaultState.vaultPortStakeAccount,
+                    vaultPortRewardToken: vaultState.vaultPortRewardToken,
                     portStakingPool: this.accounts.stakingPool,
                     portLendProgram: this.accounts.program,
                     portStakeProgram: this.accounts.stakingProgram,
+                    portStakingRewardPool: this.accounts.stakingRewardPool,
+                    portStakingAuthority: this.accounts.stakingProgamAuthority,
                     portLpTokenAccount: this.accounts.lpTokenAccount,
                     portMarketAuthority: this.accounts.marketAuthority,
                     portMarket: this.accounts.market,
@@ -537,5 +547,6 @@ async function createDefaultReserve(
         stakingRewardPool: Keypair.generate().publicKey,
         stakingRewardTokenMint: Keypair.generate().publicKey,
         stakingProgram: DEVNET_STAKING_PROGRAM_ID,
+        stakingProgamAuthority: Keypair.generate().publicKey,
     };
 }
