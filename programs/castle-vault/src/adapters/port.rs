@@ -122,33 +122,36 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                 amount,
             ),
         }
-
-        // let context = CpiContext::new(
-        //     self.port_lend_program.clone(),
-        //     port_anchor_adaptor::Deposit {
-        //         source_liquidity: self.vault_reserve_token.to_account_info(),
-        //         destination_collateral: self.vault_port_lp_token.to_account_info(),
-        //         reserve: self.port_reserve.to_account_info(),
-        //         reserve_collateral_mint: self.port_lp_mint.clone(),
-        //         reserve_liquidity_supply: self.port_reserve_token.clone(),
-        //         lending_market: self.port_market.clone(),
-        //         lending_market_authority: self.port_market_authority.clone(),
-        //         transfer_authority: self.vault_authority.clone(),
-        //         clock: self.clock.to_account_info(),
-        //         token_program: self.token_program.to_account_info(),
-        //     },
-        // );
-        // match amount {
-        //     0 => Ok(()),
-        //     _ => port_anchor_adaptor::deposit_reserve(
-        //         context.with_signer(&[&self.vault.authority_seeds()]),
-        //         amount,
-        //     ),
-        // }
     }
 
     fn redeem(&self, amount: u64) -> ProgramResult {
-        let context = CpiContext::new(
+        let refresh_obligation_context = CpiContext::new(
+            self.port_lend_program.clone(),
+            port_anchor_adaptor::RefreshObligation {
+                obligation: self.vault_port_obligation.clone(),
+                clock: self.clock.to_account_info(),
+            },
+        );
+
+        let withdraw_context = CpiContext::new(
+            self.port_lend_program.clone(),
+            port_anchor_adaptor::Withdraw {
+                source_collateral: self.port_lp_token_account.to_account_info(),
+                destination_collateral: self.vault_port_lp_token.to_account_info(),
+                reserve: self.port_reserve.to_account_info(),
+                obligation: self.vault_port_obligation.clone(),
+                lending_market: self.port_market.clone(),
+                lending_market_authority: self.port_market_authority.clone(),
+                stake_account: self.vault_port_stake_account.clone(),
+                staking_pool: self.port_staking_pool.clone(),
+                obligation_owner: self.vault_authority.clone(),
+                clock: self.clock.to_account_info(),
+                token_program: self.token_program.to_account_info(),
+                port_staking_program: self.port_stake_program.to_account_info(),
+            },
+        );
+
+        let redeem_context = CpiContext::new(
             self.port_lend_program.clone(),
             port_anchor_adaptor::Redeem {
                 source_collateral: self.vault_port_lp_token.to_account_info(),
@@ -165,10 +168,23 @@ impl<'info> LendingMarket for PortAccounts<'info> {
         );
         match amount {
             0 => Ok(()),
-            _ => port_anchor_adaptor::redeem(
-                context.with_signer(&[&self.vault.authority_seeds()]),
-                amount,
-            ),
+            _ => port_anchor_adaptor::refresh_port_obligation(
+                refresh_obligation_context
+                    .with_remaining_accounts(vec![self.port_reserve.to_account_info()])
+                    .with_signer(&[&self.vault.authority_seeds()]),
+            )
+            .map(|_| {
+                port_anchor_adaptor::withdraw(
+                    withdraw_context.with_signer(&[&self.vault.authority_seeds()]),
+                    amount,
+                )
+            })?
+            .map(|_| {
+                port_anchor_adaptor::redeem(
+                    redeem_context.with_signer(&[&self.vault.authority_seeds()]),
+                    amount,
+                )
+            })?,
         }
     }
 
