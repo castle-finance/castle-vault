@@ -40,7 +40,7 @@ export interface JetAccounts {
 
 export class JetReserveAsset extends Asset {
     private constructor(
-        public provider: anchor.Provider,
+        public provider: anchor.AnchorProvider,
         public accounts: JetAccounts,
         public market: JetMarket,
         public reserve: JetReserve
@@ -49,7 +49,7 @@ export class JetReserveAsset extends Asset {
     }
 
     static async load(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         cluster: Cluster,
         reserveMint: PublicKey
     ): Promise<JetReserveAsset> {
@@ -98,7 +98,7 @@ export class JetReserveAsset extends Asset {
      * @returns
      */
     static async initialize(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         wallet: anchor.Wallet,
         owner: Signer,
         marketQuoteTokenMint: PublicKey,
@@ -138,7 +138,7 @@ export class JetReserveAsset extends Asset {
             ownerReserveTokenAccount,
             Amount.tokens(initialReserveAmount)
         );
-        await provider.send(depositTx, [owner]);
+        await provider.sendAndConfirm(depositTx, [owner]);
 
         return new JetReserveAsset(provider, accounts, market, reserve);
     }

@@ -56,7 +56,7 @@ export class VaultClient {
     ) {}
 
     static async load(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         vaultId: PublicKey,
         env: DeploymentEnv = DeploymentEnvs.mainnet
     ): Promise<VaultClient> {
@@ -90,7 +90,7 @@ export class VaultClient {
     }
 
     static async initialize(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         wallet: anchor.Wallet,
         env: DeploymentEnv,
         reserveTokenMint: PublicKey,
