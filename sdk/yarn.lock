@@ -76,10 +76,10 @@
   resolved "https://registry.npmjs.org/@humanwhocodes/object-schema/-/object-schema-1.2.1.tgz"
   integrity sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==
 
-"@jet-lab/jet-engine@^0.2.15":
-  version "0.2.49"
-  resolved "https://registry.yarnpkg.com/@jet-lab/jet-engine/-/jet-engine-0.2.49.tgz#059f4091944f018e16382f4b033ce1ca7da3e256"
-  integrity sha512-yRW/9q344jOh6zjelJ71K6Pg/4iqNV+qsyoriKKsdu/a7xj83mcT8yDajYKmMqhOHWQZJivg6KnGQjjtIeqnMA==
+"@jet-lab/jet-engine@^0.2.51":
+  version "0.2.51"
+  resolved "https://registry.yarnpkg.com/@jet-lab/jet-engine/-/jet-engine-0.2.51.tgz#acb5dde1be3d37cc759822589dbb7927fc629437"
+  integrity sha512-/u7WZ+HuwAmyK/Fg7+KDuM7+caALfWjEvPeom2z1UOZYQCUvhnTtzomsePoJs/0RWRS3A/GSIjdyMlscMSiBYw==
   dependencies:
     "@project-serum/anchor" "^0.23.0"
     "@project-serum/serum" "^0.13.60"
