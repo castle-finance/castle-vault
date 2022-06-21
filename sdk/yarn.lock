@@ -115,10 +115,10 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@port.finance/port-sdk@^0.2.33":
-  version "0.2.62"
-  resolved "https://registry.npmjs.org/@port.finance/port-sdk/-/port-sdk-0.2.62.tgz"
-  integrity sha512-3ykBMQ7bwaM6jH4xHjvruAJArcazfBLVZ2bXGBLVRPzXGPpXeA2s/KMeb8nNzfRLJ8ooqMH7lEkiwefojJtcog==
+"@port.finance/port-sdk@^0.2.67":
+  version "0.2.67"
+  resolved "https://registry.yarnpkg.com/@port.finance/port-sdk/-/port-sdk-0.2.67.tgz#48ddd27af7b14c956fa6a2941d84edc61eb9c082"
+  integrity sha512-qm7IHdfP/vhSv41RHveEUsJSBOknPeWYuRwZS5oISwe1kvcOBHkuh/9GuJD24TlE9HaoO+JGq3rpn8YLFjNh8w==
   dependencies:
     "@project-serum/anchor" "^0.21.0"
     "@saberhq/solana-contrib" "^1.12.53"

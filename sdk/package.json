@@ -1,13 +1,13 @@
 {
   "name": "@castlefinance/vault-sdk",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "license": "MIT",
   "main": "./lib/index.js",
   "typings": "./lib/index.d.ts",
   "dependencies": {
     "@castlefinance/vault-core": "^0.1.0",
     "@jet-lab/jet-engine": "^0.2.51",
-    "@port.finance/port-sdk": "^0.2.33",
+    "@port.finance/port-sdk": "^0.2.67",
     "@project-serum/anchor": "0.18.2",
     "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.31.0",
