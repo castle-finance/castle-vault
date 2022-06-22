@@ -51,6 +51,8 @@ interface PortAccounts {
     stakingPool: PublicKey;
     stakingRewardPool: PublicKey;
     stakingRewardTokenMint: PublicKey;
+    stakingSubRewardPool: PublicKey;
+    stakingSubRewardTokenMint: PublicKey;
     stakingProgram: PublicKey;
     stakingProgamAuthority: PublicKey;
 }
@@ -130,6 +132,13 @@ export class PortReserveAsset extends LendingMarket {
                 env.getStakingProgramPk()
             );
 
+        const subrewardMintRaw = await provider.connection.getAccountInfo(
+            targetStakingPool.getSubRewardTokenPool()
+        );
+        const subrewardMint = TokenAccount.fromRaw({
+            pubkey: targetStakingPool.getSubRewardTokenPool(),
+            account: subrewardMintRaw,
+        });
         const [marketAuthority, _] = await PublicKey.findProgramAddress(
             [market.toBuffer()],
             env.getLendingProgramPk()
@@ -146,6 +155,8 @@ export class PortReserveAsset extends LendingMarket {
             stakingPool: targetStakingPool.getId(),
             stakingRewardPool: targetStakingPool.getRewardTokenPool(),
             stakingRewardTokenMint: rewardTokenMint.getMintId(),
+            stakingSubRewardPool: targetStakingPool.getSubRewardTokenPool(),
+            stakingSubRewardTokenMint: subrewardMint.getMintId(),
             stakingProgram: env.getStakingProgramPk(),
             stakingProgamAuthority: stakingProgamAuthority,
         };
@@ -546,6 +557,8 @@ async function createDefaultReserve(
         stakingPool: Keypair.generate().publicKey,
         stakingRewardPool: Keypair.generate().publicKey,
         stakingRewardTokenMint: Keypair.generate().publicKey,
+        stakingSubRewardPool: Keypair.generate().publicKey,
+        stakingSubRewardTokenMint: Keypair.generate().publicKey,
         stakingProgram: DEVNET_STAKING_PROGRAM_ID,
         stakingProgamAuthority: Keypair.generate().publicKey,
     };
