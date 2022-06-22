@@ -1137,10 +1137,10 @@ export class VaultClient {
 
     // Denominated in reserve tokens per LP token
     async getLpExchangeRate(): Promise<ExchangeRate> {
+        await this.reload();
+
         const totalValue = (await this.getTotalValue()).lamports;
-        const lpTokenSupply = new Big(
-            (await this.getLpTokenMintInfo()).supply.toString()
-        );
+        const lpTokenSupply = new Big(this.vaultState.lpTokenSupply.toString());
 
         const bigZero = new Big(0);
         if (lpTokenSupply.eq(bigZero) || totalValue.eq(bigZero)) {
@@ -1287,6 +1287,19 @@ export class VaultClient {
             Keypair.generate() // dummy since we don't need to send txs
         );
         return lpToken.getMintInfo();
+    }
+
+    // This should only be used for tests
+    getVaultState(): Vault {
+        return this.vaultState;
+    }
+
+    async getVaultLpTokenSupply(): Promise<TokenAmount> {
+        await this.reload();
+        return TokenAmount.fromToken(
+            this.lpToken,
+            Big(this.vaultState.lpTokenSupply.toString())
+        );
     }
 
     getVaultConfig(): VaultConfig {

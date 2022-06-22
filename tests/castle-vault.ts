@@ -293,8 +293,8 @@ describe("castle-vault", () => {
     }
 
     async function getLpTokenSupply(): Promise<number> {
-        const info = await vaultClient.getLpTokenMintInfo();
-        return info.supply.toNumber();
+        await vaultClient.reload();
+        return vaultClient.getVaultState().lpTokenSupply.toNumber();
     }
 
     async function mintReserveToken(receiver: PublicKey, qty: number) {
@@ -344,7 +344,7 @@ describe("castle-vault", () => {
             const preRefresh = vaultClient.getPreRefreshTxs().map((tx) => {
                 return { tx: tx, signers: [] };
             });
-            const txs: SendTxRequest[] = [
+            const txs = [
                 ...preRefresh,
                 {
                     tx: await vaultClient.getRebalanceTx(proposedWeights),

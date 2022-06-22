@@ -33,6 +33,7 @@ export interface Vault {
     vaultPortStakeAccount: PublicKey;
     vaultPortRewardToken: PublicKey;
     vaultPortObligation: PublicKey;
+    lpTokenSupply: BN;
 }
 
 export interface VaultConfig {

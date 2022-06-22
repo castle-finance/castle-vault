@@ -89,8 +89,11 @@ pub struct Vault {
     /// Account used for the port staking program
     pub vault_port_obligation: Pubkey,
 
+    pub lp_token_supply: u64,
+
+    // 4 * 26 = 104
     /// Reserved space for future upgrades
-    _reserved: [u32; 4],
+    _reserved: [u32; 2],
 }
 
 impl Vault {
@@ -356,7 +359,7 @@ impl SlotTrackedValue {
 }
 
 /// Number of slots to consider stale after
-pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 2;
+pub const STALE_AFTER_SLOTS_ELAPSED: u64 = 1;
 
 #[assert_size(aligns, 16)]
 #[repr(C, align(8))]
