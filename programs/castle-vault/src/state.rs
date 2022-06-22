@@ -80,6 +80,9 @@ pub struct Vault {
     // Actual allocation retrieved by refresh
     pub actual_allocations: Allocations,
 
+    // Supply of vault LP token
+    pub lp_token_supply: u64,
+
     /// Port staking account
     pub vault_port_stake_account: Pubkey,
 
@@ -88,8 +91,6 @@ pub struct Vault {
 
     /// Account used for the port staking program
     pub vault_port_obligation: Pubkey,
-
-    pub lp_token_supply: u64,
 
     // 4 * 26 = 104
     /// Reserved space for future upgrades
