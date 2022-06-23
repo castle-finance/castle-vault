@@ -27,9 +27,6 @@ pub struct PortAccounts<'info> {
         has_one = vault_reserve_token,
         has_one = vault_port_lp_token,
         has_one = port_reserve,
-        has_one = vault_port_stake_account,
-        has_one = vault_port_obligation,
-        has_one = vault_port_reward_token
     )]
     pub vault: Box<Account<'info, Vault>>,
 

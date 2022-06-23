@@ -334,9 +334,6 @@ export class PortReserveAsset extends LendingMarket {
                     vaultPortLpToken: vaultState.vaultPortLpToken,
                     portAdditionalStates:
                         this.accounts.vaultPortAdditionalStates,
-                    // vaultPortObligation: vaultState.vaultPortObligation,
-                    // vaultPortStakeAccount: vaultState.vaultPortStakeAccount,
-                    // vaultPortRewardToken: vaultState.vaultPortRewardToken,
                     vaultPortObligation: this.accounts.vaultPortObligation,
                     vaultPortStakeAccount: this.accounts.vaultPortStakeAccount,
                     vaultPortRewardToken: this.accounts.vaultPortRewardToken,
