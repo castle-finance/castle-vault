@@ -72,6 +72,10 @@ pub struct SolendAccounts<'info> {
 impl_has_vault!(SolendAccounts<'_>);
 
 impl<'info> LendingMarket for SolendAccounts<'info> {
+    fn verify_accounts(&self, _program_id: &Pubkey) -> ProgramResult {
+        Ok(())
+    }
+
     fn deposit(&self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.solend_program.clone(),

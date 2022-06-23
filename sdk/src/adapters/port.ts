@@ -55,6 +55,12 @@ interface PortAccounts {
     stakingSubRewardTokenMint: PublicKey;
     stakingProgram: PublicKey;
     stakingProgamAuthority: PublicKey;
+    // Some port accounts held by the vault. The rest are still in vaultState
+    // TODO refactor this in the future, maybe move all port-related accounts to this struct
+    vaultPortAdditionalStates?: PublicKey;
+    vaultPortObligation?: PublicKey;
+    vaultPortStakeAccount?: PublicKey;
+    vaultPortRewardToken?: PublicKey;
 }
 
 // TODO use constant from port sdk
@@ -326,9 +332,14 @@ export class PortReserveAsset extends LendingMarket {
                     vaultAuthority: vaultState.vaultAuthority,
                     vaultReserveToken: vaultState.vaultReserveToken,
                     vaultPortLpToken: vaultState.vaultPortLpToken,
-                    vaultPortObligation: vaultState.vaultPortObligation,
-                    vaultPortStakeAccount: vaultState.vaultPortStakeAccount,
-                    vaultPortRewardToken: vaultState.vaultPortRewardToken,
+                    portAdditionalStates:
+                        this.accounts.vaultPortAdditionalStates,
+                    // vaultPortObligation: vaultState.vaultPortObligation,
+                    // vaultPortStakeAccount: vaultState.vaultPortStakeAccount,
+                    // vaultPortRewardToken: vaultState.vaultPortRewardToken,
+                    vaultPortObligation: this.accounts.vaultPortObligation,
+                    vaultPortStakeAccount: this.accounts.vaultPortStakeAccount,
+                    vaultPortRewardToken: this.accounts.vaultPortRewardToken,
                     portStakingPool: this.accounts.stakingPool,
                     portLendProgram: this.accounts.program,
                     portStakeProgram: this.accounts.stakingProgram,

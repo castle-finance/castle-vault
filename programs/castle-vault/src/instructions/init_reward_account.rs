@@ -6,7 +6,7 @@ use anchor_spl::{
 use port_anchor_adaptor::{port_lending_id, port_staking_id, PortObligation, PortStakeAccount};
 use std::convert::Into;
 
-use crate::state::*;
+use crate::{errors::ErrorCode, state::*};
 
 #[derive(Accounts)]
 #[instruction(_obligation_bump:u8, _stake_bump:u8, _reward_bump: u8)]
@@ -19,6 +19,9 @@ pub struct InitializeRewardAccount<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     pub vault_authority: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
     #[account(
         init,
@@ -78,7 +81,7 @@ pub struct InitializeRewardAccount<'info> {
     /// Owner of the vault
     /// Only this account can call restricted instructions
     /// Acts as authority of the fee receiver account
-    pub owner: AccountInfo<'info>,
+    pub owner: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 
@@ -127,8 +130,27 @@ pub fn handler(
         init_stake_ctx.with_signer(&[&ctx.accounts.vault.authority_seeds()]),
     )?;
 
-    ctx.accounts.vault.vault_port_stake_account = ctx.accounts.vault_port_stake_account.key();
-    ctx.accounts.vault.vault_port_reward_token = ctx.accounts.vault_port_reward_token.key();
-    ctx.accounts.vault.vault_port_obligation = ctx.accounts.vault_port_obligation.key();
+    let port_additional_states_pda_key = Pubkey::create_program_address(
+        &[
+            ctx.accounts.vault.key().as_ref(),
+            b"port_additional_state".as_ref(),
+            &[ctx.accounts.vault.vault_port_additional_state_bump],
+        ],
+        &ctx.program_id,
+    )?;
+    if port_additional_states_pda_key != ctx.accounts.port_additional_states.key() {
+        return Err(ErrorCode::InvalidAccount.into());
+    }
+
+    ctx.accounts
+        .port_additional_states
+        .vault_port_stake_account_bump = _stake_bump;
+    ctx.accounts
+        .port_additional_states
+        .vault_port_reward_token_bump = _reward_bump;
+    ctx.accounts
+        .port_additional_states
+        .vault_port_obligation_bump = _obligation_bump;
+
     Ok(())
 }

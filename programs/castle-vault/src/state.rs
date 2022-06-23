@@ -83,18 +83,19 @@ pub struct Vault {
     // Supply of vault LP token
     pub lp_token_supply: u64,
 
-    /// Port staking account
-    pub vault_port_stake_account: Pubkey,
+    pub vault_port_additional_state_bump: u8,
 
-    /// Account used to receive Port staking reward
-    pub vault_port_reward_token: Pubkey,
+    // /// Port staking account
+    // pub vault_port_stake_account: Pubkey,
 
-    /// Account used for the port staking program
-    pub vault_port_obligation: Pubkey,
+    // /// Account used to receive Port staking reward
+    // pub vault_port_reward_token: Pubkey,
 
-    // 4 * 26 = 104
+    // /// Account used for the port staking program
+    // pub vault_port_obligation: Pubkey,
     /// Reserved space for future upgrades
-    _reserved: [u32; 2],
+    _reserved0: [u8; 3],
+    _reserved1: [u32; 25],
 }
 
 impl Vault {
@@ -193,6 +194,26 @@ impl Vault {
             &self.authority_bump,
         ]
     }
+}
+
+#[assert_size(504)]
+#[account]
+#[repr(C, align(8))]
+#[derive(Debug, Default)]
+#[cfg_attr(test, derive(TypeLayout))]
+pub struct VaultPortAdditionalState {
+    /// Port staking account
+    pub vault_port_stake_account_bump: u8,
+
+    /// Account used to receive Port staking reward
+    pub vault_port_reward_token_bump: u8,
+
+    /// Account used for the port staking program
+    pub vault_port_obligation_bump: u8,
+
+    _reserved0: [u8; 5],
+    _reserved1: [u64; 30],
+    _reserved2: [u64; 32],
 }
 
 #[assert_size(aligns, 32)]

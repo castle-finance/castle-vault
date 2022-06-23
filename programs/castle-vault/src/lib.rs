@@ -30,6 +30,13 @@ pub mod castle_vault {
         instructions::init_vault::handler(ctx, bumps, config)
     }
 
+    pub fn initialize_port_additional_state(
+        ctx: Context<InitializePortAdditionalState>,
+        bump: u8,
+    ) -> ProgramResult {
+        instructions::init_port_additional_state::handler(ctx, bump)
+    }
+
     pub fn initialize_reward_account(
         ctx: Context<InitializeRewardAccount>,
         obligation_bump: u8,

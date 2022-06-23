@@ -95,11 +95,62 @@ export class VaultClient {
             );
         }
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Port) {
+            const vaultPortAdditionalStateAddress =
+                await PublicKey.createProgramAddress(
+                    [
+                        vaultId.toBuffer(),
+                        anchor.utils.bytes.utf8.encode("port_additional_state"),
+                        new Uint8Array([
+                            vaultState.vaultPortAdditionalStateBump,
+                        ]),
+                    ],
+                    program.programId
+                );
+            const vaultPortAdditionalStates =
+                await program.account.vaultPortAdditionalState.fetch(
+                    vaultPortAdditionalStateAddress
+                );
             yieldSources.port = await PortReserveAsset.load(
                 provider,
                 cluster,
                 reserveMint
             );
+
+            yieldSources.port.accounts.vaultPortAdditionalStates =
+                vaultPortAdditionalStateAddress;
+            yieldSources.port.accounts.vaultPortObligation =
+                await PublicKey.createProgramAddress(
+                    [
+                        vaultId.toBuffer(),
+                        anchor.utils.bytes.utf8.encode("port_obligation"),
+                        new Uint8Array([
+                            vaultPortAdditionalStates.vaultPortObligationBump,
+                        ]),
+                    ],
+                    program.programId
+                );
+            yieldSources.port.accounts.vaultPortStakeAccount =
+                await PublicKey.createProgramAddress(
+                    [
+                        vaultId.toBuffer(),
+                        anchor.utils.bytes.utf8.encode("port_stake"),
+                        new Uint8Array([
+                            vaultPortAdditionalStates.vaultPortStakeAccountBump,
+                        ]),
+                    ],
+                    program.programId
+                );
+            yieldSources.port.accounts.vaultPortRewardToken =
+                await PublicKey.createProgramAddress(
+                    [
+                        vaultId.toBuffer(),
+                        anchor.utils.bytes.utf8.encode("port_reward"),
+                        new Uint8Array([
+                            vaultPortAdditionalStates.vaultPortRewardTokenBump,
+                        ]),
+                    ],
+                    program.programId
+                );
         }
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Jet) {
             yieldSources.jet = await JetReserveAsset.load(
@@ -254,7 +305,74 @@ export class VaultClient {
         );
     }
 
-    async initializeRewardAccount(wallet: anchor.Wallet, owner: Keypair) {
+    async initializePortAdditionalState(wallet: anchor.Wallet, owner: Keypair) {
+        const [pda, bump] = await PublicKey.findProgramAddress(
+            [
+                this.vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("port_additional_state"),
+            ],
+            this.program.programId
+        );
+        console.log("port additional state: ", pda.toString());
+
+        const tx = new Transaction();
+        tx.add(
+            this.program.instruction.initializePortAdditionalState(bump, {
+                accounts: {
+                    vault: this.vaultId,
+                    portAdditionalStates: pda,
+                    payer: wallet.payer.publicKey,
+                    owner: owner.publicKey,
+                    systemProgram: SystemProgram.programId,
+                },
+            })
+        );
+
+        const txSig = await this.program.provider.send(tx, [
+            owner,
+            wallet.payer,
+        ]);
+        console.log("initializePortAdditionalState sig: ", txSig);
+
+        await this.program.provider.connection.confirmTransaction(
+            txSig,
+            "finalized"
+        );
+    }
+
+    async initializeRewardAccount(
+        wallet: anchor.Wallet,
+        owner: Keypair,
+        provider: anchor.Provider,
+        env: DeploymentEnv,
+        program?: anchor.Program<CastleVault>
+    ) {
+        if (program == null) {
+            program = (await anchor.Program.at(
+                PROGRAM_IDS[env],
+                provider
+            )) as anchor.Program<CastleVault>;
+        }
+
+        await this.reload();
+        const vaultPortAdditionalStateAddress =
+            await PublicKey.createProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_additional_state"),
+                    new Uint8Array([
+                        this.vaultState.vaultPortAdditionalStateBump,
+                    ]),
+                ],
+                program.programId
+            );
+        this.yieldSources.port.accounts.vaultPortAdditionalStates =
+            vaultPortAdditionalStateAddress;
+        console.log(
+            "port additional state: ",
+            vaultPortAdditionalStateAddress.toString()
+        );
+
         const portNativeTokenMint =
             this.yieldSources.port.accounts.stakingRewardTokenMint;
         const portStakingPool = this.yieldSources.port.accounts.stakingPool;
@@ -304,6 +422,9 @@ export class VaultClient {
                     accounts: {
                         vault: this.vaultId,
                         vaultAuthority: this.vaultState.vaultAuthority,
+                        portAdditionalStates:
+                            this.yieldSources.port.accounts
+                                .vaultPortAdditionalStates,
                         vaultPortObligation: vaultPortObligationAccount,
                         vaultPortStakeAccount: vaultPortStakeAccount,
                         vaultPortRewardToken: vaultPortRewardTokenAccount,

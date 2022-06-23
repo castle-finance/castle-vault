@@ -79,6 +79,10 @@ impl<'info> JetAccounts<'info> {
 impl_has_vault!(JetAccounts<'_>);
 
 impl<'info> LendingMarket for JetAccounts<'info> {
+    fn verify_accounts(&self, _program_id: &Pubkey) -> ProgramResult {
+        Ok(())
+    }
+
     fn deposit(&self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.jet_program.clone(),

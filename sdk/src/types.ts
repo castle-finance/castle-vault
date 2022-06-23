@@ -30,10 +30,14 @@ export interface Vault {
     targetAllocations: Allocations;
     config: VaultConfig;
     actualAllocations: Allocations;
-    vaultPortStakeAccount: PublicKey;
-    vaultPortRewardToken: PublicKey;
-    vaultPortObligation: PublicKey;
     lpTokenSupply: BN;
+    vaultPortAdditionalStateBump: number;
+}
+
+export interface VaultPortAdditionalState {
+    vaultPortStakeAccountBump: number;
+    vaultPortRewardTokenBump: number;
+    vaultPortObligationBump: number;
 }
 
 export interface VaultConfig {
