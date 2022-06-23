@@ -9,7 +9,7 @@ use std::convert::Into;
 use crate::{errors::ErrorCode, state::*};
 
 #[derive(Accounts)]
-#[instruction(_obligation_bump:u8, _stake_bump:u8, _reward_bump: u8)]
+#[instruction(obligation_bump:u8, stake_bump:u8, reward_bump: u8, sub_reward_bump: u8)]
 pub struct InitializeRewardAccount<'info> {
     #[account(
         mut,
@@ -27,7 +27,7 @@ pub struct InitializeRewardAccount<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), b"port_obligation".as_ref()],
-        bump = _obligation_bump,
+        bump = obligation_bump,
         space = PortObligation::LEN,
         owner = port_lend_program.key(),
     )]
@@ -37,7 +37,7 @@ pub struct InitializeRewardAccount<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), b"port_stake".as_ref()],
-        bump = _stake_bump,
+        bump = stake_bump,
         space = PortStakeAccount::LEN,
         owner = port_stake_program.key(),
     )]
@@ -48,14 +48,28 @@ pub struct InitializeRewardAccount<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), b"port_reward".as_ref()],
-        bump = _reward_bump,
+        bump = reward_bump,
         token::authority = vault_authority,
         token::mint = port_reward_token_mint,
     )]
     pub vault_port_reward_token: Box<Account<'info, TokenAccount>>,
 
+    /// Token account for storing Port liquidity mining sub-reward
+    #[account(
+        init,
+        payer = payer,
+        seeds = [vault.key().as_ref(), b"port_sub_reward".as_ref()],
+        bump = sub_reward_bump,
+        token::authority = vault_authority,
+        token::mint = port_sub_reward_token_mint,
+    )]
+    pub vault_port_sub_reward_token: Box<Account<'info, TokenAccount>>,
+
     /// Mint of the port finance token (liquidity reward will be issued by this one)
     pub port_reward_token_mint: AccountInfo<'info>,
+
+    /// Mint of the port stake sub-reward token
+    pub port_sub_reward_token_mint: AccountInfo<'info>,
 
     /// ID of the staking pool
     pub port_staking_pool: AccountInfo<'info>,
@@ -96,9 +110,10 @@ pub struct InitializeRewardAccount<'info> {
 
 pub fn handler(
     ctx: Context<InitializeRewardAccount>,
-    _obligation_bump: u8,
-    _stake_bump: u8,
-    _reward_bump: u8,
+    obligation_bump: u8,
+    stake_bump: u8,
+    reward_bump: u8,
+    sub_reward_bump: u8,
 ) -> ProgramResult {
     let init_obligation_ctx = CpiContext::new(
         ctx.accounts.port_lend_program.clone(),
@@ -144,13 +159,16 @@ pub fn handler(
 
     ctx.accounts
         .port_additional_states
-        .vault_port_stake_account_bump = _stake_bump;
+        .vault_port_stake_account_bump = stake_bump;
     ctx.accounts
         .port_additional_states
-        .vault_port_reward_token_bump = _reward_bump;
+        .vault_port_reward_token_bump = reward_bump;
     ctx.accounts
         .port_additional_states
-        .vault_port_obligation_bump = _obligation_bump;
+        .vault_port_obligation_bump = obligation_bump;
+    ctx.accounts
+        .port_additional_states
+        .vault_port_sub_reward_token_bump = sub_reward_bump;
 
     Ok(())
 }

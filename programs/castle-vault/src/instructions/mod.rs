@@ -1,3 +1,4 @@
+pub mod claim_port_reward;
 pub mod consolidate_refresh;
 pub mod deposit;
 pub mod init_port_additional_state;
@@ -12,6 +13,7 @@ pub mod update_halt_flags;
 pub mod update_yield_source_flags;
 pub mod withdraw;
 
+pub use claim_port_reward::*;
 pub use consolidate_refresh::*;
 pub use deposit::*;
 pub use init_port_additional_state::*;

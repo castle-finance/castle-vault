@@ -151,6 +151,17 @@ export class VaultClient {
                     ],
                     program.programId
                 );
+            yieldSources.port.accounts.vaultPortSubRewardToken =
+                await PublicKey.createProgramAddress(
+                    [
+                        vaultId.toBuffer(),
+                        anchor.utils.bytes.utf8.encode("port_sub_reward"),
+                        new Uint8Array([
+                            vaultPortAdditionalStates.vaultPortSubRewardTokenBump,
+                        ]),
+                    ],
+                    program.programId
+                );
         }
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Jet) {
             yieldSources.jet = await JetReserveAsset.load(
@@ -373,10 +384,6 @@ export class VaultClient {
             vaultPortAdditionalStateAddress.toString()
         );
 
-        const portNativeTokenMint =
-            this.yieldSources.port.accounts.stakingRewardTokenMint;
-        const portStakingPool = this.yieldSources.port.accounts.stakingPool;
-
         const [vaultPortObligationAccount, portObligationBump] =
             await PublicKey.findProgramAddress(
                 [
@@ -404,7 +411,23 @@ export class VaultClient {
                 this.program.programId
             );
 
-        console.log("reward token mint: ", portNativeTokenMint.toString());
+        const [vaultPortSubRewardTokenAccount, portSubRewardBump] =
+            await PublicKey.findProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_sub_reward"),
+                ],
+                this.program.programId
+            );
+
+        console.log(
+            "reward token mint: ",
+            this.yieldSources.port.accounts.stakingRewardTokenMint.toString()
+        );
+        console.log(
+            "sub-reward token mint: ",
+            this.yieldSources.port.accounts.stakingSubRewardTokenMint.toString()
+        );
         console.log("stake acct: ", vaultPortStakeAccount.toString());
         console.log("obligation acct: ", vaultPortObligationAccount.toString());
         console.log(
@@ -418,6 +441,7 @@ export class VaultClient {
                 portObligationBump,
                 portStakeBump,
                 portRewardBump,
+                portSubRewardBump,
                 {
                     accounts: {
                         vault: this.vaultId,
@@ -428,8 +452,15 @@ export class VaultClient {
                         vaultPortObligation: vaultPortObligationAccount,
                         vaultPortStakeAccount: vaultPortStakeAccount,
                         vaultPortRewardToken: vaultPortRewardTokenAccount,
-                        portRewardTokenMint: portNativeTokenMint,
-                        portStakingPool: portStakingPool,
+                        vaultPortSubRewardToken: vaultPortSubRewardTokenAccount,
+                        portRewardTokenMint:
+                            this.yieldSources.port.accounts
+                                .stakingRewardTokenMint,
+                        portSubRewardTokenMint:
+                            this.yieldSources.port.accounts
+                                .stakingSubRewardTokenMint,
+                        portStakingPool:
+                            this.yieldSources.port.accounts.stakingPool,
                         portStakeProgram:
                             this.yieldSources.port.accounts.stakingProgram,
                         portLendProgram:
@@ -1189,6 +1220,25 @@ export class VaultClient {
         ];
 
         return this.program.provider.sendAll(txs);
+    }
+
+    async claimPortReward(): Promise<TransactionSignature> {
+        const tx = new Transaction();
+        // tx.add(
+        //     this.yieldSources.port.getRefreshIx(
+        //         this.program,
+        //         this.vaultId,
+        //         this.vaultState
+        //     )
+        // );
+        tx.add(
+            this.yieldSources.port.getClaimRewardIx(
+                this.program,
+                this.vaultId,
+                this.vaultState
+            )
+        );
+        return this.program.provider.send(tx);
     }
 
     async emergencyBrake(): Promise<TransactionSignature[]> {

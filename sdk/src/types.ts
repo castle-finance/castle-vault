@@ -38,6 +38,7 @@ export interface VaultPortAdditionalState {
     vaultPortStakeAccountBump: number;
     vaultPortRewardTokenBump: number;
     vaultPortObligationBump: number;
+    vaultPortSubRewardTokenBump: number;
 }
 
 export interface VaultConfig {

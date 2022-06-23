@@ -61,6 +61,7 @@ interface PortAccounts {
     vaultPortObligation?: PublicKey;
     vaultPortStakeAccount?: PublicKey;
     vaultPortRewardToken?: PublicKey;
+    vaultPortSubRewardToken?: PublicKey;
 }
 
 // TODO use constant from port sdk
@@ -353,6 +354,31 @@ export class PortReserveAsset extends LendingMarket {
                 },
             }
         );
+    }
+
+    getClaimRewardIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ): TransactionInstruction {
+        return program.instruction.claimPortReward({
+            accounts: {
+                vault: vaultId,
+                vaultAuthority: vaultState.vaultAuthority,
+                portAdditionalStates: this.accounts.vaultPortAdditionalStates,
+                vaultPortStakeAccount: this.accounts.vaultPortStakeAccount,
+                vaultPortRewardToken: this.accounts.vaultPortRewardToken,
+                vaultPortSubRewardToken: this.accounts.vaultPortSubRewardToken,
+                portStakingPool: this.accounts.stakingPool,
+                portLendProgram: this.accounts.program,
+                portStakeProgram: this.accounts.stakingProgram,
+                portStakingRewardPool: this.accounts.stakingRewardPool,
+                portStakingSubRewardPool: this.accounts.stakingSubRewardPool,
+                portStakingAuthority: this.accounts.stakingProgamAuthority,
+                clock: SYSVAR_CLOCK_PUBKEY,
+                tokenProgram: TOKEN_PROGRAM_ID,
+            },
+        });
     }
 
     async getInitializeIx(

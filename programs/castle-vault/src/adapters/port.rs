@@ -102,27 +102,6 @@ pub struct PortAccounts<'info> {
 
 impl_has_vault!(PortAccounts<'_>);
 
-impl<'info> PortAccounts<'info> {
-    pub fn claim_reward(&self) -> ProgramResult {
-        let claim_reward_context = CpiContext::new(
-            self.port_lend_program.clone(),
-            port_anchor_adaptor::ClaimReward {
-                stake_account_owner: self.vault_authority.clone(),
-                stake_account: self.vault_port_stake_account.clone(),
-                staking_pool: self.port_staking_pool.clone(),
-                reward_token_pool: self.port_staking_reward_pool.clone(),
-                reward_dest: self.vault_port_reward_token.clone(),
-                staking_program_authority: self.port_staking_authority.clone(),
-                clock: self.clock.to_account_info(),
-                token_program: self.port_lend_program.clone(),
-            },
-        );
-        port_anchor_adaptor::claim_reward(
-            claim_reward_context.with_signer(&[&self.vault.authority_seeds()]),
-        )
-    }
-}
-
 impl<'info> LendingMarket for PortAccounts<'info> {
     fn verify_accounts(&self, program_id: &Pubkey) -> ProgramResult {
         let port_additional_states_pda_key = Pubkey::create_program_address(
@@ -260,8 +239,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                     redeem_context.with_signer(&[&self.vault.authority_seeds()]),
                     amount,
                 )
-            })
-            .and_then(|_| self.claim_reward()),
+            }),
         }
     }
 

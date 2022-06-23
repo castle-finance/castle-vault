@@ -211,7 +211,10 @@ pub struct VaultPortAdditionalState {
     /// Account used for the port staking program
     pub vault_port_obligation_bump: u8,
 
-    _reserved0: [u8; 5],
+    /// Account used to receive Port staking sub-reward
+    pub vault_port_sub_reward_token_bump: u8,
+
+    _reserved0: [u8; 4],
     _reserved1: [u64; 30],
     _reserved2: [u64; 32],
 }

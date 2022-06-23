@@ -42,8 +42,15 @@ pub mod castle_vault {
         obligation_bump: u8,
         stake_bump: u8,
         reward_bump: u8,
+        sub_reward_bump: u8,
     ) -> ProgramResult {
-        instructions::init_reward_account::handler(ctx, obligation_bump, stake_bump, reward_bump)
+        instructions::init_reward_account::handler(
+            ctx,
+            obligation_bump,
+            stake_bump,
+            reward_bump,
+            sub_reward_bump,
+        )
     }
 
     pub fn initialize_jet<'info>(
@@ -129,6 +136,10 @@ pub mod castle_vault {
 
     pub fn reconcile_jet(ctx: Context<JetAccounts>, withdraw_option: u64) -> ProgramResult {
         instructions::reconcile::handler(ctx, withdraw_option)
+    }
+
+    pub fn claim_port_reward(ctx: Context<ClaimPortReward>) -> ProgramResult {
+        instructions::claim_port_reward::handler(ctx)
     }
 }
 
