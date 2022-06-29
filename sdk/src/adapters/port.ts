@@ -32,6 +32,7 @@ import {
     ReserveConfigProto,
     ReserveId,
     TokenAccount,
+    StakeAccount,
     StakingPoolLayout,
 } from "@port.finance/port-sdk";
 
@@ -259,9 +260,25 @@ export class PortReserveAsset extends LendingMarket {
             ).amount.toNumber()
         );
 
+        // We retrive the amount of tokens staked and add it to total port LP token value
+        // Note that this is the amount of Port LP tokens. We need to convert to Castle LP token
+        // using the exchange rate.
+        const raw = await this.provider.connection.getAccountInfo(
+            new PublicKey(this.accounts.vaultPortStakeAccount)
+        );
+        const stakeAccountData = StakeAccount.fromRaw({
+            pubkey: this.accounts.vaultPortStakeAccount,
+            account: raw,
+        });
+        const stakedTokenValue = AssetPrice.of(
+            mint,
+            stakeAccountData.getDepositAmount().toU64().toNumber()
+        );
+
         return TokenAmount.fromToken(
             this.reserveToken,
             lpTokenAmount
+                .add(stakedTokenValue)
                 .divide(exchangeRate.getUnchecked())
                 .getRaw()
                 .round(0, Big.roundDown)

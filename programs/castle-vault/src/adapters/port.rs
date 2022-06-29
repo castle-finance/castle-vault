@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
-use port_anchor_adaptor::{port_lending_id, port_staking_id, PortReserve};
+use port_anchor_adaptor::{port_lending_id, port_staking_id, PortReserve, PortStakeAccount};
 use port_variable_rate_lending_instructions::state::Reserve;
 use solana_maths::Rate;
 
@@ -258,7 +258,14 @@ impl<'info> LendingMarket for PortAccounts<'info> {
     }
 
     fn lp_tokens_in_vault(&self) -> u64 {
-        self.vault_port_lp_token.amount
+        // TODO can this be improved?
+        // We want to go from Rc<RefCell<&mut [u8]>> to &mut &[u8]
+        let h1 = self.vault_port_stake_account.data.deref().borrow();
+        let mut raw: Vec<u8> = vec![0; h1.len()];
+        raw.clone_from_slice(&h1);
+        let mut h2 = raw.as_slice();
+        let stake_account = PortStakeAccount::try_deserialize(&mut h2).unwrap();
+        self.vault_port_lp_token.amount + stake_account.deposited_amount
     }
 
     fn provider(&self) -> Provider {
