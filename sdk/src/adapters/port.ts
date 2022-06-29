@@ -211,7 +211,6 @@ export class PortReserveAsset extends LendingMarket {
             []
         );
         const market = await createLendingMarket(provider);
-        const stakingPool = await createStakingPool(provider, 1000, 5184000, 0);
         const accounts = await createDefaultReserve(
             provider,
             env,
@@ -220,8 +219,7 @@ export class PortReserveAsset extends LendingMarket {
             ownerReserveTokenAccount,
             market.publicKey,
             pythPrice,
-            owner,
-            stakingPool
+            owner
         );
         const client = new Port(provider.connection, env, market.publicKey);
         const lpToken = await getToken(
@@ -506,8 +504,11 @@ async function createStakingPool(
     provider: anchor.Provider,
     supply: number,
     duration: number,
-    rewardTime: number
+    rewardTime: number,
+    authority: PublicKey
 ): Promise<PublicKey> {
+    const supplyLamports = supply * 1000000;
+
     // This step will create a staking pool
     const stakingPool = await createAccount(
         provider,
@@ -522,13 +523,15 @@ async function createStakingPool(
         TOKEN_PROGRAM_ID
     );
 
-    // This step will create a mock reward token and mint some of it for testing
+    // This step will create a temporary wallet to fund subsequenc tx
     const wallet = Keypair.generate();
     const sig0 = await provider.connection.requestAirdrop(
         wallet.publicKey,
         LAMPORTS_PER_SOL
     );
     await provider.connection.confirmTransaction(sig0, "finalized");
+
+    // This step will create a mock reward token and mint some of it for testing
     const rewardMint = await SplToken.createMint(
         provider.connection,
         wallet,
@@ -540,7 +543,28 @@ async function createStakingPool(
     const rewardSupply = await rewardMint.createAssociatedTokenAccount(
         wallet.publicKey
     );
-    await rewardMint.mintTo(rewardSupply, wallet, [], supply * 1000000);
+    await rewardMint.mintTo(rewardSupply, wallet, [], supplyLamports);
+
+    // This step will create the sub-reward token pool
+    const subRewardTokenPool = await createAccount(
+        provider,
+        TOKEN_ACCOUNT_LEN,
+        TOKEN_PROGRAM_ID
+    );
+
+    // This step will create a mock sub-reward token
+    const subRewardMint = await SplToken.createMint(
+        provider.connection,
+        wallet,
+        wallet.publicKey,
+        null,
+        6,
+        TOKEN_PROGRAM_ID
+    );
+    const subRewardSupply = await subRewardMint.createAssociatedTokenAccount(
+        wallet.publicKey
+    );
+    await subRewardMint.mintTo(subRewardSupply, wallet, [], supplyLamports);
 
     // TODO briefly explain what this is used for
     const [stakingProgramDerived, bumpSeed] =
@@ -553,7 +577,7 @@ async function createStakingPool(
     const tx = new Transaction();
     tx.add(
         initStakingPoolInstruction(
-            supply,
+            supplyLamports,
             duration,
             rewardTime,
             bumpSeed,
@@ -563,9 +587,15 @@ async function createStakingPool(
             stakingPool.publicKey,
             rewardMint.publicKey,
             stakingProgramDerived,
-            wallet.publicKey,
-            wallet.publicKey,
-            DEVNET_STAKING_PROGRAM_ID
+            authority,
+            authority,
+            DEVNET_STAKING_PROGRAM_ID,
+            {
+                supply: supplyLamports,
+                tokenSupply: subRewardSupply,
+                tokenPool: subRewardTokenPool.publicKey,
+                rewardTokenMint: subRewardMint.publicKey,
+            }
         )
     );
 
@@ -588,8 +618,7 @@ async function createDefaultReserve(
     sourceTokenWallet: PublicKey,
     lendingMarket: PublicKey,
     oracle: PublicKey,
-    owner: Keypair,
-    stakingPool: PublicKey
+    owner: Keypair
 ): Promise<PortAccounts> {
     const reserve = await createAccount(
         provider,
@@ -630,6 +659,14 @@ async function createDefaultReserve(
     const [lendingMarketAuthority] = await PublicKey.findProgramAddress(
         [lendingMarket.toBuffer()],
         DEVNET_LENDING_PROGRAM_ID
+    );
+
+    const stakingPool = await createStakingPool(
+        provider,
+        1000,
+        5184000,
+        0,
+        lendingMarketAuthority
     );
 
     let config = DEFAULT_RESERVE_CONFIG;
@@ -694,6 +731,7 @@ async function createDefaultReserve(
         [targetStakingPool.getId().toBuffer()],
         env.getStakingProgramPk()
     );
+
     console.log("Init Port Client");
     console.log("    stakingPool: ", targetStakingPool.getId().toString());
     console.log(
@@ -733,6 +771,6 @@ async function createDefaultReserve(
         stakingSubRewardTokenMint: subrewardMint,
         stakingProgram: DEVNET_STAKING_PROGRAM_ID,
         // TODO create mock authority
-        stakingProgamAuthority: Keypair.generate().publicKey,
+        stakingProgamAuthority: stakingProgamAuthority,
     };
 }
