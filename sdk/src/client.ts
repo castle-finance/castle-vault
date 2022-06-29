@@ -185,7 +185,6 @@ export class VaultClient {
 
     async reload() {
         this.vaultState = await this.program.account.vault.fetch(this.vaultId);
-        await this.loadPortAdditionalAccounts();
         // TODO reload underlying asset data also?
     }
 

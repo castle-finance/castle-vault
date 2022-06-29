@@ -255,6 +255,21 @@ describe("castle-vault", () => {
                 : {},
         ]);
 
+        if (portAvailable) {
+            await vaultClient.initializePortAdditionalState(
+                provider.wallet as anchor.Wallet,
+                owner
+            );
+            await vaultClient.initializeRewardAccount(
+                provider.wallet as anchor.Wallet,
+                owner,
+                provider,
+                DeploymentEnvs.devnetStaging,
+                program
+            );
+            await vaultClient.loadPortAdditionalAccounts();
+        }
+
         await vaultClient.reload();
 
         userReserveTokenAccount = await reserveToken.createAccount(
