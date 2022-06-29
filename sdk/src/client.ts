@@ -23,13 +23,6 @@ import * as anchor from "@project-serum/anchor";
 import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 
 import {
-    PORT_LENDING,
-    PORT_STAKING,
-    STAKE_ACCOUNT_DATA_SIZE,
-    ObligationLayout,
-} from "@port.finance/port-sdk";
-
-import {
     DeploymentEnvs,
     StrategyType,
     RebalanceMode,
