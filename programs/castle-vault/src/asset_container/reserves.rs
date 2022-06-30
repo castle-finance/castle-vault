@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use itertools::Itertools;
 use solana_maths::{Rate, TryAdd, TryDiv, TryMul, TrySub};
 
-use anchor_lang::prelude::ProgramError;
+use anchor_lang::prelude::*;
 
 use crate::{
     errors::ErrorCode,
@@ -17,7 +17,7 @@ use super::AssetContainer;
 pub fn compare(
     lhs: &impl ReturnCalculator,
     rhs: &impl ReturnCalculator,
-) -> Result<Ordering, ProgramError> {
+) -> Result<Ordering> {
     Ok(lhs
         .calculate_return(0, 0)?
         .cmp(&rhs.calculate_return(0, 0)?))
@@ -27,7 +27,7 @@ impl AssetContainer<Reserves> {
     fn calculate_weights_max_yield(
         &self,
         allocation_cap_pct: u8,
-    ) -> Result<AssetContainer<Rate>, ProgramError> {
+    ) -> Result<AssetContainer<Rate>> {
         self.into_iter()
             .flat_map(|(p, r)| r.map(|v| (p, v)))
             .sorted_unstable_by(|(_, alloc_y), (_, alloc_x)| {
@@ -46,22 +46,24 @@ impl AssetContainer<Reserves> {
                     }
                 },
             )
-            .map(|(r, _)| r)
+            .map(|(r, _)| r).map_err(|e| e.into())
     }
 
-    fn calculate_weights_equal(&self) -> Result<AssetContainer<Rate>, ProgramError> {
+    fn calculate_weights_equal(&self) -> Result<AssetContainer<Rate>> {
         u8::try_from(self.len())
-            .map_err(|_| ErrorCode::StrategyError.into())
-            .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100))
-            .and_then(|r| Rate::one().try_div(r))
-            .map(|equal_allocation| self.apply(|_, v| v.map(|_| equal_allocation)))
+            .map_err(|_| ErrorCode::StrategyError)
+            .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100).map_err(|e| ErrorCode::StrategyError))
+            .and_then(|r| Rate::one().try_div(r).map_err(|e| ErrorCode::StrategyError))
+            .map(|equal_allocation| self.apply(|_, v| v.map(|_| equal_allocation))).map_err(
+                |e| e.into(),
+            )
     }
 
     pub fn calculate_weights(
         &self,
         strategy_type: StrategyType,
         allocation_cap_pct: u8,
-    ) -> Result<AssetContainer<Rate>, ProgramError> {
+    ) -> Result<AssetContainer<Rate>> {
         match strategy_type {
             StrategyType::MaxYield => self.calculate_weights_max_yield(allocation_cap_pct),
             StrategyType::EqualAllocation => self.calculate_weights_equal(),
@@ -73,15 +75,15 @@ impl AssetContainer<Reserves> {
         weights: &dyn Index<Provider, Output = Option<Rate>>,
         new_allocations: &dyn Index<Provider, Output = Option<u64>>,
         actual_allocations: &dyn Index<Provider, Output = Option<u64>>,
-    ) -> Result<Rate, ProgramError> {
+    ) -> Result<Rate> {
         self.into_iter()
             .map(|(p, r)| (r, new_allocations[p], actual_allocations[p], weights[p]))
             .flat_map(|v| match v {
                 (Some(r), Some(a1), Some(a0), Some(w)) => Some((r, a1, a0, w)),
                 _ => None,
             })
-            .map(|(r, a1, a0, w)| r.calculate_return(a1, a0).and_then(|ret| w.try_mul(ret)))
-            .try_fold(Rate::zero(), |acc, r| acc.try_add(r?))
+            .map(|(r, a1, a0, w)| r.calculate_return(a1, a0).and_then(|ret| w.try_mul(ret).map_err(|e| e.into())))
+            .try_fold(Rate::zero(), |acc, r| acc.try_add(r?)).map_err(|e| e.into())
     }
 }
 

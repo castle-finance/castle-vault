@@ -15,7 +15,7 @@ pub struct UpdateYieldSourceFlags<'info> {
     pub owner: Signer<'info>,
 }
 
-pub fn handler(ctx: Context<UpdateYieldSourceFlags>, flags: u16) -> ProgramResult {
+pub fn handler(ctx: Context<UpdateYieldSourceFlags>, flags: u16) -> Result<()> {
     #[cfg(feature = "debug")]
     msg!("New yield source flags: {:?}", flags);
 

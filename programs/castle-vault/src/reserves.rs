@@ -57,14 +57,14 @@ macro_rules! impl_provider_index {
 
 #[cfg_attr(test, automock)]
 pub trait ReserveAccessor {
-    fn utilization_rate(&self) -> Result<Rate, ProgramError>;
-    fn borrow_rate(&self) -> Result<Rate, ProgramError>;
+    fn utilization_rate(&self) -> Result<Rate>;
+    fn borrow_rate(&self) -> Result<Rate>;
 
     fn reserve_with_deposit(
         &self,
         new_allocation: u64,
         old_allocation: u64,
-    ) -> Result<Box<dyn ReserveAccessor>, ProgramError>;
+    ) -> Result<Box<dyn ReserveAccessor>>;
 }
 
 #[cfg_attr(test, automock)]
@@ -73,7 +73,7 @@ pub trait ReturnCalculator {
         &self,
         new_allocation: u64,
         old_allocation: u64,
-    ) -> Result<Rate, ProgramError>;
+    ) -> Result<Rate>;
 }
 
 impl<T> ReturnCalculator for T
@@ -84,9 +84,9 @@ where
         &self,
         new_allocation: u64,
         old_allocation: u64,
-    ) -> Result<Rate, ProgramError> {
+    ) -> Result<Rate> {
         let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
-        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
+        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?).map_err(|e| e.into())
     }
 }
 
@@ -99,7 +99,7 @@ pub enum Reserves {
 
 // TODO Is there a cleaner way to do this?
 impl<'a> ReserveAccessor for Reserves {
-    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+    fn utilization_rate(&self) -> Result<Rate> {
         match self {
             Reserves::Solend(reserve) => reserve.utilization_rate(),
             Reserves::Port(reserve) => reserve.utilization_rate(),
@@ -107,7 +107,7 @@ impl<'a> ReserveAccessor for Reserves {
         }
     }
 
-    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+    fn borrow_rate(&self) -> Result<Rate> {
         match self {
             Reserves::Solend(reserve) => reserve.borrow_rate(),
             Reserves::Port(reserve) => reserve.borrow_rate(),
@@ -119,7 +119,7 @@ impl<'a> ReserveAccessor for Reserves {
         &self,
         new_allocation: u64,
         old_allocation: u64,
-    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+    ) -> Result<Box<dyn ReserveAccessor>> {
         match self {
             Reserves::Solend(reserve) => {
                 reserve.reserve_with_deposit(new_allocation, old_allocation)
@@ -139,10 +139,10 @@ mod test {
         let mut mock_ra_inner = MockReserveAccessor::new();
         mock_ra_inner
             .expect_utilization_rate()
-            .return_const(Ok(Rate::from_percent(50)));
+            .return_once(move || Ok(Rate::from_percent(50)));
         mock_ra_inner
             .expect_borrow_rate()
-            .return_const(Ok(Rate::from_percent(80)));
+            .return_once(move || Ok(Rate::from_percent(80)));
 
         let mut mock_ra = MockReserveAccessor::new();
         mock_ra

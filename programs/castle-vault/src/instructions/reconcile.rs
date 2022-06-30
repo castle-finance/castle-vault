@@ -14,13 +14,13 @@ const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 100;
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?
 pub trait LendingMarket {
-    fn deposit(&self, amount: u64) -> ProgramResult;
-    fn redeem(&self, amount: u64) -> ProgramResult;
+    fn deposit(&self, amount: u64) -> Result<()>;
+    fn redeem(&self, amount: u64) -> Result<()>;
 
     // TODO separate these fns into ExchangeRate struct
     // OR Amount struct like Jet does which handles conversions implicitly
-    fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64, ProgramError>;
-    fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64, ProgramError>;
+    fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64>;
+    fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64>;
 
     fn reserve_tokens_in_vault(&self) -> u64;
     fn lp_tokens_in_vault(&self) -> u64;
@@ -52,14 +52,14 @@ macro_rules! impl_has_vault {
 pub fn handler<T: LendingMarket + HasVault>(
     ctx: Context<T>,
     withdraw_option: u64,
-) -> ProgramResult {
+) -> Result<()> {
     // Check that reconciles are not halted
     (!ctx
         .accounts
         .vault()
         .get_halt_flags()
         .contains(VaultFlags::HALT_RECONCILES))
-    .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
+    .ok_or(ErrorCode::HaltedVault)?;
 
     let provider = ctx.accounts.provider();
     match withdraw_option {

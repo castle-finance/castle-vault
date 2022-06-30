@@ -17,7 +17,7 @@ pub struct UpdateConfig<'info> {
     pub owner: Signer<'info>,
 }
 
-pub fn handler(ctx: Context<UpdateConfig>, config: VaultConfigArg) -> ProgramResult {
+pub fn handler(ctx: Context<UpdateConfig>, config: VaultConfigArg) -> Result<()> {
     #[cfg(feature = "debug")]
     msg!("New config: {:?}", config);
 

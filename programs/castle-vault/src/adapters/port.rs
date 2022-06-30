@@ -30,6 +30,7 @@ pub struct PortAccounts<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     /// Token account for the vault's reserve tokens
@@ -40,6 +41,7 @@ pub struct PortAccounts<'info> {
     #[account(mut)]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// CHECK: safe
     #[account(
         executable,
         address = port_lending_id(),
@@ -47,9 +49,11 @@ pub struct PortAccounts<'info> {
     pub port_program: AccountInfo<'info>,
 
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub port_market_authority: AccountInfo<'info>,
 
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub port_market: AccountInfo<'info>,
 
     #[account(mut)]
@@ -57,10 +61,12 @@ pub struct PortAccounts<'info> {
 
     #[account(mut)]
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub port_lp_mint: AccountInfo<'info>,
 
     #[account(mut)]
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub port_reserve_token: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,
@@ -71,7 +77,7 @@ pub struct PortAccounts<'info> {
 impl_has_vault!(PortAccounts<'_>);
 
 impl<'info> LendingMarket for PortAccounts<'info> {
-    fn deposit(&self, amount: u64) -> ProgramResult {
+    fn deposit(&self, amount: u64) -> Result<()> {
         let context = CpiContext::new(
             self.port_program.clone(),
             port_anchor_adaptor::Deposit {
@@ -96,7 +102,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
         }
     }
 
-    fn redeem(&self, amount: u64) -> ProgramResult {
+    fn redeem(&self, amount: u64) -> Result<()> {
         let context = CpiContext::new(
             self.port_program.clone(),
             port_anchor_adaptor::Redeem {
@@ -121,14 +127,14 @@ impl<'info> LendingMarket for PortAccounts<'info> {
         }
     }
 
-    fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64, ProgramError> {
+    fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64> {
         let exchange_rate = self.port_reserve.collateral_exchange_rate()?;
-        exchange_rate.liquidity_to_collateral(amount)
+        exchange_rate.liquidity_to_collateral(amount).map_err(|e| e.into())
     }
 
-    fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64, ProgramError> {
+    fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64> {
         let exchange_rate = self.port_reserve.collateral_exchange_rate()?;
-        exchange_rate.collateral_to_liquidity(amount)
+        exchange_rate.collateral_to_liquidity(amount).map_err(|e| e.into())
     }
 
     fn reserve_tokens_in_vault(&self) -> u64 {
@@ -145,13 +151,13 @@ impl<'info> LendingMarket for PortAccounts<'info> {
 }
 
 impl ReserveAccessor for Reserve {
-    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+    fn utilization_rate(&self) -> Result<Rate> {
         Ok(Rate::from_scaled_val(
             self.liquidity.utilization_rate()?.to_scaled_val() as u64,
         ))
     }
 
-    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+    fn borrow_rate(&self) -> Result<Rate> {
         Ok(Rate::from_scaled_val(
             self.current_borrow_rate()?.to_scaled_val() as u64,
         ))
@@ -161,7 +167,7 @@ impl ReserveAccessor for Reserve {
         &self,
         new_allocation: u64,
         old_allocation: u64,
-    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+    ) -> Result<Box<dyn ReserveAccessor>> {
         let mut reserve = Box::new(self.clone());
         reserve.liquidity.available_amount = reserve
             .liquidity
@@ -184,6 +190,7 @@ pub struct InitializePort<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     /// Token account for the vault's port lp tokens
@@ -191,13 +198,14 @@ pub struct InitializePort<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), port_lp_token_mint.key().as_ref()],
-        bump = bump,
+        bump,
         token::authority = vault_authority,
         token::mint = port_lp_token_mint,
     )]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
     /// Mint of the port lp token
+    /// CHECK: safe
     pub port_lp_token_mint: AccountInfo<'info>,
 
     pub port_reserve: Box<Account<'info, PortReserve>>,
@@ -215,7 +223,7 @@ pub struct InitializePort<'info> {
 }
 
 impl<'info> YieldSourceInitializer<'info> for InitializePort<'info> {
-    fn initialize_yield_source(&mut self) -> ProgramResult {
+    fn initialize_yield_source(&mut self) -> Result<()> {
         self.vault.port_reserve = self.port_reserve.key();
         self.vault.vault_port_lp_token = self.vault_port_lp_token.key();
 
@@ -239,6 +247,7 @@ pub struct RefreshPort<'info> {
     /// Token account for the vault's port lp tokens
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// CHECK: safe
     #[account(
         executable,
         address = port_lending_id(),
@@ -271,7 +280,7 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
     fn update_actual_allocation(
         &mut self,
         remaining_accounts: &[AccountInfo<'info>],
-    ) -> ProgramResult {
+    ) -> Result<()> {
         if self
             .vault
             .get_yield_source_flags()

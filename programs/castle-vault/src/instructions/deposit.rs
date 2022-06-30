@@ -32,6 +32,7 @@ pub struct Deposit<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     /// Token account for the vault's reserve tokens
@@ -89,7 +90,7 @@ impl<'info> Deposit<'info> {
 /// Deposit to the vault
 ///
 /// Transfers reserve tokens from user to vault and mints their share of lp tokens
-pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
+pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> Result<()> {
     #[cfg(feature = "debug")]
     msg!("Depositing {} reserve tokens", reserve_token_amount);
 
@@ -99,7 +100,7 @@ pub fn handler(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResul
         .vault
         .get_halt_flags()
         .contains(VaultFlags::HALT_DEPOSITS_WITHDRAWS))
-    .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
+    .ok_or(ErrorCode::HaltedVault)?;
 
     let vault = &ctx.accounts.vault;
 

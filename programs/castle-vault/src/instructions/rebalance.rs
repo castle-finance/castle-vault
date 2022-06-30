@@ -54,10 +54,13 @@ pub struct Rebalance<'info> {
     // DANGER: make sure the owner is as expected (currently done using `try_from`)
     //         and the keys match the vault (currently explicitly checked before `try_from`)
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub solend_reserve: AccountInfo<'info>,
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub port_reserve: AccountInfo<'info>,
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub jet_reserve: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,
@@ -65,7 +68,7 @@ pub struct Rebalance<'info> {
 
 impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
     type Error = ProgramError;
-    fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>, Self::Error> {
+    fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>> {
         let flags: YieldSourceFlags = r.vault.get_yield_source_flags();
 
         // NOTE: I tried pretty hard to get rid of these clones and only use the references.
@@ -86,7 +89,7 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
                             .clone(),
                     ))),
                     ErrorCode::InvalidAccount,
-                )?
+                ).map_err(|e| e.into())?
             })
             .transpose()?;
 
@@ -101,7 +104,7 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
                             .clone(),
                     ))),
                     ErrorCode::InvalidAccount,
-                )?
+                ).map_err(|e| e.into())?
             })
             .transpose()?;
 
@@ -115,7 +118,7 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
                             .load()?,
                     ))),
                     ErrorCode::InvalidAccount,
-                )?
+                ).map_err(|e| e.into())?
             })
             .transpose()?;
 
@@ -144,7 +147,7 @@ impl From<StrategyWeightsArg> for AssetContainer<Rate> {
 }
 
 /// Calculate and store optimal allocations to downstream lending markets
-pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
+pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> Result<()> {
     #[cfg(feature = "debug")]
     msg!("Rebalancing");
 
@@ -201,7 +204,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                     // Return error if APR from proposed weights is not higher than proof weights
                     (proposed_apr >= proof_apr).as_result(
                         proposed_allocations,
-                        ErrorCode::RebalanceProofCheckFailed.into(),
+                        ErrorCode::RebalanceProofCheckFailed,
                     )
                 }
                 RebalanceMode::Calculator => {
@@ -223,5 +226,5 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
             emit!(RebalanceDataEvent::from(&final_allocations));
 
             ctx.accounts.vault.target_allocations = final_allocations;
-        })
+        }).map_err(|e| e.into())
 }

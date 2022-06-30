@@ -32,6 +32,7 @@ pub struct Withdraw<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     /// Token account for the vault's reserve tokens
@@ -67,7 +68,7 @@ impl<'info> Withdraw<'info> {
             self.token_program.to_account_info(),
             Burn {
                 mint: self.lp_token_mint.to_account_info(),
-                to: self.user_lp_token.to_account_info(),
+                from: self.user_lp_token.to_account_info(),
                 authority: self.user_authority.to_account_info(),
             },
         )
@@ -89,7 +90,7 @@ impl<'info> Withdraw<'info> {
 /// Withdraw from the vault
 ///
 /// Burns the user's lp tokens and transfers their share of reserve tokens
-pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
+pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> Result<()> {
     #[cfg(feature = "debug")]
     msg!("Withdrawing {} lp tokens", lp_token_amount);
 
@@ -99,7 +100,7 @@ pub fn handler(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
         .vault
         .get_halt_flags()
         .contains(VaultFlags::HALT_DEPOSITS_WITHDRAWS))
-    .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
+    .ok_or(ErrorCode::HaltedVault)?;
 
     let vault = &ctx.accounts.vault;
 

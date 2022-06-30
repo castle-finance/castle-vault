@@ -31,6 +31,7 @@ pub struct JetAccounts<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     /// Token account for the vault's reserve tokens
@@ -41,6 +42,7 @@ pub struct JetAccounts<'info> {
     #[account(mut)]
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// CHECK: safe
     #[account(
         executable,
         address = jet::ID,
@@ -51,6 +53,7 @@ pub struct JetAccounts<'info> {
     pub jet_market: AccountLoader<'info, jet::state::Market>,
 
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub jet_market_authority: AccountInfo<'info>,
 
     #[account(mut)]
@@ -58,17 +61,19 @@ pub struct JetAccounts<'info> {
 
     #[account(mut)]
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub jet_reserve_token: AccountInfo<'info>,
 
     #[account(mut)]
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub jet_lp_mint: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
 }
 
 impl<'info> JetAccounts<'info> {
-    fn get_reserve_info(&self) -> Result<CachedReserveInfo, ProgramError> {
+    fn get_reserve_info(&self) -> Result<CachedReserveInfo> {
         let market = self.jet_market.load()?;
         let reserve = self.jet_reserve.load()?;
         let clock = Clock::get()?;
@@ -79,7 +84,7 @@ impl<'info> JetAccounts<'info> {
 impl_has_vault!(JetAccounts<'_>);
 
 impl<'info> LendingMarket for JetAccounts<'info> {
-    fn deposit(&self, amount: u64) -> ProgramResult {
+    fn deposit(&self, amount: u64) -> Result<()> {
         let context = CpiContext::new(
             self.jet_program.clone(),
             jet::cpi::accounts::DepositTokens {
@@ -104,7 +109,7 @@ impl<'info> LendingMarket for JetAccounts<'info> {
         }
     }
 
-    fn redeem(&self, amount: u64) -> ProgramResult {
+    fn redeem(&self, amount: u64) -> Result<()> {
         let context = CpiContext::new(
             self.jet_program.clone(),
             jet::cpi::accounts::WithdrawTokens {
@@ -128,12 +133,12 @@ impl<'info> LendingMarket for JetAccounts<'info> {
         }
     }
 
-    fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64, ProgramError> {
+    fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64> {
         let reserve_info = self.get_reserve_info()?;
         Ok(Amount::from_tokens(amount).as_deposit_notes(&reserve_info, Rounding::Down)?)
     }
 
-    fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64, ProgramError> {
+    fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64> {
         let reserve_info = self.get_reserve_info()?;
         Ok(Amount::from_deposit_notes(amount).as_tokens(&reserve_info, Rounding::Down))
     }
@@ -152,7 +157,7 @@ impl<'info> LendingMarket for JetAccounts<'info> {
 }
 
 impl ReserveAccessor for Reserve {
-    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+    fn utilization_rate(&self) -> Result<Rate> {
         let vault_amount = self.total_deposits();
         let outstanding_debt = *self.unwrap_outstanding_debt(Clock::get()?.slot);
 
@@ -161,7 +166,7 @@ impl ReserveAccessor for Reserve {
         ))
     }
 
-    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+    fn borrow_rate(&self) -> Result<Rate> {
         let vault_amount = self.total_deposits();
         let outstanding_debt = *self.unwrap_outstanding_debt(Clock::get()?.slot);
 
@@ -175,7 +180,7 @@ impl ReserveAccessor for Reserve {
         &self,
         new_allocation: u64,
         old_allocation: u64,
-    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+    ) -> Result<Box<dyn ReserveAccessor>> {
         let mut reserve = Box::new(*self);
         // We only care about the token amount here
         reserve.deposit(new_allocation, 0);
@@ -194,6 +199,7 @@ pub struct InitializeJet<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     /// Token account for the vault's jet lp tokens
@@ -201,13 +207,14 @@ pub struct InitializeJet<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), jet_lp_token_mint.key().as_ref()],
-        bump = bump,
+        bump,
         token::authority = vault_authority,
         token::mint = jet_lp_token_mint,
     )]
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
     /// Mint of the jet lp token
+    /// CHECK: safe
     pub jet_lp_token_mint: AccountInfo<'info>,
 
     pub jet_reserve: AccountLoader<'info, jet::state::Reserve>,
@@ -225,7 +232,7 @@ pub struct InitializeJet<'info> {
 }
 
 impl<'info> YieldSourceInitializer<'info> for InitializeJet<'info> {
-    fn initialize_yield_source(&mut self) -> ProgramResult {
+    fn initialize_yield_source(&mut self) -> Result<()> {
         self.vault.jet_reserve = self.jet_reserve.key();
         self.vault.vault_jet_lp_token = self.vault_jet_lp_token.key();
 
@@ -249,6 +256,7 @@ pub struct RefreshJet<'info> {
     /// Token account for the vault's jet lp tokens
     pub vault_jet_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// CHECK: safe
     #[account(
         executable,
         address = jet::ID,
@@ -257,9 +265,11 @@ pub struct RefreshJet<'info> {
 
     #[account(mut)]
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub jet_market: AccountInfo<'info>,
 
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub jet_market_authority: AccountInfo<'info>,
 
     #[account(mut)]
@@ -267,13 +277,16 @@ pub struct RefreshJet<'info> {
 
     #[account(mut)]
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub jet_fee_note_vault: AccountInfo<'info>,
 
     #[account(mut)]
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub jet_deposit_note_mint: AccountInfo<'info>,
 
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub jet_pyth: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
@@ -304,7 +317,7 @@ impl<'info> Refresher<'info> for RefreshJet<'info> {
     fn update_actual_allocation(
         &mut self,
         _remaining_accounts: &[AccountInfo<'info>],
-    ) -> ProgramResult {
+    ) -> Result<()> {
         #[cfg(feature = "debug")]
         msg!("Refreshing jet");
 

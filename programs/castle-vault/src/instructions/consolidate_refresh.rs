@@ -28,6 +28,7 @@ pub struct ConsolidateRefresh<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     /// Token account for the vault's reserve tokens
@@ -36,10 +37,13 @@ pub struct ConsolidateRefresh<'info> {
     // NOTE: make sure the owner is as expected (currently done using `try_from`)
     //       and the keys match the vault (currently explicitly checked before `try_from`)
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub vault_port_lp_token: AccountInfo<'info>,
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub vault_jet_lp_token: AccountInfo<'info>,
     //#[soteria(ignore)]
+    /// CHECK: safe
     pub vault_solend_lp_token: AccountInfo<'info>,
 
     /// Mint for the vault lp token
@@ -68,7 +72,7 @@ impl<'info> ConsolidateRefresh<'info> {
 }
 
 /// updates the vault total value, and collects fees
-pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>) -> ProgramResult {
+pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>) -> Result<()> {
     #[cfg(feature = "debug")]
     msg!("Consolidate vault refreshing");
 
@@ -78,7 +82,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
         .vault
         .get_halt_flags()
         .contains(VaultFlags::HALT_REFRESHES))
-    .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
+    .ok_or(ErrorCode::HaltedVault)?;
 
     let clock_slot = Clock::get()?.slot;
 
@@ -129,7 +133,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
             }
 
             // Ensure that we refreshed all the lending pools where we have non-zero allocation in the same slot
-            (allocation.last_update.slots_elapsed(clock_slot)? == 0).as_result::<u64, ProgramError>(
+            (allocation.last_update.slots_elapsed(clock_slot).map_err(|e| e.into()) == 0).as_result::<u64, ErrorCode>(
                 acc.checked_add(allocation.value)
                     .ok_or(ErrorCode::OverflowError)?,
                 ErrorCode::AllocationIsNotUpdated.into(),

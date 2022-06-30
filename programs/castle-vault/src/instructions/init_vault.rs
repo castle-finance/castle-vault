@@ -34,6 +34,7 @@ pub struct Initialize<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
+    /// CHECK: safe
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"authority".as_ref()],
@@ -46,7 +47,7 @@ pub struct Initialize<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), b"lp_mint".as_ref()],
-        bump = bumps.lp_mint,
+        bump,
         mint::authority = vault_authority,
         mint::decimals = reserve_token_mint.decimals,
     )]
@@ -57,7 +58,7 @@ pub struct Initialize<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), reserve_token_mint.key().as_ref()],
-        bump = bumps.reserve,
+        bump,
         token::authority = vault_authority,
         token::mint = reserve_token_mint,
     )]
@@ -69,14 +70,17 @@ pub struct Initialize<'info> {
     /// Token account that receives the primary ratio of fees from the vault
     /// denominated in vault lp tokens
     #[account(mut)]
+    /// CHECK: safe
     pub fee_receiver: AccountInfo<'info>,
 
     /// Token account that receives the secondary ratio of fees from the vault
     /// denominated in vault lp tokens
     #[account(mut)]
+    /// CHECK: safe
     pub referral_fee_receiver: AccountInfo<'info>,
 
     /// Owner of the referral fee reciever token account
+    /// CHECK: safe
     pub referral_fee_owner: AccountInfo<'info>,
 
     /// Account that pays for above account inits
@@ -86,6 +90,7 @@ pub struct Initialize<'info> {
     /// Owner of the vault
     /// Only this account can call restricted instructions
     /// Acts as authority of the fee receiver account
+    /// CHECK: safe
     pub owner: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
@@ -117,14 +122,14 @@ impl<'info> Initialize<'info> {
         )
     }
 
-    fn validate_referral_token(&self) -> ProgramResult {
+    fn validate_referral_token(&self) -> Result<()> {
         let referral_fee_receiver = associated_token::get_associated_token_address(
             &self.referral_fee_owner.key(),
             &self.lp_token_mint.key(),
         );
 
         if referral_fee_receiver.ne(&self.referral_fee_receiver.key()) {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ProgramError::InvalidAccountData.into());
         }
 
         Ok(())
@@ -135,7 +140,7 @@ pub fn handler(
     ctx: Context<Initialize>,
     bumps: InitBumpSeeds,
     config: VaultConfigArg,
-) -> ProgramResult {
+) -> Result<()> {
     let clock = Clock::get()?;
 
     // Validating referral token address

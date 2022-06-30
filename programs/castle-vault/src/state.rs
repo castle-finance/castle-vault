@@ -93,9 +93,9 @@ impl Vault {
             .unwrap_or_else(|| panic!("{:?} does not resolve to valid VaultFlags", self.halt_flags))
     }
 
-    pub fn set_halt_flags(&mut self, bits: u16) -> ProgramResult {
+    pub fn set_halt_flags(&mut self, bits: u16) -> Result<()> {
         VaultFlags::from_bits(bits)
-            .ok_or_else::<ProgramError, _>(|| ErrorCode::InvalidVaultFlags.into())?;
+            .ok_or_else(|| ErrorCode::InvalidVaultFlags)?;
         self.halt_flags = bits;
         Ok(())
     }
@@ -109,24 +109,24 @@ impl Vault {
         })
     }
 
-    pub fn set_yield_source_flags(&mut self, flags: u16) -> ProgramResult {
+    pub fn set_yield_source_flags(&mut self, flags: u16) -> Result<()> {
         YieldSourceFlags::from_bits(flags)
-            .ok_or_else::<ProgramError, _>(|| ErrorCode::InvalidVaultFlags.into())?;
+            .ok_or_else(|| ErrorCode::InvalidVaultFlags)?;
         self.yield_source_flags = flags;
         Ok(())
     }
 
     // The lower bound of allocation cap is adjusted to 100 / N
     // Where N is the number of available yield sources according to yield_source_flags
-    pub fn adjust_allocation_cap(&mut self) -> ProgramResult {
+    pub fn adjust_allocation_cap(&mut self) -> Result<()> {
         let cnt: u8 =
             u8::try_from((0..16).fold(0, |sum, i| sum + ((self.yield_source_flags >> i) & 1)))
-                .map_err::<ProgramError, _>(|_| ErrorCode::MathError.into())?;
+                .map_err(|_| ErrorCode::MathError)?;
         let new_allocation_cap = 100_u8
             .checked_div(cnt)
-            .ok_or_else::<ProgramError, _>(|| ErrorCode::MathError.into())?
+            .ok_or_else(|| ErrorCode::MathError)?
             .checked_add(1)
-            .ok_or_else::<ProgramError, _>(|| ErrorCode::MathError.into())?
+            .ok_or_else(|| ErrorCode::MathError)?
             .clamp(0, 100);
         self.config.allocation_cap_pct = self
             .config
@@ -151,7 +151,7 @@ impl Vault {
         }
     }
 
-    pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64, ProgramError> {
+    pub fn calculate_fees(&self, new_vault_value: u64, slot: u64) -> Result<u64> {
         let vault_value_diff = new_vault_value.saturating_sub(self.value.value);
         let slots_elapsed = self.value.last_update.slots_elapsed(slot)?;
 
@@ -216,7 +216,7 @@ pub struct VaultConfig {
 }
 
 impl VaultConfig {
-    pub fn new(config: VaultConfigArg) -> Result<Self, ProgramError> {
+    pub fn new(config: VaultConfigArg) -> Result<Self> {
         // Fee cannot be over 100%
         if config.fee_carry_bps > 10000 {
             return Err(ErrorCode::InvalidFeeConfig.into());
@@ -372,7 +372,7 @@ impl LastUpdate {
     }
 
     /// Return slots elapsed since given slot
-    pub fn slots_elapsed(&self, slot: u64) -> Result<u64, ProgramError> {
+    pub fn slots_elapsed(&self, slot: u64) -> Result<u64> {
         slot.checked_sub(self.slot)
             .ok_or_else(|| ErrorCode::MathError.into())
     }
@@ -389,7 +389,7 @@ impl LastUpdate {
     }
 
     /// Check if marked stale or last update slot is too long ago
-    pub fn is_stale(&self, slot: u64) -> Result<bool, ProgramError> {
+    pub fn is_stale(&self, slot: u64) -> Result<bool> {
         #[cfg(feature = "debug")]
         {
             msg!("Last updated slot: {}", self.slot);

@@ -25,92 +25,92 @@ pub mod castle_vault {
         ctx: Context<Initialize>,
         bumps: InitBumpSeeds,
         config: VaultConfigArg,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::init_vault::handler(ctx, bumps, config)
     }
 
     pub fn initialize_jet<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializeJet<'info>>,
         bump: u8,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::init_yield_source::handler(ctx, bump)
     }
 
     pub fn initialize_port<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializePort<'info>>,
         bump: u8,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::init_yield_source::handler(ctx, bump)
     }
 
     pub fn initialize_solend<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializeSolend<'info>>,
         bump: u8,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::init_yield_source::handler(ctx, bump)
     }
 
-    pub fn update_halt_flags(ctx: Context<UpdateHaltFlags>, flags: u16) -> ProgramResult {
+    pub fn update_halt_flags(ctx: Context<UpdateHaltFlags>, flags: u16) -> Result<()> {
         instructions::update_halt_flags::handler(ctx, flags)
     }
 
     pub fn update_yield_source_flags(
         ctx: Context<UpdateYieldSourceFlags>,
         flags: u16,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::update_yield_source_flags::handler(ctx, flags)
     }
 
-    pub fn update_config(ctx: Context<UpdateConfig>, new_config: VaultConfigArg) -> ProgramResult {
+    pub fn update_config(ctx: Context<UpdateConfig>, new_config: VaultConfigArg) -> Result<()> {
         instructions::update_config::handler(ctx, new_config)
     }
 
-    pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
+    pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> Result<()> {
         instructions::deposit::handler(ctx, reserve_token_amount)
     }
 
-    pub fn withdraw(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
+    pub fn withdraw(ctx: Context<Withdraw>, lp_token_amount: u64) -> Result<()> {
         instructions::withdraw::handler(ctx, lp_token_amount)
     }
 
     pub fn rebalance(
         ctx: Context<Rebalance>,
         proposed_weights: StrategyWeightsArg,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::rebalance::handler(ctx, proposed_weights)
     }
 
     pub fn refresh_solend<'info>(
         ctx: Context<'_, '_, '_, 'info, RefreshSolend<'info>>,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::refresh::handler(ctx)
     }
 
     pub fn refresh_port<'info>(
         ctx: Context<'_, '_, '_, 'info, RefreshPort<'info>>,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::refresh::handler(ctx)
     }
 
-    pub fn refresh_jet<'info>(ctx: Context<'_, '_, '_, 'info, RefreshJet<'info>>) -> ProgramResult {
+    pub fn refresh_jet<'info>(ctx: Context<'_, '_, '_, 'info, RefreshJet<'info>>) -> Result<()> {
         instructions::refresh::handler(ctx)
     }
 
     pub fn consolidate_refresh<'info>(
         ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::consolidate_refresh::handler(ctx)
     }
 
-    pub fn reconcile_solend(ctx: Context<SolendAccounts>, withdraw_option: u64) -> ProgramResult {
+    pub fn reconcile_solend(ctx: Context<SolendAccounts>, withdraw_option: u64) -> Result<()> {
         instructions::reconcile::handler(ctx, withdraw_option)
     }
 
-    pub fn reconcile_port(ctx: Context<PortAccounts>, withdraw_option: u64) -> ProgramResult {
+    pub fn reconcile_port(ctx: Context<PortAccounts>, withdraw_option: u64) -> Result<()> {
         instructions::reconcile::handler(ctx, withdraw_option)
     }
 
-    pub fn reconcile_jet(ctx: Context<JetAccounts>, withdraw_option: u64) -> ProgramResult {
+    pub fn reconcile_jet(ctx: Context<JetAccounts>, withdraw_option: u64) -> Result<()> {
         instructions::reconcile::handler(ctx, withdraw_option)
     }
 }
