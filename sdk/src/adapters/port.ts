@@ -635,11 +635,6 @@ async function createStakingPool(
     const sig1 = await provider.send(tx, [wallet]);
     await provider.connection.confirmTransaction(sig1, "finalized");
 
-    console.log("Init Staking Pool");
-    console.log("   stakingPool: ", stakingPool.publicKey.toString());
-    console.log("   rewardTokenPool: ", rewardTokenPool.publicKey.toString());
-    console.log("   rewardMint: ", rewardMint.publicKey.toString());
-
     return stakingPool.publicKey;
 }
 
@@ -763,17 +758,6 @@ async function createDefaultReserve(
     const [stakingProgamAuthority, bump] = await PublicKey.findProgramAddress(
         [targetStakingPool.getId().toBuffer()],
         env.getStakingProgramPk()
-    );
-
-    console.log("Init Port Client");
-    console.log("    stakingPool: ", targetStakingPool.getId().toString());
-    console.log(
-        "    stakingRewardPool: ",
-        targetStakingPool.getRewardTokenPool().toString()
-    );
-    console.log(
-        "    rewardTokenMint: ",
-        rewardTokenMint.getMintId().toString()
     );
 
     const subRewardPool = targetStakingPool.getSubRewardTokenPool();
