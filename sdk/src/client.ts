@@ -321,7 +321,6 @@ export class VaultClient {
             ],
             this.program.programId
         );
-        console.log("port additional state: ", pda.toString());
 
         const tx = new Transaction();
         tx.add(
@@ -416,21 +415,6 @@ export class VaultClient {
                 ],
                 this.program.programId
             );
-
-        console.log(
-            "reward token mint: ",
-            this.yieldSources.port.accounts.stakingRewardTokenMint.toString()
-        );
-        console.log(
-            "sub-reward token mint: ",
-            this.yieldSources.port.accounts.stakingSubRewardTokenMint.toString()
-        );
-        console.log("stake acct: ", vaultPortStakeAccount.toString());
-        console.log("obligation acct: ", vaultPortObligationAccount.toString());
-        console.log(
-            "reward token acct: ",
-            vaultPortRewardTokenAccount.toString()
-        );
 
         const tx = new Transaction();
         tx.add(
