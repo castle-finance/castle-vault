@@ -120,67 +120,67 @@ export class VaultClient {
     }
 
     async loadPortAdditionalAccounts() {
-            const vaultPortAdditionalStateAddress =
-                await PublicKey.createProgramAddress(
-                    [
+        const vaultPortAdditionalStateAddress =
+            await PublicKey.createProgramAddress(
+                [
                     this.vaultId.toBuffer(),
-                        anchor.utils.bytes.utf8.encode("port_additional_state"),
-                        new Uint8Array([
+                    anchor.utils.bytes.utf8.encode("port_additional_state"),
+                    new Uint8Array([
                         this.vaultState.vaultPortAdditionalStateBump,
-                        ]),
-                    ],
+                    ]),
+                ],
                 this.program.programId
-                );
-            const vaultPortAdditionalStates =
+            );
+        const vaultPortAdditionalStates =
             await this.program.account.vaultPortAdditionalState.fetch(
-                    vaultPortAdditionalStateAddress
-                );
+                vaultPortAdditionalStateAddress
+            );
         this.yieldSources.port.accounts.vaultPortAdditionalStates =
-                vaultPortAdditionalStateAddress;
+            vaultPortAdditionalStateAddress;
         this.yieldSources.port.accounts.vaultPortObligation =
-                await PublicKey.createProgramAddress(
-                    [
+            await PublicKey.createProgramAddress(
+                [
                     this.vaultId.toBuffer(),
-                        anchor.utils.bytes.utf8.encode("port_obligation"),
-                        new Uint8Array([
-                            vaultPortAdditionalStates.vaultPortObligationBump,
-                        ]),
-                    ],
+                    anchor.utils.bytes.utf8.encode("port_obligation"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortObligationBump,
+                    ]),
+                ],
                 this.program.programId
-                );
+            );
         this.yieldSources.port.accounts.vaultPortStakeAccount =
-                await PublicKey.createProgramAddress(
-                    [
+            await PublicKey.createProgramAddress(
+                [
                     this.vaultId.toBuffer(),
-                        anchor.utils.bytes.utf8.encode("port_stake"),
-                        new Uint8Array([
-                            vaultPortAdditionalStates.vaultPortStakeAccountBump,
-                        ]),
-                    ],
+                    anchor.utils.bytes.utf8.encode("port_stake"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortStakeAccountBump,
+                    ]),
+                ],
                 this.program.programId
-                );
+            );
         this.yieldSources.port.accounts.vaultPortRewardToken =
-                await PublicKey.createProgramAddress(
-                    [
+            await PublicKey.createProgramAddress(
+                [
                     this.vaultId.toBuffer(),
-                        anchor.utils.bytes.utf8.encode("port_reward"),
-                        new Uint8Array([
-                            vaultPortAdditionalStates.vaultPortRewardTokenBump,
-                        ]),
-                    ],
+                    anchor.utils.bytes.utf8.encode("port_reward"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortRewardTokenBump,
+                    ]),
+                ],
                 this.program.programId
-                );
+            );
         this.yieldSources.port.accounts.vaultPortSubRewardToken =
-                await PublicKey.createProgramAddress(
-                    [
+            await PublicKey.createProgramAddress(
+                [
                     this.vaultId.toBuffer(),
-                        anchor.utils.bytes.utf8.encode("port_sub_reward"),
-                        new Uint8Array([
-                            vaultPortAdditionalStates.vaultPortSubRewardTokenBump,
-                        ]),
-                    ],
+                    anchor.utils.bytes.utf8.encode("port_sub_reward"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortSubRewardTokenBump,
+                    ]),
+                ],
                 this.program.programId
-        );
+            );
     }
 
     async reload() {
@@ -1061,33 +1061,6 @@ export class VaultClient {
         return txs;
     }
 
-    async MyReconcile(
-        p: string,
-        amount: number
-    ): Promise<TransactionSignature> {
-        const reconcileTx = new Transaction();
-        reconcileTx.add(
-            this.yieldSources[p].getRefreshIx(
-                this.program,
-                this.vaultId,
-                this.vaultState
-            ),
-            this.yieldSources[p].getReconcileIx(
-                this.program,
-                this.vaultId,
-                this.vaultState,
-                new anchor.BN(amount.toString())
-            )
-        );
-        return this.program.provider.send(reconcileTx);
-    }
-
-    async MyRefresh(): Promise<TransactionSignature[]> {
-        const txs = this.getPreRefreshTxs().map((tx) => {
-            return { tx: tx, signers: [] };
-        });
-        return this.program.provider.sendAll(txs);
-    }
 
     async getRebalanceTx(
         proposedWeights: ProposedWeightsBps
