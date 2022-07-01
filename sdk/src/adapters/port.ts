@@ -437,6 +437,20 @@ export class PortReserveAsset extends LendingMarket {
             },
         });
     }
+
+    async getUnclaimedStakingRewards(program: anchor.Program<CastleVault>): Promise<number> {
+        const stakingAccountRaw = await program.provider.connection.getAccountInfo(
+            new PublicKey(this.accounts.vaultPortStakeAccount)
+        );
+        const stakingAccount = StakeAccount.fromRaw({
+            pubkey: this.accounts.vaultPortStakeAccount,
+            account: stakingAccountRaw,
+        });
+        return stakingAccount
+            .getUnclaimedReward()
+            .toU64()
+            .toNumber();
+    }
 }
 
 export const DEVNET_STAKING_PROGRAM_ID = new PublicKey(
