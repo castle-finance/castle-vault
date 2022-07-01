@@ -106,6 +106,8 @@ pub fn handler(ctx: Context<ClaimPortReward>) -> ProgramResult {
         || port_stake_account_pda_key != ctx.accounts.vault_port_stake_account.key()
         || port_reward_account_pda_key != ctx.accounts.vault_port_reward_token.key()
         || port_sub_reward_account_pda_key != ctx.accounts.vault_port_sub_reward_token.key()
+        || ctx.accounts.port_additional_states.port_staking_pool
+            != ctx.accounts.port_staking_pool.key()
     {
         return Err(ErrorCode::InvalidAccount.into());
     }
