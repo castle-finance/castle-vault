@@ -2,6 +2,7 @@ import { assert } from "chai";
 import * as anchor from "@project-serum/anchor";
 import { TOKEN_PROGRAM_ID, Token, NATIVE_MINT } from "@solana/spl-token";
 import { Keypair, PublicKey, TransactionSignature } from "@solana/web3.js";
+import { StakingPool,StakeAccount } from "@port.finance/port-sdk";
 
 import {
     SolendReserveAsset,

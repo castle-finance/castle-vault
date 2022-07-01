@@ -365,8 +365,12 @@ pub struct RefreshPort<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
+
     /// Token account for the vault's port lp tokens
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
+
+    pub vault_port_stake_account: Box<Account<'info, PortStakeAccount>>,
 
     #[account(
         executable,
@@ -399,6 +403,7 @@ impl<'info> RefreshPort<'info> {
 impl<'info> Refresher<'info> for RefreshPort<'info> {
     fn update_actual_allocation(
         &mut self,
+        program_id: &Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
         if self
@@ -406,6 +411,29 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
             .get_yield_source_flags()
             .contains(YieldSourceFlags::PORT)
         {
+            // Verify account integrity
+            let port_additional_states_pda_key = Pubkey::create_program_address(
+                &[
+                    self.vault.key().as_ref(),
+                    b"port_additional_state".as_ref(),
+                    &[self.vault.vault_port_additional_state_bump],
+                ],
+                program_id,
+            )?;
+            let port_stake_account_pda_key = Pubkey::create_program_address(
+                &[
+                    self.vault.key().as_ref(),
+                    b"port_stake".as_ref(),
+                    &[self.port_additional_states.vault_port_stake_account_bump],
+                ],
+                program_id,
+            )?;
+            if port_additional_states_pda_key != self.port_additional_states.key()
+                || port_stake_account_pda_key != self.vault_port_stake_account.key()
+            {
+                return Err(ErrorCode::InvalidAccount.into());
+            }
+
             port_anchor_adaptor::refresh_port_reserve(
                 self.port_refresh_reserve_context(remaining_accounts),
             )?;
@@ -414,8 +442,12 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
             msg!("Refreshing port");
 
             let port_exchange_rate = self.port_reserve.collateral_exchange_rate()?;
-            let port_value =
-                port_exchange_rate.collateral_to_liquidity(self.vault_port_lp_token.amount)?;
+            let port_value = port_exchange_rate.collateral_to_liquidity(
+                self.vault_port_lp_token
+                    .amount
+                    .checked_add(self.vault_port_stake_account.deposited_amount)
+                    .ok_or(ErrorCode::OverflowError)?,
+            )?;
 
             #[cfg(feature = "debug")]
             msg!("Refresh port reserve token value: {}", port_value);

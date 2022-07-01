@@ -698,7 +698,17 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "portAdditionalStates";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "vaultPortLpToken";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortStakeAccount";
                     isMut: false;
                     isSigner: false;
                 },
@@ -2407,7 +2417,17 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
+                    name: "portAdditionalStates",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
                     name: "vaultPortLpToken",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortStakeAccount",
                     isMut: false,
                     isSigner: false,
                 },

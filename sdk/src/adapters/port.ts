@@ -327,7 +327,9 @@ export class PortReserveAsset extends LendingMarket {
         return program.instruction.refreshPort({
             accounts: {
                 vault: vaultId,
+                portAdditionalStates: this.accounts.vaultPortAdditionalStates,
                 vaultPortLpToken: vaultState.vaultPortLpToken,
+                vaultPortStakeAccount: this.accounts.vaultPortStakeAccount,
                 portLendProgram: this.accounts.program,
                 portReserve: this.accounts.reserve,
                 clock: SYSVAR_CLOCK_PUBKEY,

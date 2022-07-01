@@ -446,6 +446,7 @@ impl<'info> RefreshSolend<'info> {
 impl<'info> Refresher<'info> for RefreshSolend<'info> {
     fn update_actual_allocation(
         &mut self,
+        _program_id: &Pubkey,
         _remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
         #[cfg(feature = "debug")]

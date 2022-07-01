@@ -125,11 +125,8 @@ pub fn handler(ctx: Context<ClaimPortReward>) -> ProgramResult {
     );
 
     port_anchor_adaptor::claim_reward(
-        claim_reward_context
-            .with_remaining_accounts(vec![
-                ctx.accounts.port_staking_sub_reward_pool.clone(),
-                ctx.accounts.vault_port_sub_reward_token.clone(),
-            ])
-            .with_signer(&[&ctx.accounts.vault.authority_seeds()]),
+        claim_reward_context.with_signer(&[&ctx.accounts.vault.authority_seeds()]),
+        ctx.accounts.port_staking_sub_reward_pool.clone(),
+        ctx.accounts.vault_port_sub_reward_token.clone(),
     )
 }
