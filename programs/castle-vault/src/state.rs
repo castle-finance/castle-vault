@@ -214,8 +214,12 @@ pub struct VaultPortAdditionalState {
     /// Account used to receive Port staking sub-reward
     pub vault_port_sub_reward_token_bump: u8,
 
+    pub port_staking_pool: Pubkey,
+
+    pub port_lp_token_account: Pubkey,
+
     _reserved0: [u8; 4],
-    _reserved1: [u64; 30],
+    _reserved1: [u64; 22],
     _reserved2: [u64; 32],
 }
 

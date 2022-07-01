@@ -375,10 +375,6 @@ export class VaultClient {
             );
         this.yieldSources.port.accounts.vaultPortAdditionalStates =
             vaultPortAdditionalStateAddress;
-        console.log(
-            "port additional state: ",
-            vaultPortAdditionalStateAddress.toString()
-        );
 
         const [vaultPortObligationAccount, portObligationBump] =
             await PublicKey.findProgramAddress(
@@ -434,6 +430,8 @@ export class VaultClient {
                         vaultPortStakeAccount: vaultPortStakeAccount,
                         vaultPortRewardToken: vaultPortRewardTokenAccount,
                         vaultPortSubRewardToken: vaultPortSubRewardTokenAccount,
+                        portLpTokenAccount:
+                            this.yieldSources.port.accounts.lpTokenAccount,
                         portRewardTokenMint:
                             this.yieldSources.port.accounts
                                 .stakingRewardTokenMint,
@@ -1045,7 +1043,6 @@ export class VaultClient {
         return txs;
     }
 
-
     async getRebalanceTx(
         proposedWeights: ProposedWeightsBps
     ): Promise<Transaction> {
@@ -1178,13 +1175,6 @@ export class VaultClient {
 
     async claimPortReward(): Promise<TransactionSignature> {
         const tx = new Transaction();
-        // tx.add(
-        //     this.yieldSources.port.getRefreshIx(
-        //         this.program,
-        //         this.vaultId,
-        //         this.vaultState
-        //     )
-        // );
         tx.add(
             this.yieldSources.port.getClaimRewardIx(
                 this.program,

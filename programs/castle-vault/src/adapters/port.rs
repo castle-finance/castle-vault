@@ -141,6 +141,8 @@ impl<'info> LendingMarket for PortAccounts<'info> {
             || port_stake_account_pda_key != self.vault_port_stake_account.key()
             || port_reward_account_pda_key != self.vault_port_reward_token.key()
             || port_obligation_pda_key != self.vault_port_obligation.key()
+            || self.port_additional_states.port_lp_token_account != self.port_lp_token_account.key()
+            || self.port_additional_states.port_staking_pool != self.port_staking_pool.key()
         {
             return Err(ErrorCode::InvalidAccount.into());
         }

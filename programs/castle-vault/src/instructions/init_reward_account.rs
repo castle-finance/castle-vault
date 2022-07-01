@@ -65,6 +65,9 @@ pub struct InitializeRewardAccount<'info> {
     )]
     pub vault_port_sub_reward_token: Box<Account<'info, TokenAccount>>,
 
+    // Account to which the token should be transfered for the purpose of staking
+    pub port_lp_token_account: AccountInfo<'info>,
+
     /// Mint of the port finance token (liquidity reward will be issued by this one)
     pub port_reward_token_mint: AccountInfo<'info>,
 
@@ -170,5 +173,8 @@ pub fn handler(
         .port_additional_states
         .vault_port_sub_reward_token_bump = sub_reward_bump;
 
+    ctx.accounts.port_additional_states.port_lp_token_account =
+        ctx.accounts.port_lp_token_account.key();
+    ctx.accounts.port_additional_states.port_staking_pool = ctx.accounts.port_staking_pool.key();
     Ok(())
 }

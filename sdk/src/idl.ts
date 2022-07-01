@@ -166,6 +166,11 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "portLpTokenAccount";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "portRewardTokenMint";
                     isMut: false;
                     isSigner: false;
@@ -1318,6 +1323,14 @@ export type CastleVault = {
                         type: "u8";
                     },
                     {
+                        name: "portStakingPool";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "portLpTokenAccount";
+                        type: "publicKey";
+                    },
+                    {
                         name: "reserved0";
                         type: {
                             array: ["u8", 4];
@@ -1326,7 +1339,7 @@ export type CastleVault = {
                     {
                         name: "reserved1";
                         type: {
-                            array: ["u64", 30];
+                            array: ["u64", 22];
                         };
                     },
                     {
@@ -1882,6 +1895,11 @@ export const IDL: CastleVault = {
                 {
                     name: "vaultPortSubRewardToken",
                     isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portLpTokenAccount",
+                    isMut: false,
                     isSigner: false,
                 },
                 {
@@ -3037,6 +3055,14 @@ export const IDL: CastleVault = {
                         type: "u8",
                     },
                     {
+                        name: "portStakingPool",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "portLpTokenAccount",
+                        type: "publicKey",
+                    },
+                    {
                         name: "reserved0",
                         type: {
                             array: ["u8", 4],
@@ -3045,7 +3071,7 @@ export const IDL: CastleVault = {
                     {
                         name: "reserved1",
                         type: {
-                            array: ["u64", 30],
+                            array: ["u64", 22],
                         },
                     },
                     {
