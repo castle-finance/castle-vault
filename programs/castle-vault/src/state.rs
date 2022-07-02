@@ -18,7 +18,7 @@ use crate::{
     reserves::Provider,
 };
 
-#[assert_size(768)]
+// #[assert_size(704)]
 #[account]
 #[repr(C, align(8))]
 #[derive(Debug)]
@@ -42,8 +42,6 @@ pub struct Vault {
 
     pub port_reserve: Pubkey,
 
-    pub jet_reserve: Pubkey,
-
     /// Account where reserve tokens are stored
     pub vault_reserve_token: Pubkey,
 
@@ -52,9 +50,6 @@ pub struct Vault {
 
     /// Account where port LP tokens are stored
     pub vault_port_lp_token: Pubkey,
-
-    /// Account where jet LP tokens are stored
-    pub vault_jet_lp_token: Pubkey,
 
     /// Mint address of vault LP tokens
     pub lp_token_mint: Pubkey,
@@ -85,6 +80,9 @@ pub struct Vault {
     // 4 * 26 = 104
     /// Reserved space for future upgrades
     _reserved: [u32; 26],
+
+    // #[account] doesnt work for this bc anchor cant serialize this size
+    // _reserved: [u32; 42],
 }
 
 impl Vault {
@@ -147,7 +145,6 @@ impl Vault {
         match provider {
             Provider::Solend => flags.contains(YieldSourceFlags::SOLEND),
             Provider::Port => flags.contains(YieldSourceFlags::PORT),
-            Provider::Jet => flags.contains(YieldSourceFlags::JET),
         }
     }
 
@@ -288,17 +285,15 @@ bitflags::bitflags! {
     pub struct YieldSourceFlags: u16 {
         const SOLEND = 1 << 0;
         const PORT = 1 << 1;
-        const JET = 1 << 2;
     }
 }
 
-#[assert_size(aligns, 72)]
+#[assert_size(aligns, 48)]
 #[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: SlotTrackedValue,
     pub port: SlotTrackedValue,
-    pub jet: SlotTrackedValue,
 }
 impl_provider_index!(Allocations, SlotTrackedValue);
 
@@ -320,7 +315,6 @@ impl Allocations {
                 .contains(match p {
                     Provider::Solend => YieldSourceFlags::SOLEND,
                     Provider::Port => YieldSourceFlags::PORT,
-                    Provider::Jet => YieldSourceFlags::JET,
                 })
                 .then(|| self[p].value);
         });

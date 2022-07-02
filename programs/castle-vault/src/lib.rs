@@ -29,13 +29,6 @@ pub mod castle_vault {
         instructions::init_vault::handler(ctx, bumps, config)
     }
 
-    pub fn initialize_jet<'info>(
-        ctx: Context<'_, '_, '_, 'info, InitializeJet<'info>>,
-        bump: u8,
-    ) -> Result<()> {
-        instructions::init_yield_source::handler(ctx, bump)
-    }
-
     pub fn initialize_port<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializePort<'info>>,
         bump: u8,
@@ -92,10 +85,6 @@ pub mod castle_vault {
         instructions::refresh::handler(ctx)
     }
 
-    pub fn refresh_jet<'info>(ctx: Context<'_, '_, '_, 'info, RefreshJet<'info>>) -> Result<()> {
-        instructions::refresh::handler(ctx)
-    }
-
     pub fn consolidate_refresh<'info>(
         ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>,
     ) -> Result<()> {
@@ -107,10 +96,6 @@ pub mod castle_vault {
     }
 
     pub fn reconcile_port(ctx: Context<PortAccounts>, withdraw_option: u64) -> Result<()> {
-        instructions::reconcile::handler(ctx, withdraw_option)
-    }
-
-    pub fn reconcile_jet(ctx: Context<JetAccounts>, withdraw_option: u64) -> Result<()> {
         instructions::reconcile::handler(ctx, withdraw_option)
     }
 }

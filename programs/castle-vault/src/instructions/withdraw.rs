@@ -1,5 +1,3 @@
-use std::convert::Into;
-
 use boolinator::Boolinator;
 
 use anchor_lang::prelude::*;

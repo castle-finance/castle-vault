@@ -52,8 +52,8 @@ impl AssetContainer<Reserves> {
     fn calculate_weights_equal(&self) -> Result<AssetContainer<Rate>> {
         u8::try_from(self.len())
             .map_err(|_| ErrorCode::StrategyError)
-            .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100).map_err(|e| ErrorCode::StrategyError))
-            .and_then(|r| Rate::one().try_div(r).map_err(|e| ErrorCode::StrategyError))
+            .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100).map_err(|_| ErrorCode::StrategyError))
+            .and_then(|r| Rate::one().try_div(r).map_err(|_| ErrorCode::StrategyError))
             .map(|equal_allocation| self.apply(|_, v| v.map(|_| equal_allocation))).map_err(
                 |e| e.into(),
             )
@@ -102,12 +102,12 @@ mod test {
         let mut mock_rc1 = MockReturnCalculator::new();
         mock_rc1
             .expect_calculate_return()
-            .return_const(Ok(Rate::from_percent(10)));
+            .return_once(move |_, _| Ok(Rate::from_percent(10)));
 
         let mut mock_rc2 = MockReturnCalculator::new();
         mock_rc2
             .expect_calculate_return()
-            .return_const(Ok(Rate::from_percent(20)));
+            .return_once(move |_, _| Ok(Rate::from_percent(20)));
 
         assert_eq!(compare(&mock_rc1, &mock_rc2), Ok(Ordering::Less));
     }

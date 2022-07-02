@@ -41,9 +41,6 @@ pub struct ConsolidateRefresh<'info> {
     pub vault_port_lp_token: AccountInfo<'info>,
     //#[soteria(ignore)]
     /// CHECK: safe
-    pub vault_jet_lp_token: AccountInfo<'info>,
-    //#[soteria(ignore)]
-    /// CHECK: safe
     pub vault_solend_lp_token: AccountInfo<'info>,
 
     /// Mint for the vault lp token
@@ -116,24 +113,14 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
                         )?
                         .amount
                 }
-                Provider::Jet => {
-                    ctx.accounts
-                        .vault_jet_lp_token
-                        .key
-                        .eq(&ctx.accounts.vault.vault_jet_lp_token)
-                        .as_result(
-                            Account::<TokenAccount>::try_from(&ctx.accounts.vault_jet_lp_token)?,
-                            ErrorCode::InvalidAccount,
-                        )?
-                        .amount
-                }
             };
+
             if lp_token_value == 0 {
                 return Ok(acc);
             }
 
             // Ensure that we refreshed all the lending pools where we have non-zero allocation in the same slot
-            (allocation.last_update.slots_elapsed(clock_slot).map_err(|e| e.into()) == 0).as_result::<u64, ErrorCode>(
+            (allocation.last_update.slots_elapsed(clock_slot)? == 0).as_result::<u64, Error>(
                 acc.checked_add(allocation.value)
                     .ok_or(ErrorCode::OverflowError)?,
                 ErrorCode::AllocationIsNotUpdated.into(),

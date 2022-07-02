@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
 
-use std::convert::Into;
-
 use crate::state::{Vault, VaultConfig};
 
 use super::VaultConfigArg;

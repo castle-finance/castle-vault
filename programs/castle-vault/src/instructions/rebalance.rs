@@ -27,7 +27,6 @@ pub struct RebalanceEvent {
 pub struct RebalanceDataEvent {
     solend: u64,
     port: u64,
-    jet: u64,
 }
 impl_provider_index!(RebalanceDataEvent, u64);
 
@@ -59,15 +58,12 @@ pub struct Rebalance<'info> {
     //#[soteria(ignore)]
     /// CHECK: safe
     pub port_reserve: AccountInfo<'info>,
-    //#[soteria(ignore)]
-    /// CHECK: safe
-    pub jet_reserve: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,
 }
 
 impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
-    type Error = ProgramError;
+    type Error = Error;
     fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>> {
         let flags: YieldSourceFlags = r.vault.get_yield_source_flags();
 
@@ -83,13 +79,13 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             .as_option()
             .map(|()| {
                 r.solend_reserve.key.eq(&r.vault.solend_reserve).as_result(
-                    Ok::<_, ProgramError>(Reserves::Solend(Box::new(
+                    Ok::<_, Error>(Reserves::Solend(Box::new(
                         Account::<SolendReserve>::try_from(&r.solend_reserve)?
                             .deref()
                             .clone(),
                     ))),
                     ErrorCode::InvalidAccount,
-                ).map_err(|e| e.into())?
+                )?
             })
             .transpose()?;
 
@@ -98,32 +94,18 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             .as_option()
             .map(|()| {
                 r.port_reserve.key.eq(&r.vault.port_reserve).as_result(
-                    Ok::<_, ProgramError>(Reserves::Port(Box::new(
+                    Ok::<_, Error>(Reserves::Port(Box::new(
                         Account::<PortReserve>::try_from(&r.port_reserve)?
                             .deref()
                             .clone(),
                     ))),
                     ErrorCode::InvalidAccount,
-                ).map_err(|e| e.into())?
-            })
-            .transpose()?;
-
-        let jet = flags
-            .contains(YieldSourceFlags::JET)
-            .as_option()
-            .map(|()| {
-                r.jet_reserve.key.eq(&r.vault.jet_reserve).as_result(
-                    Ok::<_, ProgramError>(Reserves::Jet(Box::new(
-                        *(AccountLoader::<jet::state::Reserve>::try_from(&r.jet_reserve)?)
-                            .load()?,
-                    ))),
-                    ErrorCode::InvalidAccount,
-                ).map_err(|e| e.into())?
+                )?
             })
             .transpose()?;
 
         Ok(AssetContainer {
-            inner: [solend, port, jet],
+            inner: [solend, port],
         })
     }
 }
@@ -132,7 +114,6 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
 pub struct StrategyWeightsArg {
     solend: u16,
     port: u16,
-    jet: u16,
 }
 impl_provider_index!(StrategyWeightsArg, u16);
 
@@ -204,7 +185,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
                     // Return error if APR from proposed weights is not higher than proof weights
                     (proposed_apr >= proof_apr).as_result(
                         proposed_allocations,
-                        ErrorCode::RebalanceProofCheckFailed,
+                        ErrorCode::RebalanceProofCheckFailed.into(),
                     )
                 }
                 RebalanceMode::Calculator => {

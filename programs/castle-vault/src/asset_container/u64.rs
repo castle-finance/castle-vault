@@ -1,4 +1,4 @@
-use anchor_lang::prelude::ProgramError;
+use anchor_lang::prelude::*;
 use solana_maths::{Decimal, Rate, TryMul};
 
 use super::AssetContainerGeneric;
@@ -9,7 +9,7 @@ impl<const N: usize> AssetContainerGeneric<u64, N> {
     pub fn try_from_weights(
         rates: &AssetContainerGeneric<Rate, N>,
         total_amount: u64,
-    ) -> Result<Self, ProgramError> {
+    ) -> Result<Self> {
         rates.try_apply(|_, rate| match rate {
             Some(r) => {
                 Ok(Some(r.try_mul(total_amount).and_then(|product| {

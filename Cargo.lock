@@ -656,9 +656,7 @@ dependencies = [
  "bitflags",
  "boolinator",
  "itertools",
- "jet-proto-math",
  "jet-proto-proc-macros",
- "jet-proto-v1-cpi",
  "mockall",
  "port-anchor-adaptor",
  "port-variable-rate-lending-instructions",
@@ -945,18 +943,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 
 [[package]]
-name = "jet-proto-math"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02366c669de4115999e93c7157488a6b820ca1ef3c9eae9b670bfc48a14b1232"
-dependencies = [
- "bytemuck",
- "static_assertions",
- "thiserror",
- "uint 0.9.1",
-]
-
-[[package]]
 name = "jet-proto-proc-macros"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -966,19 +952,6 @@ dependencies = [
  "quote",
  "static_assertions",
  "syn",
-]
-
-[[package]]
-name = "jet-proto-v1-cpi"
-version = "0.24.2"
-source = "git+https://github.com/udbhav1/jet-v1/#12f6b997bbd714268b1c6b7bf39758a5303d1655"
-dependencies = [
- "anchor-lang 0.24.2",
- "borsh 0.9.1",
- "jet-proto-math",
- "jet-proto-proc-macros",
- "static_assertions",
- "thiserror",
 ]
 
 [[package]]

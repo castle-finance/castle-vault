@@ -25,7 +25,6 @@ use crate::adapters::solend::SolendReserve;
 pub enum Provider {
     Solend = 0,
     Port,
-    Jet,
 }
 
 #[macro_export]
@@ -38,7 +37,6 @@ macro_rules! impl_provider_index {
                 match provider {
                     Provider::Solend => &self.solend,
                     Provider::Port => &self.port,
-                    Provider::Jet => &self.jet,
                 }
             }
         }
@@ -48,7 +46,6 @@ macro_rules! impl_provider_index {
                 match provider {
                     Provider::Solend => &mut self.solend,
                     Provider::Port => &mut self.port,
-                    Provider::Jet => &mut self.jet,
                 }
             }
         }
@@ -94,7 +91,6 @@ where
 pub enum Reserves {
     Solend(Box<SolendReserve>),
     Port(Box<PortReserve>),
-    Jet(Box<jet::state::Reserve>),
 }
 
 // TODO Is there a cleaner way to do this?
@@ -103,7 +99,6 @@ impl<'a> ReserveAccessor for Reserves {
         match self {
             Reserves::Solend(reserve) => reserve.utilization_rate(),
             Reserves::Port(reserve) => reserve.utilization_rate(),
-            Reserves::Jet(reserve) => reserve.utilization_rate(),
         }
     }
 
@@ -111,7 +106,6 @@ impl<'a> ReserveAccessor for Reserves {
         match self {
             Reserves::Solend(reserve) => reserve.borrow_rate(),
             Reserves::Port(reserve) => reserve.borrow_rate(),
-            Reserves::Jet(reserve) => reserve.borrow_rate(),
         }
     }
 
@@ -125,7 +119,6 @@ impl<'a> ReserveAccessor for Reserves {
                 reserve.reserve_with_deposit(new_allocation, old_allocation)
             }
             Reserves::Port(reserve) => reserve.reserve_with_deposit(new_allocation, old_allocation),
-            Reserves::Jet(reserve) => reserve.reserve_with_deposit(new_allocation, old_allocation),
         }
     }
 }
