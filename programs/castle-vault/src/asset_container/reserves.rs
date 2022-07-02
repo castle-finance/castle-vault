@@ -109,6 +109,6 @@ mod test {
             .expect_calculate_return()
             .return_once(move |_, _| Ok(Rate::from_percent(20)));
 
-        assert_eq!(compare(&mock_rc1, &mock_rc2), Ok(Ordering::Less));
+        assert_eq!(compare(&mock_rc1, &mock_rc2).unwrap(), Ordering::Less);
     }
 }

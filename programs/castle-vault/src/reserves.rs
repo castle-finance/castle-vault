@@ -142,6 +142,6 @@ mod test {
             .expect_reserve_with_deposit()
             .return_once(|_, _| Ok(Box::new(mock_ra_inner)));
 
-        assert_eq!(mock_ra.calculate_return(10, 0), Ok(Rate::from_percent(40)));
+        assert_eq!(mock_ra.calculate_return(10, 0).unwrap(), Rate::from_percent(40));
     }
 }

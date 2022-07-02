@@ -99,11 +99,11 @@ mod tests {
 
     #[test]
     fn test_carry_fees() {
-        assert_eq!(calc_carry_fees(50000, 10), Ok(50))
+        assert_eq!(calc_carry_fees(50000, 10).unwrap(), 50)
     }
 
     #[test]
     fn test_mgmt_fees() {
-        assert_eq!(calc_mgmt_fees(1261440000, 1000, 100), Ok(200))
+        assert_eq!(calc_mgmt_fees(1261440000, 1000, 100).unwrap(), 200)
     }
 }
