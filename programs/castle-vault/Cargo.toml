@@ -38,7 +38,7 @@ itertools = "0.10"
 jet = {git = "https://github.com/jet-lab/jet-v1/", version = "0.2.0", features = ["no-entrypoint", "cpi"]}
 jet-proto-math = "1.0.1"
 jet-proto-proc-macros = "1.0.3"
-port-anchor-adaptor = {git = "https://github.com/castle-finance/port-anchor-adaptor.git", version = "0.3.5"}
+port-anchor-adaptor = {git = "https://github.com/castle-finance/port-anchor-adaptor.git", branch = "claim-reward-bugfix"}
 port-variable-rate-lending-instructions = "0.2.9"
 solana-maths = "0.1.1"
 solana-security-txt = "1.0.1"
