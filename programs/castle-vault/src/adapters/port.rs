@@ -340,7 +340,6 @@ pub struct RefreshPort<'info> {
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
     #[account(
-        mut,
         seeds = [vault.key().as_ref(), b"port_stake".as_ref()], 
         bump = port_additional_states.vault_port_stake_account_bump
     )]

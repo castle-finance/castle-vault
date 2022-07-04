@@ -81,6 +81,10 @@ pub struct InitializeRewardAccount<'info> {
     /// ID of the staking pool
     pub port_staking_pool: AccountInfo<'info>,
 
+    pub port_staking_reward_pool: AccountInfo<'info>,
+
+    pub port_staking_sub_reward_pool: AccountInfo<'info>,
+
     #[account(
         executable,
         address = port_staking_id(),
@@ -168,5 +172,11 @@ pub fn handler(
     ctx.accounts.port_additional_states.port_lp_token_account =
         ctx.accounts.port_lp_token_account.key();
     ctx.accounts.port_additional_states.port_staking_pool = ctx.accounts.port_staking_pool.key();
+    ctx.accounts.port_additional_states.port_staking_reward_pool =
+        ctx.accounts.port_staking_reward_pool.key();
+    ctx.accounts
+        .port_additional_states
+        .port_staking_sub_reward_pool = ctx.accounts.port_staking_sub_reward_pool.key();
+
     Ok(())
 }

@@ -440,6 +440,10 @@ export class VaultClient {
                                 .stakingSubRewardTokenMint,
                         portStakingPool:
                             this.yieldSources.port.accounts.stakingPool,
+                        portStakingRewardPool:
+                            this.yieldSources.port.accounts.stakingRewardPool,
+                        portStakingSubRewardPool:
+                            this.yieldSources.port.accounts.stakingSubRewardPool,
                         portStakeProgram:
                             this.yieldSources.port.accounts.stakingProgram,
                         portLendProgram:

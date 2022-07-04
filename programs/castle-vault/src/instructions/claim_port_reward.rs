@@ -21,7 +21,9 @@ pub struct ClaimPortReward<'info> {
     #[account(
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
         bump = vault.vault_port_additional_state_bump,
-        has_one = port_staking_pool
+        has_one = port_staking_pool,
+        has_one = port_staking_reward_pool,
+        has_one = port_staking_sub_reward_pool,
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
