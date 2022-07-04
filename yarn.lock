@@ -9,10 +9,10 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
-"@castlefinance/port-sdk@0.2.68":
-  version "0.2.68"
-  resolved "https://registry.yarnpkg.com/@castlefinance/port-sdk/-/port-sdk-0.2.68.tgz#e4e25ec0f20bcac7c86fd69aed34610603938166"
-  integrity sha512-Tzi5GtkH5hX3jGGHBoi+9VeNk+yaSrmnJVZ2P/jBcE8cMhqY6SYrGf1LORITfA6iWbevGqxBvbOnMMm8aYns0g==
+"@castlefinance/port-sdk@0.2.69":
+  version "0.2.69"
+  resolved "https://registry.yarnpkg.com/@castlefinance/port-sdk/-/port-sdk-0.2.69.tgz#5a894d8f1c5dd1ef8e4f37d775dc189e96318370"
+  integrity sha512-v6I42ChhEZusk9s7tsjoPlDtEnWrmS+6c5jqYwPPP9p/Oexf3jRbvbahEdusbnUpGuM1sABmi39MkNpnKRIroQ==
   dependencies:
     "@project-serum/anchor" "^0.21.0"
     "@saberhq/solana-contrib" "^1.12.53"
@@ -36,7 +36,7 @@
 "@castlefinance/vault-sdk@file:sdk":
   version "3.2.1"
   dependencies:
-    "@castlefinance/port-sdk" "0.2.68"
+    "@castlefinance/port-sdk" "0.2.69"
     "@castlefinance/vault-core" "^0.1.0"
     "@jet-lab/jet-engine" "^0.2.15"
     "@project-serum/anchor" "0.18.2"
