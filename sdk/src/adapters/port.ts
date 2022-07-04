@@ -34,7 +34,7 @@ import {
     TokenAccount,
     StakeAccount,
     StakingPoolLayout,
-} from "@port.finance/port-sdk";
+} from "@castlefinance/port-sdk";
 
 import { CastleVault } from "../idl";
 import { Vault } from "../types";

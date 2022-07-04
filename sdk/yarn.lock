@@ -9,6 +9,25 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
+"@castlefinance/port-sdk@0.2.68":
+  version "0.2.68"
+  resolved "https://registry.yarnpkg.com/@castlefinance/port-sdk/-/port-sdk-0.2.68.tgz#e4e25ec0f20bcac7c86fd69aed34610603938166"
+  integrity sha512-Tzi5GtkH5hX3jGGHBoi+9VeNk+yaSrmnJVZ2P/jBcE8cMhqY6SYrGf1LORITfA6iWbevGqxBvbOnMMm8aYns0g==
+  dependencies:
+    "@project-serum/anchor" "^0.21.0"
+    "@saberhq/solana-contrib" "^1.12.53"
+    "@saberhq/token-utils" "^1.12.53"
+    "@solana/buffer-layout" "^3.0.0"
+    "@solana/spl-token" "^0.1.8"
+    "@solana/spl-token-registry" "^0.2.1107"
+    big.js "^6.1.1"
+    bignumber.js "^9.0.1"
+    buffer-layout "1.2.2"
+    jsbi "^4.1.0"
+    prettier "^2.4.1"
+    tiny-invariant "^1.2.0"
+    typescript "^4.3.5"
+
 "@castlefinance/vault-core@^0.1.0":
   version "0.1.1"
   resolved "https://registry.yarnpkg.com/@castlefinance/vault-core/-/vault-core-0.1.1.tgz#a47cc891669cfd48f2af749b624defc0a2f0b8f8"
@@ -114,25 +133,6 @@
   dependencies:
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
-
-"@port.finance/port-sdk@^0.2.33":
-  version "0.2.62"
-  resolved "https://registry.npmjs.org/@port.finance/port-sdk/-/port-sdk-0.2.62.tgz"
-  integrity sha512-3ykBMQ7bwaM6jH4xHjvruAJArcazfBLVZ2bXGBLVRPzXGPpXeA2s/KMeb8nNzfRLJ8ooqMH7lEkiwefojJtcog==
-  dependencies:
-    "@project-serum/anchor" "^0.21.0"
-    "@saberhq/solana-contrib" "^1.12.53"
-    "@saberhq/token-utils" "^1.12.53"
-    "@solana/buffer-layout" "^3.0.0"
-    "@solana/spl-token" "^0.1.8"
-    "@solana/spl-token-registry" "^0.2.1107"
-    big.js "^6.1.1"
-    bignumber.js "^9.0.1"
-    buffer-layout "1.2.2"
-    jsbi "^4.1.0"
-    prettier "^2.4.1"
-    tiny-invariant "^1.2.0"
-    typescript "^4.3.5"
 
 "@project-serum/anchor@0.18.2":
   version "0.18.2"
