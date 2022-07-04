@@ -25,7 +25,7 @@ pub struct PortAccounts<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_port_lp_token,
-        has_one = port_reserve,
+        has_one = port_reserve
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -36,7 +36,8 @@ pub struct PortAccounts<'info> {
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
         bump = vault.vault_port_additional_state_bump,
         has_one = port_staking_pool,
-        has_one = port_staking_reward_pool
+        has_one = port_staking_reward_pool,
+        has_one = port_lp_token_account
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
