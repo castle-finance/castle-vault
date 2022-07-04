@@ -14,7 +14,6 @@ const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 100;
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?
 pub trait LendingMarket {
-    fn verify_accounts(&self, program_id: &Pubkey) -> ProgramResult;
     fn deposit(&self, amount: u64) -> ProgramResult;
     fn redeem(&self, amount: u64) -> ProgramResult;
 
@@ -61,10 +60,6 @@ pub fn handler<T: LendingMarket + HasVault>(
         .get_halt_flags()
         .contains(VaultFlags::HALT_RECONCILES))
     .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
-
-    // verify that the account keys passed are trusted
-    ctx.accounts.verify_accounts(ctx.program_id)?;
-
     let provider = ctx.accounts.provider();
     match withdraw_option {
         // Normal case where reconcile is being called after rebalance

@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use port_anchor_adaptor::{port_lending_id, port_staking_id};
 
-use crate::errors::ErrorCode;
 use crate::state::{Vault, VaultPortAdditionalState};
 
 #[derive(Accounts)]
@@ -19,12 +18,25 @@ pub struct ClaimPortReward<'info> {
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
 
+    #[account(
+        seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
+        bump = vault.vault_port_additional_state_bump,
+        has_one = port_staking_pool
+    )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [vault.key().as_ref(), b"port_stake".as_ref()], 
+        bump = port_additional_states.vault_port_stake_account_bump
+    )]
     pub vault_port_stake_account: AccountInfo<'info>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [vault.key().as_ref(), b"port_reward".as_ref()], 
+        bump = port_additional_states.vault_port_reward_token_bump
+    )]
     pub vault_port_reward_token: AccountInfo<'info>,
 
     #[account(mut)]
@@ -61,57 +73,6 @@ pub struct ClaimPortReward<'info> {
 }
 
 pub fn handler(ctx: Context<ClaimPortReward>) -> ProgramResult {
-    let port_additional_states_pda_key = Pubkey::create_program_address(
-        &[
-            ctx.accounts.vault.key().as_ref(),
-            b"port_additional_state".as_ref(),
-            &[ctx.accounts.vault.vault_port_additional_state_bump],
-        ],
-        ctx.program_id,
-    )?;
-    let port_stake_account_pda_key = Pubkey::create_program_address(
-        &[
-            ctx.accounts.vault.key().as_ref(),
-            b"port_stake".as_ref(),
-            &[ctx
-                .accounts
-                .port_additional_states
-                .vault_port_stake_account_bump],
-        ],
-        ctx.program_id,
-    )?;
-    let port_reward_account_pda_key = Pubkey::create_program_address(
-        &[
-            ctx.accounts.vault.key().as_ref(),
-            b"port_reward".as_ref(),
-            &[ctx
-                .accounts
-                .port_additional_states
-                .vault_port_reward_token_bump],
-        ],
-        ctx.program_id,
-    )?;
-    let port_sub_reward_account_pda_key = Pubkey::create_program_address(
-        &[
-            ctx.accounts.vault.key().as_ref(),
-            b"port_sub_reward".as_ref(),
-            &[ctx
-                .accounts
-                .port_additional_states
-                .vault_port_sub_reward_token_bump],
-        ],
-        ctx.program_id,
-    )?;
-    if port_additional_states_pda_key != ctx.accounts.port_additional_states.key()
-        || port_stake_account_pda_key != ctx.accounts.vault_port_stake_account.key()
-        || port_reward_account_pda_key != ctx.accounts.vault_port_reward_token.key()
-        || port_sub_reward_account_pda_key != ctx.accounts.vault_port_sub_reward_token.key()
-        || ctx.accounts.port_additional_states.port_staking_pool
-            != ctx.accounts.port_staking_pool.key()
-    {
-        return Err(ErrorCode::InvalidAccount.into());
-    }
-
     let claim_reward_context = CpiContext::new(
         ctx.accounts.port_stake_program.clone(),
         port_anchor_adaptor::ClaimReward {

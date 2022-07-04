@@ -6,7 +6,7 @@ use anchor_spl::{
 use port_anchor_adaptor::{port_lending_id, port_staking_id, PortObligation, PortStakeAccount};
 use std::convert::Into;
 
-use crate::{errors::ErrorCode, state::*};
+use crate::state::*;
 
 #[derive(Accounts)]
 #[instruction(obligation_bump:u8, stake_bump:u8, reward_bump: u8, sub_reward_bump: u8)]
@@ -20,7 +20,11 @@ pub struct InitializeRewardAccount<'info> {
 
     pub vault_authority: AccountInfo<'info>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
+        bump = vault.vault_port_additional_state_bump
+    )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
     #[account(
@@ -147,18 +151,6 @@ pub fn handler(
     port_anchor_adaptor::create_stake_account(
         init_stake_ctx.with_signer(&[&ctx.accounts.vault.authority_seeds()]),
     )?;
-
-    let port_additional_states_pda_key = Pubkey::create_program_address(
-        &[
-            ctx.accounts.vault.key().as_ref(),
-            b"port_additional_state".as_ref(),
-            &[ctx.accounts.vault.vault_port_additional_state_bump],
-        ],
-        &ctx.program_id,
-    )?;
-    if port_additional_states_pda_key != ctx.accounts.port_additional_states.key() {
-        return Err(ErrorCode::InvalidAccount.into());
-    }
 
     ctx.accounts
         .port_additional_states

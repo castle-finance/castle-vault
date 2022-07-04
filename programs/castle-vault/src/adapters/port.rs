@@ -33,6 +33,10 @@ pub struct PortAccounts<'info> {
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
     pub vault_authority: AccountInfo<'info>,
 
+    #[account(
+        seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
+        bump = vault.vault_port_additional_state_bump
+    )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
     /// Token account for the vault's reserve tokens
@@ -43,13 +47,25 @@ pub struct PortAccounts<'info> {
     #[account(mut)]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [vault.key().as_ref(), b"port_obligation".as_ref()], 
+        bump = port_additional_states.vault_port_obligation_bump
+    )]
     pub vault_port_obligation: AccountInfo<'info>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [vault.key().as_ref(), b"port_stake".as_ref()], 
+        bump = port_additional_states.vault_port_stake_account_bump
+    )]
     pub vault_port_stake_account: Box<Account<'info, PortStakeAccount>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [vault.key().as_ref(), b"port_reward".as_ref()], 
+        bump = port_additional_states.vault_port_reward_token_bump
+    )]
     pub vault_port_reward_token: AccountInfo<'info>,
 
     /// ID of the staking pool
@@ -103,52 +119,6 @@ pub struct PortAccounts<'info> {
 impl_has_vault!(PortAccounts<'_>);
 
 impl<'info> LendingMarket for PortAccounts<'info> {
-    fn verify_accounts(&self, program_id: &Pubkey) -> ProgramResult {
-        let port_additional_states_pda_key = Pubkey::create_program_address(
-            &[
-                self.vault.key().as_ref(),
-                b"port_additional_state".as_ref(),
-                &[self.vault.vault_port_additional_state_bump],
-            ],
-            program_id,
-        )?;
-        let port_stake_account_pda_key = Pubkey::create_program_address(
-            &[
-                self.vault.key().as_ref(),
-                b"port_stake".as_ref(),
-                &[self.port_additional_states.vault_port_stake_account_bump],
-            ],
-            program_id,
-        )?;
-        let port_reward_account_pda_key = Pubkey::create_program_address(
-            &[
-                self.vault.key().as_ref(),
-                b"port_reward".as_ref(),
-                &[self.port_additional_states.vault_port_reward_token_bump],
-            ],
-            program_id,
-        )?;
-        let port_obligation_pda_key = Pubkey::create_program_address(
-            &[
-                self.vault.key().as_ref(),
-                b"port_obligation".as_ref(),
-                &[self.port_additional_states.vault_port_obligation_bump],
-            ],
-            program_id,
-        )?;
-
-        if port_additional_states_pda_key != self.port_additional_states.key()
-            || port_stake_account_pda_key != self.vault_port_stake_account.key()
-            || port_reward_account_pda_key != self.vault_port_reward_token.key()
-            || port_obligation_pda_key != self.vault_port_obligation.key()
-            || self.port_additional_states.port_lp_token_account != self.port_lp_token_account.key()
-            || self.port_additional_states.port_staking_pool != self.port_staking_pool.key()
-        {
-            return Err(ErrorCode::InvalidAccount.into());
-        }
-        Ok(())
-    }
-
     fn deposit(&self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.port_lend_program.clone(),
@@ -360,11 +330,20 @@ pub struct RefreshPort<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    #[account(
+        seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
+        bump = vault.vault_port_additional_state_bump
+    )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
     /// Token account for the vault's port lp tokens
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
+    #[account(
+        mut,
+        seeds = [vault.key().as_ref(), b"port_stake".as_ref()], 
+        bump = port_additional_states.vault_port_stake_account_bump
+    )]
     pub vault_port_stake_account: Box<Account<'info, PortStakeAccount>>,
 
     #[account(
@@ -398,7 +377,6 @@ impl<'info> RefreshPort<'info> {
 impl<'info> Refresher<'info> for RefreshPort<'info> {
     fn update_actual_allocation(
         &mut self,
-        program_id: &Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult {
         if self
@@ -406,29 +384,6 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
             .get_yield_source_flags()
             .contains(YieldSourceFlags::PORT)
         {
-            // Verify account integrity
-            let port_additional_states_pda_key = Pubkey::create_program_address(
-                &[
-                    self.vault.key().as_ref(),
-                    b"port_additional_state".as_ref(),
-                    &[self.vault.vault_port_additional_state_bump],
-                ],
-                program_id,
-            )?;
-            let port_stake_account_pda_key = Pubkey::create_program_address(
-                &[
-                    self.vault.key().as_ref(),
-                    b"port_stake".as_ref(),
-                    &[self.port_additional_states.vault_port_stake_account_bump],
-                ],
-                program_id,
-            )?;
-            if port_additional_states_pda_key != self.port_additional_states.key()
-                || port_stake_account_pda_key != self.vault_port_stake_account.key()
-            {
-                return Err(ErrorCode::InvalidAccount.into());
-            }
-
             port_anchor_adaptor::refresh_port_reserve(
                 self.port_refresh_reserve_context(remaining_accounts),
             )?;

@@ -13,7 +13,6 @@ use crate::{
 pub trait Refresher<'info> {
     fn update_actual_allocation(
         &mut self,
-        program_id: &Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
     ) -> ProgramResult;
 }
@@ -24,5 +23,5 @@ pub fn handler<'info, T: Refresher<'info>>(ctx: Context<'_, '_, '_, 'info, T>) -
     msg!("Refreshing yield source");
 
     ctx.accounts
-        .update_actual_allocation(ctx.program_id, ctx.remaining_accounts)
+        .update_actual_allocation(ctx.remaining_accounts)
 }
