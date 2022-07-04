@@ -15,8 +15,7 @@ use instructions::*;
 declare_id!("Cast1eoVj8hwfKKRPji4cqX7WFgcnYz3um7TTgnaJKFn");
 
 #[cfg(feature = "devnet-castle-addr")]
-declare_id!("J3Q5tokVSSv8xmXYL4go1qUVLrDS61rejzXFLsaKkDdW");
-// declare_id!("4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK");
+declare_id!("4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK");
 
 #[program]
 pub mod castle_vault {
