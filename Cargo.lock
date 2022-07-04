@@ -1178,8 +1178,8 @@ dependencies = [
 
 [[package]]
 name = "port-anchor-adaptor"
-version = "0.3.4"
-source = "git+https://github.com/udbhav1/port-anchor-adaptor.git#a7d2b904f5f5b5a609daee99aeec8c8e285d76aa"
+version = "0.3.6"
+source = "git+https://github.com/udbhav1/port-anchor-adaptor.git#f950f2c3aaecbec83bf31b2e1ae69c1a62b4621d"
 dependencies = [
  "anchor-lang 0.24.2",
  "num-derive",
