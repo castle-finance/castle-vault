@@ -84,16 +84,7 @@ pub struct Vault {
     pub lp_token_supply: u64,
 
     pub vault_port_additional_state_bump: u8,
-
-    // /// Port staking account
-    // pub vault_port_stake_account: Pubkey,
-
-    // /// Account used to receive Port staking reward
-    // pub vault_port_reward_token: Pubkey,
-
-    // /// Account used for the port staking program
-    // pub vault_port_obligation: Pubkey,
-    /// Reserved space for future upgrades
+    
     _reserved0: [u8; 3],
     _reserved1: [u32; 25],
 }

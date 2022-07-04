@@ -20,7 +20,6 @@ use crate::{
 pub struct PortAccounts<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
-    /// TODO check if we should verify has_one for the staking accounts and staking pool ID
     #[account(
         mut,
         has_one = vault_authority,
@@ -35,7 +34,9 @@ pub struct PortAccounts<'info> {
 
     #[account(
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
-        bump = vault.vault_port_additional_state_bump
+        bump = vault.vault_port_additional_state_bump,
+        has_one = port_staking_pool,
+        has_one = port_staking_reward_pool
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 

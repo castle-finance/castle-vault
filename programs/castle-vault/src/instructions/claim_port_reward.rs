@@ -8,7 +8,6 @@ use crate::state::{Vault, VaultPortAdditionalState};
 pub struct ClaimPortReward<'info> {
     /// Vault state account
     /// Checks that the accounts passed in are correct
-    /// TODO check if we should verify has_one for the staking accounts and staking pool ID
     #[account(
         mut,
         has_one = vault_authority,
