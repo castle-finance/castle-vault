@@ -47,7 +47,7 @@ pub struct PortAccounts<'info> {
     pub vault_port_obligation: AccountInfo<'info>,
 
     #[account(mut)]
-    pub vault_port_stake_account: AccountInfo<'info>,
+    pub vault_port_stake_account: Box<Account<'info, PortStakeAccount>>,
 
     #[account(mut)]
     pub vault_port_reward_token: AccountInfo<'info>,
@@ -163,7 +163,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                 destination_collateral: self.port_lp_token_account.clone(),
                 obligation: self.vault_port_obligation.clone(),
                 obligation_owner: self.vault_authority.clone(),
-                stake_account: self.vault_port_stake_account.clone(),
+                stake_account: self.vault_port_stake_account.to_account_info(),
                 staking_pool: self.port_staking_pool.clone(),
                 transfer_authority: self.vault_authority.clone(),
                 clock: self.clock.to_account_info(),
@@ -198,7 +198,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                 obligation: self.vault_port_obligation.clone(),
                 lending_market: self.port_market.clone(),
                 lending_market_authority: self.port_market_authority.clone(),
-                stake_account: self.vault_port_stake_account.clone(),
+                stake_account: self.vault_port_stake_account.to_account_info(),
                 staking_pool: self.port_staking_pool.clone(),
                 obligation_owner: self.vault_authority.clone(),
                 clock: self.clock.to_account_info(),
@@ -260,14 +260,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
     }
 
     fn lp_tokens_in_vault(&self) -> u64 {
-        // TODO can this be improved?
-        // We want to go from Rc<RefCell<&mut [u8]>> to &mut &[u8]
-        let h1 = self.vault_port_stake_account.data.deref().borrow();
-        let mut raw: Vec<u8> = vec![0; h1.len()];
-        raw.clone_from_slice(&h1);
-        let mut h2 = raw.as_slice();
-        let stake_account = PortStakeAccount::try_deserialize(&mut h2).unwrap();
-        self.vault_port_lp_token.amount + stake_account.deposited_amount
+        self.vault_port_lp_token.amount + self.vault_port_stake_account.deposited_amount
     }
 
     fn provider(&self) -> Provider {
