@@ -36,7 +36,7 @@ import {
     LendingMarket,
     PortReserveAsset,
     SolendReserveAsset,
-    JetReserveAsset,
+    // JetReserveAsset,
 } from "./adapters";
 import {
     ProposedWeightsBps,
@@ -51,7 +51,7 @@ import { ExchangeRate, Rate, Token, TokenAmount } from "./utils";
 interface YieldSources {
     solend?: SolendReserveAsset;
     port?: PortReserveAsset;
-    jet?: JetReserveAsset;
+    // jet?: JetReserveAsset;
 }
 
 export class VaultClient {
@@ -94,13 +94,13 @@ export class VaultClient {
                 reserveMint
             );
         }
-        if (vaultState.yieldSourceFlags & YieldSourceFlags.Jet) {
-            yieldSources.jet = await JetReserveAsset.load(
-                provider,
-                cluster,
-                reserveMint
-            );
-        }
+        // if (vaultState.yieldSourceFlags & YieldSourceFlags.Jet) {
+        //     yieldSources.jet = await JetReserveAsset.load(
+        //         provider,
+        //         cluster,
+        //         reserveMint
+        //     );
+        // }
 
         const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
             provider.connection,
@@ -301,32 +301,32 @@ export class VaultClient {
         this.yieldSources.port = port;
     }
 
-    async initializeJet(
-        wallet: anchor.Wallet,
-        jet: JetReserveAsset,
-        owner: Keypair
-    ) {
-        const tx = new Transaction();
-        tx.add(
-            await jet.getInitializeIx(
-                this.program,
-                this.vaultId,
-                this.vaultState.vaultAuthority,
-                wallet.payer.publicKey,
-                owner.publicKey
-            )
-        );
+    // async initializeJet(
+    //     wallet: anchor.Wallet,
+    //     jet: JetReserveAsset,
+    //     owner: Keypair
+    // ) {
+    //     const tx = new Transaction();
+    //     tx.add(
+    //         await jet.getInitializeIx(
+    //             this.program,
+    //             this.vaultId,
+    //             this.vaultState.vaultAuthority,
+    //             wallet.payer.publicKey,
+    //             owner.publicKey
+    //         )
+    //     );
 
-        const txSig = await this.program.provider.send(tx, [
-            owner,
-            wallet.payer,
-        ]);
-        await this.program.provider.connection.confirmTransaction(
-            txSig,
-            "finalized"
-        );
-        this.yieldSources.jet = jet;
-    }
+    //     const txSig = await this.program.provider.send(tx, [
+    //         owner,
+    //         wallet.payer,
+    //     ]);
+    //     await this.program.provider.connection.confirmTransaction(
+    //         txSig,
+    //         "finalized"
+    //     );
+    //     this.yieldSources.jet = jet;
+    // }
 
     // Solana transaction size limits that we can refresh at most 3(or 4) pools atomically (in a single tx)
     // We must atomically refresh the pools in which we have non-zero allocation.
@@ -445,10 +445,10 @@ export class VaultClient {
                     this.yieldSources.port != null
                         ? this.vaultState.vaultPortLpToken
                         : Keypair.generate().publicKey,
-                vaultJetLpToken:
-                    this.yieldSources.jet != null
-                        ? this.vaultState.vaultJetLpToken
-                        : Keypair.generate().publicKey,
+                // vaultJetLpToken:
+                //     this.yieldSources.jet != null
+                //         ? this.vaultState.vaultJetLpToken
+                //         : Keypair.generate().publicKey,
                 lpTokenMint: this.vaultState.lpTokenMint,
                 tokenProgram: TOKEN_PROGRAM_ID,
             },
@@ -839,10 +839,10 @@ export class VaultClient {
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
                             : Keypair.generate().publicKey,
-                    jetReserve:
-                        this.yieldSources.jet != null
-                            ? this.yieldSources.jet.accounts.reserve
-                            : Keypair.generate().publicKey,
+                    // jetReserve:
+                    //     this.yieldSources.jet != null
+                    //         ? this.yieldSources.jet.accounts.reserve
+                    //         : Keypair.generate().publicKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
             })
@@ -878,7 +878,29 @@ export class VaultClient {
             .concat([this.getConsolidateRefreshIx()]);
 
         // Sort ixs in descending order of outflows
-        const newAllocations = (
+        // const newAllocations = (
+        //     await this.program.simulate.rebalance(proposedWeights, {
+        //         accounts: {
+        //             vault: this.vaultId,
+        //             solendReserve:
+        //                 this.yieldSources.solend != null
+        //                     ? this.yieldSources.solend.accounts.reserve
+        //                     : Keypair.generate().publicKey,
+        //             portReserve:
+        //                 this.yieldSources.port != null
+        //                     ? this.yieldSources.port.accounts.reserve
+        //                     : Keypair.generate().publicKey,
+        //             // jetReserve:
+        //             //     this.yieldSources.jet != null
+        //             //         ? this.yieldSources.jet.accounts.reserve
+        //             //         : Keypair.generate().publicKey,
+        //             clock: SYSVAR_CLOCK_PUBKEY,
+        //         },
+        //         instructions: simIx,
+        //     })
+        // ).events[1].data as RebalanceDataEvent;
+
+        let tmp = (
             await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
@@ -890,15 +912,19 @@ export class VaultClient {
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
                             : Keypair.generate().publicKey,
-                    jetReserve:
-                        this.yieldSources.jet != null
-                            ? this.yieldSources.jet.accounts.reserve
-                            : Keypair.generate().publicKey,
+                    // jetReserve:
+                    //     this.yieldSources.jet != null
+                    //         ? this.yieldSources.jet.accounts.reserve
+                    //         : Keypair.generate().publicKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
                 instructions: simIx,
             })
-        ).events[1].data as RebalanceDataEvent;
+        )
+        // console.log("CAMEL")
+        // console.log(tmp)
+        
+        const newAllocations = tmp.events[1].data as RebalanceDataEvent;
 
         const newAndOldallocations = await Promise.all(
             Object.entries(this.yieldSources).map(
@@ -1091,9 +1117,9 @@ export class VaultClient {
         return this.yieldSources.port.getLpTokenAccountValue(this.vaultState);
     }
 
-    async getVaultJetLpTokenAccountValue(): Promise<TokenAmount> {
-        return this.yieldSources.jet.getLpTokenAccountValue(this.vaultState);
-    }
+    // async getVaultJetLpTokenAccountValue(): Promise<TokenAmount> {
+    //     return this.yieldSources.jet.getLpTokenAccountValue(this.vaultState);
+    // }
 
     /**
      * Calculates the ATA given the user's address and vault mint
@@ -1237,9 +1263,9 @@ export class VaultClient {
         return this.yieldSources.port;
     }
 
-    getJet(): JetReserveAsset {
-        return this.yieldSources.jet;
-    }
+    // getJet(): JetReserveAsset {
+    //     return this.yieldSources.jet;
+    // }
 
     getReferralFeeSplit(): Rate {
         return Rate.fromPercent(this.vaultState.config.referralFeePct);

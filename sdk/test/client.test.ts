@@ -4,7 +4,7 @@ import { NATIVE_MINT } from "@solana/spl-token";
 import { Wallet, Provider } from "@project-serum/anchor";
 
 import {
-    JetReserveAsset,
+    // JetReserveAsset,
     PortReserveAsset,
     SolendReserveAsset,
     VaultClient,
@@ -26,7 +26,7 @@ describe("VaultClient", () => {
     const depositAmount = new TokenAmount(Big(0.05), 9);
 
     let vaultClient: VaultClient;
-    let jet: JetReserveAsset;
+    // let jet: JetReserveAsset;
     let solend: SolendReserveAsset;
     let port: PortReserveAsset;
 
@@ -55,18 +55,18 @@ describe("VaultClient", () => {
         );
         console.log("APY: ", (await vaultClient.getApy()).toNumber());
 
-        jet = vaultClient.getJet();
-        solend = vaultClient.getSolend();
-        port = vaultClient.getPort();
+        // jet = vaultClient.getJet();
+        // solend = vaultClient.getSolend();
+        // port = vaultClient.getPort();
 
-        console.log("Jet");
-        console.log(
-            "value: ",
-            (await vaultClient.getVaultJetLpTokenAccountValue()).getAmount()
-        );
-        console.log((await jet.getApy()).toNumber());
-        console.log((await jet.getBorrowedAmount()).getAmount());
-        console.log((await jet.getDepositedAmount()).getAmount());
+        // console.log("Jet");
+        // console.log(
+        //     "value: ",
+        //     (await vaultClient.getVaultJetLpTokenAccountValue()).getAmount()
+        // );
+        // console.log((await jet.getApy()).toNumber());
+        // console.log((await jet.getBorrowedAmount()).getAmount());
+        // console.log((await jet.getDepositedAmount()).getAmount());
 
         console.log("Solend");
         console.log(
