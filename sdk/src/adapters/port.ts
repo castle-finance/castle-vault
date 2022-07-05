@@ -137,11 +137,10 @@ export class PortReserveAsset extends LendingMarket {
             pubkey: targetStakingPool.getRewardTokenPool(),
             account: rewardMintRaw,
         });
-        const [stakingProgamAuthority, bump] =
-            await PublicKey.findProgramAddress(
-                [targetStakingPool.getId().toBuffer()],
-                env.getStakingProgramPk()
-            );
+        const [stakingProgamAuthority] = await PublicKey.findProgramAddress(
+            [targetStakingPool.getId().toBuffer()],
+            env.getStakingProgramPk()
+        );
 
         // Get sub-reward accounts, these are optional
         const subRewardPool = targetStakingPool.getSubRewardTokenPool();
@@ -156,7 +155,7 @@ export class PortReserveAsset extends LendingMarket {
             }).getMintId();
         }
 
-        const [marketAuthority, _] = await PublicKey.findProgramAddress(
+        const [marketAuthority] = await PublicKey.findProgramAddress(
             [market.toBuffer()],
             env.getLendingProgramPk()
         );
@@ -697,7 +696,7 @@ async function createDefaultReserve(
         lendingMarketAuthority
     );
 
-    let config = DEFAULT_RESERVE_CONFIG;
+    const config = DEFAULT_RESERVE_CONFIG;
     config.stakingPoolOption = 1;
     config.stakingPool = stakingPool;
 
@@ -755,7 +754,7 @@ async function createDefaultReserve(
         pubkey: targetStakingPool.getRewardTokenPool(),
         account: rewardMintRaw,
     });
-    const [stakingProgamAuthority, bump] = await PublicKey.findProgramAddress(
+    const [stakingProgamAuthority] = await PublicKey.findProgramAddress(
         [targetStakingPool.getId().toBuffer()],
         env.getStakingProgramPk()
     );
