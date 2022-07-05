@@ -665,18 +665,6 @@ export class VaultClient {
                 vault: this.vaultId,
                 vaultAuthority: this.vaultState.vaultAuthority,
                 vaultReserveToken: this.vaultState.vaultReserveToken,
-                vaultSolendLpToken:
-                    this.yieldSources.solend != null
-                        ? this.vaultState.vaultSolendLpToken
-                        : Keypair.generate().publicKey,
-                vaultPortLpToken:
-                    this.yieldSources.port != null
-                        ? this.vaultState.vaultPortLpToken
-                        : Keypair.generate().publicKey,
-                vaultJetLpToken:
-                    this.yieldSources.jet != null
-                        ? this.vaultState.vaultJetLpToken
-                        : Keypair.generate().publicKey,
                 lpTokenMint: this.vaultState.lpTokenMint,
                 tokenProgram: TOKEN_PROGRAM_ID,
             },

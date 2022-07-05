@@ -825,21 +825,6 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "vaultPortLpToken";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultJetLpToken";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultSolendLpToken";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
                     name: "lpTokenMint";
                     isMut: true;
                     isSigner: false;
@@ -2571,21 +2556,6 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "vaultReserveToken",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultPortLpToken",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultJetLpToken",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultSolendLpToken",
                     isMut: false,
                     isSigner: false,
                 },

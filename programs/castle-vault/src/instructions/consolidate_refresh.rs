@@ -33,15 +33,6 @@ pub struct ConsolidateRefresh<'info> {
     /// Token account for the vault's reserve tokens
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
-    // NOTE: make sure the owner is as expected (currently done using `try_from`)
-    //       and the keys match the vault (currently explicitly checked before `try_from`)
-    //#[soteria(ignore)]
-    pub vault_port_lp_token: AccountInfo<'info>,
-    //#[soteria(ignore)]
-    pub vault_jet_lp_token: AccountInfo<'info>,
-    //#[soteria(ignore)]
-    pub vault_solend_lp_token: AccountInfo<'info>,
-
     /// Mint for the vault lp token
     #[account(mut)]
     pub lp_token_mint: Box<Account<'info, Mint>>,
