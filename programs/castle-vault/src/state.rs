@@ -84,7 +84,7 @@ pub struct Vault {
     pub lp_token_supply: u64,
 
     pub vault_port_additional_state_bump: u8,
-    
+
     _reserved0: [u8; 3],
     _reserved1: [u32; 25],
 }
