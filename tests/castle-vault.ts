@@ -261,7 +261,7 @@ describe("castle-vault", () => {
                 provider.wallet as anchor.Wallet,
                 owner
             );
-            await vaultClient.initializeRewardAccount(
+            await vaultClient.initializePortRewardAccounts(
                 provider.wallet as anchor.Wallet,
                 owner,
                 provider,

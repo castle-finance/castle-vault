@@ -347,7 +347,7 @@ export class VaultClient {
         );
     }
 
-    async initializeRewardAccount(
+    async initializePortRewardAccounts(
         wallet: anchor.Wallet,
         owner: Keypair,
         provider: anchor.Provider,
@@ -414,7 +414,7 @@ export class VaultClient {
 
         const tx = new Transaction();
         tx.add(
-            this.program.instruction.initializeRewardAccount(
+            this.program.instruction.initializePortRewardAccounts(
                 portObligationBump,
                 portStakeBump,
                 portRewardBump,

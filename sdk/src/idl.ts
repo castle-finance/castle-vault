@@ -128,7 +128,7 @@ export type CastleVault = {
             ];
         },
         {
-            name: "initializeRewardAccount";
+            name: "initializePortRewardAccounts";
             accounts: [
                 {
                     name: "vault";
@@ -1878,7 +1878,7 @@ export const IDL: CastleVault = {
             ],
         },
         {
-            name: "initializeRewardAccount",
+            name: "initializePortRewardAccounts",
             accounts: [
                 {
                     name: "vault",

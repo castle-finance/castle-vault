@@ -10,7 +10,7 @@ use crate::state::*;
 
 #[derive(Accounts)]
 #[instruction(obligation_bump:u8, stake_bump:u8, reward_bump: u8, sub_reward_bump: u8)]
-pub struct InitializeRewardAccount<'info> {
+pub struct InitializePortRewardAccounts<'info> {
     #[account(
         mut,
         has_one = owner,
@@ -120,7 +120,7 @@ pub struct InitializeRewardAccount<'info> {
 }
 
 pub fn handler(
-    ctx: Context<InitializeRewardAccount>,
+    ctx: Context<InitializePortRewardAccounts>,
     obligation_bump: u8,
     stake_bump: u8,
     reward_bump: u8,
