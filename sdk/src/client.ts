@@ -443,7 +443,8 @@ export class VaultClient {
                         portStakingRewardPool:
                             this.yieldSources.port.accounts.stakingRewardPool,
                         portStakingSubRewardPool:
-                            this.yieldSources.port.accounts.stakingSubRewardPool,
+                            this.yieldSources.port.accounts
+                                .stakingSubRewardPool,
                         portStakeProgram:
                             this.yieldSources.port.accounts.stakingProgram,
                         portLendProgram:
