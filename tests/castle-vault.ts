@@ -810,10 +810,47 @@ describe("castle-vault", () => {
                 jet: expectedJetRatio * 10000,
             });
 
+            const maxDiffAllowed = 1;
+
+            // Deleberately craft an incomplete refresh
+            // This should fail, because we should refresh all pools that was updated by the rebalance
+            const refreshTx = new Transaction();
+            refreshTx.add(
+                vaultClient
+                    .getSolend()
+                    .getRefreshIx(
+                        program,
+                        vaultClient.vaultId,
+                        vaultClient.getVaultState()
+                    )
+            );
+            refreshTx.add(vaultClient.getConsolidateRefreshIx());
+            const expectedErrorCode = "0x12f";
+            try {
+                const sig = await program.provider.send(refreshTx);
+                await program.provider.connection.confirmTransaction(
+                    sig,
+                    "singleGossip"
+                );
+            } catch (err) {
+                assert.isTrue(
+                    err.message.includes(expectedErrorCode),
+                    `Error code ${expectedErrorCode} not included in error message: ${err}`
+                );
+            }
+
+            await vaultClient.reload();
+            const vaultValutStoredOnChain = vaultClient
+                .getVaultState()
+                .value.value.toNumber();
+            assert.isAtMost(
+                Math.abs(vaultValutStoredOnChain - Math.floor(depositQty)),
+                maxDiffAllowed
+            );
+
             // TODO Resolve the difference
             // Use isAtMost because on-chain rust program handles rounding differently than TypeScript.
             // However the difference should not exceet 1 token.
-            const maxDiffAllowed = 1;
             const totalValue = await getVaultTotalValue();
             assert.isAtMost(
                 Math.abs(totalValue - Math.floor(depositQty)),

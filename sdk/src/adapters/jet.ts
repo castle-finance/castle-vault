@@ -305,6 +305,7 @@ export class JetReserveAsset extends LendingMarket {
                     jetReserveToken: this.accounts.liquiditySupply,
                     jetLpMint: this.accounts.depositNoteMint,
                     tokenProgram: TOKEN_PROGRAM_ID,
+                    clock: SYSVAR_CLOCK_PUBKEY,
                 },
             }
         );

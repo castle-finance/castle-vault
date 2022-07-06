@@ -998,17 +998,16 @@ export class VaultClient {
                 )
             ).sort((a, b) => b[0].sub(a[0]).toNumber());
 
-            const toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
+            let toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
             let reconciledAmount = Big(0);
             let n = 0;
             while (reconciledAmount.lt(toReconcileAmount)) {
                 const [alloc, k] = reconcileIxs[n];
 
                 // min of alloc and toWithdrawAmount - withdrawnAmount
-                const reconcileAmount = alloc.gt(
-                    toReconcileAmount.sub(reconciledAmount)
-                )
-                    ? toReconcileAmount
+                const remainingAmount = toReconcileAmount.sub(reconciledAmount);
+                const reconcileAmount = alloc.gt(remainingAmount)
+                    ? remainingAmount
                     : alloc;
 
                 if (!Big(0).eq(reconcileAmount)) {

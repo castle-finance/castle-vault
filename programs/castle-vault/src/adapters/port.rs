@@ -121,7 +121,7 @@ pub struct PortAccounts<'info> {
 impl_has_vault!(PortAccounts<'_>);
 
 impl<'info> LendingMarket for PortAccounts<'info> {
-    fn deposit(&self, amount: u64) -> ProgramResult {
+    fn deposit(&mut self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.port_lend_program.clone(),
             port_anchor_adaptor::DepositAndCollateralize {
@@ -149,10 +149,18 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                 context.with_signer(&[&self.vault.authority_seeds()]),
                 amount,
             ),
-        }
+        }?; 
+
+        let vault_reserve_value_delta = self.convert_amount_lp_to_reserve(amount)?;
+        let port_value = self.vault.actual_allocations[Provider::Port]
+            .value
+            .checked_add(vault_reserve_value_delta)
+            .ok_or(ErrorCode::MathError)?;
+        self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
+        Ok(())
     }
 
-    fn redeem(&self, amount: u64) -> ProgramResult {
+    fn redeem(&mut self, amount: u64) -> ProgramResult {
         let refresh_obligation_context = CpiContext::new(
             self.port_lend_program.clone(),
             port_anchor_adaptor::RefreshObligation {
@@ -214,7 +222,15 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                     amount,
                 )
             }),
-        }
+        }?; 
+
+        let vault_reserve_value_delta = self.convert_amount_lp_to_reserve(amount)?;
+        let port_value = self.vault.actual_allocations[Provider::Port]
+            .value
+            .checked_sub(vault_reserve_value_delta)
+            .ok_or(ErrorCode::MathError)?;
+        self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
+        Ok(())
     }
 
     fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64, ProgramError> {
