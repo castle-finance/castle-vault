@@ -1,7 +1,12 @@
 import { assert } from "chai";
 import * as anchor from "@project-serum/anchor";
 import { TOKEN_PROGRAM_ID, Token, NATIVE_MINT } from "@solana/spl-token";
-import { Keypair, PublicKey, TransactionSignature } from "@solana/web3.js";
+import {
+    Keypair,
+    PublicKey,
+    TransactionSignature,
+    Transaction,
+} from "@solana/web3.js";
 import { StakingPool, StakeAccount } from "@castlefinance/port-sdk";
 
 import {
@@ -810,47 +815,10 @@ describe("castle-vault", () => {
                 jet: expectedJetRatio * 10000,
             });
 
-            const maxDiffAllowed = 1;
-
-            // Deleberately craft an incomplete refresh
-            // This should fail, because we should refresh all pools that was updated by the rebalance
-            const refreshTx = new Transaction();
-            refreshTx.add(
-                vaultClient
-                    .getSolend()
-                    .getRefreshIx(
-                        program,
-                        vaultClient.vaultId,
-                        vaultClient.getVaultState()
-                    )
-            );
-            refreshTx.add(vaultClient.getConsolidateRefreshIx());
-            const expectedErrorCode = "0x12f";
-            try {
-                const sig = await program.provider.send(refreshTx);
-                await program.provider.connection.confirmTransaction(
-                    sig,
-                    "singleGossip"
-                );
-            } catch (err) {
-                assert.isTrue(
-                    err.message.includes(expectedErrorCode),
-                    `Error code ${expectedErrorCode} not included in error message: ${err}`
-                );
-            }
-
-            await vaultClient.reload();
-            const vaultValutStoredOnChain = vaultClient
-                .getVaultState()
-                .value.value.toNumber();
-            assert.isAtMost(
-                Math.abs(vaultValutStoredOnChain - Math.floor(depositQty)),
-                maxDiffAllowed
-            );
-
             // TODO Resolve the difference
             // Use isAtMost because on-chain rust program handles rounding differently than TypeScript.
             // However the difference should not exceet 1 token.
+            const maxDiffAllowed = 1;
             const totalValue = await getVaultTotalValue();
             assert.isAtMost(
                 Math.abs(totalValue - Math.floor(depositQty)),
@@ -1134,6 +1102,68 @@ describe("castle-vault", () => {
         });
     });
 
+    describe("Refresh Check", () => {
+        const rebalanceMode = RebalanceModes.calculator;
+        before(initLendingMarkets);
+        before(async function () {
+            await initializeVault({
+                allocationCapPct: vaultAllocationCap,
+                strategyType: { [StrategyTypes.equalAllocation]: {} },
+                rebalanceMode: { [RebalanceModes.calculator]: {} },
+            });
+        });
+
+        it("Incomplete refresh after rebalance should not succeed", async function () {
+            const depositQty = 3000000;
+            await mintReserveToken(userReserveTokenAccount, depositQty);
+            await depositToVault(depositQty);
+
+            await performRebalance({
+                solend: (1 / 3) * 10000,
+                port: (1 / 3) * 10000,
+                jet: (1 / 3) * 10000,
+            });
+
+            const maxDiffAllowed = 1;
+
+            // Deleberately craft an incomplete refresh
+            const refreshTx = new Transaction();
+            refreshTx.add(
+                vaultClient
+                    .getJet()
+                    .getRefreshIx(
+                        program,
+                        vaultClient.vaultId,
+                        vaultClient.getVaultState()
+                    )
+            );
+            refreshTx.add(vaultClient.getConsolidateRefreshIx());
+
+            const expectedErrorCode = "0x12f";
+            try {
+                const sig = await program.provider.send(refreshTx);
+                await program.provider.connection.confirmTransaction(
+                    sig,
+                    "singleGossip"
+                );
+            } catch (err) {
+                assert.isTrue(
+                    err.message.includes(expectedErrorCode),
+                    `Error code ${expectedErrorCode} not included in error message: ${err}`
+                );
+            }
+
+            await vaultClient.reload();
+            const vaultValutStoredOnChain = vaultClient
+                .getVaultState()
+                .value.value.toNumber();
+            assert.isAtMost(
+                Math.abs(vaultValutStoredOnChain - Math.floor(depositQty)),
+                maxDiffAllowed
+            );
+        });
+    });
+
     describe("Disabled pools", () => {
         describe("Rebalance with equal allocation strategy missing 1 pool", () => {
             const rebalanceMode = RebalanceModes.calculator;
@@ -1346,7 +1376,7 @@ describe("castle-vault", () => {
             const rewardAmountAfterClaiming =
                 await port.getUnclaimedStakingRewards(program);
             assert.equal(rewardAmountAfterClaiming, 0);
-            
+
             const mint = port.accounts.stakingRewardTokenMint;
             const rewardToken = new Token(
                 program.provider.connection,
