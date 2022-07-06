@@ -64,7 +64,7 @@ pub struct JetAccounts<'info> {
     #[account(mut)]
     //#[soteria(ignore)]
     pub jet_lp_mint: AccountInfo<'info>,
-    
+
     pub token_program: Program<'info, Token>,
 
     pub clock: Sysvar<'info, Clock>,

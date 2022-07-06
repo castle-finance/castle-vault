@@ -149,7 +149,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                 context.with_signer(&[&self.vault.authority_seeds()]),
                 amount,
             ),
-        }?; 
+        }?;
 
         let vault_reserve_value_delta = self.convert_amount_lp_to_reserve(amount)?;
         let port_value = self.vault.actual_allocations[Provider::Port]
@@ -222,7 +222,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
                     amount,
                 )
             }),
-        }?; 
+        }?;
 
         let vault_reserve_value_delta = self.convert_amount_lp_to_reserve(amount)?;
         let port_value = self.vault.actual_allocations[Provider::Port]
