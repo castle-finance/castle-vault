@@ -92,6 +92,180 @@ export type CastleVault = {
             ];
         },
         {
+            name: "initializePortAdditionalState";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portAdditionalStates";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "bump";
+                    type: "u8";
+                }
+            ];
+        },
+        {
+            name: "initializePortRewardAccounts";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portAdditionalStates";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortObligation";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortStakeAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortRewardToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortSubRewardToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portLpTokenAccount";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portRewardTokenMint";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portSubRewardTokenMint";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingPool";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingRewardPool";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingSubRewardPool";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakeProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portLendProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portLendingMarket";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "associatedTokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "clock";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "rent";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "obligationBump";
+                    type: "u8";
+                },
+                {
+                    name: "stakeBump";
+                    type: "u8";
+                },
+                {
+                    name: "rewardBump";
+                    type: "u8";
+                },
+                {
+                    name: "subRewardBump";
+                    type: "u8";
+                }
+            ];
+        },
+        {
             name: "initializeJet";
             accounts: [
                 {
@@ -539,12 +713,22 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "portAdditionalStates";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "vaultPortLpToken";
                     isMut: false;
                     isSigner: false;
                 },
                 {
-                    name: "portProgram";
+                    name: "vaultPortStakeAccount";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portLendProgram";
                     isMut: false;
                     isSigner: false;
                 },
@@ -637,21 +821,6 @@ export type CastleVault = {
                 },
                 {
                     name: "vaultReserveToken";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultPortLpToken";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultJetLpToken";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "vaultSolendLpToken";
                     isMut: false;
                     isSigner: false;
                 },
@@ -753,6 +922,11 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "portAdditionalStates";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "vaultReserveToken";
                     isMut: true;
                     isSigner: false;
@@ -763,8 +937,48 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portProgram";
+                    name: "vaultPortObligation";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortStakeAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortRewardToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingPool";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portLendProgram";
                     isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakeProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingRewardPool";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portLpTokenAccount";
+                    isMut: true;
                     isSigner: false;
                 },
                 {
@@ -875,6 +1089,82 @@ export type CastleVault = {
                     type: "u64";
                 }
             ];
+        },
+        {
+            name: "claimPortReward";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portAdditionalStates";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortStakeAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortRewardToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortSubRewardToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingPool";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portLendProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakeProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingRewardPool";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingSubRewardPool";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "clock";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
         }
     ];
     accounts: [
@@ -988,9 +1278,71 @@ export type CastleVault = {
                         type: "u64";
                     },
                     {
-                        name: "reserved";
+                        name: "vaultPortAdditionalStateBump";
+                        type: "u8";
+                    },
+                    {
+                        name: "reserved0";
                         type: {
-                            array: ["u32", 26];
+                            array: ["u8", 3];
+                        };
+                    },
+                    {
+                        name: "reserved1";
+                        type: {
+                            array: ["u32", 25];
+                        };
+                    }
+                ];
+            };
+        },
+        {
+            name: "vaultPortAdditionalState";
+            type: {
+                kind: "struct";
+                fields: [
+                    {
+                        name: "vaultPortStakeAccountBump";
+                        type: "u8";
+                    },
+                    {
+                        name: "vaultPortRewardTokenBump";
+                        type: "u8";
+                    },
+                    {
+                        name: "vaultPortObligationBump";
+                        type: "u8";
+                    },
+                    {
+                        name: "vaultPortSubRewardTokenBump";
+                        type: "u8";
+                    },
+                    {
+                        name: "portLpTokenAccount";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "portStakingPool";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "portStakingRewardPool";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "portStakingSubRewardPool";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "reserved0";
+                        type: {
+                            array: ["u8", 4];
+                        };
+                    },
+                    {
+                        name: "reserved1";
+                        type: {
+                            array: ["u64", 32];
                         };
                     }
                 ];
@@ -1469,6 +1821,180 @@ export const IDL: CastleVault = {
             ],
         },
         {
+            name: "initializePortAdditionalState",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portAdditionalStates",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "bump",
+                    type: "u8",
+                },
+            ],
+        },
+        {
+            name: "initializePortRewardAccounts",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portAdditionalStates",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortObligation",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortStakeAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortRewardToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortSubRewardToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portLpTokenAccount",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portRewardTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portSubRewardTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingPool",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingRewardPool",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingSubRewardPool",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakeProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portLendProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portLendingMarket",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "associatedTokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "clock",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "rent",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "obligationBump",
+                    type: "u8",
+                },
+                {
+                    name: "stakeBump",
+                    type: "u8",
+                },
+                {
+                    name: "rewardBump",
+                    type: "u8",
+                },
+                {
+                    name: "subRewardBump",
+                    type: "u8",
+                },
+            ],
+        },
+        {
             name: "initializeJet",
             accounts: [
                 {
@@ -1916,12 +2442,22 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
+                    name: "portAdditionalStates",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
                     name: "vaultPortLpToken",
                     isMut: false,
                     isSigner: false,
                 },
                 {
-                    name: "portProgram",
+                    name: "vaultPortStakeAccount",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portLendProgram",
                     isMut: false,
                     isSigner: false,
                 },
@@ -2014,21 +2550,6 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "vaultReserveToken",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultPortLpToken",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultJetLpToken",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultSolendLpToken",
                     isMut: false,
                     isSigner: false,
                 },
@@ -2130,6 +2651,11 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
+                    name: "portAdditionalStates",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
                     name: "vaultReserveToken",
                     isMut: true,
                     isSigner: false,
@@ -2140,8 +2666,48 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "portProgram",
+                    name: "vaultPortObligation",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortStakeAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortRewardToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingPool",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portLendProgram",
                     isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakeProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingRewardPool",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portLpTokenAccount",
+                    isMut: true,
                     isSigner: false,
                 },
                 {
@@ -2252,6 +2818,82 @@ export const IDL: CastleVault = {
                     type: "u64",
                 },
             ],
+        },
+        {
+            name: "claimPortReward",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portAdditionalStates",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortStakeAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortRewardToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortSubRewardToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingPool",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portLendProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakeProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingRewardPool",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingSubRewardPool",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "clock",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
         },
     ],
     accounts: [
@@ -2365,9 +3007,71 @@ export const IDL: CastleVault = {
                         type: "u64",
                     },
                     {
-                        name: "reserved",
+                        name: "vaultPortAdditionalStateBump",
+                        type: "u8",
+                    },
+                    {
+                        name: "reserved0",
                         type: {
-                            array: ["u32", 26],
+                            array: ["u8", 3],
+                        },
+                    },
+                    {
+                        name: "reserved1",
+                        type: {
+                            array: ["u32", 25],
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            name: "vaultPortAdditionalState",
+            type: {
+                kind: "struct",
+                fields: [
+                    {
+                        name: "vaultPortStakeAccountBump",
+                        type: "u8",
+                    },
+                    {
+                        name: "vaultPortRewardTokenBump",
+                        type: "u8",
+                    },
+                    {
+                        name: "vaultPortObligationBump",
+                        type: "u8",
+                    },
+                    {
+                        name: "vaultPortSubRewardTokenBump",
+                        type: "u8",
+                    },
+                    {
+                        name: "portLpTokenAccount",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "portStakingPool",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "portStakingRewardPool",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "portStakingSubRewardPool",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "reserved0",
+                        type: {
+                            array: ["u8", 4],
+                        },
+                    },
+                    {
+                        name: "reserved1",
+                        type: {
+                            array: ["u64", 32],
                         },
                     },
                 ],

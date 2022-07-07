@@ -9,6 +9,7 @@ import {
     TransactionInstruction,
     SYSVAR_CLOCK_PUBKEY,
     SYSVAR_RENT_PUBKEY,
+    LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token as SplToken } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
@@ -24,12 +25,16 @@ import {
     Environment,
     initLendingMarketInstruction,
     initReserveInstruction,
+    initStakingPoolInstruction,
     MintId,
     Port,
     PORT_STAKING,
     ReserveConfigProto,
     ReserveId,
-} from "@port.finance/port-sdk";
+    TokenAccount,
+    StakeAccount,
+    StakingPoolLayout,
+} from "@castlefinance/port-sdk";
 
 import { CastleVault } from "../idl";
 import { Vault } from "../types";
@@ -46,6 +51,21 @@ interface PortAccounts {
     collateralMint: PublicKey;
     oracle: PublicKey;
     liquiditySupply: PublicKey;
+    lpTokenAccount: PublicKey;
+    stakingPool: PublicKey;
+    stakingRewardPool: PublicKey;
+    stakingRewardTokenMint: PublicKey;
+    stakingSubRewardPool: PublicKey;
+    stakingSubRewardTokenMint: PublicKey;
+    stakingProgram: PublicKey;
+    stakingProgamAuthority: PublicKey;
+    // Some port accounts held by the vault. The rest are still in vaultState
+    // TODO refactor this in the future, maybe move all port-related accounts to this struct
+    vaultPortAdditionalStates?: PublicKey;
+    vaultPortObligation?: PublicKey;
+    vaultPortStakeAccount?: PublicKey;
+    vaultPortRewardToken?: PublicKey;
+    vaultPortSubRewardToken?: PublicKey;
 }
 
 // TODO use constant from port sdk
@@ -103,21 +123,58 @@ export class PortReserveAsset extends LendingMarket {
         } else {
             throw new Error("Cluster ${cluster} not supported");
         }
+
         const client = new Port(provider.connection, env, market);
         const reserveContext = await client.getReserveContext();
         const reserve = reserveContext.getByAssetMintId(MintId.of(reserveMint));
-        const [authority, _] = await PublicKey.findProgramAddress(
+        const stakingPools = await client.getStakingPoolContext();
+        const stakingPoolId = await reserve.getStakingPoolId();
+        const targetStakingPool = stakingPools.getStakingPool(stakingPoolId);
+        const rewardMintRaw = await provider.connection.getAccountInfo(
+            targetStakingPool.getRewardTokenPool()
+        );
+        const rewardTokenMint = TokenAccount.fromRaw({
+            pubkey: targetStakingPool.getRewardTokenPool(),
+            account: rewardMintRaw,
+        });
+        const [stakingProgamAuthority] = await PublicKey.findProgramAddress(
+            [targetStakingPool.getId().toBuffer()],
+            env.getStakingProgramPk()
+        );
+
+        // Get sub-reward accounts, these are optional
+        const subRewardPool = targetStakingPool.getSubRewardTokenPool();
+        let subrewardMint = undefined;
+        if (subRewardPool != undefined) {
+            const subrewardMintRaw = await provider.connection.getAccountInfo(
+                targetStakingPool.getSubRewardTokenPool()
+            );
+            subrewardMint = TokenAccount.fromRaw({
+                pubkey: targetStakingPool.getSubRewardTokenPool(),
+                account: subrewardMintRaw,
+            }).getMintId();
+        }
+
+        const [marketAuthority] = await PublicKey.findProgramAddress(
             [market.toBuffer()],
             env.getLendingProgramPk()
         );
         const accounts: PortAccounts = {
             program: env.getLendingProgramPk(),
             market: market,
-            marketAuthority: authority,
+            marketAuthority: marketAuthority,
             reserve: reserve.getReserveId(),
             collateralMint: reserve.getShareMintId(),
             oracle: reserve.getOracleId(),
             liquiditySupply: reserve.getAssetBalanceId(),
+            lpTokenAccount: reserve.getShareBalanceId(),
+            stakingPool: targetStakingPool.getId(),
+            stakingRewardPool: targetStakingPool.getRewardTokenPool(),
+            stakingRewardTokenMint: rewardTokenMint.getMintId(),
+            stakingSubRewardPool: subRewardPool,
+            stakingSubRewardTokenMint: subrewardMint,
+            stakingProgram: env.getStakingProgramPk(),
+            stakingProgamAuthority: stakingProgamAuthority,
         };
 
         const lpToken = await getToken(
@@ -146,9 +203,17 @@ export class PortReserveAsset extends LendingMarket {
         ownerReserveTokenAccount: PublicKey,
         initialReserveAmount: number
     ): Promise<PortReserveAsset> {
+        const env = new Environment(
+            ENV.Devnet,
+            DEVNET_LENDING_PROGRAM_ID,
+            DEVNET_STAKING_PROGRAM_ID,
+            TOKEN_PROGRAM_ID,
+            []
+        );
         const market = await createLendingMarket(provider);
         const accounts = await createDefaultReserve(
             provider,
+            env,
             initialReserveAmount,
             reserveTokenMint,
             ownerReserveTokenAccount,
@@ -156,15 +221,7 @@ export class PortReserveAsset extends LendingMarket {
             pythPrice,
             owner
         );
-        const env = new Environment(
-            ENV.Devnet,
-            DEVNET_LENDING_PROGRAM_ID,
-            null,
-            TOKEN_PROGRAM_ID,
-            []
-        );
         const client = new Port(provider.connection, env, market.publicKey);
-
         const lpToken = await getToken(
             provider.connection,
             accounts.collateralMint
@@ -202,9 +259,25 @@ export class PortReserveAsset extends LendingMarket {
             ).amount.toNumber()
         );
 
+        // We retrive the amount of tokens staked and add it to total port LP token value
+        // Note that this is the amount of Port LP tokens. We need to convert to Castle LP token
+        // using the exchange rate.
+        const raw = await this.provider.connection.getAccountInfo(
+            new PublicKey(this.accounts.vaultPortStakeAccount)
+        );
+        const stakeAccountData = StakeAccount.fromRaw({
+            pubkey: this.accounts.vaultPortStakeAccount,
+            account: raw,
+        });
+        const stakedTokenValue = AssetPrice.of(
+            mint,
+            stakeAccountData.getDepositAmount().toU64().toNumber()
+        );
+
         return TokenAmount.fromToken(
             this.reserveToken,
             lpTokenAmount
+                .add(stakedTokenValue)
                 .divide(exchangeRate.getUnchecked())
                 .getRaw()
                 .round(0, Big.roundDown)
@@ -253,8 +326,10 @@ export class PortReserveAsset extends LendingMarket {
         return program.instruction.refreshPort({
             accounts: {
                 vault: vaultId,
+                portAdditionalStates: this.accounts.vaultPortAdditionalStates,
                 vaultPortLpToken: vaultState.vaultPortLpToken,
-                portProgram: this.accounts.program,
+                vaultPortStakeAccount: this.accounts.vaultPortStakeAccount,
+                portLendProgram: this.accounts.program,
                 portReserve: this.accounts.reserve,
                 clock: SYSVAR_CLOCK_PUBKEY,
             },
@@ -285,7 +360,17 @@ export class PortReserveAsset extends LendingMarket {
                     vaultAuthority: vaultState.vaultAuthority,
                     vaultReserveToken: vaultState.vaultReserveToken,
                     vaultPortLpToken: vaultState.vaultPortLpToken,
-                    portProgram: this.accounts.program,
+                    portAdditionalStates:
+                        this.accounts.vaultPortAdditionalStates,
+                    vaultPortObligation: this.accounts.vaultPortObligation,
+                    vaultPortStakeAccount: this.accounts.vaultPortStakeAccount,
+                    vaultPortRewardToken: this.accounts.vaultPortRewardToken,
+                    portStakingPool: this.accounts.stakingPool,
+                    portLendProgram: this.accounts.program,
+                    portStakeProgram: this.accounts.stakingProgram,
+                    portStakingRewardPool: this.accounts.stakingRewardPool,
+                    portStakingAuthority: this.accounts.stakingProgamAuthority,
+                    portLpTokenAccount: this.accounts.lpTokenAccount,
                     portMarketAuthority: this.accounts.marketAuthority,
                     portMarket: this.accounts.market,
                     portReserve: this.accounts.reserve,
@@ -296,6 +381,31 @@ export class PortReserveAsset extends LendingMarket {
                 },
             }
         );
+    }
+
+    getClaimRewardIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ): TransactionInstruction {
+        return program.instruction.claimPortReward({
+            accounts: {
+                vault: vaultId,
+                vaultAuthority: vaultState.vaultAuthority,
+                portAdditionalStates: this.accounts.vaultPortAdditionalStates,
+                vaultPortStakeAccount: this.accounts.vaultPortStakeAccount,
+                vaultPortRewardToken: this.accounts.vaultPortRewardToken,
+                vaultPortSubRewardToken: this.accounts.vaultPortSubRewardToken,
+                portStakingPool: this.accounts.stakingPool,
+                portLendProgram: this.accounts.program,
+                portStakeProgram: this.accounts.stakingProgram,
+                portStakingRewardPool: this.accounts.stakingRewardPool,
+                portStakingSubRewardPool: this.accounts.stakingSubRewardPool,
+                portStakingAuthority: this.accounts.stakingProgamAuthority,
+                clock: SYSVAR_CLOCK_PUBKEY,
+                tokenProgram: TOKEN_PROGRAM_ID,
+            },
+        });
     }
 
     async getInitializeIx(
@@ -326,8 +436,25 @@ export class PortReserveAsset extends LendingMarket {
             },
         });
     }
+
+    async getUnclaimedStakingRewards(
+        program: anchor.Program<CastleVault>
+    ): Promise<number> {
+        const stakingAccountRaw =
+            await program.provider.connection.getAccountInfo(
+                new PublicKey(this.accounts.vaultPortStakeAccount)
+            );
+        const stakingAccount = StakeAccount.fromRaw({
+            pubkey: this.accounts.vaultPortStakeAccount,
+            account: stakingAccountRaw,
+        });
+        return stakingAccount.getUnclaimedReward().toU64().toNumber();
+    }
 }
 
+export const DEVNET_STAKING_PROGRAM_ID = new PublicKey(
+    "stkarvwmSzv2BygN5e2LeTwimTczLWHCKPKGC2zVLiq"
+);
 const DEVNET_LENDING_PROGRAM_ID = new PublicKey(
     "pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4"
 );
@@ -405,8 +532,114 @@ async function createLendingMarket(
     return lendingMarket;
 }
 
+async function createStakingPool(
+    provider: anchor.Provider,
+    supply: number,
+    duration: number,
+    rewardTime: number,
+    authority: PublicKey
+): Promise<PublicKey> {
+    const supplyLamports = supply * 1000000;
+
+    // This step will create a staking pool
+    const stakingPool = await createAccount(
+        provider,
+        StakingPoolLayout.span,
+        DEVNET_STAKING_PROGRAM_ID
+    );
+
+    // This step will create the reward token pool, held by the staking pool to store tokens to be distributed as rewards
+    const rewardTokenPool = await createAccount(
+        provider,
+        TOKEN_ACCOUNT_LEN,
+        TOKEN_PROGRAM_ID
+    );
+
+    // This step will create a temporary wallet to fund subsequenc tx
+    const wallet = Keypair.generate();
+    const sig0 = await provider.connection.requestAirdrop(
+        wallet.publicKey,
+        LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(sig0, "finalized");
+
+    // This step will create a mock reward token and mint some of it for testing
+    const rewardMint = await SplToken.createMint(
+        provider.connection,
+        wallet,
+        wallet.publicKey,
+        null,
+        6,
+        TOKEN_PROGRAM_ID
+    );
+    const rewardSupply = await rewardMint.createAssociatedTokenAccount(
+        wallet.publicKey
+    );
+    await rewardMint.mintTo(rewardSupply, wallet, [], supplyLamports);
+
+    // This step will create the sub-reward token pool
+    const subRewardTokenPool = await createAccount(
+        provider,
+        TOKEN_ACCOUNT_LEN,
+        TOKEN_PROGRAM_ID
+    );
+
+    // This step will create a mock sub-reward token
+    const subRewardMint = await SplToken.createMint(
+        provider.connection,
+        wallet,
+        wallet.publicKey,
+        null,
+        6,
+        TOKEN_PROGRAM_ID
+    );
+    const subRewardSupply = await subRewardMint.createAssociatedTokenAccount(
+        wallet.publicKey
+    );
+    await subRewardMint.mintTo(subRewardSupply, wallet, [], supplyLamports);
+
+    // TODO briefly explain what this is used for
+    const [stakingProgramDerived, bumpSeed] =
+        await PublicKey.findProgramAddress(
+            [stakingPool.publicKey.toBuffer()],
+            DEVNET_STAKING_PROGRAM_ID
+        );
+
+    // Send the actual instruction to init staking pool
+    const tx = new Transaction();
+    tx.add(
+        initStakingPoolInstruction(
+            supplyLamports,
+            duration,
+            rewardTime,
+            bumpSeed,
+            wallet.publicKey,
+            rewardSupply,
+            rewardTokenPool.publicKey,
+            stakingPool.publicKey,
+            rewardMint.publicKey,
+            stakingProgramDerived,
+            authority,
+            authority,
+            DEVNET_STAKING_PROGRAM_ID,
+            {
+                supply: supplyLamports,
+                tokenSupply: subRewardSupply,
+                tokenPool: subRewardTokenPool.publicKey,
+                rewardTokenMint: subRewardMint.publicKey,
+            }
+        )
+    );
+
+    const sig1 = await provider.send(tx, [wallet]);
+    await provider.connection.confirmTransaction(sig1, "finalized");
+
+    return stakingPool.publicKey;
+}
+
 async function createDefaultReserve(
     provider: anchor.Provider,
+    env: Environment,
     initialLiquidity: number | anchor.BN,
     liquidityMint: PublicKey,
     sourceTokenWallet: PublicKey,
@@ -455,6 +688,18 @@ async function createDefaultReserve(
         DEVNET_LENDING_PROGRAM_ID
     );
 
+    const stakingPool = await createStakingPool(
+        provider,
+        1000,
+        5184000,
+        0,
+        lendingMarketAuthority
+    );
+
+    const config = DEFAULT_RESERVE_CONFIG;
+    config.stakingPoolOption = 1;
+    config.stakingPool = stakingPool;
+
     const tx = new Transaction();
 
     tx.add(
@@ -472,7 +717,7 @@ async function createDefaultReserve(
             initialLiquidity,
             0,
             new anchor.BN(0),
-            DEFAULT_RESERVE_CONFIG,
+            config,
             sourceTokenWallet,
             userCollateralTokenAccount.publicKey,
             reserve.publicKey,
@@ -490,7 +735,41 @@ async function createDefaultReserve(
         )
     );
 
-    await provider.send(tx, [owner]);
+    const sig = await provider.send(tx, [owner]);
+    await provider.connection.confirmTransaction(sig, "finalized");
+
+    // Double check account values
+    const client = new Port(provider.connection, env, lendingMarket);
+    const reserveContext = await client.getReserveContext();
+    const reserveAcct = reserveContext.getByAssetMintId(
+        MintId.of(liquidityMint)
+    );
+    const stakingPools = await client.getStakingPoolContext();
+    const stakingPoolId = await reserveAcct.getStakingPoolId();
+    const targetStakingPool = stakingPools.getStakingPool(stakingPoolId);
+    const rewardMintRaw = await provider.connection.getAccountInfo(
+        targetStakingPool.getRewardTokenPool()
+    );
+    const rewardTokenMint = TokenAccount.fromRaw({
+        pubkey: targetStakingPool.getRewardTokenPool(),
+        account: rewardMintRaw,
+    });
+    const [stakingProgamAuthority] = await PublicKey.findProgramAddress(
+        [targetStakingPool.getId().toBuffer()],
+        env.getStakingProgramPk()
+    );
+
+    const subRewardPool = targetStakingPool.getSubRewardTokenPool();
+    let subrewardMint = undefined;
+    if (subRewardPool != undefined) {
+        const subrewardMintRaw = await provider.connection.getAccountInfo(
+            targetStakingPool.getSubRewardTokenPool()
+        );
+        subrewardMint = TokenAccount.fromRaw({
+            pubkey: targetStakingPool.getSubRewardTokenPool(),
+            account: subrewardMintRaw,
+        }).getMintId();
+    }
 
     return {
         program: DEVNET_LENDING_PROGRAM_ID,
@@ -500,5 +779,14 @@ async function createDefaultReserve(
         oracle: oracle,
         collateralMint: collateralMintAccount.publicKey,
         liquiditySupply: liquiditySupplyTokenAccount.publicKey,
+        lpTokenAccount: collateralSupplyTokenAccount.publicKey,
+        stakingPool: targetStakingPool.getId(),
+        stakingRewardPool: targetStakingPool.getRewardTokenPool(),
+        stakingRewardTokenMint: rewardTokenMint.getMintId(),
+        stakingSubRewardPool: subRewardPool,
+        stakingSubRewardTokenMint: subrewardMint,
+        stakingProgram: DEVNET_STAKING_PROGRAM_ID,
+        // TODO create mock authority
+        stakingProgamAuthority: stakingProgamAuthority,
     };
 }

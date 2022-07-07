@@ -33,15 +33,6 @@ pub struct ConsolidateRefresh<'info> {
     /// Token account for the vault's reserve tokens
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
 
-    // NOTE: make sure the owner is as expected (currently done using `try_from`)
-    //       and the keys match the vault (currently explicitly checked before `try_from`)
-    //#[soteria(ignore)]
-    pub vault_port_lp_token: AccountInfo<'info>,
-    //#[soteria(ignore)]
-    pub vault_jet_lp_token: AccountInfo<'info>,
-    //#[soteria(ignore)]
-    pub vault_solend_lp_token: AccountInfo<'info>,
-
     /// Mint for the vault lp token
     #[account(mut)]
     pub lp_token_mint: Box<Account<'info, Mint>>,
@@ -88,43 +79,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>
         let allocation: SlotTrackedValue = ctx.accounts.vault.actual_allocations[p];
         if ctx.accounts.vault.get_yield_source_availability(p) {
             // We skip pools where we have zero allocation
-            // Must do it inside the if block because we have to check yield source flags first
-            let lp_token_value = match p {
-                Provider::Solend => {
-                    ctx.accounts
-                        .vault_solend_lp_token
-                        .key
-                        .eq(&ctx.accounts.vault.vault_solend_lp_token)
-                        .as_result(
-                            Account::<TokenAccount>::try_from(&ctx.accounts.vault_solend_lp_token)?,
-                            ErrorCode::InvalidAccount,
-                        )?
-                        .amount
-                }
-                Provider::Port => {
-                    ctx.accounts
-                        .vault_port_lp_token
-                        .key
-                        .eq(&ctx.accounts.vault.vault_port_lp_token)
-                        .as_result(
-                            Account::<TokenAccount>::try_from(&ctx.accounts.vault_port_lp_token)?,
-                            ErrorCode::InvalidAccount,
-                        )?
-                        .amount
-                }
-                Provider::Jet => {
-                    ctx.accounts
-                        .vault_jet_lp_token
-                        .key
-                        .eq(&ctx.accounts.vault.vault_jet_lp_token)
-                        .as_result(
-                            Account::<TokenAccount>::try_from(&ctx.accounts.vault_jet_lp_token)?,
-                            ErrorCode::InvalidAccount,
-                        )?
-                        .amount
-                }
-            };
-            if lp_token_value == 0 {
+            if allocation.value == 0 {
                 return Ok(acc);
             }
 

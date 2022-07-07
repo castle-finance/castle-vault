@@ -69,6 +69,13 @@ const main = async () => {
             reserveMint
         );
         await vaultClient.initializePort(wallet, port, owner);
+        await vaultClient.initializePortAdditionalState(wallet, owner);
+        await vaultClient.initializePortRewardAccounts(
+            wallet,
+            owner,
+            provider,
+            DeploymentEnvs.mainnet
+        );
         console.log("Succesfully initialized Port");
     } catch (error) {
         console.log("Failed to initialize Port: ", error);

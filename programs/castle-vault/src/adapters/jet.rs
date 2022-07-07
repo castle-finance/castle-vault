@@ -9,6 +9,7 @@ use jet::{
 use solana_maths::Rate;
 
 use crate::{
+    errors::ErrorCode,
     impl_has_vault,
     init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
@@ -79,7 +80,7 @@ impl<'info> JetAccounts<'info> {
 impl_has_vault!(JetAccounts<'_>);
 
 impl<'info> LendingMarket for JetAccounts<'info> {
-    fn deposit(&self, amount: u64) -> ProgramResult {
+    fn deposit(&mut self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.jet_program.clone(),
             jet::cpi::accounts::DepositTokens {
@@ -101,10 +102,17 @@ impl<'info> LendingMarket for JetAccounts<'info> {
                 context.with_signer(&[&self.vault.authority_seeds()]),
                 Amount::from_tokens(amount),
             ),
-        }
+        }?;
+
+        let jet_value = self.vault.actual_allocations[Provider::Jet]
+            .value
+            .checked_add(amount)
+            .ok_or(ErrorCode::MathError)?;
+        self.vault.actual_allocations[Provider::Jet].update(jet_value, Clock::get()?.slot);
+        Ok(())
     }
 
-    fn redeem(&self, amount: u64) -> ProgramResult {
+    fn redeem(&mut self, amount: u64) -> ProgramResult {
         let context = CpiContext::new(
             self.jet_program.clone(),
             jet::cpi::accounts::WithdrawTokens {
@@ -125,7 +133,15 @@ impl<'info> LendingMarket for JetAccounts<'info> {
                 context.with_signer(&[&self.vault.authority_seeds()]),
                 Amount::from_deposit_notes(amount),
             ),
-        }
+        }?;
+
+        let vault_reserve_value_delta = self.convert_amount_lp_to_reserve(amount)?;
+        let jet_value = self.vault.actual_allocations[Provider::Jet]
+            .value
+            .checked_sub(vault_reserve_value_delta)
+            .ok_or(ErrorCode::MathError)?;
+        self.vault.actual_allocations[Provider::Jet].update(jet_value, Clock::get()?.slot);
+        Ok(())
     }
 
     fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64, ProgramError> {

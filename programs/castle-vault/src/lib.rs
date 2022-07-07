@@ -29,6 +29,29 @@ pub mod castle_vault {
         instructions::init_vault::handler(ctx, bumps, config)
     }
 
+    pub fn initialize_port_additional_state(
+        ctx: Context<InitializePortAdditionalState>,
+        bump: u8,
+    ) -> ProgramResult {
+        instructions::init_port_additional_state::handler(ctx, bump)
+    }
+
+    pub fn initialize_port_reward_accounts(
+        ctx: Context<InitializePortRewardAccounts>,
+        obligation_bump: u8,
+        stake_bump: u8,
+        reward_bump: u8,
+        sub_reward_bump: u8,
+    ) -> ProgramResult {
+        instructions::init_port_reward_accounts::handler(
+            ctx,
+            obligation_bump,
+            stake_bump,
+            reward_bump,
+            sub_reward_bump,
+        )
+    }
+
     pub fn initialize_jet<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializeJet<'info>>,
         bump: u8,
@@ -112,6 +135,10 @@ pub mod castle_vault {
 
     pub fn reconcile_jet(ctx: Context<JetAccounts>, withdraw_option: u64) -> ProgramResult {
         instructions::reconcile::handler(ctx, withdraw_option)
+    }
+
+    pub fn claim_port_reward(ctx: Context<ClaimPortReward>) -> ProgramResult {
+        instructions::claim_port_reward::handler(ctx)
     }
 }
 

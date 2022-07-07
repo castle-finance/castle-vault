@@ -14,8 +14,8 @@ const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 100;
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?
 pub trait LendingMarket {
-    fn deposit(&self, amount: u64) -> ProgramResult;
-    fn redeem(&self, amount: u64) -> ProgramResult;
+    fn deposit(&mut self, amount: u64) -> ProgramResult;
+    fn redeem(&mut self, amount: u64) -> ProgramResult;
 
     // TODO separate these fns into ExchangeRate struct
     // OR Amount struct like Jet does which handles conversions implicitly
@@ -60,7 +60,6 @@ pub fn handler<T: LendingMarket + HasVault>(
         .get_halt_flags()
         .contains(VaultFlags::HALT_RECONCILES))
     .ok_or::<ProgramError>(ErrorCode::HaltedVault.into())?;
-
     let provider = ctx.accounts.provider();
     match withdraw_option {
         // Normal case where reconcile is being called after rebalance

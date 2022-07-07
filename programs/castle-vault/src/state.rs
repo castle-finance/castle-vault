@@ -80,11 +80,13 @@ pub struct Vault {
     // Actual allocation retrieved by refresh
     pub actual_allocations: Allocations,
 
+    // Supply of vault LP token
     pub lp_token_supply: u64,
 
-    // 4 * 26 = 104
-    /// Reserved space for future upgrades
-    _reserved: [u32; 26],
+    pub vault_port_additional_state_bump: u8,
+
+    _reserved0: [u8; 3],
+    _reserved1: [u32; 25],
 }
 
 impl Vault {
@@ -183,6 +185,36 @@ impl Vault {
             &self.authority_bump,
         ]
     }
+}
+
+#[assert_size(392)]
+#[account]
+#[repr(C, align(8))]
+#[derive(Debug, Default)]
+#[cfg_attr(test, derive(TypeLayout))]
+pub struct VaultPortAdditionalState {
+    /// Port staking account
+    pub vault_port_stake_account_bump: u8,
+
+    /// Account used to receive Port staking reward
+    pub vault_port_reward_token_bump: u8,
+
+    /// Account used for the port staking program
+    pub vault_port_obligation_bump: u8,
+
+    /// Account used to receive Port staking sub-reward
+    pub vault_port_sub_reward_token_bump: u8,
+
+    pub port_lp_token_account: Pubkey,
+
+    pub port_staking_pool: Pubkey,
+
+    pub port_staking_reward_pool: Pubkey,
+
+    pub port_staking_sub_reward_pool: Pubkey,
+
+    _reserved0: [u8; 4],
+    _reserved1: [u64; 32],
 }
 
 #[assert_size(aligns, 32)]
