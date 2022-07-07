@@ -42,7 +42,7 @@ pub mod castle_vault {
         stake_bump: u8,
         reward_bump: u8,
         sub_reward_bump: u8,
-        sub_reward_available: bool
+        sub_reward_available: bool,
     ) -> ProgramResult {
         instructions::init_port_reward_accounts::handler(
             ctx,
@@ -50,7 +50,7 @@ pub mod castle_vault {
             stake_bump,
             reward_bump,
             sub_reward_bump,
-            sub_reward_available
+            sub_reward_available,
         )
     }
 
