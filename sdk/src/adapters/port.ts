@@ -70,7 +70,7 @@ const DEVNET_ASSETS = [
 
 export class PortReserveAsset extends LendingMarket {
     private constructor(
-        public provider: anchor.Provider,
+        public provider: anchor.AnchorProvider,
         public accounts: PortAccounts,
         public client: Port,
         public reserveToken: Token,
@@ -80,7 +80,7 @@ export class PortReserveAsset extends LendingMarket {
     }
 
     static async load(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         cluster: Cluster,
         reserveMint: PublicKey
     ): Promise<PortReserveAsset> {
@@ -139,7 +139,7 @@ export class PortReserveAsset extends LendingMarket {
     }
 
     static async initialize(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         owner: Keypair,
         reserveTokenMint: PublicKey,
         pythPrice: PublicKey,
@@ -355,7 +355,7 @@ const DEFAULT_RESERVE_CONFIG: ReserveConfigProto = {
 
 // TODO move to common utils
 const createAccount = async (
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     space: number,
     owner: PublicKey
 ): Promise<Keypair> => {
@@ -372,19 +372,19 @@ const createAccount = async (
             space,
         })
     );
-    await provider.send(createTx, [newAccount]);
+    await provider.sendAndConfirm(createTx, [newAccount]);
     return newAccount;
 };
 
 async function createLendingMarket(
-    provider: anchor.Provider
+    provider: anchor.AnchorProvider
 ): Promise<Keypair> {
     const lendingMarket = await createAccount(
         provider,
         LENDING_MARKET_LEN,
         DEVNET_LENDING_PROGRAM_ID
     );
-    await provider.send(
+    await provider.sendAndConfirm(
         (() => {
             const tx = new Transaction();
             tx.add(
@@ -406,7 +406,7 @@ async function createLendingMarket(
 }
 
 async function createDefaultReserve(
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     initialLiquidity: number | anchor.BN,
     liquidityMint: PublicKey,
     sourceTokenWallet: PublicKey,
@@ -490,7 +490,7 @@ async function createDefaultReserve(
         )
     );
 
-    await provider.send(tx, [owner]);
+    await provider.sendAndConfirm(tx, [owner]);
 
     return {
         program: DEVNET_LENDING_PROGRAM_ID,

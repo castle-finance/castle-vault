@@ -45,7 +45,7 @@ export interface SolendAccounts {
 
 export class SolendReserveAsset extends LendingMarket {
     private constructor(
-        public provider: anchor.Provider,
+        public provider: anchor.AnchorProvider,
         public accounts: SolendAccounts,
         public reserve: SolendReserve,
         public reserveToken: Token,
@@ -56,7 +56,7 @@ export class SolendReserveAsset extends LendingMarket {
 
     // TODO change to connection instead of provider so it doesn't need to be reloaded when wallet changes
     static async load(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         cluster: Cluster,
         reserveMint: PublicKey
     ): Promise<SolendReserveAsset> {
@@ -112,7 +112,7 @@ export class SolendReserveAsset extends LendingMarket {
     }
 
     static async initialize(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         owner: Keypair,
         wallet: anchor.Wallet,
         reserveTokenMint: PublicKey,
@@ -333,7 +333,7 @@ const DEVNET_PROGRAM_ID = new PublicKey(
 );
 
 export async function initLendingMarket(
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     owner: PublicKey,
     payer: Keypair,
     pythProgramId: PublicKey,
@@ -365,12 +365,12 @@ export async function initLendingMarket(
                 DEVNET_PROGRAM_ID
             )
         );
-    await provider.send(initTx, [payer, lendingMarketAccount]);
+    await provider.sendAndConfirm(initTx, [payer, lendingMarketAccount]);
     return lendingMarketAccount;
 }
 
 export async function addReserve(
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     liquidityAmount: number,
     ownerReserveTokenAccount: PublicKey,
     owner: Keypair,

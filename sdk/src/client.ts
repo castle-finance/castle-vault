@@ -64,7 +64,7 @@ export class VaultClient {
     ) {}
 
     static async load(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         vaultId: PublicKey,
         env: DeploymentEnv = DeploymentEnvs.mainnet
     ): Promise<VaultClient> {
@@ -114,7 +114,7 @@ export class VaultClient {
     }
 
     static async initialize(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         wallet: anchor.Wallet,
         env: DeploymentEnv,
         reserveTokenMint: PublicKey,
@@ -254,7 +254,7 @@ export class VaultClient {
             )
         );
 
-        const txSig = await this.program.provider.send(tx, [
+        const txSig = await this.program.provider.sendAndConfirm(tx, [
             owner,
             wallet.payer,
         ]);
@@ -281,7 +281,7 @@ export class VaultClient {
             )
         );
 
-        const txSig = await this.program.provider.send(tx, [
+        const txSig = await this.program.provider.sendAndConfirm(tx, [
             owner,
             wallet.payer,
         ]);
@@ -476,7 +476,7 @@ export class VaultClient {
                 },
             })
         );
-        return await this.program.provider.send(updateTx, [owner]);
+        return await this.program.provider.sendAndConfirm(updateTx, [owner]);
     }
 
     async updateYieldSourceFlags(
@@ -512,7 +512,7 @@ export class VaultClient {
                 },
             })
         );
-        return await this.program.provider.send(updateTx, [owner]);
+        return await this.program.provider.sendAndConfirm(updateTx, [owner]);
     }
 
     getDepositIx(
@@ -834,25 +834,7 @@ export class VaultClient {
             .concat([this.getConsolidateRefreshIx()]);
 
         // Sort ixs in descending order of outflows
-        // const newAllocations = (
-        //     await this.program.simulate.rebalance(proposedWeights, {
-        //         accounts: {
-        //             vault: this.vaultId,
-        //             solendReserve:
-        //                 this.yieldSources.solend != null
-        //                     ? this.yieldSources.solend.accounts.reserve
-        //                     : Keypair.generate().publicKey,
-        //             portReserve:
-        //                 this.yieldSources.port != null
-        //                     ? this.yieldSources.port.accounts.reserve
-        //                     : Keypair.generate().publicKey,
-        //             clock: SYSVAR_CLOCK_PUBKEY,
-        //         },
-        //         instructions: simIx,
-        //     })
-        // ).events[1].data as RebalanceDataEvent;
-
-        let tmp = (
+        const newAllocations = (
             await this.program.simulate.rebalance(proposedWeights, {
                 accounts: {
                     vault: this.vaultId,
@@ -868,9 +850,7 @@ export class VaultClient {
                 },
                 instructions: simIx,
             })
-        )
-        
-        const newAllocations = tmp.events[1].data as RebalanceDataEvent;
+        ).events[1].data as RebalanceDataEvent;
 
         const newAndOldallocations = await Promise.all(
             Object.entries(this.yieldSources).map(
@@ -940,7 +920,7 @@ export class VaultClient {
                         value
                     )
                 );
-                return this.program.provider.send(tx);
+                return this.program.provider.sendAndConfirm(tx);
             })
         );
     }

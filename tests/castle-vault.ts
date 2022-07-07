@@ -20,7 +20,7 @@ import {
 } from "@castlefinance/vault-core";
 
 describe("castle-vault", () => {
-    const provider = anchor.Provider.env();
+    const provider = anchor.AnchorProvider.env();
     anchor.setProvider(provider);
     const wallet = provider.wallet as anchor.Wallet;
 
@@ -640,7 +640,7 @@ describe("castle-vault", () => {
     function testRebalanceWithdraw(
         expectedSolendRatio: number,
         expectedPortRatio: number,
-        expectedJetRatio: number,
+        expectedJetRatio: number, // TODO remove
         rebalanceMode: RebalanceMode = RebalanceModes.calculator,
         solendAvailable: boolean = true,
         portAvailable: boolean = true,
@@ -656,7 +656,7 @@ describe("castle-vault", () => {
         });
 
         if (rebalanceMode == RebalanceModes.proofChecker) {
-            it("Rejects tx if weights don't equal 100%", async () => {
+            it("Reject transaction if weights don't equal 100%", async () => {
                 suppressLogs()
 
                 const errorCode = program.idl.errors
@@ -698,7 +698,7 @@ describe("castle-vault", () => {
                 restoreLogs()
             });
 
-            it("Rejects tx if weights are suboptimal", async () => {
+            it("Reject transaction if weights are suboptimal", async () => {
                 suppressLogs()
 
                 const errorCode = program.idl.errors
@@ -740,7 +740,7 @@ describe("castle-vault", () => {
                 restoreLogs()
             });
 
-            it("Rejects tx if weights exceed the cap", async () => {
+            it("Reject transaction if weights exceed the cap", async () => {
                 suppressLogs()
 
                 const errorCode = program.idl.errors
@@ -1002,7 +1002,7 @@ describe("castle-vault", () => {
             testVaultFlags();
         });
 
-        xdescribe("Rebalance", () => {
+        describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -1031,7 +1031,7 @@ describe("castle-vault", () => {
         });
     });
 
-    xdescribe("Max yield calculator", () => {
+    describe("Max yield calculator", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -1049,7 +1049,7 @@ describe("castle-vault", () => {
         });
     });
 
-    xdescribe("Max yield proof checker", () => {
+    describe("Max yield proof checker", () => {
         describe("Rebalance", () => {
             const rebalanceMode = RebalanceModes.proofChecker;
             before(initLendingMarkets);
@@ -1069,7 +1069,7 @@ describe("castle-vault", () => {
         });
     });
 
-    xdescribe("Disabled pools", () => {
+    describe("Disabled pools", () => {
         describe("Rebalance with equal allocation strategy missing 1 pool", () => {
             const rebalanceMode = RebalanceModes.calculator;
             before(initLendingMarkets);
