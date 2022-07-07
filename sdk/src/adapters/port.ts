@@ -656,7 +656,7 @@ async function createDefaultReserve(
     sourceTokenWallet: PublicKey,
     lendingMarket: PublicKey,
     oracle: PublicKey,
-    owner: Keypair, 
+    owner: Keypair,
     createSubRewardPool: boolean
 ): Promise<PortAccounts> {
     const reserve = await createAccount(
