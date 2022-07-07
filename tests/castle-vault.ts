@@ -5,7 +5,6 @@ import { Keypair, PublicKey, TransactionSignature } from "@solana/web3.js";
 
 import {
     SolendReserveAsset,
-    // JetReserveAsset,
     PortReserveAsset,
     VaultClient,
     CastleVault,
@@ -52,7 +51,6 @@ describe("castle-vault", () => {
 
     let reserveToken: Token;
 
-    // let jet: JetReserveAsset;
     let solend: SolendReserveAsset;
     let port: PortReserveAsset;
 
@@ -186,7 +184,6 @@ describe("castle-vault", () => {
             "DtmE9D2CSB4L5D6A15mraeEjrGMm6auWVzgaD8hK2tZM"
         );
 
-        // console.log("CAMEL INITING SOLEND")
         solend = await SolendReserveAsset.initialize(
             provider,
             owner,
@@ -201,7 +198,6 @@ describe("castle-vault", () => {
             initialReserveAmount
         );
 
-        // console.log("CAMEL INITING PORT")
         port = await PortReserveAsset.initialize(
             provider,
             owner,
@@ -210,30 +206,6 @@ describe("castle-vault", () => {
             ownerReserveTokenAccount,
             initialReserveAmount
         );
-
-        // jet = await JetReserveAsset.initialize(
-        //     provider,
-        //     wallet,
-        //     owner,
-        //     NATIVE_MINT,
-        //     reserveToken,
-        //     pythPrice,
-        //     pythProduct,
-        //     ownerReserveTokenAccount,
-        //     initialReserveAmount
-        // );
-
-        // const jetBorrowedAmt = initialReserveAmount / 2;
-        // const jetBorrowTxs = await jet.borrow(
-        //     owner,
-        //     ownerReserveTokenAccount,
-        //     jetBorrowedAmt
-        // );
-        // await provider.connection.confirmTransaction(
-        //     jetBorrowTxs[jetBorrowTxs.length - 1],
-        //     "finalized"
-        // );
-        // console.log("CAMEL OUT")
     }
 
     async function initializeVault(
@@ -242,7 +214,6 @@ describe("castle-vault", () => {
         portAvailable: boolean = true,
         jetAvailable: boolean = true
     ) {
-        // console.log("MOOSE INITING VAULT")
         vaultClient = await VaultClient.initialize(
             provider,
             provider.wallet as anchor.Wallet,
@@ -253,7 +224,6 @@ describe("castle-vault", () => {
             config,
             program
         );
-        // console.log("MOOSE INITING LENDING MARKETS")
 
         await Promise.all([
             solendAvailable
@@ -270,13 +240,6 @@ describe("castle-vault", () => {
                       owner
                   )
                 : {},
-            // jetAvailable
-            //     ? await vaultClient.initializeJet(
-            //           provider.wallet as anchor.Wallet,
-            //           jet,
-            //           owner
-            //       )
-            //     : {},
         ]);
 
         await vaultClient.reload();
@@ -284,8 +247,6 @@ describe("castle-vault", () => {
         userReserveTokenAccount = await reserveToken.createAccount(
             wallet.publicKey
         );
-
-        // console.log("MOOSE OUT")
     }
 
     async function getReserveTokenBalance(account: PublicKey): Promise<number> {
@@ -706,7 +667,6 @@ describe("castle-vault", () => {
                         {
                             solend: 0,
                             port: 0,
-                            // jet: 0,
                         },
                         true
                     );
@@ -734,14 +694,6 @@ describe("castle-vault", () => {
                         0
                     );
                 }
-                // if (jetAvailable) {
-                //     assert.equal(
-                //         (
-                //             await vaultClient.getVaultJetLpTokenAccountValue()
-                //         ).lamports.toNumber(),
-                //         0
-                //     );
-                // }
 
                 restoreLogs()
             });
@@ -757,7 +709,6 @@ describe("castle-vault", () => {
                         {
                             solend: 7500,
                             port: 2500,
-                            // jet: 3334,
                         },
                         true
                     );
@@ -785,14 +736,6 @@ describe("castle-vault", () => {
                         0
                     );
                 }
-                // if (jetAvailable) {
-                //     assert.equal(
-                //         (
-                //             await vaultClient.getVaultJetLpTokenAccountValue()
-                //         ).lamports.toNumber(),
-                //         0
-                //     );
-                // }
 
                 restoreLogs()
             });
@@ -808,7 +751,6 @@ describe("castle-vault", () => {
                         {
                             solend: 10000,
                             port: 0,
-                            // jet: 0,
                         },
                         true
                     );
@@ -836,14 +778,6 @@ describe("castle-vault", () => {
                         0
                     );
                 }
-                // if (jetAvailable) {
-                //     assert.equal(
-                //         (
-                //             await vaultClient.getVaultJetLpTokenAccountValue()
-                //         ).lamports.toNumber(),
-                //         0
-                //     );
-                // }
 
                 restoreLogs()
             });
@@ -853,7 +787,6 @@ describe("castle-vault", () => {
             await performRebalance({
                 solend: expectedSolendRatio * 10000,
                 port: expectedPortRatio * 10000,
-                // jet: expectedJetRatio * 10000,
             });
 
             // TODO Resolve the difference
@@ -889,17 +822,6 @@ describe("castle-vault", () => {
                     maxDiffAllowed
                 );
             }
-            // if (jetAvailable) {
-            //     const jetValue = (
-            //         await vaultClient.getVaultJetLpTokenAccountValue()
-            //     ).lamports.toNumber();
-            //     assert.isAtMost(
-            //         Math.abs(
-            //             jetValue - Math.floor(depositQty * expectedJetRatio)
-            //         ),
-            //         maxDiffAllowed
-            //     );
-            // }
         });
 
         it("Withdraws", async function () {
@@ -1055,7 +977,7 @@ describe("castle-vault", () => {
         });
     }
 
-    xdescribe("Equal allocation strategy", () => {
+    describe("Equal allocation strategy", () => {
         describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -1080,7 +1002,7 @@ describe("castle-vault", () => {
             testVaultFlags();
         });
 
-        describe("Rebalance", () => {
+        xdescribe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -1091,7 +1013,7 @@ describe("castle-vault", () => {
             testRebalanceWithdraw(1 / 3, 1 / 3, 1 / 3);
         });
 
-        describe("Fees", () => {
+        xdescribe("Fees", () => {
             const feeMgmtBps = 10000;
             const feeCarryBps = 10000;
             const referralFeePct = 20;
@@ -1127,7 +1049,7 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Max yield proof checker", () => {
+    xdescribe("Max yield proof checker", () => {
         describe("Rebalance", () => {
             const rebalanceMode = RebalanceModes.proofChecker;
             before(initLendingMarkets);

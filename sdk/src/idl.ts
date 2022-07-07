@@ -91,67 +91,6 @@ export type CastleVault = {
                 }
             ];
         },
-        // {
-        //     name: "initializeJet";
-        //     accounts: [
-        //         {
-        //             name: "vault";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "vaultAuthority";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "vaultJetLpToken";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetLpTokenMint";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetReserve";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "owner";
-        //             isMut: false;
-        //             isSigner: true;
-        //         },
-        //         {
-        //             name: "payer";
-        //             isMut: true;
-        //             isSigner: true;
-        //         },
-        //         {
-        //             name: "tokenProgram";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "systemProgram";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "rent";
-        //             isMut: false;
-        //             isSigner: false;
-        //         }
-        //     ];
-        //     args: [
-        //         {
-        //             name: "bump";
-        //             type: "u8";
-        //         }
-        //     ];
-        // },
         {
             name: "initializePort";
             accounts: [
@@ -469,11 +408,6 @@ export type CastleVault = {
                     isMut: false;
                     isSigner: false;
                 },
-                // {
-                //     name: "jetReserve";
-                //     isMut: false;
-                //     isSigner: false;
-                // },
                 {
                     name: "clock";
                     isMut: false;
@@ -561,67 +495,6 @@ export type CastleVault = {
             ];
             args: [];
         },
-        // {
-        //     name: "refreshJet";
-        //     accounts: [
-        //         {
-        //             name: "vault";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "vaultJetLpToken";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetProgram";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetMarket";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetMarketAuthority";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetReserve";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetFeeNoteVault";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetDepositNoteMint";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetPyth";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "tokenProgram";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "clock";
-        //             isMut: false;
-        //             isSigner: false;
-        //         }
-        //     ];
-        //     args: [];
-        // },
         {
             name: "consolidateRefresh";
             accounts: [
@@ -645,11 +518,6 @@ export type CastleVault = {
                     isMut: false;
                     isSigner: false;
                 },
-                // {
-                //     name: "vaultJetLpToken";
-                //     isMut: false;
-                //     isSigner: false;
-                // },
                 {
                     name: "vaultSolendLpToken";
                     isMut: false;
@@ -810,72 +678,6 @@ export type CastleVault = {
                 }
             ];
         },
-        // {
-        //     name: "reconcileJet";
-        //     accounts: [
-        //         {
-        //             name: "vault";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "vaultAuthority";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "vaultReserveToken";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "vaultJetLpToken";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetProgram";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetMarket";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetMarketAuthority";
-        //             isMut: false;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetReserve";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetReserveToken";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "jetLpMint";
-        //             isMut: true;
-        //             isSigner: false;
-        //         },
-        //         {
-        //             name: "tokenProgram";
-        //             isMut: false;
-        //             isSigner: false;
-        //         }
-        //     ];
-        //     args: [
-        //         {
-        //             name: "withdrawOption";
-        //             type: "u64";
-        //         }
-        //     ];
-        // }
     ];
     accounts: [
         {
@@ -915,10 +717,6 @@ export type CastleVault = {
                         name: "portReserve";
                         type: "publicKey";
                     },
-                    // {
-                    //     name: "jetReserve";
-                    //     type: "publicKey";
-                    // },
                     {
                         name: "vaultReserveToken";
                         type: "publicKey";
@@ -931,10 +729,6 @@ export type CastleVault = {
                         name: "vaultPortLpToken";
                         type: "publicKey";
                     },
-                    // {
-                    //     name: "vaultJetLpToken";
-                    //     type: "publicKey";
-                    // },
                     {
                         name: "lpTokenMint";
                         type: "publicKey";
@@ -1071,10 +865,6 @@ export type CastleVault = {
                         name: "port";
                         type: "u16";
                     },
-                    // {
-                    //     name: "jet";
-                    //     type: "u16";
-                    // }
                 ];
             };
         },
@@ -1141,12 +931,6 @@ export type CastleVault = {
                             defined: "SlotTrackedValue";
                         };
                     },
-                    // {
-                    //     name: "jet";
-                    //     type: {
-                    //         defined: "SlotTrackedValue";
-                    //     };
-                    // }
                 ];
             };
         },
@@ -1301,11 +1085,6 @@ export type CastleVault = {
                     type: "u64";
                     index: false;
                 },
-                // {
-                //     name: "jet";
-                //     type: "u64";
-                //     index: false;
-                // }
             ];
         },
         {
@@ -1509,67 +1288,6 @@ export const IDL: CastleVault = {
                 },
             ],
         },
-        // {
-        //     name: "initializeJet",
-        //     accounts: [
-        //         {
-        //             name: "vault",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "vaultAuthority",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "vaultJetLpToken",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetLpTokenMint",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetReserve",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "owner",
-        //             isMut: false,
-        //             isSigner: true,
-        //         },
-        //         {
-        //             name: "payer",
-        //             isMut: true,
-        //             isSigner: true,
-        //         },
-        //         {
-        //             name: "tokenProgram",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "systemProgram",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "rent",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //     ],
-        //     args: [
-        //         {
-        //             name: "bump",
-        //             type: "u8",
-        //         },
-        //     ],
-        // },
         {
             name: "initializePort",
             accounts: [
@@ -1887,11 +1605,6 @@ export const IDL: CastleVault = {
                     isMut: false,
                     isSigner: false,
                 },
-                // {
-                //     name: "jetReserve",
-                //     isMut: false,
-                //     isSigner: false,
-                // },
                 {
                     name: "clock",
                     isMut: false,
@@ -1979,67 +1692,6 @@ export const IDL: CastleVault = {
             ],
             args: [],
         },
-        // {
-        //     name: "refreshJet",
-        //     accounts: [
-        //         {
-        //             name: "vault",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "vaultJetLpToken",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetProgram",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetMarket",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetMarketAuthority",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetReserve",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetFeeNoteVault",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetDepositNoteMint",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetPyth",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "tokenProgram",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "clock",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //     ],
-        //     args: [],
-        // },
         {
             name: "consolidateRefresh",
             accounts: [
@@ -2063,11 +1715,6 @@ export const IDL: CastleVault = {
                     isMut: false,
                     isSigner: false,
                 },
-                // {
-                //     name: "vaultJetLpToken",
-                //     isMut: false,
-                //     isSigner: false,
-                // },
                 {
                     name: "vaultSolendLpToken",
                     isMut: false,
@@ -2228,72 +1875,6 @@ export const IDL: CastleVault = {
                 },
             ],
         },
-        // {
-        //     name: "reconcileJet",
-        //     accounts: [
-        //         {
-        //             name: "vault",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "vaultAuthority",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "vaultReserveToken",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "vaultJetLpToken",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetProgram",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetMarket",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetMarketAuthority",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetReserve",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetReserveToken",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "jetLpMint",
-        //             isMut: true,
-        //             isSigner: false,
-        //         },
-        //         {
-        //             name: "tokenProgram",
-        //             isMut: false,
-        //             isSigner: false,
-        //         },
-        //     ],
-        //     args: [
-        //         {
-        //             name: "withdrawOption",
-        //             type: "u64",
-        //         },
-        //     ],
-        // },
     ],
     accounts: [
         {
@@ -2333,10 +1914,6 @@ export const IDL: CastleVault = {
                         name: "portReserve",
                         type: "publicKey",
                     },
-                    // {
-                    //     name: "jetReserve",
-                    //     type: "publicKey",
-                    // },
                     {
                         name: "vaultReserveToken",
                         type: "publicKey",
@@ -2349,10 +1926,6 @@ export const IDL: CastleVault = {
                         name: "vaultPortLpToken",
                         type: "publicKey",
                     },
-                    // {
-                    //     name: "vaultJetLpToken",
-                    //     type: "publicKey",
-                    // },
                     {
                         name: "lpTokenMint",
                         type: "publicKey",
@@ -2489,10 +2062,6 @@ export const IDL: CastleVault = {
                         name: "port",
                         type: "u16",
                     },
-                    // {
-                    //     name: "jet",
-                    //     type: "u16",
-                    // },
                 ],
             },
         },
@@ -2559,12 +2128,6 @@ export const IDL: CastleVault = {
                             defined: "SlotTrackedValue",
                         },
                     },
-                    // {
-                    //     name: "jet",
-                    //     type: {
-                    //         defined: "SlotTrackedValue",
-                    //     },
-                    // },
                 ],
             },
         },
@@ -2719,11 +2282,6 @@ export const IDL: CastleVault = {
                     type: "u64",
                     index: false,
                 },
-                // {
-                //     name: "jet",
-                //     type: "u64",
-                //     index: false,
-                // },
             ],
         },
         {
