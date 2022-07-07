@@ -1342,12 +1342,6 @@ export type CastleVault = {
                     {
                         name: "reserved1";
                         type: {
-                            array: ["u64", 14];
-                        };
-                    },
-                    {
-                        name: "reserved2";
-                        type: {
                             array: ["u64", 32];
                         };
                     }
@@ -3076,12 +3070,6 @@ export const IDL: CastleVault = {
                     },
                     {
                         name: "reserved1",
-                        type: {
-                            array: ["u64", 14],
-                        },
-                    },
-                    {
-                        name: "reserved2",
                         type: {
                             array: ["u64", 32],
                         },

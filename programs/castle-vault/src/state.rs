@@ -187,7 +187,7 @@ impl Vault {
     }
 }
 
-#[assert_size(504)]
+#[assert_size(392)]
 #[account]
 #[repr(C, align(8))]
 #[derive(Debug, Default)]
@@ -214,8 +214,7 @@ pub struct VaultPortAdditionalState {
     pub port_staking_sub_reward_pool: Pubkey,
 
     _reserved0: [u8; 4],
-    _reserved1: [u64; 14],
-    _reserved2: [u64; 32],
+    _reserved1: [u64; 32],
 }
 
 #[assert_size(aligns, 32)]
