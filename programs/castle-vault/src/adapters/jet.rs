@@ -66,8 +66,6 @@ pub struct JetAccounts<'info> {
     pub jet_lp_mint: AccountInfo<'info>,
 
     pub token_program: Program<'info, Token>,
-
-    pub clock: Sysvar<'info, Clock>,
 }
 
 impl<'info> JetAccounts<'info> {
@@ -110,7 +108,7 @@ impl<'info> LendingMarket for JetAccounts<'info> {
             .value
             .checked_add(amount)
             .ok_or(ErrorCode::MathError)?;
-        self.vault.actual_allocations[Provider::Jet].update(jet_value, self.clock.slot);
+        self.vault.actual_allocations[Provider::Jet].update(jet_value, Clock::get()?.slot);
         Ok(())
     }
 
@@ -142,7 +140,7 @@ impl<'info> LendingMarket for JetAccounts<'info> {
             .value
             .checked_sub(vault_reserve_value_delta)
             .ok_or(ErrorCode::MathError)?;
-        self.vault.actual_allocations[Provider::Jet].update(jet_value, self.clock.slot);
+        self.vault.actual_allocations[Provider::Jet].update(jet_value, Clock::get()?.slot);
         Ok(())
     }
 
