@@ -61,7 +61,7 @@ describe("castle-vault", () => {
         if (enableSuppressLogs) {
             oldConsoleError = console.error;
             console.error = function () {
-                const _noop = '';
+                const _noop = "";
             };
         }
     }
@@ -419,7 +419,7 @@ describe("castle-vault", () => {
         });
 
         it("Reject transaction if deposit cap is reached", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const depositCapErrorCode = program.idl.errors
                 .find((e) => e.name == "DepositCapError")
@@ -450,7 +450,7 @@ describe("castle-vault", () => {
             assert.equal(userLpBalance, 0);
             assert.equal(lpTokenSupply, 0);
 
-            restoreLogs()
+            restoreLogs();
         });
 
         it("Update deposit cap", async function () {
@@ -469,7 +469,7 @@ describe("castle-vault", () => {
         });
 
         it("Reject unauthorized config update", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = "0x7d1";
             const noPermissionUser = Keypair.generate();
@@ -503,13 +503,13 @@ describe("castle-vault", () => {
                 vaultClient.getDepositCap().lamports.toNumber()
             );
 
-            restoreLogs()
+            restoreLogs();
         });
     }
 
     function testVaultFlags() {
         it("Reject deposit transaction if vault is halted", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const depositCapErrorCode = program.idl.errors
                 .find((e) => e.name == "HaltedVault")
@@ -533,11 +533,11 @@ describe("castle-vault", () => {
                 );
             }
 
-            restoreLogs()
+            restoreLogs();
         });
 
         it("Reject rebalance transaction if vault is halted", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = program.idl.errors
                 .find((e) => e.name == "HaltedVault")
@@ -555,7 +555,7 @@ describe("castle-vault", () => {
                 );
             }
 
-            restoreLogs()
+            restoreLogs();
         });
 
         it("Update halt flags", async function () {
@@ -575,7 +575,7 @@ describe("castle-vault", () => {
         });
 
         it("Reject invalid flags update", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = program.idl.errors
                 .find((e) => e.name == "InvalidVaultFlags")
@@ -601,11 +601,11 @@ describe("castle-vault", () => {
 
             assert.equal(oldFlags, vaultClient.getHaltFlags());
 
-            restoreLogs()
+            restoreLogs();
         });
 
         it("Reject unauthorized flags update", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = "0x7d1";
 
@@ -633,7 +633,7 @@ describe("castle-vault", () => {
 
             assert.equal(oldFlags, vaultClient.getHaltFlags());
 
-            restoreLogs()
+            restoreLogs();
         });
     }
 
@@ -657,7 +657,7 @@ describe("castle-vault", () => {
 
         if (rebalanceMode == RebalanceModes.proofChecker) {
             it("Reject transaction if weights don't equal 100%", async () => {
-                suppressLogs()
+                suppressLogs();
 
                 const errorCode = program.idl.errors
                     .find((e) => e.name == "InvalidProposedWeights")
@@ -695,11 +695,11 @@ describe("castle-vault", () => {
                     );
                 }
 
-                restoreLogs()
+                restoreLogs();
             });
 
             it("Reject transaction if weights are suboptimal", async () => {
-                suppressLogs()
+                suppressLogs();
 
                 const errorCode = program.idl.errors
                     .find((e) => e.name == "RebalanceProofCheckFailed")
@@ -737,11 +737,11 @@ describe("castle-vault", () => {
                     );
                 }
 
-                restoreLogs()
+                restoreLogs();
             });
 
             it("Reject transaction if weights exceed the cap", async () => {
-                suppressLogs()
+                suppressLogs();
 
                 const errorCode = program.idl.errors
                     .find((e) => e.name == "InvalidProposedWeights")
@@ -779,7 +779,7 @@ describe("castle-vault", () => {
                     );
                 }
 
-                restoreLogs()
+                restoreLogs();
             });
         }
 
@@ -932,7 +932,7 @@ describe("castle-vault", () => {
         });
 
         it("Reject invalid fee rates", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = program.idl.errors
                 .find((e) => e.name == "InvalidReferralFeeConfig")
@@ -973,7 +973,7 @@ describe("castle-vault", () => {
                 vaultClient.getReferralFeeSplit().asPercent().toNumber()
             );
 
-            restoreLogs()
+            restoreLogs();
         });
     }
 

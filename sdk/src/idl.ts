@@ -677,7 +677,7 @@ export type CastleVault = {
                     type: "u64";
                 }
             ];
-        },
+        }
     ];
     accounts: [
         {
@@ -864,7 +864,7 @@ export type CastleVault = {
                     {
                         name: "port";
                         type: "u16";
-                    },
+                    }
                 ];
             };
         },
@@ -930,7 +930,7 @@ export type CastleVault = {
                         type: {
                             defined: "SlotTrackedValue";
                         };
-                    },
+                    }
                 ];
             };
         },
@@ -994,21 +994,21 @@ export type CastleVault = {
                 kind: "enum";
                 variants: [
                     {
-                        name: "Solend",
+                        name: "Solend";
                         fields: [
                             {
                                 defined: "Box<SolendReserve>";
                             }
-                        ]
+                        ];
                     },
                     {
-                        name: "Port",
+                        name: "Port";
                         fields: [
                             {
                                 defined: "Box<PortReserve>";
                             }
-                        ]
-                    },
+                        ];
+                    }
                 ];
             };
         },
@@ -1084,7 +1084,7 @@ export type CastleVault = {
                     name: "port";
                     type: "u64";
                     index: false;
-                },
+                }
             ];
         },
         {
@@ -2177,13 +2177,13 @@ export const IDL: CastleVault = {
                 kind: "enum",
                 variants: [
                     {
-                        name: "Solend"
+                        name: "Solend",
                     },
                     {
-                        name: "Port"
-                    }
-                ]
-            }
+                        name: "Port",
+                    },
+                ],
+            },
         },
         {
             name: "Reserves",
@@ -2194,20 +2194,20 @@ export const IDL: CastleVault = {
                         name: "Solend",
                         fields: [
                             {
-                                defined: "Box<SolendReserve>"
-                            }
-                        ]
+                                defined: "Box<SolendReserve>",
+                            },
+                        ],
                     },
                     {
                         name: "Port",
                         fields: [
                             {
-                                defined: "Box<PortReserve>"
-                            }
-                        ]
-                    }
-                ]
-            }
+                                defined: "Box<PortReserve>",
+                            },
+                        ],
+                    },
+                ],
+            },
         },
         {
             name: "RebalanceMode",
@@ -2388,6 +2388,6 @@ export const IDL: CastleVault = {
         },
     ],
     metadata: {
-        address: "4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK"
-    }
+        address: "4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK",
+    },
 };
