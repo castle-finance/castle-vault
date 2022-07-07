@@ -151,10 +151,9 @@ impl<'info> LendingMarket for PortAccounts<'info> {
             ),
         }?;
 
-        let vault_reserve_value_delta = self.convert_amount_lp_to_reserve(amount)?;
         let port_value = self.vault.actual_allocations[Provider::Port]
             .value
-            .checked_add(vault_reserve_value_delta)
+            .checked_add(amount)
             .ok_or(ErrorCode::MathError)?;
         self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
         Ok(())

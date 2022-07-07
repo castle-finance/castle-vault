@@ -106,10 +106,9 @@ impl<'info> LendingMarket for JetAccounts<'info> {
             ),
         }?;
 
-        let vault_reserve_value_delta = self.convert_amount_lp_to_reserve(amount)?;
         let jet_value = self.vault.actual_allocations[Provider::Jet]
             .value
-            .checked_add(vault_reserve_value_delta)
+            .checked_add(amount)
             .ok_or(ErrorCode::MathError)?;
         self.vault.actual_allocations[Provider::Jet].update(jet_value, self.clock.slot);
         Ok(())

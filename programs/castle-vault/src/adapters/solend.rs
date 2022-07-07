@@ -98,10 +98,9 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
             ),
         }?;
 
-        let vault_reserve_vault_delta = self.convert_amount_lp_to_reserve(amount)?;
         let solend_value = self.vault.actual_allocations[Provider::Solend]
             .value
-            .checked_add(vault_reserve_vault_delta)
+            .checked_add(amount)
             .ok_or(ErrorCode::MathError)?;
         self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
         Ok(())
