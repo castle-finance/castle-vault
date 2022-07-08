@@ -211,7 +211,7 @@ describe("castle-vault", () => {
     async function initializeVault(
         config: VaultConfig,
         solendAvailable: boolean = true,
-        portAvailable: boolean = true,
+        portAvailable: boolean = true
     ) {
         vaultClient = await VaultClient.initialize(
             provider,
@@ -327,9 +327,11 @@ describe("castle-vault", () => {
         let txSigs = null;
 
         if (rebalanceOnly) {
-            const preRefresh = (await vaultClient.getPreRefreshTxs()).map((tx) => {
-                return { tx: tx, signers: [] };
-            });
+            const preRefresh = (await vaultClient.getPreRefreshTxs()).map(
+                (tx) => {
+                    return { tx: tx, signers: [] };
+                }
+            );
             const txs = [
                 ...preRefresh,
                 {
@@ -641,7 +643,7 @@ describe("castle-vault", () => {
         expectedPortRatio: number,
         rebalanceMode: RebalanceMode = RebalanceModes.calculator,
         solendAvailable: boolean = true,
-        portAvailable: boolean = true,
+        portAvailable: boolean = true
     ) {
         // NOTE: should not be divisible by the number of markets, 2 in this case
         // The TODO to correct this is below
@@ -803,7 +805,8 @@ describe("castle-vault", () => {
                 ).lamports.toNumber();
                 assert.isAtMost(
                     Math.abs(
-                        solendValue - Math.floor(depositQty * expectedSolendRatio)
+                        solendValue -
+                            Math.floor(depositQty * expectedSolendRatio)
                     ),
                     maxDiffAllowed
                 );
@@ -1007,10 +1010,7 @@ describe("castle-vault", () => {
                     strategyType: { [StrategyTypes.equalAllocation]: {} },
                 });
             });
-            testRebalanceWithdraw(
-                1/2,
-                1/2,
-            );
+            testRebalanceWithdraw(1 / 2, 1 / 2);
         });
 
         xdescribe("Fees", () => {
@@ -1042,7 +1042,7 @@ describe("castle-vault", () => {
             // since both have borrow/util rates of 0 this might just be because solend is first in the Provider enum
             testRebalanceWithdraw(
                 vaultAllocationCap / 100,
-                1 - vaultAllocationCap / 100,
+                1 - vaultAllocationCap / 100
             );
 
             // TODO borrow from port to increase apy and ensure it switches to that
@@ -1080,7 +1080,7 @@ describe("castle-vault", () => {
                         strategyType: { [StrategyTypes.equalAllocation]: {} },
                     },
                     true,
-                    false,
+                    false
                 );
             });
 
@@ -1088,13 +1088,7 @@ describe("castle-vault", () => {
                 assert.equal(0b01, vaultClient.getYieldSourceFlags());
             });
 
-            testRebalanceWithdraw(
-                1,
-                0,
-                rebalanceMode,
-                true,
-                false,
-            );
+            testRebalanceWithdraw(1, 0, rebalanceMode, true, false);
         });
     });
 });

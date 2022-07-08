@@ -259,17 +259,18 @@ export class SolendReserveAsset extends LendingMarket {
         vaultId: PublicKey,
         vaultState: Vault
     ): Promise<TransactionInstruction> {
-        return program.methods.refreshSolend()
-        .accounts({
-            vault: vaultId,
-            vaultSolendLpToken: vaultState.vaultSolendLpToken,
-            solendProgram: this.accounts.program,
-            solendReserve: this.accounts.reserve,
-            solendPyth: this.accounts.pythPrice,
-            solendSwitchboard: this.accounts.switchboardFeed,
-            clock: SYSVAR_CLOCK_PUBKEY,
-        })
-        .instruction();
+        return program.methods
+            .refreshSolend()
+            .accounts({
+                vault: vaultId,
+                vaultSolendLpToken: vaultState.vaultSolendLpToken,
+                solendProgram: this.accounts.program,
+                solendReserve: this.accounts.reserve,
+                solendPyth: this.accounts.pythPrice,
+                solendSwitchboard: this.accounts.switchboardFeed,
+                clock: SYSVAR_CLOCK_PUBKEY,
+            })
+            .instruction();
     }
 
     async getReconcileIx(
@@ -278,23 +279,25 @@ export class SolendReserveAsset extends LendingMarket {
         vaultState: Vault,
         withdrawOption?: anchor.BN
     ): Promise<TransactionInstruction> {
-        return program.methods.reconcileSolend(
-            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
-        ).accounts({
-            vault: vaultId,
-            vaultAuthority: vaultState.vaultAuthority,
-            vaultReserveToken: vaultState.vaultReserveToken,
-            vaultSolendLpToken: vaultState.vaultSolendLpToken,
-            solendProgram: this.accounts.program,
-            solendMarketAuthority: this.accounts.marketAuthority,
-            solendMarket: this.accounts.market,
-            solendReserve: this.accounts.reserve,
-            solendLpMint: this.accounts.collateralMint,
-            solendReserveToken: this.accounts.liquiditySupply,
-            clock: SYSVAR_CLOCK_PUBKEY,
-            tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .instruction();
+        return program.methods
+            .reconcileSolend(
+                withdrawOption == null ? new anchor.BN(0) : withdrawOption
+            )
+            .accounts({
+                vault: vaultId,
+                vaultAuthority: vaultState.vaultAuthority,
+                vaultReserveToken: vaultState.vaultReserveToken,
+                vaultSolendLpToken: vaultState.vaultSolendLpToken,
+                solendProgram: this.accounts.program,
+                solendMarketAuthority: this.accounts.marketAuthority,
+                solendMarket: this.accounts.market,
+                solendReserve: this.accounts.reserve,
+                solendLpMint: this.accounts.collateralMint,
+                solendReserveToken: this.accounts.liquiditySupply,
+                clock: SYSVAR_CLOCK_PUBKEY,
+                tokenProgram: TOKEN_PROGRAM_ID,
+            })
+            .instruction();
     }
 
     async getInitializeIx(
@@ -309,20 +312,21 @@ export class SolendReserveAsset extends LendingMarket {
                 [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
                 program.programId
             );
-        return program.methods.initializeSolend(solendLpBump)
-        .accounts({
-            vault: vaultId,
-            vaultAuthority: vaultAuthority,
-            vaultSolendLpToken: vaultSolendLpTokenAccount,
-            solendReserve: this.accounts.reserve,
-            solendLpTokenMint: this.accounts.collateralMint,
-            owner: owner,
-            payer: wallet,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            systemProgram: SystemProgram.programId,
-            rent: SYSVAR_RENT_PUBKEY,
-        })
-        .instruction();
+        return program.methods
+            .initializeSolend(solendLpBump)
+            .accounts({
+                vault: vaultId,
+                vaultAuthority: vaultAuthority,
+                vaultSolendLpToken: vaultSolendLpTokenAccount,
+                solendReserve: this.accounts.reserve,
+                solendLpTokenMint: this.accounts.collateralMint,
+                owner: owner,
+                payer: wallet,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            })
+            .instruction();
     }
 }
 
