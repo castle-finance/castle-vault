@@ -351,21 +351,6 @@ export class VaultClient {
         res = res.concat([await this.getConsolidateRefreshIx()]);
         res = res.filter((value) => value != null);
         return res;
-
-        // return Object.keys(this.yieldSources)
-        //     .map((k) => {
-        //         if (lpTokenValues[k] > 0) {
-        //             return this.yieldSources[k].getRefreshIx(
-        //                 this.program,
-        //                 this.vaultId,
-        //                 this.vaultState
-        //             );
-        //         } else {
-        //             return null;
-        //         }
-        //     })
-        //     .concat([await this.getConsolidateRefreshIx()])
-        //     .filter((value) => value != null);
     }
 
     private static async getReserveAndLpTokens(
