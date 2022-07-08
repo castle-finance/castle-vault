@@ -1,0 +1,209 @@
+import {
+    Cluster,
+    Keypair,
+    PublicKey,
+    SystemProgram,
+    Transaction,
+    TransactionInstruction,
+    SYSVAR_CLOCK_PUBKEY,
+    SYSVAR_RENT_PUBKEY,
+    LAMPORTS_PER_SOL,
+} from "@solana/web3.js";
+import { TokenSwap } from "@solana/spl-token-swap";
+import { TOKEN_PROGRAM_ID, Token, AccountLayout } from "@solana/spl-token";
+import * as BufferLayout from "@solana/buffer-layout";
+import * as anchor from "@project-serum/anchor";
+
+interface OrcaLegacyAccounts {
+    swapProgram: PublicKey;
+    swapAuthority: PublicKey;
+    inputToken: PublicKey;
+    outputTOken: PublicKey;
+}
+
+export class OrcaLegacySwap {
+    private constructor(public accounts: OrcaLegacyAccounts) {}
+}
+
+const createAccount = async (
+    provider: anchor.Provider,
+    space: number,
+    owner: PublicKey
+): Promise<Keypair> => {
+    const newAccount = Keypair.generate();
+    const createTx = new Transaction().add(
+        SystemProgram.createAccount({
+            fromPubkey: provider.wallet.publicKey,
+            newAccountPubkey: newAccount.publicKey,
+            programId: owner,
+            lamports:
+                await provider.connection.getMinimumBalanceForRentExemption(
+                    space
+                ),
+            space,
+        })
+    );
+    await provider.send(createTx, [newAccount]);
+    return newAccount;
+};
+
+// constants: https://github.com/orca-so/typescript-sdk/blob/main/src/public/utils/constants.ts
+const DEVNET_ORCA_TOKEN_SWAP_ID = new PublicKey(
+    "3xQ8SWv2GaFXXpHZNqkXsdxq5DZciHBz6ZFoPPfbFd7U"
+);
+const ORCA_TOKEN_SWAP_ACCOUNT_LEN = 324;
+
+interface InitOrcaSwapIxData {
+    instruction: number;
+    nonce: number;
+    tradeFeeNumerator: number;
+    tradeFeeDenominator: number;
+    ownerTradeFeeNumerator: number;
+    ownerTradeFeeDenominator: number;
+    ownerWithdrawFeeNumerator: number;
+    ownerWithdrawFeeDenominator: number;
+    hostFeeNumerator: number;
+    hostFeeDenominator: number;
+    curveType: number;
+    curveParameters: Uint8Array;
+}
+
+const initOrcaSwapIxDataLayout = BufferLayout.struct<InitOrcaSwapIxData>([
+    BufferLayout.u8("instruction"),
+    BufferLayout.u8("nonce"),
+    BufferLayout.nu64("tradeFeeNumerator"),
+    BufferLayout.nu64("tradeFeeDenominator"),
+    BufferLayout.nu64("ownerTradeFeeNumerator"),
+    BufferLayout.nu64("ownerTradeFeeDenominator"),
+    BufferLayout.nu64("ownerWithdrawFeeNumerator"),
+    BufferLayout.nu64("ownerWithdrawFeeDenominator"),
+    BufferLayout.nu64("hostFeeNumerator"),
+    BufferLayout.nu64("hostFeeDenominator"),
+    BufferLayout.u8("curveType"),
+    BufferLayout.blob(32, "curveParameters"),
+]);
+
+export async function initialize(
+    provider: anchor.Provider,
+    owner: Keypair, // owner of the pool
+    tokenA: Token, // mint of token A
+    tokenB: Token, // mint of token B
+    tokenOwnerA: Keypair, // acct that can mint token A
+    tokenOwnerB: Keypair // acct that can mint token B
+): Promise<OrcaLegacyAccounts> {
+    // This step will create the swap program account, which is used to store states of the pool
+    const swapProgram = await createAccount(
+        provider,
+        ORCA_TOKEN_SWAP_ACCOUNT_LEN,
+        DEVNET_ORCA_TOKEN_SWAP_ID
+    );
+    const [authority, bump] = await PublicKey.findProgramAddress(
+        [swapProgram.publicKey.toBuffer()],
+        DEVNET_ORCA_TOKEN_SWAP_ID
+    );
+
+    // This step will create the pool's native LP token
+    const poolTokenMint = await Token.createMint(
+        provider.connection,
+        owner,
+        authority,
+        null,
+        6,
+        TOKEN_PROGRAM_ID
+    );
+
+    // This step will create the pool's fee account
+    const feeAccount = await poolTokenMint.createAssociatedTokenAccount(
+        poolTokenMint.publicKey
+    );
+
+    // This step will mint some mock tokens to be swaped for testing purposes
+    const tokenSupplyA = await tokenA.createAssociatedTokenAccount(
+        tokenOwnerA.publicKey
+    );
+    await tokenA.mintTo(tokenSupplyA, tokenOwnerA, [], 1000000000);
+
+    const tokenSupplyB = await tokenB.createAssociatedTokenAccount(
+        tokenOwnerB.publicKey
+    );
+    await tokenB.mintTo(tokenSupplyB, tokenOwnerB, [], 1000000000);
+
+    // This step will transfer the ownership of token A & B accounts to the pool.
+    const sig0 = await tokenA.setAuthority(
+        tokenSupplyA,
+        authority,
+        "AccountOwner",
+        tokenOwnerA.publicKey,
+        []
+    );
+    const sig1 = await tokenB.setAuthority(
+        tokenSupplyB,
+        authority,
+        "AccountOwner",
+        tokenOwnerB.publicKey,
+        []
+    );
+
+    // define trading fees
+    const tradeFeeNumerator = 25;
+    const tradeFeeDenominator = 10000;
+    const ownerFeeNumerator = 5;
+    const ownerFeeDenominator = 10000;
+
+    const ixData = Buffer.alloc(99);
+    initOrcaSwapIxDataLayout.encode(
+        {
+            instruction: 0x00, // Init
+            nonce: bump,
+            tradeFeeNumerator: tradeFeeNumerator,
+            tradeFeeDenominator: tradeFeeDenominator,
+            ownerTradeFeeNumerator: ownerFeeNumerator,
+            ownerTradeFeeDenominator: ownerFeeDenominator,
+            ownerWithdrawFeeNumerator: 0,
+            ownerWithdrawFeeDenominator: 0,
+            hostFeeNumerator: 0,
+            hostFeeDenominator: 0,
+            curveType: 0,
+            curveParameters: Buffer.alloc(32),
+        },
+        ixData
+    );
+
+    const keys = [
+        { pubkey: swapProgram.publicKey, isSigner: false, isWritable: true },
+        { pubkey: authority, isSigner: false, isWritable: false },
+        { pubkey: tokenSupplyA, isSigner: false, isWritable: false },
+        { pubkey: tokenSupplyB, isSigner: false, isWritable: false },
+        { pubkey: poolTokenMint.publicKey, isSigner: false, isWritable: true },
+        { pubkey: feeAccount, isSigner: false, isWritable: true },
+        { pubkey: feeAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ];
+
+    const tx = new Transaction().add(
+        new TransactionInstruction({
+            keys,
+            programId: DEVNET_ORCA_TOKEN_SWAP_ID,
+            data: ixData,
+        })
+    );
+
+    console.log("owner: ", owner.publicKey.toString());
+    console.log("swapProgram: ", swapProgram.publicKey.toString());
+    console.log(
+        "poolTokenMint.payer: ",
+        poolTokenMint.payer.publicKey.toString()
+    );
+    console.log("feeAccount: ", feeAccount.toString());
+
+    const sig = await provider.send(tx, [owner]);
+    console.log(sig);
+
+    let orcaAccounts: OrcaLegacyAccounts = {
+        swapProgram: swapProgram.publicKey,
+        swapAuthority: authority,
+        inputToken: tokenSupplyA,
+        outputTOken: tokenSupplyB,
+    };
+    return orcaAccounts;
+}

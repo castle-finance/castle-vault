@@ -85,7 +85,10 @@ pub struct Vault {
 
     pub vault_port_additional_state_bump: u8,
 
-    _reserved0: [u8; 3],
+    // Stores accounts needed for interacting with DEX
+    pub dex_accounts_bump: u8,
+
+    _reserved0: [u8; 2],
     _reserved1: [u32; 25],
 }
 
@@ -215,6 +218,15 @@ pub struct VaultPortAdditionalState {
 
     _reserved0: [u8; 4],
     _reserved1: [u64; 32],
+}
+
+#[assert_size(128)]
+#[account]
+#[repr(C, align(8))]
+#[derive(Debug, Default)]
+#[cfg_attr(test, derive(TypeLayout))]
+pub struct DexAccounts {
+    _reserved0: [u64; 16],
 }
 
 #[assert_size(aligns, 32)]

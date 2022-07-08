@@ -39,6 +39,9 @@ import {
     JetReserveAsset,
 } from "./adapters";
 import {
+    OrcaLegacySwap
+} from "./dex";
+import {
     ProposedWeightsBps,
     RebalanceDataEvent,
     Vault,
@@ -52,6 +55,10 @@ interface YieldSources {
     solend?: SolendReserveAsset;
     port?: PortReserveAsset;
     jet?: JetReserveAsset;
+}
+
+interface ExchangeMarkets {
+    orcaLegacy: OrcaLegacySwap
 }
 
 export class VaultClient {
