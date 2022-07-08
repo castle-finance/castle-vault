@@ -245,57 +245,57 @@ export class PortReserveAsset extends LendingMarket {
         return TokenAmount.fromToken(this.reserveToken, total.getRaw().round());
     }
 
-    getRefreshIx(
+    async getRefreshIx(
         program: anchor.Program<CastleVault>,
         vaultId: PublicKey,
         vaultState: Vault
-    ): TransactionInstruction {
-        return program.instruction.refreshPort({
-            accounts: {
-                vault: vaultId,
-                vaultPortLpToken: vaultState.vaultPortLpToken,
-                portProgram: this.accounts.program,
-                portReserve: this.accounts.reserve,
-                clock: SYSVAR_CLOCK_PUBKEY,
-            },
-            remainingAccounts:
-                this.accounts.oracle == null
-                    ? []
-                    : [
-                          {
-                              isSigner: false,
-                              isWritable: false,
-                              pubkey: this.accounts.oracle,
-                          },
-                      ],
-        });
+    ): Promise<TransactionInstruction> {
+        return program.methods.refreshPort()
+        .accounts({
+            vault: vaultId,
+            vaultPortLpToken: vaultState.vaultPortLpToken,
+            portProgram: this.accounts.program,
+            portReserve: this.accounts.reserve,
+            clock: SYSVAR_CLOCK_PUBKEY,
+        })
+        .remainingAccounts(
+            this.accounts.oracle == null
+                ? []
+                : [
+                    {
+                        isSigner: false,
+                        isWritable: false,
+                        pubkey: this.accounts.oracle,
+                    },
+                ],
+        )
+        .instruction();
     }
 
-    getReconcileIx(
+    async getReconcileIx(
         program: anchor.Program<CastleVault>,
         vaultId: PublicKey,
         vaultState: Vault,
         withdrawOption?: anchor.BN
-    ): TransactionInstruction {
-        return program.instruction.reconcilePort(
+    ): Promise<TransactionInstruction> {
+        return program.methods.reconcilePort(
             withdrawOption == null ? new anchor.BN(0) : withdrawOption,
-            {
-                accounts: {
-                    vault: vaultId,
-                    vaultAuthority: vaultState.vaultAuthority,
-                    vaultReserveToken: vaultState.vaultReserveToken,
-                    vaultPortLpToken: vaultState.vaultPortLpToken,
-                    portProgram: this.accounts.program,
-                    portMarketAuthority: this.accounts.marketAuthority,
-                    portMarket: this.accounts.market,
-                    portReserve: this.accounts.reserve,
-                    portLpMint: this.accounts.collateralMint,
-                    portReserveToken: this.accounts.liquiditySupply,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                },
-            }
-        );
+        )
+        .accounts({
+            vault: vaultId,
+            vaultAuthority: vaultState.vaultAuthority,
+            vaultReserveToken: vaultState.vaultReserveToken,
+            vaultPortLpToken: vaultState.vaultPortLpToken,
+            portProgram: this.accounts.program,
+            portMarketAuthority: this.accounts.marketAuthority,
+            portMarket: this.accounts.market,
+            portReserve: this.accounts.reserve,
+            portLpMint: this.accounts.collateralMint,
+            portReserveToken: this.accounts.liquiditySupply,
+            clock: SYSVAR_CLOCK_PUBKEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .instruction();
     }
 
     async getInitializeIx(
@@ -311,20 +311,20 @@ export class PortReserveAsset extends LendingMarket {
                 program.programId
             );
 
-        return program.instruction.initializePort(portLpBump, {
-            accounts: {
-                vault: vaultId,
-                vaultAuthority: vaultAuthority,
-                vaultPortLpToken: vaultPortLpTokenAccount,
-                portLpTokenMint: this.accounts.collateralMint,
-                portReserve: this.accounts.reserve,
-                owner: owner,
-                payer: wallet,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                systemProgram: SystemProgram.programId,
-                rent: SYSVAR_RENT_PUBKEY,
-            },
-        });
+        return program.methods.initializePort(portLpBump)
+        .accounts({
+            vault: vaultId,
+            vaultAuthority: vaultAuthority,
+            vaultPortLpToken: vaultPortLpTokenAccount,
+            portLpTokenMint: this.accounts.collateralMint,
+            portReserve: this.accounts.reserve,
+            owner: owner,
+            payer: wallet,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+            rent: SYSVAR_RENT_PUBKEY,
+        })
+        .instruction();
     }
 }
 

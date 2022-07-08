@@ -327,7 +327,7 @@ describe("castle-vault", () => {
         let txSigs = null;
 
         if (rebalanceOnly) {
-            const preRefresh = vaultClient.getPreRefreshTxs().map((tx) => {
+            const preRefresh = (await vaultClient.getPreRefreshTxs()).map((tx) => {
                 return { tx: tx, signers: [] };
             });
             const txs = [
@@ -986,7 +986,7 @@ describe("castle-vault", () => {
             testDepositAndWithdrawal();
         });
 
-        xdescribe("Deposit cap and vault flags", () => {
+        describe("Deposit cap and vault flags", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -999,7 +999,7 @@ describe("castle-vault", () => {
             testVaultFlags();
         });
 
-        xdescribe("Rebalance", () => {
+        describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -1038,7 +1038,8 @@ describe("castle-vault", () => {
                 await initializeVault({ allocationCapPct: vaultAllocationCap });
             });
 
-            // Solend has a higher yield than Port, so it should get max alloc
+            // Solend is prioritized over Port, so it should get max alloc
+            // since both have borrow/util rates of 0 this might just be because solend is first in the Provider enum
             testRebalanceWithdraw(
                 vaultAllocationCap / 100,
                 1 - vaultAllocationCap / 100,

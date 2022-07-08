@@ -15,14 +15,14 @@ export abstract class LendingMarket {
         program: anchor.Program<CastleVault>,
         vaultId: PublicKey,
         vaultState: Vault
-    ): TransactionInstruction;
+    ): Promise<TransactionInstruction>;
 
     abstract getReconcileIx(
         program: anchor.Program<CastleVault>,
         vaultId: PublicKey,
         vaultState: Vault,
         withdrawOption?: anchor.BN
-    ): TransactionInstruction;
+    ): Promise<TransactionInstruction>;
 
     abstract getInitializeIx(
         program: anchor.Program<CastleVault>,
