@@ -634,7 +634,7 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "castle-vault"
-version = "3.3.1"
+version = "3.4.1"
 dependencies = [
  "anchor-lang 0.18.2",
  "anchor-spl 0.18.2",

@@ -419,6 +419,17 @@ export class VaultClient {
                 this.program.programId
             );
 
+        const subRewardAvailable =
+            this.yieldSources.port.accounts.stakingSubRewardTokenMint !=
+                undefined &&
+            this.yieldSources.port.accounts.stakingSubRewardPool != undefined;
+        const subRewardMint = subRewardAvailable
+            ? this.yieldSources.port.accounts.stakingSubRewardTokenMint
+            : this.yieldSources.port.accounts.stakingRewardTokenMint;
+        const subRewardPool = subRewardAvailable
+            ? this.yieldSources.port.accounts.stakingSubRewardPool
+            : Keypair.generate().publicKey;
+
         const tx = new Transaction();
         tx.add(
             this.program.instruction.initializePortRewardAccounts(
@@ -426,6 +437,7 @@ export class VaultClient {
                 portStakeBump,
                 portRewardBump,
                 portSubRewardBump,
+                subRewardAvailable,
                 {
                     accounts: {
                         vault: this.vaultId,
@@ -442,16 +454,12 @@ export class VaultClient {
                         portRewardTokenMint:
                             this.yieldSources.port.accounts
                                 .stakingRewardTokenMint,
-                        portSubRewardTokenMint:
-                            this.yieldSources.port.accounts
-                                .stakingSubRewardTokenMint,
+                        portSubRewardTokenMint: subRewardMint,
                         portStakingPool:
                             this.yieldSources.port.accounts.stakingPool,
                         portStakingRewardPool:
                             this.yieldSources.port.accounts.stakingRewardPool,
-                        portStakingSubRewardPool:
-                            this.yieldSources.port.accounts
-                                .stakingSubRewardPool,
+                        portStakingSubRewardPool: subRewardPool,
                         portStakeProgram:
                             this.yieldSources.port.accounts.stakingProgram,
                         portLendProgram:
