@@ -1286,9 +1286,13 @@ export type CastleVault = {
                         type: "u8";
                     },
                     {
+                        name: "dexAccountsBump";
+                        type: "u8";
+                    },
+                    {
                         name: "reserved0";
                         type: {
-                            array: ["u8", 3];
+                            array: ["u8", 2];
                         };
                     },
                     {
@@ -1351,6 +1355,20 @@ export type CastleVault = {
                         name: "reserved1";
                         type: {
                             array: ["u64", 32];
+                        };
+                    }
+                ];
+            };
+        },
+        {
+            name: "dexAccounts";
+            type: {
+                kind: "struct";
+                fields: [
+                    {
+                        name: "reserved0";
+                        type: {
+                            array: ["u64", 16];
                         };
                     }
                 ];
@@ -3023,9 +3041,13 @@ export const IDL: CastleVault = {
                         type: "u8",
                     },
                     {
+                        name: "dexAccountsBump",
+                        type: "u8",
+                    },
+                    {
                         name: "reserved0",
                         type: {
-                            array: ["u8", 3],
+                            array: ["u8", 2],
                         },
                     },
                     {
@@ -3088,6 +3110,20 @@ export const IDL: CastleVault = {
                         name: "reserved1",
                         type: {
                             array: ["u64", 32],
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            name: "dexAccounts",
+            type: {
+                kind: "struct",
+                fields: [
+                    {
+                        name: "reserved0",
+                        type: {
+                            array: ["u64", 16],
                         },
                     },
                 ],
