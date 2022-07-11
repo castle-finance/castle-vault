@@ -217,7 +217,9 @@ export class PortReserveAsset extends LendingMarket {
                 this.accounts.collateralMint
             )
         );
-        const ataInitSig = await this.provider.sendAndConfirm(ataInitTx, [user]);
+        const ataInitSig = await this.provider.sendAndConfirm(ataInitTx, [
+            user,
+        ]);
 
         const obligation = await createAccount(
             this.provider,

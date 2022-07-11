@@ -698,7 +698,7 @@ describe("castle-vault", () => {
     ) {
         // NOTE: should not be divisible by the number of markets, 2 in this case
         // The TODO to correct this is below
-        const depositQty = 1024501;
+        const depositQty = 1000001;
 
         before(async () => {
             await mintReserveToken(userReserveTokenAccount, depositQty);
@@ -1040,7 +1040,7 @@ describe("castle-vault", () => {
             testDepositAndWithdrawal();
         });
 
-        describe("Deposit cap and vault flags", () => {
+        xdescribe("Deposit cap and vault flags", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -1053,7 +1053,7 @@ describe("castle-vault", () => {
             testVaultFlags();
         });
 
-        describe("Rebalance", () => {
+        xdescribe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -1082,7 +1082,7 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Max yield calculator", () => {
+    xdescribe("Max yield calculator", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -1099,7 +1099,7 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Max yield proof checker", () => {
+    xdescribe("Max yield proof checker", () => {
         describe("Rebalance", () => {
             const rebalanceMode = RebalanceModes.proofChecker;
             before(initLendingMarkets);
@@ -1118,7 +1118,7 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Disabled pools", () => {
+    xdescribe("Disabled pools", () => {
         describe("Rebalance with equal allocation strategy missing 1 pool", () => {
             const rebalanceMode = RebalanceModes.calculator;
             before(initLendingMarkets);
