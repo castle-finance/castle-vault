@@ -240,15 +240,15 @@ pub struct DexStates {
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(TypeLayout))]
 pub struct OrcaLegacyAccounts {
-    pub swap_program: Pubkey,
+    pub orca_swap_state: Pubkey,
 
-    pub swap_authority: Pubkey, 
+    pub orca_swap_authority: Pubkey, 
 
-    pub input_token_account: Pubkey,
+    pub orca_input_token_account: Pubkey,
 
-    pub output_token_account: Pubkey,
+    pub orca_output_token_account: Pubkey,
 
-    pub swap_token_mint: Pubkey,
+    pub orca_swap_token_mint: Pubkey,
 
     _reserved1: [u64; 20],
 }

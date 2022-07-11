@@ -31,7 +31,7 @@ pub struct InitializeDexOrcaLegacy<'info> {
     )]
     pub orca_legacy_accounts: Box<Account<'info, OrcaLegacyAccounts>>,
 
-    pub orca_swap_program: AccountInfo<'info>,
+    pub orca_swap_state: AccountInfo<'info>,
 
     pub orca_swap_authority: AccountInfo<'info>,
 
@@ -59,12 +59,12 @@ pub struct InitializeDexOrcaLegacy<'info> {
 
 pub fn handler(ctx: Context<InitializeDexOrcaLegacy>, bump: u8) -> ProgramResult {
     ctx.accounts.dex_states.orca_legacy_accounts_bump = bump;
-    ctx.accounts.orca_legacy_accounts.swap_program = ctx.accounts.orca_swap_program.key();
-    ctx.accounts.orca_legacy_accounts.swap_authority = ctx.accounts.orca_swap_authority.key();
-    ctx.accounts.orca_legacy_accounts.input_token_account =
+    ctx.accounts.orca_legacy_accounts.orca_swap_state = ctx.accounts.orca_swap_state.key();
+    ctx.accounts.orca_legacy_accounts.orca_swap_authority = ctx.accounts.orca_swap_authority.key();
+    ctx.accounts.orca_legacy_accounts.orca_input_token_account =
         ctx.accounts.orca_input_token_account.key();
-    ctx.accounts.orca_legacy_accounts.output_token_account =
+    ctx.accounts.orca_legacy_accounts.orca_output_token_account =
         ctx.accounts.orca_output_token_account.key();
-    ctx.accounts.orca_legacy_accounts.swap_token_mint = ctx.accounts.orca_swap_token_mint.key();
+    ctx.accounts.orca_legacy_accounts.orca_swap_token_mint = ctx.accounts.orca_swap_token_mint.key();
     Ok(())
 }
