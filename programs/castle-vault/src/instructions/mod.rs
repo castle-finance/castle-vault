@@ -1,6 +1,8 @@
 pub mod claim_port_reward;
 pub mod consolidate_refresh;
 pub mod deposit;
+pub mod init_dex_states;
+pub mod init_dex_orca_legacy;
 pub mod init_port_additional_state;
 pub mod init_port_reward_accounts;
 pub mod init_vault;
@@ -16,6 +18,8 @@ pub mod withdraw;
 pub use claim_port_reward::*;
 pub use consolidate_refresh::*;
 pub use deposit::*;
+pub use init_dex_states::*;
+pub use init_dex_orca_legacy::*;
 pub use init_port_additional_state::*;
 pub use init_port_reward_accounts::*;
 pub use init_vault::*;

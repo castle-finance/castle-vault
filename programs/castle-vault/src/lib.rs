@@ -29,6 +29,14 @@ pub mod castle_vault {
         instructions::init_vault::handler(ctx, bumps, config)
     }
 
+    pub fn initialize_dex_states(ctx: Context<InitializeDexStates>, bump: u8) -> ProgramResult {
+        instructions::init_dex_states::handler(ctx, bump)
+    }
+
+    pub fn initialize_dex_orca_legacy(ctx: Context<InitializeDexOrcaLegacy>, bump: u8) -> ProgramResult {
+        instructions::init_dex_orca_legacy::handler(ctx, bump)
+    }
+
     pub fn initialize_port_additional_state(
         ctx: Context<InitializePortAdditionalState>,
         bump: u8,

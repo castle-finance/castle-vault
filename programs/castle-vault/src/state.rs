@@ -86,7 +86,7 @@ pub struct Vault {
     pub vault_port_additional_state_bump: u8,
 
     // Stores accounts needed for interacting with DEX
-    pub dex_accounts_bump: u8,
+    pub dex_states_bump: u8,
 
     _reserved0: [u8; 2],
     _reserved1: [u32; 25],
@@ -227,13 +227,14 @@ pub struct VaultPortAdditionalState {
 #[repr(C, align(8))]
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(TypeLayout))]
-pub struct DexAccounts {
+pub struct DexStates {
     pub orca_legacy_accounts_bump: u8,
     
     _reserved0: [u8; 7],
     _reserved1: [u64; 15],
 }
 
+#[assert_size(320)]
 #[account]
 #[repr(C, align(8))]
 #[derive(Debug, Default)]
@@ -248,6 +249,8 @@ pub struct OrcaLegacyAccounts {
     pub output_token_account: Pubkey,
 
     pub swap_token_mint: Pubkey,
+
+    _reserved1: [u64; 20],
 }
 
 #[assert_size(aligns, 32)]
