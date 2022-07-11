@@ -39,3 +39,6 @@ program = "deps/port_finance_staking.so"
 [[test.genesis]]
 address = "JPv1rCqrhagNNmJVM5J1he7msQ5ybtvE1nNuHpDHMNU"
 program = "deps/jet.so"
+[[test.genesis]]
+address = "3xQ8SWv2GaFXXpHZNqkXsdxq5DZciHBz6ZFoPPfbFd7U"
+program = "deps/orca_legacy_pool.so"
