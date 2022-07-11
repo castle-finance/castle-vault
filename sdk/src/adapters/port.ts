@@ -9,7 +9,13 @@ import {
     TransactionInstruction,
     SYSVAR_CLOCK_PUBKEY,
     SYSVAR_RENT_PUBKEY,
+    TransactionSignature,
+    Signer,
 } from "@solana/web3.js";
+import {
+    getAssociatedTokenAddress,
+    createAssociatedTokenAccount,
+} from "@project-serum/associated-token";
 import { TOKEN_PROGRAM_ID, Token as SplToken } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
 import * as anchor from "@project-serum/anchor";
@@ -22,13 +28,18 @@ import {
     AssetPriceConfig,
     DEFAULT_PORT_LENDING_MARKET,
     Environment,
-    initLendingMarketInstruction,
-    initReserveInstruction,
     MintId,
     Port,
     PORT_STAKING,
     ReserveConfigProto,
     ReserveId,
+    initLendingMarketInstruction,
+    initReserveInstruction,
+    initObligationInstruction,
+    refreshReserveInstruction,
+    refreshObligationInstruction,
+    depositReserveLiquidityAndAddCollateralInstruction,
+    borrowObligationLiquidityInstruction,
 } from "@port.finance/port-sdk";
 
 import { CastleVault } from "../idl";
@@ -46,6 +57,8 @@ interface PortAccounts {
     collateralMint: PublicKey;
     oracle: PublicKey;
     liquiditySupply: PublicKey;
+    liquidityFeeReceiver: PublicKey;
+    lpTokenAccount: PublicKey;
 }
 
 // TODO use constant from port sdk
@@ -118,6 +131,8 @@ export class PortReserveAsset extends LendingMarket {
             collateralMint: reserve.getShareMintId(),
             oracle: reserve.getOracleId(),
             liquiditySupply: reserve.getAssetBalanceId(),
+            liquidityFeeReceiver: reserve.getFeeBalanceId(),
+            lpTokenAccount: reserve.getShareBalanceId(),
         };
 
         const lpToken = await getToken(
@@ -181,6 +196,114 @@ export class PortReserveAsset extends LendingMarket {
             reserveToken,
             lpToken
         );
+    }
+
+    async borrow(
+        user: Signer,
+        userReserveTokenAccount: PublicKey,
+        borrowAmount: number
+    ): Promise<TransactionSignature[]> {
+        let depositAmount = borrowAmount * 1.5;
+
+        let userCollateralTokenAccount = await getAssociatedTokenAddress(
+            user.publicKey,
+            this.accounts.collateralMint
+        );
+
+        let ataInitTx = new Transaction().add(
+            await createAssociatedTokenAccount(
+                user.publicKey,
+                user.publicKey,
+                this.accounts.collateralMint
+            )
+        );
+        let ataInitSig = await this.provider.sendAndConfirm(ataInitTx, [user]);
+
+        let obligation = await createAccount(
+            this.provider,
+            OBLIGATION_LEN,
+            DEVNET_LENDING_PROGRAM_ID
+        );
+
+        let depositTx = new Transaction()
+            .add(
+                initObligationInstruction(
+                    obligation.publicKey,
+                    this.accounts.market,
+                    user.publicKey,
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                refreshReserveInstruction(
+                    this.accounts.reserve,
+                    this.accounts.oracle,
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                refreshObligationInstruction(
+                    obligation.publicKey,
+                    [],
+                    [],
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                depositReserveLiquidityAndAddCollateralInstruction(
+                    depositAmount,
+                    userReserveTokenAccount,
+                    userCollateralTokenAccount,
+                    this.accounts.reserve,
+                    this.accounts.liquiditySupply,
+                    this.accounts.collateralMint,
+                    this.accounts.market,
+                    this.accounts.marketAuthority,
+                    this.accounts.lpTokenAccount,
+                    obligation.publicKey,
+                    user.publicKey,
+                    user.publicKey,
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            );
+
+        let borrowTx = new Transaction()
+            .add(
+                refreshReserveInstruction(
+                    this.accounts.reserve,
+                    this.accounts.oracle,
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                refreshObligationInstruction(
+                    obligation.publicKey,
+                    [this.accounts.reserve],
+                    [],
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                borrowObligationLiquidityInstruction(
+                    borrowAmount,
+                    this.accounts.liquiditySupply,
+                    userReserveTokenAccount,
+                    this.accounts.reserve,
+                    this.accounts.liquidityFeeReceiver,
+                    obligation.publicKey,
+                    this.accounts.market,
+                    this.accounts.marketAuthority,
+                    user.publicKey,
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            );
+
+        let sigs = await this.provider.sendAll([
+            { tx: depositTx, signers: [user] },
+            { tx: borrowTx, signers: [user] },
+        ]);
+
+        return [ataInitSig, ...sigs];
     }
 
     async getLpTokenAccountValue(vaultState: Vault): Promise<TokenAmount> {
@@ -338,6 +461,7 @@ const TOKEN_ACCOUNT_LEN = 165;
 const TOKEN_MINT_LEN = 82;
 const RESERVE_LEN = 575;
 const LENDING_MARKET_LEN = 258;
+const OBLIGATION_LEN = 916;
 
 const DEFAULT_RESERVE_CONFIG: ReserveConfigProto = {
     optimalUtilizationRate: 80,
@@ -503,5 +627,7 @@ async function createDefaultReserve(
         oracle: oracle,
         collateralMint: collateralMintAccount.publicKey,
         liquiditySupply: liquiditySupplyTokenAccount.publicKey,
+        liquidityFeeReceiver: liquidityFeeReceiver.publicKey,
+        lpTokenAccount: collateralSupplyTokenAccount.publicKey,
     };
 }

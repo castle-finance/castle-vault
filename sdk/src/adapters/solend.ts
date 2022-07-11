@@ -182,14 +182,6 @@ export class SolendReserveAsset extends LendingMarket {
         );
     }
 
-    //async borrow(amount: number): Promise<TransactionSignature> {
-    //    const borrowTx = SolendAction.buildBorrowTxns(
-    //        this.provider.connection,
-    //        new anchor.BN(amount),
-    //
-    //    )
-    //}
-
     private async reload() {
         await this.reserve.load();
     }

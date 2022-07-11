@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import * as anchor from "@project-serum/anchor";
-import { TOKEN_PROGRAM_ID, Token, NATIVE_MINT } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { Keypair, PublicKey, TransactionSignature } from "@solana/web3.js";
 
 import {
@@ -70,6 +70,46 @@ describe("castle-vault", () => {
         if (enableSuppressLogs) {
             console.error = oldConsoleError;
         }
+    }
+
+    async function printLendingStats() {
+        await vaultClient.reload();
+
+        let vaultState = await vaultClient.getVaultState();
+
+        let vaultApy = (await vaultClient.getApy()).toNumber();
+        let solend = vaultClient.getSolend();
+        let port = vaultClient.getPort();
+
+        let solendApy = (await solend.getApy()).toNumber();
+        let solendBorrow = (
+            await solend.getBorrowedAmount()
+        ).lamports.toNumber();
+        let solendDeposit = (
+            await solend.getDepositedAmount()
+        ).lamports.toNumber();
+        let solendLpToken = (
+            await solend.getLpTokenAccountValue(vaultState)
+        ).lamports.toNumber();
+
+        let portApy = (await port.getApy()).toNumber();
+        let portBorrow = (await port.getBorrowedAmount()).lamports.toNumber();
+        let portDeposit = (await port.getDepositedAmount()).lamports.toNumber();
+        let portLpToken = (
+            await port.getLpTokenAccountValue(vaultState)
+        ).lamports.toNumber();
+
+        console.log("Vault APY: ", vaultApy);
+        console.log("");
+        console.log("Solend APY: " + solendApy);
+        console.log("Solend Borrow: " + solendBorrow);
+        console.log("Solend Deposit: " + solendDeposit);
+        console.log("Solend LP Tokens: " + solendLpToken);
+        console.log("");
+        console.log("Port APY: " + portApy);
+        console.log("Port Borrow: " + portBorrow);
+        console.log("Port Deposit: " + portDeposit);
+        console.log("Port LP Tokens: " + portLpToken);
     }
 
     async function fetchSlots(txs: string[]): Promise<number[]> {
@@ -206,6 +246,17 @@ describe("castle-vault", () => {
             ownerReserveTokenAccount,
             initialReserveAmount
         );
+
+        const borrowAmount = initialReserveAmount / 2;
+
+        let portBorrowTxs = await port.borrow(
+            owner,
+            ownerReserveTokenAccount,
+            borrowAmount
+        );
+        for (let tx of portBorrowTxs) {
+            await provider.connection.confirmTransaction(tx, "finalized");
+        }
     }
 
     async function initializeVault(
@@ -697,14 +748,14 @@ describe("castle-vault", () => {
                 restoreLogs();
             });
 
-            // TODO figure out how to make solend/port borrow/util rates not 0 so that calc'ed apr will be non-zero
-            xit("Reject transaction if weights are suboptimal", async () => {
-                // suppressLogs();
+            it("Reject transaction if weights are suboptimal", async () => {
+                suppressLogs();
 
                 const errorCode = program.idl.errors
                     .find((e) => e.name == "RebalanceProofCheckFailed")
                     .code.toString(16);
                 try {
+                    // should be suboptimal since solend apy is 0
                     await performRebalance(
                         {
                             solend: 5000,
@@ -737,7 +788,7 @@ describe("castle-vault", () => {
                     );
                 }
 
-                // restoreLogs();
+                restoreLogs();
             });
 
             it("Reject transaction if weights exceed the cap", async () => {
@@ -1031,25 +1082,24 @@ describe("castle-vault", () => {
         });
     });
 
-    xdescribe("Max yield calculator", () => {
+    describe("Max yield calculator", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({ allocationCapPct: vaultAllocationCap });
             });
 
-            // Solend is prioritized over Port, so it should get max alloc
-            // since both have borrow/util rates of 0 this might just be because solend is first in the Provider enum
+            // Port should get max alloc since only it has > 0 APY
             testRebalanceWithdraw(
-                vaultAllocationCap / 100,
-                1 - vaultAllocationCap / 100
+                1 - vaultAllocationCap / 100,
+                vaultAllocationCap / 100
             );
 
-            // TODO borrow from port to increase apy and ensure it switches to that
+            // TODO borrow from solend to get higher apy and ensure we switch
         });
     });
 
-    xdescribe("Max yield proof checker", () => {
+    describe("Max yield proof checker", () => {
         describe("Rebalance", () => {
             const rebalanceMode = RebalanceModes.proofChecker;
             before(initLendingMarkets);
@@ -1061,14 +1111,14 @@ describe("castle-vault", () => {
                 });
             });
             testRebalanceWithdraw(
-                vaultAllocationCap / 100,
                 1 - vaultAllocationCap / 100,
+                vaultAllocationCap / 100,
                 rebalanceMode
             );
         });
     });
 
-    xdescribe("Disabled pools", () => {
+    describe("Disabled pools", () => {
         describe("Rebalance with equal allocation strategy missing 1 pool", () => {
             const rebalanceMode = RebalanceModes.calculator;
             before(initLendingMarkets);
