@@ -18,7 +18,7 @@ use crate::{
     reserves::Provider,
 };
 
-// #[assert_size(704)]
+#[assert_size(768)]
 #[account]
 #[repr(C, align(8))]
 #[derive(Debug)]
@@ -77,12 +77,8 @@ pub struct Vault {
 
     pub lp_token_supply: u64,
 
-    // 4 * 26 = 104
-    /// Reserved space for future upgrades
-    _reserved: [u32; 26],
-
-    // #[account] doesnt work for this bc anchor cant serialize this size
-    // _reserved: [u32; 42],
+    _reserved0: [u32; 26],
+    _reserved1: [u32; 28],
 }
 
 impl Vault {
