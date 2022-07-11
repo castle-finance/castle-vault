@@ -203,29 +203,29 @@ export class PortReserveAsset extends LendingMarket {
         userReserveTokenAccount: PublicKey,
         borrowAmount: number
     ): Promise<TransactionSignature[]> {
-        let depositAmount = borrowAmount * 1.5;
+        const depositAmount = borrowAmount * 1.5;
 
-        let userCollateralTokenAccount = await getAssociatedTokenAddress(
+        const userCollateralTokenAccount = await getAssociatedTokenAddress(
             user.publicKey,
             this.accounts.collateralMint
         );
 
-        let ataInitTx = new Transaction().add(
+        const ataInitTx = new Transaction().add(
             await createAssociatedTokenAccount(
                 user.publicKey,
                 user.publicKey,
                 this.accounts.collateralMint
             )
         );
-        let ataInitSig = await this.provider.sendAndConfirm(ataInitTx, [user]);
+        const ataInitSig = await this.provider.sendAndConfirm(ataInitTx, [user]);
 
-        let obligation = await createAccount(
+        const obligation = await createAccount(
             this.provider,
             OBLIGATION_LEN,
             DEVNET_LENDING_PROGRAM_ID
         );
 
-        let depositTx = new Transaction()
+        const depositTx = new Transaction()
             .add(
                 initObligationInstruction(
                     obligation.publicKey,
@@ -267,7 +267,7 @@ export class PortReserveAsset extends LendingMarket {
                 )
             );
 
-        let borrowTx = new Transaction()
+        const borrowTx = new Transaction()
             .add(
                 refreshReserveInstruction(
                     this.accounts.reserve,
@@ -298,7 +298,7 @@ export class PortReserveAsset extends LendingMarket {
                 )
             );
 
-        let sigs = await this.provider.sendAll([
+        const sigs = await this.provider.sendAll([
             { tx: depositTx, signers: [user] },
             { tx: borrowTx, signers: [user] },
         ]);
