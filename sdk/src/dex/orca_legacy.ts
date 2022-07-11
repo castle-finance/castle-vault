@@ -13,16 +13,68 @@ import { TokenSwap } from "@solana/spl-token-swap";
 import { TOKEN_PROGRAM_ID, Token, AccountLayout } from "@solana/spl-token";
 import * as BufferLayout from "@solana/buffer-layout";
 import * as anchor from "@project-serum/anchor";
+import { OrcaPoolConfig } from "@orca-so/sdk";
+import { orcaPoolConfigs } from "@orca-so/sdk/dist/constants/pools";
+import { OrcaPoolParams } from "@orca-so/sdk/dist/model/orca/pool/pool-types";
+import { PubkeyField } from "@jet-lab/jet-engine/lib/common/accountParser";
 
 interface OrcaLegacyAccounts {
+    programId: PublicKey;
     swapProgram: PublicKey;
     swapAuthority: PublicKey;
-    inputToken: PublicKey;
-    outputTOken: PublicKey;
+    poolTokenMint: PublicKey;
+    feeAccount: PublicKey;
+    tokenAccountA: PublicKey;
+    tokenAccountB: PublicKey;
 }
 
 export class OrcaLegacySwap {
     private constructor(public accounts: OrcaLegacyAccounts) {}
+
+    static async load(
+        tokenA: PublicKey,
+        tokenB: PublicKey,
+        cluster: Cluster
+    ): Promise<OrcaLegacySwap> {
+        const tokenPairSig = tokenA.toString() + tokenB.toString();
+        let tokenPairToOrcaLegacyPool;
+
+        if (cluster == "devnet") {
+            // TODO mock orca pool
+        } else if (cluster == "mainnet-beta") {
+            // Load orca pool parameters from the sdk for look-up.
+            // Because the sdk doesn't support look-up using token mint pubkeys.
+            tokenPairToOrcaLegacyPool = Object.fromEntries(
+                Object.values(OrcaPoolConfig).map((v) => {
+                    const params = orcaPoolConfigs[v];
+                    const tokens = Object.keys(params.tokens);
+                    return [
+                        tokens[0].toString() + tokens[1].toString(),
+                        params,
+                    ];
+                })
+            );
+        } else {
+            throw new Error("Cluster ${cluster} not supported");
+        }
+
+        const params: OrcaPoolParams = tokenPairToOrcaLegacyPool[tokenPairSig];
+        if (params == undefined) {
+            throw new Error("Token pair not supported");
+        }
+
+        const dummy = Keypair.generate().publicKey;
+        const accounts = {
+            programId: DEVNET_ORCA_TOKEN_SWAP_ID,
+            swapProgram: params.address,
+            swapAuthority: params.authority,
+            poolTokenMint: params.poolTokenMint,
+            feeAccount: params.feeAccount,
+            tokenAccountA: tokenA,
+            tokenAccountB: tokenB,
+        };
+        return new OrcaLegacySwap(accounts);
+    }
 }
 
 const createAccount = async (
@@ -126,7 +178,7 @@ export async function initialize(
     const tokenSupplyB = await tokenB.createAssociatedTokenAccount(
         tokenOwnerB.publicKey
     );
-    await tokenB.mintTo(tokenSupplyB, tokenOwnerB, [], 1000000000);
+    await tokenB.mintTo(tokenSupplyB, tokenOwnerB, [], 2000000000);
 
     // This step will transfer the ownership of token A & B accounts to the pool.
     const sig0 = await tokenA.setAuthority(
@@ -188,22 +240,16 @@ export async function initialize(
         })
     );
 
-    console.log("owner: ", owner.publicKey.toString());
-    console.log("swapProgram: ", swapProgram.publicKey.toString());
-    console.log(
-        "poolTokenMint.payer: ",
-        poolTokenMint.payer.publicKey.toString()
-    );
-    console.log("feeAccount: ", feeAccount.toString());
-
     const sig = await provider.send(tx, [owner]);
-    console.log(sig);
 
     let orcaAccounts: OrcaLegacyAccounts = {
+        programId: DEVNET_ORCA_TOKEN_SWAP_ID,
         swapProgram: swapProgram.publicKey,
         swapAuthority: authority,
-        inputToken: tokenSupplyA,
-        outputTOken: tokenSupplyB,
+        poolTokenMint: poolTokenMint.publicKey,
+        feeAccount: feeAccount,
+        tokenAccountA: tokenSupplyA,
+        tokenAccountB: tokenSupplyB,
     };
     return orcaAccounts;
 }

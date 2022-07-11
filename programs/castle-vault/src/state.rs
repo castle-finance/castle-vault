@@ -228,7 +228,26 @@ pub struct VaultPortAdditionalState {
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(TypeLayout))]
 pub struct DexAccounts {
-    _reserved0: [u64; 16],
+    pub orca_legacy_accounts_bump: u8,
+    
+    _reserved0: [u8; 7],
+    _reserved1: [u64; 15],
+}
+
+#[account]
+#[repr(C, align(8))]
+#[derive(Debug, Default)]
+#[cfg_attr(test, derive(TypeLayout))]
+pub struct OrcaLegacyAccounts {
+    pub swap_program: Pubkey,
+
+    pub swap_authority: Pubkey, 
+
+    pub input_token_account: Pubkey,
+
+    pub output_token_account: Pubkey,
+
+    pub swap_token_mint: Pubkey,
 }
 
 #[assert_size(aligns, 32)]
