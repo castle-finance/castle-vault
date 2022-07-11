@@ -11,10 +11,8 @@ use crate::{
 };
 
 pub trait Refresher<'info> {
-    fn update_actual_allocation(
-        &mut self,
-        remaining_accounts: &[AccountInfo<'info>],
-    ) -> Result<()>;
+    fn update_actual_allocation(&mut self, remaining_accounts: &[AccountInfo<'info>])
+        -> Result<()>;
 }
 
 /// Refreshes the reserves of downstream lending markets

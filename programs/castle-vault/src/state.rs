@@ -88,8 +88,7 @@ impl Vault {
     }
 
     pub fn set_halt_flags(&mut self, bits: u16) -> Result<()> {
-        VaultFlags::from_bits(bits)
-            .ok_or_else(|| ErrorCode::InvalidVaultFlags)?;
+        VaultFlags::from_bits(bits).ok_or_else(|| ErrorCode::InvalidVaultFlags)?;
         self.halt_flags = bits;
         Ok(())
     }
@@ -104,8 +103,7 @@ impl Vault {
     }
 
     pub fn set_yield_source_flags(&mut self, flags: u16) -> Result<()> {
-        YieldSourceFlags::from_bits(flags)
-            .ok_or_else(|| ErrorCode::InvalidVaultFlags)?;
+        YieldSourceFlags::from_bits(flags).ok_or_else(|| ErrorCode::InvalidVaultFlags)?;
         self.yield_source_flags = flags;
         Ok(())
     }

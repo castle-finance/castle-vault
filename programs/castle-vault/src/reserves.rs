@@ -66,24 +66,19 @@ pub trait ReserveAccessor {
 
 #[cfg_attr(test, automock)]
 pub trait ReturnCalculator {
-    fn calculate_return(
-        &self,
-        new_allocation: u64,
-        old_allocation: u64,
-    ) -> Result<Rate>;
+    fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate>;
 }
 
 impl<T> ReturnCalculator for T
 where
     T: ReserveAccessor,
 {
-    fn calculate_return(
-        &self,
-        new_allocation: u64,
-        old_allocation: u64,
-    ) -> Result<Rate> {
+    fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate> {
         let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
-        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?).map_err(|e| e.into())
+        reserve
+            .utilization_rate()?
+            .try_mul(reserve.borrow_rate()?)
+            .map_err(|e| e.into())
     }
 }
 
@@ -142,6 +137,9 @@ mod test {
             .expect_reserve_with_deposit()
             .return_once(|_, _| Ok(Box::new(mock_ra_inner)));
 
-        assert_eq!(mock_ra.calculate_return(10, 0).unwrap(), Rate::from_percent(40));
+        assert_eq!(
+            mock_ra.calculate_return(10, 0).unwrap(),
+            Rate::from_percent(40)
+        );
     }
 }

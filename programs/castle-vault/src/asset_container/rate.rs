@@ -41,10 +41,7 @@ mod tests {
     #[test]
     fn test_verify_weights_happy() {
         let rates = AssetContainerGeneric::<Rate, 2> {
-            inner: [
-                Some(Rate::from_percent(0)),
-                Some(Rate::from_percent(100)),
-            ],
+            inner: [Some(Rate::from_percent(0)), Some(Rate::from_percent(100))],
         };
         assert!(rates.verify_weights(100).is_ok())
     }
@@ -52,10 +49,7 @@ mod tests {
     #[test]
     fn test_verify_weights_happy2() {
         let rates = AssetContainerGeneric::<Rate, 2> {
-            inner: [
-                Some(Rate::from_percent(59)),
-                Some(Rate::from_percent(41)),
-            ],
+            inner: [Some(Rate::from_percent(59)), Some(Rate::from_percent(41))],
         };
         assert!(rates.verify_weights(59).is_ok())
     }
@@ -63,10 +57,7 @@ mod tests {
     #[test]
     fn test_verify_weights_unhappy_gt1() {
         let rates = AssetContainerGeneric::<Rate, 2> {
-            inner: [
-                Some(Rate::from_percent(59)),
-                Some(Rate::from_percent(42)),
-            ],
+            inner: [Some(Rate::from_percent(59)), Some(Rate::from_percent(42))],
         };
         // TODO fix
         // assert_eq!(
@@ -79,10 +70,7 @@ mod tests {
     #[test]
     fn test_verify_weights_unhappy_alloc_cap() {
         let rates = AssetContainerGeneric::<Rate, 2> {
-            inner: [
-                Some(Rate::from_percent(59)),
-                Some(Rate::from_percent(41)),
-            ],
+            inner: [Some(Rate::from_percent(59)), Some(Rate::from_percent(41))],
         };
         // TODO fix
         // assert_eq!(

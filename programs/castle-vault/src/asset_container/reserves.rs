@@ -14,20 +14,14 @@ use crate::{
 
 use super::AssetContainer;
 
-pub fn compare(
-    lhs: &impl ReturnCalculator,
-    rhs: &impl ReturnCalculator,
-) -> Result<Ordering> {
+pub fn compare(lhs: &impl ReturnCalculator, rhs: &impl ReturnCalculator) -> Result<Ordering> {
     Ok(lhs
         .calculate_return(0, 0)?
         .cmp(&rhs.calculate_return(0, 0)?))
 }
 
 impl AssetContainer<Reserves> {
-    fn calculate_weights_max_yield(
-        &self,
-        allocation_cap_pct: u8,
-    ) -> Result<AssetContainer<Rate>> {
+    fn calculate_weights_max_yield(&self, allocation_cap_pct: u8) -> Result<AssetContainer<Rate>> {
         self.into_iter()
             .flat_map(|(p, r)| r.map(|v| (p, v)))
             .sorted_unstable_by(|(_, alloc_y), (_, alloc_x)| {
@@ -46,17 +40,21 @@ impl AssetContainer<Reserves> {
                     }
                 },
             )
-            .map(|(r, _)| r).map_err(|e| e.into())
+            .map(|(r, _)| r)
+            .map_err(|e| e.into())
     }
 
     fn calculate_weights_equal(&self) -> Result<AssetContainer<Rate>> {
         u8::try_from(self.len())
             .map_err(|_| ErrorCode::StrategyError)
-            .and_then(|num_assets| Rate::from_percent(num_assets).try_mul(100).map_err(|_| ErrorCode::StrategyError))
+            .and_then(|num_assets| {
+                Rate::from_percent(num_assets)
+                    .try_mul(100)
+                    .map_err(|_| ErrorCode::StrategyError)
+            })
             .and_then(|r| Rate::one().try_div(r).map_err(|_| ErrorCode::StrategyError))
-            .map(|equal_allocation| self.apply(|_, v| v.map(|_| equal_allocation))).map_err(
-                |e| e.into(),
-            )
+            .map(|equal_allocation| self.apply(|_, v| v.map(|_| equal_allocation)))
+            .map_err(|e| e.into())
     }
 
     pub fn calculate_weights(
@@ -82,8 +80,12 @@ impl AssetContainer<Reserves> {
                 (Some(r), Some(a1), Some(a0), Some(w)) => Some((r, a1, a0, w)),
                 _ => None,
             })
-            .map(|(r, a1, a0, w)| r.calculate_return(a1, a0).and_then(|ret| w.try_mul(ret).map_err(|e| e.into())))
-            .try_fold(Rate::zero(), |acc, r| acc.try_add(r?)).map_err(|e| e.into())
+            .map(|(r, a1, a0, w)| {
+                r.calculate_return(a1, a0)
+                    .and_then(|ret| w.try_mul(ret).map_err(|e| e.into()))
+            })
+            .try_fold(Rate::zero(), |acc, r| acc.try_add(r?))
+            .map_err(|e| e.into())
     }
 }
 

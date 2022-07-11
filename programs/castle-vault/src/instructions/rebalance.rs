@@ -207,5 +207,6 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
             emit!(RebalanceDataEvent::from(&final_allocations));
 
             ctx.accounts.vault.target_allocations = final_allocations;
-        }).map_err(|e| e.into())
+        })
+        .map_err(|e| e.into())
 }

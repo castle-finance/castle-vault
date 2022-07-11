@@ -129,12 +129,16 @@ impl<'info> LendingMarket for PortAccounts<'info> {
 
     fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64> {
         let exchange_rate = self.port_reserve.collateral_exchange_rate()?;
-        exchange_rate.liquidity_to_collateral(amount).map_err(|e| e.into())
+        exchange_rate
+            .liquidity_to_collateral(amount)
+            .map_err(|e| e.into())
     }
 
     fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64> {
         let exchange_rate = self.port_reserve.collateral_exchange_rate()?;
-        exchange_rate.collateral_to_liquidity(amount).map_err(|e| e.into())
+        exchange_rate
+            .collateral_to_liquidity(amount)
+            .map_err(|e| e.into())
     }
 
     fn reserve_tokens_in_vault(&self) -> u64 {

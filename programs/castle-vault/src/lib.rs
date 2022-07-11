@@ -66,10 +66,7 @@ pub mod castle_vault {
         instructions::withdraw::handler(ctx, lp_token_amount)
     }
 
-    pub fn rebalance(
-        ctx: Context<Rebalance>,
-        proposed_weights: StrategyWeightsArg,
-    ) -> Result<()> {
+    pub fn rebalance(ctx: Context<Rebalance>, proposed_weights: StrategyWeightsArg) -> Result<()> {
         instructions::rebalance::handler(ctx, proposed_weights)
     }
 
@@ -79,9 +76,7 @@ pub mod castle_vault {
         instructions::refresh::handler(ctx)
     }
 
-    pub fn refresh_port<'info>(
-        ctx: Context<'_, '_, '_, 'info, RefreshPort<'info>>,
-    ) -> Result<()> {
+    pub fn refresh_port<'info>(ctx: Context<'_, '_, '_, 'info, RefreshPort<'info>>) -> Result<()> {
         instructions::refresh::handler(ctx)
     }
 

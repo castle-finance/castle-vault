@@ -49,10 +49,7 @@ macro_rules! impl_has_vault {
     )+)
 }
 
-pub fn handler<T: LendingMarket + HasVault>(
-    ctx: Context<T>,
-    withdraw_option: u64,
-) -> Result<()> {
+pub fn handler<T: LendingMarket + HasVault>(ctx: Context<T>, withdraw_option: u64) -> Result<()> {
     // Check that reconciles are not halted
     (!ctx
         .accounts
