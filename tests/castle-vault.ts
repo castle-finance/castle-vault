@@ -25,6 +25,7 @@ import {
     RebalanceModes,
     StrategyTypes,
 } from "@castlefinance/vault-core";
+import { OrcaLegacySwap } from "../sdk/src/dex";
 
 describe("castle-vault", () => {
     const provider = anchor.Provider.env();
@@ -61,6 +62,7 @@ describe("castle-vault", () => {
     let jet: JetReserveAsset;
     let solend: SolendReserveAsset;
     let port: PortReserveAsset;
+    let orca: OrcaLegacySwap;
 
     let vaultClient: VaultClient;
     let userReserveTokenAccount: PublicKey;
@@ -69,7 +71,7 @@ describe("castle-vault", () => {
         if (enableSuppressLogs) {
             oldConsoleError = console.error;
             console.error = function () {
-                const _noop = '';
+                const _noop = "";
             };
         }
     }
@@ -237,6 +239,22 @@ describe("castle-vault", () => {
         await provider.connection.confirmTransaction(
             jetBorrowTxs[jetBorrowTxs.length - 1],
             "finalized"
+        );
+
+        const tokenMintA = new Token(
+            program.provider.connection,
+            port.accounts.stakingRewardTokenMint,
+            TOKEN_PROGRAM_ID,
+            owner
+        );
+        const tokenMintB = reserveToken;
+        orca = await OrcaLegacySwap.initialize(
+            provider,
+            wallet.payer,
+            tokenMintA,
+            tokenMintB,
+            owner,
+            owner
         );
     }
 
