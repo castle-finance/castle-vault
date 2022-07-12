@@ -92,6 +92,118 @@ export type CastleVault = {
             ];
         },
         {
+            name: "initializeDexStates";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "dexStates";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "bump";
+                    type: "u8";
+                }
+            ];
+        },
+        {
+            name: "initializeDexOrcaLegacy";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "dexStates";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaLegacyAccounts";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapState";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaInputTokenAccount";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaOutputTokenAccount";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapTokenMint";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "associatedTokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "bump";
+                    type: "u8";
+                }
+            ];
+        },
+        {
             name: "initializePortAdditionalState";
             accounts: [
                 {
@@ -1286,7 +1398,7 @@ export type CastleVault = {
                         type: "u8";
                     },
                     {
-                        name: "dexAccountsBump";
+                        name: "dexStatesBump";
                         type: "u8";
                     },
                     {
@@ -1361,14 +1473,58 @@ export type CastleVault = {
             };
         },
         {
-            name: "dexAccounts";
+            name: "dexStates";
             type: {
                 kind: "struct";
                 fields: [
                     {
+                        name: "orcaLegacyAccountsBump";
+                        type: "u8";
+                    },
+                    {
                         name: "reserved0";
                         type: {
-                            array: ["u64", 16];
+                            array: ["u8", 7];
+                        };
+                    },
+                    {
+                        name: "reserved1";
+                        type: {
+                            array: ["u64", 15];
+                        };
+                    }
+                ];
+            };
+        },
+        {
+            name: "orcaLegacyAccounts";
+            type: {
+                kind: "struct";
+                fields: [
+                    {
+                        name: "orcaSwapState";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "orcaSwapAuthority";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "orcaInputTokenAccount";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "orcaOutputTokenAccount";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "orcaSwapTokenMint";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "reserved1";
+                        type: {
+                            array: ["u64", 20];
                         };
                     }
                 ];
@@ -1843,6 +1999,118 @@ export const IDL: CastleVault = {
                     type: {
                         defined: "VaultConfigArg",
                     },
+                },
+            ],
+        },
+        {
+            name: "initializeDexStates",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "dexStates",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "bump",
+                    type: "u8",
+                },
+            ],
+        },
+        {
+            name: "initializeDexOrcaLegacy",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "dexStates",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaLegacyAccounts",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapState",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaInputTokenAccount",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaOutputTokenAccount",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "associatedTokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "bump",
+                    type: "u8",
                 },
             ],
         },
@@ -3041,7 +3309,7 @@ export const IDL: CastleVault = {
                         type: "u8",
                     },
                     {
-                        name: "dexAccountsBump",
+                        name: "dexStatesBump",
                         type: "u8",
                     },
                     {
@@ -3116,14 +3384,58 @@ export const IDL: CastleVault = {
             },
         },
         {
-            name: "dexAccounts",
+            name: "dexStates",
             type: {
                 kind: "struct",
                 fields: [
                     {
+                        name: "orcaLegacyAccountsBump",
+                        type: "u8",
+                    },
+                    {
                         name: "reserved0",
                         type: {
-                            array: ["u64", 16],
+                            array: ["u8", 7],
+                        },
+                    },
+                    {
+                        name: "reserved1",
+                        type: {
+                            array: ["u64", 15],
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            name: "orcaLegacyAccounts",
+            type: {
+                kind: "struct",
+                fields: [
+                    {
+                        name: "orcaSwapState",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "orcaSwapAuthority",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "orcaInputTokenAccount",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "orcaOutputTokenAccount",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "orcaSwapTokenMint",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "reserved1",
+                        type: {
+                            array: ["u64", 20],
                         },
                     },
                 ],
