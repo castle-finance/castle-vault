@@ -1240,9 +1240,6 @@ describe("castle-vault", () => {
             );
             const newReserveBalance = await getVaultReserveTokenBalance();
 
-            console.log("oldReserveBalance: ", oldReserveBalance);
-            console.log("newReserveBalance: ", newReserveBalance);
-
             assert.isAtMost(remainingAmount, 1);
             assert.isAtLeast(
                 newReserveBalance - oldReserveBalance,
