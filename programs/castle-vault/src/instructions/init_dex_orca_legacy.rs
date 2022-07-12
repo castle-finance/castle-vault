@@ -10,11 +10,8 @@ pub struct InitializeDexOrcaLegacy<'info> {
     #[account(
         mut,
         has_one = owner,
-        has_one = vault_authority,
     )]
     pub vault: Box<Account<'info, Vault>>,
-
-    pub vault_authority: AccountInfo<'info>,
 
     #[account(
         mut,

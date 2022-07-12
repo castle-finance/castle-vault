@@ -9,14 +9,12 @@ import {
     SYSVAR_RENT_PUBKEY,
     LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
-import { TokenSwap } from "@solana/spl-token-swap";
 import { TOKEN_PROGRAM_ID, Token, AccountLayout } from "@solana/spl-token";
 import * as BufferLayout from "@solana/buffer-layout";
 import * as anchor from "@project-serum/anchor";
 import { OrcaPoolConfig } from "@orca-so/sdk";
 import { orcaPoolConfigs } from "@orca-so/sdk/dist/constants/pools";
 import { OrcaPoolParams } from "@orca-so/sdk/dist/model/orca/pool/pool-types";
-import { PubkeyField } from "@jet-lab/jet-engine/lib/common/accountParser";
 
 interface OrcaLegacyAccounts {
     programId: PublicKey;
