@@ -1,1 +1,1 @@
-export { OrcaLegacySwap } from "./orca_legacy";
+export * from "./orca_legacy";

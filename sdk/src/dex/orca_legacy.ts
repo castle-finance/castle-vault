@@ -16,7 +16,7 @@ import { OrcaPoolConfig } from "@orca-so/sdk";
 import { orcaPoolConfigs } from "@orca-so/sdk/dist/constants/pools";
 import { OrcaPoolParams } from "@orca-so/sdk/dist/model/orca/pool/pool-types";
 
-interface OrcaLegacyAccounts {
+export interface OrcaLegacyAccounts {
     programId: PublicKey;
     swapProgram: PublicKey;
     swapAuthority: PublicKey;
@@ -26,17 +26,22 @@ interface OrcaLegacyAccounts {
     tokenAccountB: PublicKey;
 }
 
-export class OrcaLegacySwap {
-    private constructor(public accounts: OrcaLegacyAccounts) {}
 
-    static async load(
+export class OrcaLegacySwap {
+
+    private constructor(
+        public accounts: OrcaLegacyAccounts
+    ) {
+    }
+
+    static load(
         tokenA: PublicKey,
         tokenB: PublicKey,
         cluster: Cluster
-    ): Promise<OrcaLegacySwap> {
+    ): OrcaLegacySwap {
         const tokenPairSig = tokenA.toString() + tokenB.toString();
         let tokenPairToOrcaLegacyPool;
-
+    
         if (cluster == "devnet") {
             // TODO mock orca pool
         } else if (cluster == "mainnet-beta") {
@@ -55,12 +60,12 @@ export class OrcaLegacySwap {
         } else {
             throw new Error("Cluster ${cluster} not supported");
         }
-
+    
         const params: OrcaPoolParams = tokenPairToOrcaLegacyPool[tokenPairSig];
         if (params == undefined) {
             throw new Error("Token pair not supported");
         }
-
+    
         const dummy = Keypair.generate().publicKey;
         const accounts = {
             programId: DEVNET_ORCA_TOKEN_SWAP_ID,
@@ -71,6 +76,18 @@ export class OrcaLegacySwap {
             tokenAccountA: tokenA,
             tokenAccountB: tokenB,
         };
+        return new OrcaLegacySwap(accounts);
+    }
+
+    static async initialize(
+        provider: anchor.Provider,
+        owner: Keypair, // owner of the pool
+        tokenA: Token, // mint of token A
+        tokenB: Token, // mint of token B
+        tokenOwnerA: Keypair, // acct that can mint token A
+        tokenOwnerB: Keypair // acct that can mint token B
+    ): Promise<OrcaLegacySwap> {
+        let accounts = await createMockSwap(provider, owner, tokenA, tokenB, tokenOwnerA, tokenOwnerB);
         return new OrcaLegacySwap(accounts);
     }
 }
@@ -133,7 +150,7 @@ const initOrcaSwapIxDataLayout = BufferLayout.struct<InitOrcaSwapIxData>([
     BufferLayout.blob(32, "curveParameters"),
 ]);
 
-export async function initialize(
+async function createMockSwap(
     provider: anchor.Provider,
     owner: Keypair, // owner of the pool
     tokenA: Token, // mint of token A
