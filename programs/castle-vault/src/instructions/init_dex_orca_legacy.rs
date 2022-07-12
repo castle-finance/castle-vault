@@ -62,6 +62,7 @@ pub fn handler(ctx: Context<InitializeDexOrcaLegacy>, bump: u8) -> ProgramResult
         ctx.accounts.orca_input_token_account.key();
     ctx.accounts.orca_legacy_accounts.orca_output_token_account =
         ctx.accounts.orca_output_token_account.key();
-    ctx.accounts.orca_legacy_accounts.orca_swap_token_mint = ctx.accounts.orca_swap_token_mint.key();
+    ctx.accounts.orca_legacy_accounts.orca_swap_token_mint =
+        ctx.accounts.orca_swap_token_mint.key();
     Ok(())
 }

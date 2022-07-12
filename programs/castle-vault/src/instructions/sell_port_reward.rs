@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount};
 use anchor_lang::solana_program::program::invoke_signed;
+use anchor_spl::token::{Token, TokenAccount};
 
 use crate::state::{DexStates, OrcaLegacyAccounts, Vault, VaultPortAdditionalState};
 
@@ -70,7 +70,6 @@ pub struct SellPortReward<'info> {
 }
 
 pub fn handler(ctx: Context<SellPortReward>) -> ProgramResult {
-
     let amount_in = ctx.accounts.vault_port_reward_token.amount;
     let minimum_amount_out = 1;
 
@@ -93,7 +92,7 @@ pub fn handler(ctx: Context<SellPortReward>) -> ProgramResult {
         },
     )?;
 
-    let accounts : Vec<AccountInfo> = vec![
+    let accounts: Vec<AccountInfo> = vec![
         ctx.accounts.orca_swap_program.clone(),
         ctx.accounts.token_program.to_account_info(),
         ctx.accounts.orca_swap_state.clone(),
@@ -107,10 +106,5 @@ pub fn handler(ctx: Context<SellPortReward>) -> ProgramResult {
         ctx.accounts.orca_fee_account.clone(),
     ];
 
-    invoke_signed(
-        &ix,
-        &accounts,
-        &[&ctx.accounts.vault.authority_seeds()],
-    )
-    .map_err(|e| e.into())
+    invoke_signed(&ix, &accounts, &[&ctx.accounts.vault.authority_seeds()]).map_err(|e| e.into())
 }

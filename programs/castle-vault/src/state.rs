@@ -229,7 +229,7 @@ pub struct VaultPortAdditionalState {
 #[cfg_attr(test, derive(TypeLayout))]
 pub struct DexStates {
     pub orca_legacy_accounts_bump: u8,
-    
+
     _reserved0: [u8; 7],
     _reserved1: [u64; 15],
 }
@@ -242,7 +242,7 @@ pub struct DexStates {
 pub struct OrcaLegacyAccounts {
     pub orca_swap_state: Pubkey,
 
-    pub orca_swap_authority: Pubkey, 
+    pub orca_swap_authority: Pubkey,
 
     pub orca_input_token_account: Pubkey,
 

@@ -33,7 +33,10 @@ pub mod castle_vault {
         instructions::init_dex_states::handler(ctx, bump)
     }
 
-    pub fn initialize_dex_orca_legacy(ctx: Context<InitializeDexOrcaLegacy>, bump: u8) -> ProgramResult {
+    pub fn initialize_dex_orca_legacy(
+        ctx: Context<InitializeDexOrcaLegacy>,
+        bump: u8,
+    ) -> ProgramResult {
         instructions::init_dex_orca_legacy::handler(ctx, bump)
     }
 
