@@ -170,14 +170,14 @@ export async function initialize(
     );
 
     // This step will mint some mock tokens to be swaped for testing purposes
-    const tokenSupplyA = await tokenA.createAssociatedTokenAccount(
+    const tokenSupplyA = (await tokenA.getOrCreateAssociatedAccountInfo(
         tokenOwnerA.publicKey
-    );
+    )).address;
     await tokenA.mintTo(tokenSupplyA, tokenOwnerA, [], 1000000000);
 
-    const tokenSupplyB = await tokenB.createAssociatedTokenAccount(
+    const tokenSupplyB = (await tokenB.getOrCreateAssociatedAccountInfo(
         tokenOwnerB.publicKey
-    );
+    )).address;
     await tokenB.mintTo(tokenSupplyB, tokenOwnerB, [], 2000000000);
 
     // This step will transfer the ownership of token A & B accounts to the pool.
