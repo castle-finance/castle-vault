@@ -48,6 +48,10 @@ const main = async () => {
     );
     console.log("Vauld ID: ", vaultClient.vaultId.toString());
 
+    // This step creates the PDA that holds DEX account date.
+    // The DEX are used to sell the liquidity mining rewards.
+    await vaultClient.initializeDexStates(wallet, owner);
+
     // When the reserve token is not available on a lending pool, the load instruction will fail.
     // This is how we detect if we should disable (i.e. not initialize) a lending pool.
     try {
@@ -76,6 +80,12 @@ const main = async () => {
             provider,
             DeploymentEnvs.mainnet
         );
+        await vaultClient.initializeOrcaLegacy(
+            wallet,
+            owner,
+            DeploymentEnvs.mainnet
+        );
+
         console.log("Succesfully initialized Port");
     } catch (error) {
         console.log("Failed to initialize Port: ", error);
