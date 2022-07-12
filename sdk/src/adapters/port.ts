@@ -540,6 +540,7 @@ async function createLendingMarket(
 
 async function createStakingPool(
     provider: anchor.Provider,
+    owner: Keypair,
     supply: number,
     duration: number,
     rewardTime: number,
@@ -562,27 +563,19 @@ async function createStakingPool(
         TOKEN_PROGRAM_ID
     );
 
-    // This step will create a temporary wallet to fund subsequenc tx
-    const wallet = Keypair.generate();
-    const sig0 = await provider.connection.requestAirdrop(
-        wallet.publicKey,
-        LAMPORTS_PER_SOL
-    );
-    await provider.connection.confirmTransaction(sig0, "finalized");
-
     // This step will create a mock reward token and mint some of it for testing
     const rewardMint = await SplToken.createMint(
         provider.connection,
-        wallet,
-        wallet.publicKey,
+        owner,
+        owner.publicKey,
         null,
         6,
         TOKEN_PROGRAM_ID
     );
     const rewardSupply = await rewardMint.createAssociatedTokenAccount(
-        wallet.publicKey
+        owner.publicKey
     );
-    await rewardMint.mintTo(rewardSupply, wallet, [], supplyLamports);
+    await rewardMint.mintTo(rewardSupply, owner, [], supplyLamports);
 
     // This step will create the sub-reward token pool
     const subRewardTokenPool = await createAccount(
@@ -603,15 +596,15 @@ async function createStakingPool(
         // This step will create a mock sub-reward token
         const subRewardMint = await SplToken.createMint(
             provider.connection,
-            wallet,
-            wallet.publicKey,
+            owner,
+            owner.publicKey,
             null,
             6,
             TOKEN_PROGRAM_ID
         );
         const subRewardSupply =
-            await subRewardMint.createAssociatedTokenAccount(wallet.publicKey);
-        await subRewardMint.mintTo(subRewardSupply, wallet, [], supplyLamports);
+            await subRewardMint.createAssociatedTokenAccount(owner.publicKey);
+        await subRewardMint.mintTo(subRewardSupply, owner, [], supplyLamports);
 
         subReward = {
             supply: supplyLamports,
@@ -629,7 +622,7 @@ async function createStakingPool(
             duration,
             rewardTime,
             bumpSeed,
-            wallet.publicKey,
+            owner.publicKey,
             rewardSupply,
             rewardTokenPool.publicKey,
             stakingPool.publicKey,
@@ -642,7 +635,7 @@ async function createStakingPool(
         )
     );
 
-    const sig1 = await provider.send(tx, [wallet]);
+    const sig1 = await provider.send(tx, [owner]);
     await provider.connection.confirmTransaction(sig1, "finalized");
 
     return stakingPool.publicKey;
@@ -702,6 +695,7 @@ async function createDefaultReserve(
 
     const stakingPool = await createStakingPool(
         provider,
+        owner,
         1000,
         5184000,
         0,
