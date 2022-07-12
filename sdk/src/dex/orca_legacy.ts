@@ -24,6 +24,7 @@ export interface OrcaLegacyAccounts {
     feeAccount: PublicKey;
     tokenAccountA: PublicKey;
     tokenAccountB: PublicKey;
+    vaultOrcaLegacyAccount?: PublicKey;
 }
 
 
@@ -37,7 +38,8 @@ export class OrcaLegacySwap {
     static load(
         tokenA: PublicKey,
         tokenB: PublicKey,
-        cluster: Cluster
+        cluster: Cluster,
+        
     ): OrcaLegacySwap {
         const tokenPairSig = tokenA.toString() + tokenB.toString();
         let tokenPairToOrcaLegacyPool;

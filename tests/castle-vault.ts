@@ -299,6 +299,11 @@ describe("castle-vault", () => {
                 : {},
         ]);
 
+        await vaultClient.initializeDexStates(
+            provider.wallet as anchor.Wallet,
+            owner
+        );
+
         if (portAvailable) {
             await vaultClient.initializePortAdditionalState(
                 provider.wallet as anchor.Wallet,
@@ -312,6 +317,13 @@ describe("castle-vault", () => {
                 program
             );
             await vaultClient.loadPortAdditionalAccounts();
+
+            await vaultClient.initializeOrcaLegacy(
+                provider.wallet as anchor.Wallet,
+                owner,
+                DeploymentEnvs.devnetStaging,
+                orca
+            );
         }
 
         await vaultClient.reload();

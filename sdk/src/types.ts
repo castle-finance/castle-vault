@@ -32,6 +32,7 @@ export interface Vault {
     actualAllocations: Allocations;
     lpTokenSupply: BN;
     vaultPortAdditionalStateBump: number;
+    dexStatesBump: number;
 }
 
 export interface VaultPortAdditionalState {
@@ -39,6 +40,10 @@ export interface VaultPortAdditionalState {
     vaultPortRewardTokenBump: number;
     vaultPortObligationBump: number;
     vaultPortSubRewardTokenBump: number;
+}
+
+export interface DexStates {
+    orcaLegacyAccountsBump: number;
 }
 
 export interface VaultConfig {
