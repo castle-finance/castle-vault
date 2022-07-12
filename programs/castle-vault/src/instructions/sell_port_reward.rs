@@ -40,12 +40,16 @@ pub struct SellPortReward<'info> {
 
     pub orca_swap_authority: AccountInfo<'info>,
 
+    #[account(mut)]
     pub orca_input_token_account: AccountInfo<'info>,
 
+    #[account(mut)]
     pub orca_output_token_account: AccountInfo<'info>,
 
+    #[account(mut)]
     pub orca_swap_token_mint: AccountInfo<'info>,
 
+    #[account(mut)]
     pub orca_fee_account: AccountInfo<'info>,
 
     #[account(executable)]
@@ -56,10 +60,10 @@ pub struct SellPortReward<'info> {
         seeds = [vault.key().as_ref(), b"port_reward".as_ref()], 
         bump = port_additional_states.vault_port_reward_token_bump
     )]
-    pub vault_port_reward_token: AccountInfo<'info>,
+    pub vault_port_reward_token: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
-    pub vault_port_sub_reward_token: AccountInfo<'info>,
+    pub vault_port_sub_reward_token: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
     pub vault_reserve_token: Box<Account<'info, TokenAccount>>,
@@ -68,7 +72,8 @@ pub struct SellPortReward<'info> {
 }
 
 pub fn handler(ctx: Context<SellPortReward>) -> ProgramResult {
-    let amount_in = 1;
+
+    let amount_in = ctx.accounts.vault_port_reward_token.amount;
     let minimum_amount_out = 1;
 
     let ix = spl_token_swap::instruction::swap(
@@ -96,7 +101,7 @@ pub fn handler(ctx: Context<SellPortReward>) -> ProgramResult {
         ctx.accounts.orca_swap_state.clone(),
         ctx.accounts.orca_swap_authority.clone(),
         ctx.accounts.vault_authority.clone(),
-        ctx.accounts.vault_port_reward_token.clone(),
+        ctx.accounts.vault_port_reward_token.to_account_info(),
         ctx.accounts.orca_input_token_account.clone(),
         ctx.accounts.orca_output_token_account.clone(),
         ctx.accounts.vault_reserve_token.to_account_info(),

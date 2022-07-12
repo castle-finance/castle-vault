@@ -1281,6 +1281,92 @@ export type CastleVault = {
                 }
             ];
             args: [];
+        },
+        {
+            name: "sellPortReward";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portAdditionalStates";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "dexStates";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaLegacyAccounts";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapState";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaInputTokenAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaOutputTokenAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapTokenMint";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaFeeAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortRewardToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortSubRewardToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultReserveToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
         }
     ];
     accounts: [
@@ -3183,6 +3269,92 @@ export const IDL: CastleVault = {
                 {
                     name: "clock",
                     isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
+        },
+        {
+            name: "sellPortReward",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portAdditionalStates",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "dexStates",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaLegacyAccounts",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapState",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaInputTokenAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaOutputTokenAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapTokenMint",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaFeeAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortRewardToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortSubRewardToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultReserveToken",
+                    isMut: true,
                     isSigner: false,
                 },
                 {

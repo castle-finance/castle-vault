@@ -150,6 +150,10 @@ pub mod castle_vault {
     pub fn claim_port_reward(ctx: Context<ClaimPortReward>) -> ProgramResult {
         instructions::claim_port_reward::handler(ctx)
     }
+
+    pub fn sell_port_reward(ctx: Context<SellPortReward>) -> ProgramResult {
+        instructions::sell_port_reward::handler(ctx)
+    }
 }
 
 solana_security_txt::security_txt! {

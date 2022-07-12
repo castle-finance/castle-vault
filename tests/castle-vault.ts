@@ -333,6 +333,19 @@ describe("castle-vault", () => {
         );
     }
 
+    async function getSplTokenAccountBalance(
+        mint: PublicKey,
+        account: PublicKey
+    ): Promise<number> {
+        const tokenMint = new Token(
+            program.provider.connection,
+            mint,
+            TOKEN_PROGRAM_ID,
+            Keypair.generate()
+        );
+        return (await tokenMint.getAccountInfo(account)).amount.toNumber();
+    }
+
     async function getReserveTokenBalance(account: PublicKey): Promise<number> {
         const info = await vaultClient.getReserveTokenAccountInfo(account);
         return info.amount.toNumber();
@@ -503,7 +516,7 @@ describe("castle-vault", () => {
         });
 
         it("Reject transaction if deposit cap is reached", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const depositCapErrorCode = program.idl.errors
                 .find((e) => e.name == "DepositCapError")
@@ -534,7 +547,7 @@ describe("castle-vault", () => {
             assert.equal(userLpBalance, 0);
             assert.equal(lpTokenSupply, 0);
 
-            restoreLogs()
+            restoreLogs();
         });
 
         it("Update deposit cap", async function () {
@@ -553,7 +566,7 @@ describe("castle-vault", () => {
         });
 
         it("Reject unauthorized config update", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = "0x8d";
             const noPermissionUser = Keypair.generate();
@@ -587,13 +600,13 @@ describe("castle-vault", () => {
                 vaultClient.getDepositCap().lamports.toNumber()
             );
 
-            restoreLogs()
+            restoreLogs();
         });
     }
 
     function testVaultFlags() {
         it("Reject deposit transaction if vault is halted", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const depositCapErrorCode = program.idl.errors
                 .find((e) => e.name == "HaltedVault")
@@ -617,11 +630,11 @@ describe("castle-vault", () => {
                 );
             }
 
-            restoreLogs()
+            restoreLogs();
         });
 
         it("Reject rebalance transaction if vault is halted", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = program.idl.errors
                 .find((e) => e.name == "HaltedVault")
@@ -639,7 +652,7 @@ describe("castle-vault", () => {
                 );
             }
 
-            restoreLogs()
+            restoreLogs();
         });
 
         it("Update halt flags", async function () {
@@ -659,7 +672,7 @@ describe("castle-vault", () => {
         });
 
         it("Reject invalid flags update", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = program.idl.errors
                 .find((e) => e.name == "InvalidVaultFlags")
@@ -685,11 +698,11 @@ describe("castle-vault", () => {
 
             assert.equal(oldFlags, vaultClient.getHaltFlags());
 
-            restoreLogs()
+            restoreLogs();
         });
 
         it("Reject unauthorized flags update", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = "0x8d";
 
@@ -717,7 +730,7 @@ describe("castle-vault", () => {
 
             assert.equal(oldFlags, vaultClient.getHaltFlags());
 
-            restoreLogs()
+            restoreLogs();
         });
     }
 
@@ -741,7 +754,7 @@ describe("castle-vault", () => {
 
         if (rebalanceMode == RebalanceModes.proofChecker) {
             it("Rejects tx if weights don't equal 100%", async () => {
-                suppressLogs()
+                suppressLogs();
 
                 const errorCode = program.idl.errors
                     .find((e) => e.name == "InvalidProposedWeights")
@@ -788,11 +801,11 @@ describe("castle-vault", () => {
                     );
                 }
 
-                restoreLogs()
+                restoreLogs();
             });
 
             it("Rejects tx if weights are suboptimal", async () => {
-                suppressLogs()
+                suppressLogs();
 
                 const errorCode = program.idl.errors
                     .find((e) => e.name == "RebalanceProofCheckFailed")
@@ -839,11 +852,11 @@ describe("castle-vault", () => {
                     );
                 }
 
-                restoreLogs()
+                restoreLogs();
             });
 
             it("Rejects tx if weights exceeds the cap", async () => {
-                suppressLogs()
+                suppressLogs();
 
                 const errorCode = program.idl.errors
                     .find((e) => e.name == "InvalidProposedWeights")
@@ -890,7 +903,7 @@ describe("castle-vault", () => {
                     );
                 }
 
-                restoreLogs()
+                restoreLogs();
             });
         }
 
@@ -1055,7 +1068,7 @@ describe("castle-vault", () => {
         });
 
         it("Reject invalid fee rates", async function () {
-            suppressLogs()
+            suppressLogs();
 
             const errorCode = program.idl.errors
                 .find((e) => e.name == "InvalidReferralFeeConfig")
@@ -1096,7 +1109,7 @@ describe("castle-vault", () => {
                 vaultClient.getReferralFeeSplit().asPercent().toNumber()
             );
 
-            restoreLogs()
+            restoreLogs();
         });
     }
 
@@ -1196,37 +1209,45 @@ describe("castle-vault", () => {
                 await port.getUnclaimedStakingRewards(program);
             assert.equal(rewardAmountAfterClaiming, 0);
 
-            const mint = port.accounts.stakingRewardTokenMint;
-            const rewardToken = new Token(
-                program.provider.connection,
-                mint,
-                TOKEN_PROGRAM_ID,
-                Keypair.generate()
+            const claimedRewardAmount = await getSplTokenAccountBalance(
+                port.accounts.stakingRewardTokenMint,
+                port.accounts.vaultPortRewardToken
             );
-            const claimedRewardAmount = (
-                await rewardToken.getAccountInfo(
-                    port.accounts.vaultPortRewardToken
-                )
-            ).amount.toNumber();
             assert.isAtLeast(claimedRewardAmount, accumulatedRewardAmount);
 
             if (subReward) {
-                const subRewardMint = port.accounts.stakingSubRewardTokenMint;
-                const subRewardToken = new Token(
-                    program.provider.connection,
-                    subRewardMint,
-                    TOKEN_PROGRAM_ID,
-                    Keypair.generate()
+                const claimedSubRewardAmount = await getSplTokenAccountBalance(
+                    port.accounts.stakingSubRewardTokenMint,
+                    port.accounts.vaultPortSubRewardToken
                 );
-                const claimedSubRewardAmount = (
-                    await subRewardToken.getAccountInfo(
-                        port.accounts.vaultPortSubRewardToken
-                    )
-                ).amount.toNumber();
-
                 console.log("claimedSubRewardAmount: ", claimedSubRewardAmount);
                 assert.isAtLeast(claimedSubRewardAmount, 1);
             }
+        });
+
+        it("Sell reward", async function () {
+            const claimedRewardAmount = await getSplTokenAccountBalance(
+                port.accounts.stakingRewardTokenMint,
+                port.accounts.vaultPortRewardToken
+            );
+            const oldReserveBalance = await getVaultReserveTokenBalance();
+
+            await vaultClient.sellPortReward();
+
+            const remainingAmount = await getSplTokenAccountBalance(
+                port.accounts.stakingRewardTokenMint,
+                port.accounts.vaultPortRewardToken
+            );
+            const newReserveBalance = await getVaultReserveTokenBalance();
+
+            console.log("oldReserveBalance: ", oldReserveBalance);
+            console.log("newReserveBalance: ", newReserveBalance);
+
+            assert.isAtMost(remainingAmount, 1);
+            assert.isAtLeast(
+                newReserveBalance - oldReserveBalance,
+                claimedRewardAmount
+            );
         });
     }
 
