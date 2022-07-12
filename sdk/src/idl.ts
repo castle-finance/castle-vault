@@ -1351,11 +1351,6 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "vaultPortSubRewardToken";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
                     name: "vaultReserveToken";
                     isMut: true;
                     isSigner: false;
@@ -3344,11 +3339,6 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "vaultPortRewardToken",
-                    isMut: true,
-                    isSigner: false,
-                },
-                {
-                    name: "vaultPortSubRewardToken",
                     isMut: true,
                     isSigner: false,
                 },

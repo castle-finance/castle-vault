@@ -1336,8 +1336,6 @@ export class VaultClient {
                     orcaSwapProgram: this.dex.orcaLegacy.accounts.programId,
                     vaultPortRewardToken:
                         this.yieldSources.port.accounts.vaultPortRewardToken,
-                    vaultPortSubRewardToken:
-                        this.yieldSources.port.accounts.vaultPortSubRewardToken,
                     vaultReserveToken: this.vaultState.vaultReserveToken,
                     tokenProgram: TOKEN_PROGRAM_ID,
                 },
