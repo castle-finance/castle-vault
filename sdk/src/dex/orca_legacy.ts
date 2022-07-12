@@ -79,6 +79,7 @@ export class OrcaLegacySwap {
         return new OrcaLegacySwap(accounts);
     }
 
+    // This is used ONLY to create a mock orca swap for testing
     static async initialize(
         provider: anchor.Provider,
         owner: Keypair, // owner of the pool
