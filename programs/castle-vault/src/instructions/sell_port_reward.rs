@@ -34,6 +34,10 @@ pub struct SellPortReward<'info> {
         seeds = [vault.key().as_ref(), b"dex_orca_legacy".as_ref()],
         bump = dex_states.orca_legacy_accounts_bump,
         has_one = orca_swap_state,
+        has_one = orca_swap_authority,
+        has_one = orca_input_token_account,
+        has_one = orca_output_token_account,
+        has_one = orca_swap_token_mint,
     )]
     pub orca_legacy_accounts: Box<Account<'info, OrcaLegacyAccounts>>,
 
