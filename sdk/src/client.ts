@@ -365,9 +365,7 @@ export class VaultClient {
                     orcaSwapProgram: orcaMarket.accounts.programId,
                     payer: wallet.payer.publicKey,
                     owner: owner.publicKey,
-                    systemProgram: SystemProgram.programId,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                    systemProgram: SystemProgram.programId
                 },
             })
         );

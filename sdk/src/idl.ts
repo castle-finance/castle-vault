@@ -189,16 +189,6 @@ export type CastleVault = {
                     name: "systemProgram";
                     isMut: false;
                     isSigner: false;
-                },
-                {
-                    name: "tokenProgram";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "associatedTokenProgram";
-                    isMut: false;
-                    isSigner: false;
                 }
             ];
             args: [
@@ -2188,16 +2178,6 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "systemProgram",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "tokenProgram",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "associatedTokenProgram",
                     isMut: false,
                     isSigner: false,
                 },

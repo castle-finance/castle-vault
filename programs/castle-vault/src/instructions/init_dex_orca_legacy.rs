@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{associated_token::AssociatedToken, token::Token};
 use std::convert::Into;
 
 use crate::state::*;
@@ -50,11 +49,7 @@ pub struct InitializeDexOrcaLegacy<'info> {
     /// Acts as authority of the fee receiver account
     pub owner: Signer<'info>,
 
-    pub system_program: Program<'info, System>,
-
-    pub token_program: Program<'info, Token>,
-
-    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>
 }
 
 pub fn handler(ctx: Context<InitializeDexOrcaLegacy>, bump: u8) -> ProgramResult {
