@@ -128,8 +128,8 @@ export class VaultClient {
             program,
             vaultId,
             vaultState,
-            dex,
             yieldSources,
+            dex,
             reserveToken,
             lpToken
         );
