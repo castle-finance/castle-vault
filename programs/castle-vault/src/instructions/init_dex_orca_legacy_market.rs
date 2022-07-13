@@ -38,7 +38,7 @@ pub struct InitializeDexOrcaLegacyMarket<'info> {
 pub fn handler(ctx: Context<InitializeDexOrcaLegacyMarket>, market_id: u8) -> ProgramResult {
     if market_id as usize > ctx.accounts.orca_legacy_accounts.orca_markets.len() {
         msg!("Invalid market Id");
-        return Err(ErrorCode::InvalidAccount.into());
+        return Err(ErrorCode::InvalidArgument.into());
     }
     ctx.accounts.orca_legacy_accounts.orca_markets[market_id as usize] =
         ctx.accounts.orca_swap_state.key();

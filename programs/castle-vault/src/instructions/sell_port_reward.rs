@@ -74,7 +74,7 @@ pub struct SellPortReward<'info> {
 pub fn handler(ctx: Context<SellPortReward>, market_id: u8) -> ProgramResult {
     if market_id as usize > ctx.accounts.orca_legacy_accounts.orca_markets.len() {
         msg!("Invalid market Id");
-        return Err(ErrorCode::InvalidAccount.into());
+        return Err(ErrorCode::InvalidArgument.into());
     }
 
     // No need to check other orca accounts, because those are checked by the swap program.

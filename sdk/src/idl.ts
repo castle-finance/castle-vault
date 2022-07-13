@@ -1986,6 +1986,11 @@ export type CastleVault = {
             code: 315;
             name: "HaltedVault";
             msg: "Vault is halted";
+        },
+        {
+            code: 316;
+            name: "InvalidArgument";
+            msg: "Invalid argument";
         }
     ];
 };
@@ -3978,6 +3983,11 @@ export const IDL: CastleVault = {
             code: 315,
             name: "HaltedVault",
             msg: "Vault is halted",
+        },
+        {
+            code: 316,
+            name: "InvalidArgument",
+            msg: "Invalid argument",
         },
     ],
 };
