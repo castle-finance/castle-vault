@@ -100,6 +100,11 @@ export class VaultClient {
                 cluster,
                 reserveMint
             );
+            await yieldSources.port.loadAdditionalAccounts(
+                program,
+                vaultId,
+                vaultState
+            );
         }
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Jet) {
             yieldSources.jet = await JetReserveAsset.load(
@@ -128,15 +133,13 @@ export class VaultClient {
             program,
             vaultId,
             vaultState,
-            dex,
             yieldSources,
+            dex,
             reserveToken,
             lpToken
         );
 
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Port) {
-            await client.loadPortAdditionalAccounts();
-
             // Get PDA addr that stores orca account info.
             // Only available for Port
             const dexStates = await program.account.dexStates.fetch(
@@ -158,72 +161,15 @@ export class VaultClient {
     }
 
     async loadPortAdditionalAccounts() {
-        const vaultPortAdditionalStateAddress =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_additional_state"),
-                    new Uint8Array([
-                        this.vaultState.vaultPortAdditionalStateBump,
-                    ]),
-                ],
-                this.program.programId
-            );
-        const vaultPortAdditionalStates =
-            await this.program.account.vaultPortAdditionalState.fetch(
-                vaultPortAdditionalStateAddress
-            );
-        this.yieldSources.port.accounts.vaultPortAdditionalStates =
-            vaultPortAdditionalStateAddress;
-        this.yieldSources.port.accounts.vaultPortObligation =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_obligation"),
-                    new Uint8Array([
-                        vaultPortAdditionalStates.vaultPortObligationBump,
-                    ]),
-                ],
-                this.program.programId
-            );
-        this.yieldSources.port.accounts.vaultPortStakeAccount =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_stake"),
-                    new Uint8Array([
-                        vaultPortAdditionalStates.vaultPortStakeAccountBump,
-                    ]),
-                ],
-                this.program.programId
-            );
-        this.yieldSources.port.accounts.vaultPortRewardToken =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_reward"),
-                    new Uint8Array([
-                        vaultPortAdditionalStates.vaultPortRewardTokenBump,
-                    ]),
-                ],
-                this.program.programId
-            );
-        this.yieldSources.port.accounts.vaultPortSubRewardToken =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_sub_reward"),
-                    new Uint8Array([
-                        vaultPortAdditionalStates.vaultPortSubRewardTokenBump,
-                    ]),
-                ],
-                this.program.programId
-            );
+        this.yieldSources.port.loadAdditionalAccounts(
+            this.program,
+            this.vaultId,
+            this.vaultState
+        );
     }
 
     async reload() {
         this.vaultState = await this.program.account.vault.fetch(this.vaultId);
-        // TODO reload underlying asset data also?
     }
 
     static async initialize(
@@ -1326,13 +1272,18 @@ export class VaultClient {
                         this.yieldSources.port.accounts
                             .vaultPortAdditionalStates,
                     dexStates: this.dex.dexStates,
-                    orcaLegacyAccounts: this.dex.orcaLegacy.accounts.vaultOrcaLegacyAccount,
+                    orcaLegacyAccounts:
+                        this.dex.orcaLegacy.accounts.vaultOrcaLegacyAccount,
                     orcaSwapState: this.dex.orcaLegacy.accounts.swapProgram,
-                    orcaSwapAuthority: this.dex.orcaLegacy.accounts.swapAuthority,
+                    orcaSwapAuthority:
+                        this.dex.orcaLegacy.accounts.swapAuthority,
 
-                    orcaInputTokenAccount: this.dex.orcaLegacy.accounts.tokenAccountA,
-                    orcaOutputTokenAccount: this.dex.orcaLegacy.accounts.tokenAccountB,
-                    orcaSwapTokenMint: this.dex.orcaLegacy.accounts.poolTokenMint,
+                    orcaInputTokenAccount:
+                        this.dex.orcaLegacy.accounts.tokenAccountA,
+                    orcaOutputTokenAccount:
+                        this.dex.orcaLegacy.accounts.tokenAccountB,
+                    orcaSwapTokenMint:
+                        this.dex.orcaLegacy.accounts.poolTokenMint,
                     orcaFeeAccount: this.dex.orcaLegacy.accounts.feeAccount,
                     orcaSwapProgram: this.dex.orcaLegacy.accounts.programId,
                     vaultPortRewardToken:
