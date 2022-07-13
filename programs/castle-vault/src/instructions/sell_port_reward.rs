@@ -60,7 +60,7 @@ pub struct SellPortReward<'info> {
     pub orca_swap_program: AccountInfo<'info>,
 
     #[account(mut)]
-    // No need to check this account because coins in it will be sold 
+    // No need to check this account because coins in it will be sold
     // and vault_reserve_token collects the revenue.
     // We only have to check the integrity of vault_reserve_token
     pub vault_port_reward_token: Box<Account<'info, TokenAccount>>,

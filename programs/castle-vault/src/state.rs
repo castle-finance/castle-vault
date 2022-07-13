@@ -240,10 +240,9 @@ pub struct DexStates {
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(TypeLayout))]
 pub struct OrcaLegacyAccounts {
+    pub orca_swap_program: Pubkey,
 
-    pub orca_swap_program: Pubkey, 
-
-    pub orca_markets: [Pubkey; 20], 
+    pub orca_markets: [Pubkey; 20],
 }
 
 #[assert_size(aligns, 32)]
