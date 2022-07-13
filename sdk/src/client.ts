@@ -86,6 +86,16 @@ export class VaultClient {
         const cluster = CLUSTER_MAP[env];
         const reserveMint = vaultState.reserveTokenMint;
 
+        const dexStatesAddress = await PublicKey.createProgramAddress(
+            [
+                vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("dex_states"),
+                new Uint8Array([vaultState.dexStatesBump]),
+            ],
+            program.programId
+        );
+        let dex: ExchangeMarkets = { dexStates: dexStatesAddress };
+
         let yieldSources: YieldSources = {};
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Solend) {
             yieldSources.solend = await SolendReserveAsset.load(
@@ -105,6 +115,21 @@ export class VaultClient {
                 vaultId,
                 vaultState
             );
+            // Get PDA addr that stores orca account info.
+            // Only available for Port
+            const dexStates = await program.account.dexStates.fetch(
+                dexStatesAddress
+            );
+            const orcaLegacyAddress = await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("dex_orca_legacy"),
+                    new Uint8Array([dexStates.orcaLegacyAccountsBump]),
+                ],
+                program.programId
+            );
+            dex.orcaLegacy.accounts.vaultOrcaLegacyAccount =
+                orcaLegacyAddress;
         }
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Jet) {
             yieldSources.jet = await JetReserveAsset.load(
@@ -119,17 +144,7 @@ export class VaultClient {
             vaultState
         );
 
-        const dexStatesAddress = await PublicKey.createProgramAddress(
-            [
-                vaultId.toBuffer(),
-                anchor.utils.bytes.utf8.encode("dex_states"),
-                new Uint8Array([vaultState.dexStatesBump]),
-            ],
-            program.programId
-        );
-        let dex: ExchangeMarkets = { dexStates: dexStatesAddress };
-
-        let client = new VaultClient(
+        return new VaultClient(
             program,
             vaultId,
             vaultState,
@@ -138,26 +153,6 @@ export class VaultClient {
             reserveToken,
             lpToken
         );
-
-        if (vaultState.yieldSourceFlags & YieldSourceFlags.Port) {
-            // Get PDA addr that stores orca account info.
-            // Only available for Port
-            const dexStates = await program.account.dexStates.fetch(
-                dexStatesAddress
-            );
-            const orcaLegacyAddress = await PublicKey.createProgramAddress(
-                [
-                    vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("dex_orca_legacy"),
-                    new Uint8Array([dexStates.orcaLegacyAccountsBump]),
-                ],
-                program.programId
-            );
-            client.dex.orcaLegacy.accounts.vaultOrcaLegacyAccount =
-                orcaLegacyAddress;
-        }
-
-        return client;
     }
 
     async loadPortAdditionalAccounts() {
