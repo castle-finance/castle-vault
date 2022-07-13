@@ -242,6 +242,74 @@ export class PortReserveAsset extends LendingMarket {
         );
     }
 
+    async loadAdditionalAccounts(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ) {
+        const vaultPortAdditionalStateAddress =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_additional_state"),
+                    new Uint8Array([
+                        vaultState.vaultPortAdditionalStateBump,
+                    ]),
+                ],
+                program.programId
+            );
+        const vaultPortAdditionalStates =
+            await program.account.vaultPortAdditionalState.fetch(
+                vaultPortAdditionalStateAddress
+            );
+        this.accounts.vaultPortAdditionalStates =
+            vaultPortAdditionalStateAddress;
+        this.accounts.vaultPortObligation =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_obligation"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortObligationBump,
+                    ]),
+                ],
+                program.programId
+            );
+        this.accounts.vaultPortStakeAccount =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_stake"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortStakeAccountBump,
+                    ]),
+                ],
+                program.programId
+            );
+        this.accounts.vaultPortRewardToken =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_reward"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortRewardTokenBump,
+                    ]),
+                ],
+                program.programId
+            );
+        this.accounts.vaultPortSubRewardToken =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_sub_reward"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortSubRewardTokenBump,
+                    ]),
+                ],
+                program.programId
+            );
+    }
+
     async getLpTokenAccountValue(vaultState: Vault): Promise<TokenAmount> {
         const reserve = await this.client.getReserve(this.accounts.reserve);
         const exchangeRate = reserve.getExchangeRatio();
