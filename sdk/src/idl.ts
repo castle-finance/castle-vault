@@ -171,6 +171,11 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "orcaSwapProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "payer";
                     isMut: true;
                     isSigner: true;
@@ -1583,6 +1588,10 @@ export type CastleVault = {
                 kind: "struct";
                 fields: [
                     {
+                        name: "orcaSwapProgram";
+                        type: "publicKey";
+                    },
+                    {
                         name: "orcaSwapState";
                         type: "publicKey";
                     },
@@ -1605,7 +1614,7 @@ export type CastleVault = {
                     {
                         name: "reserved1";
                         type: {
-                            array: ["u64", 20];
+                            array: ["u64", 16];
                         };
                     }
                 ];
@@ -2159,6 +2168,11 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "orcaSwapTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapProgram",
                     isMut: false,
                     isSigner: false,
                 },
@@ -3575,6 +3589,10 @@ export const IDL: CastleVault = {
                 kind: "struct",
                 fields: [
                     {
+                        name: "orcaSwapProgram",
+                        type: "publicKey",
+                    },
+                    {
                         name: "orcaSwapState",
                         type: "publicKey",
                     },
@@ -3597,7 +3615,7 @@ export const IDL: CastleVault = {
                     {
                         name: "reserved1",
                         type: {
-                            array: ["u64", 20],
+                            array: ["u64", 16],
                         },
                     },
                 ],

@@ -33,6 +33,7 @@ pub struct SellPortReward<'info> {
     #[account(
         seeds = [vault.key().as_ref(), b"dex_orca_legacy".as_ref()],
         bump = dex_states.orca_legacy_accounts_bump,
+        has_one = orca_swap_program,
         has_one = orca_swap_state,
         has_one = orca_swap_authority,
         has_one = orca_input_token_account,

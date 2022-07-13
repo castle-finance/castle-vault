@@ -421,6 +421,7 @@ export class VaultClient {
                     orcaInputTokenAccount: orcaMarket.accounts.tokenAccountA,
                     orcaOutputTokenAccount: orcaMarket.accounts.tokenAccountB,
                     orcaSwapTokenMint: orcaMarket.accounts.poolTokenMint,
+                    orcaSwapProgram: orcaMarket.accounts.programId,
                     payer: wallet.payer.publicKey,
                     owner: owner.publicKey,
                     systemProgram: SystemProgram.programId,

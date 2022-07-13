@@ -38,6 +38,9 @@ pub struct InitializeDexOrcaLegacy<'info> {
 
     pub orca_swap_token_mint: AccountInfo<'info>,
 
+    #[account(executable)]
+    pub orca_swap_program: AccountInfo<'info>,
+
     /// Account that pays for above account inits
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -56,6 +59,7 @@ pub struct InitializeDexOrcaLegacy<'info> {
 
 pub fn handler(ctx: Context<InitializeDexOrcaLegacy>, bump: u8) -> ProgramResult {
     ctx.accounts.dex_states.orca_legacy_accounts_bump = bump;
+    ctx.accounts.orca_legacy_accounts.orca_swap_program = ctx.accounts.orca_swap_program.key();
     ctx.accounts.orca_legacy_accounts.orca_swap_state = ctx.accounts.orca_swap_state.key();
     ctx.accounts.orca_legacy_accounts.orca_swap_authority = ctx.accounts.orca_swap_authority.key();
     ctx.accounts.orca_legacy_accounts.orca_input_token_account =
