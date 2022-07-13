@@ -67,8 +67,7 @@ export class OrcaLegacySwap {
         if (params == undefined) {
             throw new Error("Token pair not supported");
         }
-    
-        const dummy = Keypair.generate().publicKey;
+
         const accounts = {
             programId: DEVNET_ORCA_TOKEN_SWAP_ID,
             swapProgram: params.address,
