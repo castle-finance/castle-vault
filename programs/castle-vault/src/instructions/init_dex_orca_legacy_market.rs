@@ -1,11 +1,10 @@
 use anchor_lang::prelude::*;
 use std::convert::Into;
 
-use crate::state::*;
+use crate::{errors::ErrorCode, state::*};
 
 #[derive(Accounts)]
-#[instruction(bump: u8)]
-pub struct InitializeDexOrcaLegacy<'info> {
+pub struct InitializeDexOrcaLegacyMarket<'info> {
     #[account(
         mut,
         has_one = owner,
@@ -20,19 +19,13 @@ pub struct InitializeDexOrcaLegacy<'info> {
     pub dex_states: Box<Account<'info, DexStates>>,
 
     #[account(
-        init,
-        payer = payer,
+        mut,
         seeds = [vault.key().as_ref(), b"dex_orca_legacy".as_ref()],
-        bump = bump
+        bump = dex_states.orca_legacy_accounts_bump
     )]
     pub orca_legacy_accounts: Box<Account<'info, OrcaLegacyAccounts>>,
 
-    #[account(executable)]
-    pub orca_swap_program: AccountInfo<'info>,
-
-    /// Account that pays for above account inits
-    #[account(mut)]
-    pub payer: Signer<'info>,
+    pub orca_swap_state: AccountInfo<'info>,
 
     /// Owner of the vault
     /// Only this account can call restricted instructions
@@ -42,9 +35,12 @@ pub struct InitializeDexOrcaLegacy<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<InitializeDexOrcaLegacy>, bump: u8) -> ProgramResult {
-    ctx.accounts.dex_states.orca_legacy_accounts_bump = bump;
-    // All orca markets have the same program ID
-    ctx.accounts.orca_legacy_accounts.orca_swap_program = ctx.accounts.orca_swap_program.key();
+pub fn handler(ctx: Context<InitializeDexOrcaLegacyMarket>, market_id: u8) -> ProgramResult {
+    if market_id as usize > ctx.accounts.orca_legacy_accounts.orca_markets.len() {
+        msg!("Invalid market Id");
+        return Err(ErrorCode::InvalidAccount.into());
+    }
+    ctx.accounts.orca_legacy_accounts.orca_markets[market_id as usize] =
+        ctx.accounts.orca_swap_state.key();
     Ok(())
 }

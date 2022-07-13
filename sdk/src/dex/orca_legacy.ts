@@ -17,6 +17,7 @@ import { orcaPoolConfigs } from "@orca-so/sdk/dist/constants/pools";
 import { OrcaPoolParams } from "@orca-so/sdk/dist/model/orca/pool/pool-types";
 
 export interface OrcaLegacyAccounts {
+    marketId: number;
     programId: PublicKey;
     swapProgram: PublicKey;
     swapAuthority: PublicKey;
@@ -26,7 +27,6 @@ export interface OrcaLegacyAccounts {
     tokenAccountB: PublicKey;
     vaultOrcaLegacyAccount?: PublicKey;
 }
-
 
 export class OrcaLegacySwap {
 
@@ -39,7 +39,6 @@ export class OrcaLegacySwap {
         tokenA: PublicKey,
         tokenB: PublicKey,
         cluster: Cluster,
-        
     ): OrcaLegacySwap {
         const tokenPairSig = tokenA.toString() + tokenB.toString();
         let tokenPairToOrcaLegacyPool;
@@ -68,7 +67,11 @@ export class OrcaLegacySwap {
             throw new Error("Token pair not supported");
         }
 
+        // TODO marketId to trading pair mapping
+        const marketId = 0;
+
         const accounts = {
+            marketId: marketId,
             programId: DEVNET_ORCA_TOKEN_SWAP_ID,
             swapProgram: params.address,
             swapAuthority: params.authority,
@@ -260,6 +263,7 @@ async function createMockSwap(
     const sig = await provider.send(tx, [owner]);
 
     let orcaAccounts: OrcaLegacyAccounts = {
+        marketId: 0,
         programId: DEVNET_ORCA_TOKEN_SWAP_ID,
         swapProgram: swapProgram.publicKey,
         swapAuthority: authority,

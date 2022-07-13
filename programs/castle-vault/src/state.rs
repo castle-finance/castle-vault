@@ -234,25 +234,16 @@ pub struct DexStates {
     _reserved1: [u64; 15],
 }
 
-#[assert_size(320)]
+#[assert_size(672)]
 #[account]
 #[repr(C, align(8))]
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(TypeLayout))]
 pub struct OrcaLegacyAccounts {
-    pub orca_swap_program: Pubkey,
 
-    pub orca_swap_state: Pubkey,
+    pub orca_swap_program: Pubkey, 
 
-    pub orca_swap_authority: Pubkey,
-
-    pub orca_input_token_account: Pubkey,
-
-    pub orca_output_token_account: Pubkey,
-
-    pub orca_swap_token_mint: Pubkey,
-
-    _reserved1: [u64; 16],
+    pub orca_markets: [Pubkey; 20], 
 }
 
 #[assert_size(aligns, 32)]

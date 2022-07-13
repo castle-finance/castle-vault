@@ -85,7 +85,7 @@ const main = async () => {
             owner,
             DeploymentEnvs.mainnet
         );
-
+        await vaultClient.initializeOrcaLegacyMarket(wallet, owner);
         console.log("Succesfully initialized Port");
     } catch (error) {
         console.log("Failed to initialize Port: ", error);

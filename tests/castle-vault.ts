@@ -324,6 +324,11 @@ describe("castle-vault", () => {
                 DeploymentEnvs.devnetStaging,
                 orca
             );
+
+            await vaultClient.initializeOrcaLegacyMarket(
+                provider.wallet as anchor.Wallet,
+                owner
+            );
         }
 
         await vaultClient.reload();

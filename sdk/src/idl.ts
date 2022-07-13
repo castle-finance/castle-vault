@@ -146,31 +146,6 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "orcaSwapState";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "orcaSwapAuthority";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "orcaInputTokenAccount";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "orcaOutputTokenAccount";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "orcaSwapTokenMint";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
                     name: "orcaSwapProgram";
                     isMut: false;
                     isSigner: false;
@@ -194,6 +169,47 @@ export type CastleVault = {
             args: [
                 {
                     name: "bump";
+                    type: "u8";
+                }
+            ];
+        },
+        {
+            name: "initializeDexOrcaLegacyMarket";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "dexStates";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaLegacyAccounts";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapState";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "marketId";
                     type: "u8";
                 }
             ];
@@ -1356,7 +1372,12 @@ export type CastleVault = {
                     isSigner: false;
                 }
             ];
-            args: [];
+            args: [
+                {
+                    name: "marketId";
+                    type: "u8";
+                }
+            ];
         }
     ];
     accounts: [
@@ -1582,29 +1603,9 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "orcaSwapState";
-                        type: "publicKey";
-                    },
-                    {
-                        name: "orcaSwapAuthority";
-                        type: "publicKey";
-                    },
-                    {
-                        name: "orcaInputTokenAccount";
-                        type: "publicKey";
-                    },
-                    {
-                        name: "orcaOutputTokenAccount";
-                        type: "publicKey";
-                    },
-                    {
-                        name: "orcaSwapTokenMint";
-                        type: "publicKey";
-                    },
-                    {
-                        name: "reserved1";
+                        name: "orcaMarkets";
                         type: {
-                            array: ["u64", 16];
+                            array: ["publicKey", 20];
                         };
                     }
                 ];
@@ -2137,31 +2138,6 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "orcaSwapState",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "orcaSwapAuthority",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "orcaInputTokenAccount",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "orcaOutputTokenAccount",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "orcaSwapTokenMint",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
                     name: "orcaSwapProgram",
                     isMut: false,
                     isSigner: false,
@@ -2185,6 +2161,47 @@ export const IDL: CastleVault = {
             args: [
                 {
                     name: "bump",
+                    type: "u8",
+                },
+            ],
+        },
+        {
+            name: "initializeDexOrcaLegacyMarket",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "dexStates",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaLegacyAccounts",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapState",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "marketId",
                     type: "u8",
                 },
             ],
@@ -3347,7 +3364,12 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
             ],
-            args: [],
+            args: [
+                {
+                    name: "marketId",
+                    type: "u8",
+                },
+            ],
         },
     ],
     accounts: [
@@ -3573,29 +3595,9 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "orcaSwapState",
-                        type: "publicKey",
-                    },
-                    {
-                        name: "orcaSwapAuthority",
-                        type: "publicKey",
-                    },
-                    {
-                        name: "orcaInputTokenAccount",
-                        type: "publicKey",
-                    },
-                    {
-                        name: "orcaOutputTokenAccount",
-                        type: "publicKey",
-                    },
-                    {
-                        name: "orcaSwapTokenMint",
-                        type: "publicKey",
-                    },
-                    {
-                        name: "reserved1",
+                        name: "orcaMarkets",
                         type: {
-                            array: ["u64", 16],
+                            array: ["publicKey", 20],
                         },
                     },
                 ],

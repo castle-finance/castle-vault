@@ -2,7 +2,10 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke_signed;
 use anchor_spl::token::{Token, TokenAccount};
 
-use crate::state::{DexStates, OrcaLegacyAccounts, Vault, VaultPortAdditionalState};
+use crate::{
+    errors::ErrorCode,
+    state::{DexStates, OrcaLegacyAccounts, Vault, VaultPortAdditionalState},
+};
 
 #[derive(Accounts)]
 pub struct SellPortReward<'info> {
@@ -34,11 +37,6 @@ pub struct SellPortReward<'info> {
         seeds = [vault.key().as_ref(), b"dex_orca_legacy".as_ref()],
         bump = dex_states.orca_legacy_accounts_bump,
         has_one = orca_swap_program,
-        has_one = orca_swap_state,
-        has_one = orca_swap_authority,
-        has_one = orca_input_token_account,
-        has_one = orca_output_token_account,
-        has_one = orca_swap_token_mint,
     )]
     pub orca_legacy_accounts: Box<Account<'info, OrcaLegacyAccounts>>,
 
@@ -61,11 +59,10 @@ pub struct SellPortReward<'info> {
     #[account(executable)]
     pub orca_swap_program: AccountInfo<'info>,
 
-    #[account(
-        mut,
-        seeds = [vault.key().as_ref(), b"port_reward".as_ref()], 
-        bump = port_additional_states.vault_port_reward_token_bump
-    )]
+    #[account(mut)]
+    // No need to check this account because coins in it will be sold 
+    // and vault_reserve_token collects the revenue.
+    // We only have to check the integrity of vault_reserve_token
     pub vault_port_reward_token: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
@@ -74,7 +71,21 @@ pub struct SellPortReward<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn handler(ctx: Context<SellPortReward>) -> ProgramResult {
+pub fn handler(ctx: Context<SellPortReward>, market_id: u8) -> ProgramResult {
+    if market_id as usize > ctx.accounts.orca_legacy_accounts.orca_markets.len() {
+        msg!("Invalid market Id");
+        return Err(ErrorCode::InvalidAccount.into());
+    }
+
+    // No need to check other orca accounts, because those are checked by the swap program.
+    // using data stored in orca_swap_state.
+    // We only have to check the integrity of orca_swap_state
+    if ctx.accounts.orca_swap_state.key()
+        != ctx.accounts.orca_legacy_accounts.orca_markets[market_id as usize]
+    {
+        return Err(ErrorCode::InvalidAccount.into());
+    }
+
     let amount_in = ctx.accounts.vault_port_reward_token.amount;
     let minimum_amount_out = 1;
 
