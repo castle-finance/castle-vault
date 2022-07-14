@@ -42,8 +42,9 @@ pub struct SellPortReward<'info> {
 
     pub orca_swap_state: AccountInfo<'info>,
 
-    // NOTE why can we ignore this? because the the Orca program will check this
-    //      and fail the CPI if this account is invalid
+    // DANGER why can we ignore this? because the the Orca program will check this
+    //        and fail the CPI if this account is invalid
+    // TODO Security audit to ensure it's really ok.
     //#[soteria(ignore)]
     pub orca_swap_authority: AccountInfo<'info>,
 
