@@ -5,11 +5,8 @@ import {
     SystemProgram,
     Transaction,
     TransactionInstruction,
-    SYSVAR_CLOCK_PUBKEY,
-    SYSVAR_RENT_PUBKEY,
-    LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, Token, AccountLayout } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import * as BufferLayout from "@solana/buffer-layout";
 import * as anchor from "@project-serum/anchor";
 import { OrcaPoolConfig } from "@orca-so/sdk";
@@ -88,7 +85,7 @@ export class OrcaLegacySwap {
         tokenOwnerA: Keypair, // acct that can mint token A
         tokenOwnerB: Keypair // acct that can mint token B
     ): Promise<OrcaLegacySwap> {
-        let accounts = await createMockSwap(
+        const accounts = await createMockSwap(
             provider,
             owner,
             tokenA,
@@ -204,14 +201,14 @@ async function createMockSwap(
     await tokenB.mintTo(tokenSupplyB, tokenOwnerB, [], 2000000000);
 
     // This step will transfer the ownership of token A & B accounts to the pool.
-    const sig0 = await tokenA.setAuthority(
+    await tokenA.setAuthority(
         tokenSupplyA,
         authority,
         "AccountOwner",
         tokenOwnerA.publicKey,
         []
     );
-    const sig1 = await tokenB.setAuthority(
+    await tokenB.setAuthority(
         tokenSupplyB,
         authority,
         "AccountOwner",
@@ -263,9 +260,9 @@ async function createMockSwap(
         })
     );
 
-    const sig = await provider.send(tx, [owner]);
+    await provider.send(tx, [owner]);
 
-    let orcaAccounts: OrcaLegacyAccounts = {
+    const orcaAccounts: OrcaLegacyAccounts = {
         marketId: 0,
         programId: DEVNET_ORCA_TOKEN_SWAP_ID,
         swapProgram: swapProgram.publicKey,

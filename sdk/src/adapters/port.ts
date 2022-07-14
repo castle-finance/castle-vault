@@ -9,7 +9,6 @@ import {
     TransactionInstruction,
     SYSVAR_CLOCK_PUBKEY,
     SYSVAR_RENT_PUBKEY,
-    LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token as SplToken } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
