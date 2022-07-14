@@ -29,6 +29,7 @@ pub struct InitializeDexStates<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// Create a PDA that stores DEX status (should only do it once)
 pub fn handler(ctx: Context<InitializeDexStates>, bump: u8) -> ProgramResult {
     ctx.accounts.vault.dex_states_bump = bump;
     Ok(())

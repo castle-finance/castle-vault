@@ -42,6 +42,7 @@ pub struct InitializeDexOrcaLegacy<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// Create a PDA that stores Orca swap information (should only do it once)
 pub fn handler(ctx: Context<InitializeDexOrcaLegacy>, bump: u8) -> ProgramResult {
     ctx.accounts.dex_states.orca_legacy_accounts_bump = bump;
     // All orca markets have the same program ID

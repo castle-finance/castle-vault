@@ -35,6 +35,9 @@ pub struct InitializeDexOrcaLegacyMarket<'info> {
     pub system_program: Program<'info, System>,
 }
 
+// Register a particular Orca swap market with the vault. A market is a token pair that can be swapped on Orca
+// The market_id is used to identify the market in the future.
+// The vault will use market(s) registered via this interface to sell/buy assets (e.g. sell_port_reward)
 pub fn handler(ctx: Context<InitializeDexOrcaLegacyMarket>, market_id: u8) -> ProgramResult {
     if market_id as usize > ctx.accounts.orca_legacy_accounts.orca_markets.len() {
         msg!("Invalid market Id");
