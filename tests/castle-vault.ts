@@ -1382,6 +1382,7 @@ describe("castle-vault", () => {
             );
             refreshTx.add(vaultClient.getConsolidateRefreshIx());
 
+            suppressLogs();
             const expectedErrorCode = "0x12f";
             try {
                 const sig = await program.provider.send(refreshTx);
@@ -1395,6 +1396,7 @@ describe("castle-vault", () => {
                     `Error code ${expectedErrorCode} not included in error message: ${err}`
                 );
             }
+            restoreLogs();
 
             await vaultClient.reload();
             const vaultValutStoredOnChain = vaultClient
