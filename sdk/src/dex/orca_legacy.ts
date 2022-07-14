@@ -29,20 +29,16 @@ export interface OrcaLegacyAccounts {
 }
 
 export class OrcaLegacySwap {
-
-    private constructor(
-        public accounts: OrcaLegacyAccounts
-    ) {
-    }
+    private constructor(public accounts: OrcaLegacyAccounts) {}
 
     static load(
         tokenA: PublicKey,
         tokenB: PublicKey,
-        cluster: Cluster,
+        cluster: Cluster
     ): OrcaLegacySwap {
         const tokenPairSig = tokenA.toString() + tokenB.toString();
         let tokenPairToOrcaLegacyPool;
-    
+
         if (cluster == "devnet") {
             // TODO mock orca pool
         } else if (cluster == "mainnet-beta") {
@@ -61,7 +57,7 @@ export class OrcaLegacySwap {
         } else {
             throw new Error("Cluster ${cluster} not supported");
         }
-    
+
         const params: OrcaPoolParams = tokenPairToOrcaLegacyPool[tokenPairSig];
         if (params == undefined) {
             throw new Error("Token pair not supported");
@@ -92,7 +88,14 @@ export class OrcaLegacySwap {
         tokenOwnerA: Keypair, // acct that can mint token A
         tokenOwnerB: Keypair // acct that can mint token B
     ): Promise<OrcaLegacySwap> {
-        let accounts = await createMockSwap(provider, owner, tokenA, tokenB, tokenOwnerA, tokenOwnerB);
+        let accounts = await createMockSwap(
+            provider,
+            owner,
+            tokenA,
+            tokenB,
+            tokenOwnerA,
+            tokenOwnerB
+        );
         return new OrcaLegacySwap(accounts);
     }
 }
@@ -190,14 +193,14 @@ async function createMockSwap(
     );
 
     // This step will mint some mock tokens to be swaped for testing purposes
-    const tokenSupplyA = (await tokenA.getOrCreateAssociatedAccountInfo(
-        tokenOwnerA.publicKey
-    )).address;
+    const tokenSupplyA = (
+        await tokenA.getOrCreateAssociatedAccountInfo(tokenOwnerA.publicKey)
+    ).address;
     await tokenA.mintTo(tokenSupplyA, tokenOwnerA, [], 1000000000);
 
-    const tokenSupplyB = (await tokenB.getOrCreateAssociatedAccountInfo(
-        tokenOwnerB.publicKey
-    )).address;
+    const tokenSupplyB = (
+        await tokenB.getOrCreateAssociatedAccountInfo(tokenOwnerB.publicKey)
+    ).address;
     await tokenB.mintTo(tokenSupplyB, tokenOwnerB, [], 2000000000);
 
     // This step will transfer the ownership of token A & B accounts to the pool.

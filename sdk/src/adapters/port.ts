@@ -252,9 +252,7 @@ export class PortReserveAsset extends LendingMarket {
                 [
                     vaultId.toBuffer(),
                     anchor.utils.bytes.utf8.encode("port_additional_state"),
-                    new Uint8Array([
-                        vaultState.vaultPortAdditionalStateBump,
-                    ]),
+                    new Uint8Array([vaultState.vaultPortAdditionalStateBump]),
                 ],
                 program.programId
             );
