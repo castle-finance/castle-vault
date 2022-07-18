@@ -49,7 +49,7 @@ describe("Refresh Check", () => {
         refreshTx.add(fixture.vaultClient.getConsolidateRefreshIx());
         
         const expectedErrorCode = "0x12f";
-        this.suppressLogs();
+        fixture.suppressLogs();
         try {
             const sig = await fixture.program.provider.send(refreshTx);
             await fixture.program.provider.connection.confirmTransaction(
@@ -62,7 +62,7 @@ describe("Refresh Check", () => {
                 `Error code ${expectedErrorCode} not included in error message: ${err}`
             );
         }
-        this.restoreLogs();
+        fixture.restoreLogs();
 
         await fixture.vaultClient.reload();
         const vaultValutStoredOnChain = fixture.vaultClient
