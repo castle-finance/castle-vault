@@ -262,7 +262,7 @@ export class TestFixture {
             solend: true,
             port: true,
             jet: true,
-        },
+        }
     ) {
         this.vaultClient = await VaultClient.initialize(
             this.provider,
@@ -427,7 +427,9 @@ export class TestFixture {
             assert.isNotNull(this.vaultClient.getLpTokenMintInfo());
             assert.isNotNull(this.vaultClient.getVaultReserveTokenAccount());
             assert.isNotNull(this.vaultClient.getFeeReceiverAccountInfo());
-            assert.isNotNull(this.vaultClient.getReferralFeeReceiverAccountInfo());
+            assert.isNotNull(
+                this.vaultClient.getReferralFeeReceiverAccountInfo()
+            );
             assert.equal(
                 this.vaultClient.getDepositCap().lamports.toString(),
                 "18446744073709551615"
@@ -445,10 +447,9 @@ export class TestFixture {
             await this.mintReserveToken(this.userReserveTokenAccount, qty);
             await this.depositToVault(qty);
 
-            const userReserveBalance = await this.getReserveTokenBalance(
-                this.userReserveTokenAccount
-            );
-            const vaultReserveBalance = await this.getVaultReserveTokenBalance();
+            const userReserveBalance = await this.getUserReserveTokenBalance();
+            const vaultReserveBalance =
+                await this.getVaultReserveTokenBalance();
             const userLpBalance = await this.getUserLpTokenBalance();
             const lpTokenSupply = await this.getLpTokenSupply();
 
@@ -459,14 +460,17 @@ export class TestFixture {
         });
 
         it("Withdraw funds from vault", async () => {
-            const oldVaultReserveBalance = await this.getVaultReserveTokenBalance();
+            const oldVaultReserveBalance =
+                await this.getVaultReserveTokenBalance();
             const oldLpTokenSupply = await this.getLpTokenSupply();
 
             const qty = 70;
             await this.withdrawFromVault(qty);
 
-            const newUserReserveBalance = await this.getUserReserveTokenBalance();
-            const newVaultReserveBalance = await this.getVaultReserveTokenBalance();
+            const newUserReserveBalance =
+                await this.getUserReserveTokenBalance();
+            const newVaultReserveBalance =
+                await this.getVaultReserveTokenBalance();
             const newLpTokenSupply = await this.getLpTokenSupply();
 
             assert.equal(oldVaultReserveBalance - newVaultReserveBalance, qty);
@@ -480,7 +484,9 @@ export class TestFixture {
             assert.isNotNull(this.vaultClient.getLpTokenMintInfo());
             assert.isNotNull(this.vaultClient.getVaultReserveTokenAccount());
             assert.isNotNull(this.vaultClient.getFeeReceiverAccountInfo());
-            assert.isNotNull(this.vaultClient.getReferralFeeReceiverAccountInfo());
+            assert.isNotNull(
+                this.vaultClient.getReferralFeeReceiverAccountInfo()
+            );
             assert.equal(
                 this.vaultClient.getDepositCap().lamports.toNumber(),
                 this.vaultDepositCap
@@ -492,7 +498,7 @@ export class TestFixture {
         });
 
         it("Reject transaction if deposit cap is reached", async () => {
-            this.suppressLogs()
+            this.suppressLogs();
 
             const depositCapErrorCode = this.program.idl.errors
                 .find((e) => e.name == "DepositCapError")
@@ -511,10 +517,9 @@ export class TestFixture {
                 );
             }
 
-            const userReserveBalance = await this.getReserveTokenBalance(
-                this.userReserveTokenAccount
-            );
-            const vaultReserveBalance = await this.getVaultReserveTokenBalance();
+            const userReserveBalance = await this.getUserLpTokenBalance();
+            const vaultReserveBalance =
+                await this.getVaultReserveTokenBalance();
             const userLpBalance = await this.getUserLpTokenBalance();
             const lpTokenSupply = await this.getLpTokenSupply();
 
@@ -523,7 +528,7 @@ export class TestFixture {
             assert.equal(userLpBalance, 0);
             assert.equal(lpTokenSupply, 0);
 
-            this.restoreLogs()
+            this.restoreLogs();
         });
 
         it("Update deposit cap", async () => {
@@ -532,8 +537,14 @@ export class TestFixture {
                 ...oldConfig,
                 depositCap: oldConfig.depositCap.mul(new anchor.BN(24)),
             };
-            const tx = await this.vaultClient.updateConfig(this.owner, newConfig);
-            await this.provider.connection.confirmTransaction(tx, "singleGossip");
+            const tx = await this.vaultClient.updateConfig(
+                this.owner,
+                newConfig
+            );
+            await this.provider.connection.confirmTransaction(
+                tx,
+                "singleGossip"
+            );
             await this.vaultClient.reload();
             assert.equal(
                 newConfig.depositCap.toNumber(),
@@ -542,7 +553,7 @@ export class TestFixture {
         });
 
         it("Reject unauthorized config update", async () => {
-            this.suppressLogs()
+            this.suppressLogs();
 
             const errorCode = "0x8d";
             const noPermissionUser = Keypair.generate();
@@ -576,13 +587,13 @@ export class TestFixture {
                 this.vaultClient.getDepositCap().lamports.toNumber()
             );
 
-            this.restoreLogs()
+            this.restoreLogs();
         });
     }
 
     testVaultFlags() {
         it("Reject deposit transaction if vault is halted", async () => {
-            this.suppressLogs()
+            this.suppressLogs();
 
             const depositCapErrorCode = this.program.idl.errors
                 .find((e) => e.name == "HaltedVault")
@@ -606,17 +617,20 @@ export class TestFixture {
                 );
             }
 
-            this.restoreLogs()
+            this.restoreLogs();
         });
 
         it("Reject rebalance transaction if vault is halted", async () => {
-            this.suppressLogs()
+            this.suppressLogs();
 
             const errorCode = this.program.idl.errors
                 .find((e) => e.name == "HaltedVault")
                 .code.toString(16);
 
-            await this.vaultClient.updateHaltFlags(this.owner, VaultFlags.HaltReconciles);
+            await this.vaultClient.updateHaltFlags(
+                this.owner,
+                VaultFlags.HaltReconciles
+            );
 
             try {
                 await this.performRebalance();
@@ -628,27 +642,39 @@ export class TestFixture {
                 );
             }
 
-            this.restoreLogs()
+            this.restoreLogs();
         });
 
         it("Update halt flags", async () => {
             const flags = 0;
-            const tx = await this.vaultClient.updateHaltFlags(this.owner, flags);
-            await this.provider.connection.confirmTransaction(tx, "singleGossip");
+            const tx = await this.vaultClient.updateHaltFlags(
+                this.owner,
+                flags
+            );
+            await this.provider.connection.confirmTransaction(
+                tx,
+                "singleGossip"
+            );
             await this.vaultClient.reload();
             assert.equal(flags, this.vaultClient.getHaltFlags());
         });
 
         it("Update yield source flags", async () => {
             const flags = 1 | (1 << 2);
-            const tx = await this.vaultClient.updateYieldSourceFlags(this.owner, flags);
-            await this.provider.connection.confirmTransaction(tx, "singleGossip");
+            const tx = await this.vaultClient.updateYieldSourceFlags(
+                this.owner,
+                flags
+            );
+            await this.provider.connection.confirmTransaction(
+                tx,
+                "singleGossip"
+            );
             await this.vaultClient.reload();
             assert.equal(flags, this.vaultClient.getYieldSourceFlags());
         });
 
         it("Reject invalid flags update", async () => {
-            this.suppressLogs()
+            this.suppressLogs();
 
             const errorCode = this.program.idl.errors
                 .find((e) => e.name == "InvalidVaultFlags")
@@ -657,7 +683,10 @@ export class TestFixture {
             const oldFlags = this.vaultClient.getHaltFlags();
 
             try {
-                const tx = await this.vaultClient.updateHaltFlags(this.owner, 23);
+                const tx = await this.vaultClient.updateHaltFlags(
+                    this.owner,
+                    23
+                );
                 await this.provider.connection.confirmTransaction(
                     tx,
                     "singleGossip"
@@ -674,11 +703,11 @@ export class TestFixture {
 
             assert.equal(oldFlags, this.vaultClient.getHaltFlags());
 
-            this.restoreLogs()
+            this.restoreLogs();
         });
 
         it("Reject unauthorized flags update", async () => {
-            this.suppressLogs()
+            this.suppressLogs();
 
             const errorCode = "0x8d";
 
@@ -706,7 +735,7 @@ export class TestFixture {
 
             assert.equal(oldFlags, this.vaultClient.getHaltFlags());
 
-            this.restoreLogs()
+            this.restoreLogs();
         });
     }
 
@@ -724,13 +753,16 @@ export class TestFixture {
         const depositQty = 1024502;
 
         before(async () => {
-            await this.mintReserveToken(this.userReserveTokenAccount, depositQty);
+            await this.mintReserveToken(
+                this.userReserveTokenAccount,
+                depositQty
+            );
             await this.depositToVault(depositQty);
         });
 
         if (rebalanceMode == RebalanceModes.proofChecker) {
             it("Rejects tx if weights don't equal 100%", async () => {
-                this.suppressLogs()
+                this.suppressLogs();
 
                 const errorCode = this.program.idl.errors
                     .find((e) => e.name == "InvalidProposedWeights")
@@ -777,11 +809,11 @@ export class TestFixture {
                     );
                 }
 
-                this.restoreLogs()
+                this.restoreLogs();
             });
 
             it("Rejects tx if weights are suboptimal", async () => {
-                this.suppressLogs()
+                this.suppressLogs();
 
                 const errorCode = this.program.idl.errors
                     .find((e) => e.name == "RebalanceProofCheckFailed")
@@ -828,11 +860,11 @@ export class TestFixture {
                     );
                 }
 
-                this.restoreLogs()
+                this.restoreLogs();
             });
 
             it("Rejects tx if weights exceeds the cap", async () => {
-                this.suppressLogs()
+                this.suppressLogs();
 
                 const errorCode = this.program.idl.errors
                     .find((e) => e.name == "InvalidProposedWeights")
@@ -879,7 +911,7 @@ export class TestFixture {
                     );
                 }
 
-                this.restoreLogs()
+                this.restoreLogs();
             });
         }
 
@@ -943,7 +975,8 @@ export class TestFixture {
             const withdrawQty = 922051;
             await this.withdrawFromVault(withdrawQty);
 
-            const newUserReserveBalance = await this.getUserReserveTokenBalance();
+            const newUserReserveBalance =
+                await this.getUserReserveTokenBalance();
             const newVaultValue = await this.getVaultTotalValue();
             const newLpTokenSupply = await this.getLpTokenSupply();
 
@@ -973,7 +1006,9 @@ export class TestFixture {
             const txs1 = await this.depositToVault(qty1);
             const slots0 = await this.fetchSlots(txs1);
 
-            const vaultTotalValue = new anchor.BN(await this.getVaultTotalValue());
+            const vaultTotalValue = new anchor.BN(
+                await this.getVaultTotalValue()
+            );
             const lpTokenSupply = new anchor.BN(await this.getLpTokenSupply());
 
             await this.sleep(1000);
@@ -1021,8 +1056,14 @@ export class TestFixture {
                 feeMgmtBps: oldConfig.feeMgmtBps / 2,
                 referralFeePct: oldConfig.referralFeePct / 2,
             };
-            const txSig = await this.vaultClient.updateConfig(this.owner, newConfig);
-            await this.provider.connection.confirmTransaction(txSig, "singleGossip");
+            const txSig = await this.vaultClient.updateConfig(
+                this.owner,
+                newConfig
+            );
+            await this.provider.connection.confirmTransaction(
+                txSig,
+                "singleGossip"
+            );
 
             await this.vaultClient.reload();
             assert.equal(
@@ -1040,7 +1081,7 @@ export class TestFixture {
         });
 
         it("Reject invalid fee rates", async () => {
-            this.suppressLogs()
+            this.suppressLogs();
 
             const errorCode = this.program.idl.errors
                 .find((e) => e.name == "InvalidReferralFeeConfig")
@@ -1054,7 +1095,10 @@ export class TestFixture {
                 referralFeePct: 110,
             };
             try {
-                const txSig = await this.vaultClient.updateConfig(this.owner, newConfig);
+                const txSig = await this.vaultClient.updateConfig(
+                    this.owner,
+                    newConfig
+                );
                 await this.provider.connection.confirmTransaction(
                     txSig,
                     "singleGossip"
@@ -1081,7 +1125,7 @@ export class TestFixture {
                 this.vaultClient.getReferralFeeSplit().asPercent().toNumber()
             );
 
-            this.restoreLogs()
+            this.restoreLogs();
         });
     }
 

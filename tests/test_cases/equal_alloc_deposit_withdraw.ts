@@ -11,7 +11,6 @@ describe("Equal allocation strategy", () => {
         });
         before(async function () {
             await fixture.initializeVault({
-                depositCap: new anchor.BN(fixture.vaultDepositCap),
                 strategyType: { [StrategyTypes.equalAllocation]: {} },
                 rebalanceMode: { [RebalanceModes.calculator]: {} },
             });
