@@ -316,7 +316,8 @@ export class TestFixture {
 
         await this.vaultClient.reload();
 
-        this.userReserveTokenAccount = await this.reserveToken.createAccount(
+        this.userReserveTokenAccount =
+            await this.reserveToken.createAssociatedTokenAccount(
             this.wallet.publicKey
         );
     }
@@ -361,7 +362,6 @@ export class TestFixture {
     }
 
     async depositToVault(qty: number): Promise<TransactionSignature[]> {
-        await this.mintReserveToken(this.userReserveTokenAccount, qty);
         const txs = await this.vaultClient.deposit(
             this.wallet,
             qty,
@@ -517,7 +517,7 @@ export class TestFixture {
                 );
             }
 
-            const userReserveBalance = await this.getUserLpTokenBalance();
+            const userReserveBalance = await this.getUserReserveTokenBalance();
             const vaultReserveBalance =
                 await this.getVaultReserveTokenBalance();
             const userLpBalance = await this.getUserLpTokenBalance();
@@ -1133,6 +1133,7 @@ export class TestFixture {
         const depositQty = 1024502;
 
         before(async () => {
+            await this.mintReserveToken(this.userReserveTokenAccount, depositQty);
             await this.depositToVault(depositQty);
         });
 
