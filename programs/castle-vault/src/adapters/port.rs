@@ -6,8 +6,9 @@ use port_anchor_adaptor::{
     port_lending_id, port_staking_id, PortLendingMarket, PortObligation, PortReserve,
     PortStakeAccount, PortStakingPool,
 };
-use port_variable_rate_lending_instructions::instruction::withdraw_obligation_collateral;
-use port_variable_rate_lending_instructions::state::Reserve;
+use port_variable_rate_lending_instructions::{
+    instruction::withdraw_obligation_collateral, state::Reserve,
+};
 use solana_maths::Rate;
 
 use crate::{

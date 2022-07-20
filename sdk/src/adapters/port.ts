@@ -559,8 +559,9 @@ export class PortReserveAsset extends LendingMarket {
         vaultId: PublicKey,
         vaultState: Vault
     ): Promise<TransactionInstruction> {
-        return program.instruction.claimPortReward({
-            accounts: {
+        return program.methods
+            .claimPortReward()
+            .accounts({
                 vault: vaultId,
                 vaultAuthority: vaultState.vaultAuthority,
                 portAdditionalStates: this.accounts.vaultPortAdditionalStates,
@@ -575,8 +576,8 @@ export class PortReserveAsset extends LendingMarket {
                 portStakingAuthority: this.accounts.stakingProgamAuthority,
                 clock: SYSVAR_CLOCK_PUBKEY,
                 tokenProgram: TOKEN_PROGRAM_ID,
-            },
-        });
+            })
+            .instruction();
     }
 
     async getUnclaimedStakingRewards(

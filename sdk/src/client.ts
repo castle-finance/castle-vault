@@ -405,53 +405,49 @@ export class VaultClient {
 
         const tx = new Transaction();
         tx.add(
-            this.program.instruction.initializePortRewardAccounts(
-                portObligationBump,
-                portStakeBump,
-                portRewardBump,
-                portSubRewardBump,
-                {
-                    accounts: {
-                        vault: this.vaultId,
-                        vaultAuthority: this.vaultState.vaultAuthority,
-                        portAdditionalStates:
-                            this.yieldSources.port.accounts
-                                .vaultPortAdditionalStates,
-                        vaultPortObligation: vaultPortObligationAccount,
-                        vaultPortStakeAccount: vaultPortStakeAccount,
-                        vaultPortRewardToken: vaultPortRewardTokenAccount,
-                        vaultPortSubRewardToken: vaultPortSubRewardTokenAccount,
-                        portLpTokenAccount:
-                            this.yieldSources.port.accounts.lpTokenAccount,
-                        portRewardTokenMint:
-                            this.yieldSources.port.accounts
-                                .stakingRewardTokenMint,
-                        portSubRewardTokenMint:
-                            this.yieldSources.port.accounts
-                                .stakingSubRewardTokenMint,
-                        portStakingPool:
-                            this.yieldSources.port.accounts.stakingPool,
-                        portStakingRewardPool:
-                            this.yieldSources.port.accounts.stakingRewardPool,
-                        portStakingSubRewardPool:
-                            this.yieldSources.port.accounts
-                                .stakingSubRewardPool,
-                        portStakeProgram:
-                            this.yieldSources.port.accounts.stakingProgram,
-                        portLendProgram:
-                            this.yieldSources.port.accounts.program,
-                        portLendingMarket:
-                            this.yieldSources.port.accounts.market,
-                        payer: wallet.payer.publicKey,
-                        owner: owner.publicKey,
-                        systemProgram: SystemProgram.programId,
-                        tokenProgram: TOKEN_PROGRAM_ID,
-                        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                        clock: SYSVAR_CLOCK_PUBKEY,
-                        rent: SYSVAR_RENT_PUBKEY,
-                    },
-                }
-            )
+            await this.program.methods
+                .initializePortRewardAccounts(
+                    portObligationBump,
+                    portStakeBump,
+                    portRewardBump,
+                    portSubRewardBump
+                )
+                .accounts({
+                    vault: this.vaultId,
+                    vaultAuthority: this.vaultState.vaultAuthority,
+                    portAdditionalStates:
+                        this.yieldSources.port.accounts
+                            .vaultPortAdditionalStates,
+                    vaultPortObligation: vaultPortObligationAccount,
+                    vaultPortStakeAccount: vaultPortStakeAccount,
+                    vaultPortRewardToken: vaultPortRewardTokenAccount,
+                    vaultPortSubRewardToken: vaultPortSubRewardTokenAccount,
+                    portLpTokenAccount:
+                        this.yieldSources.port.accounts.lpTokenAccount,
+                    portRewardTokenMint:
+                        this.yieldSources.port.accounts.stakingRewardTokenMint,
+                    portSubRewardTokenMint:
+                        this.yieldSources.port.accounts
+                            .stakingSubRewardTokenMint,
+                    portStakingPool:
+                        this.yieldSources.port.accounts.stakingPool,
+                    portStakingRewardPool:
+                        this.yieldSources.port.accounts.stakingRewardPool,
+                    portStakingSubRewardPool:
+                        this.yieldSources.port.accounts.stakingSubRewardPool,
+                    portStakeProgram:
+                        this.yieldSources.port.accounts.stakingProgram,
+                    portLendProgram: this.yieldSources.port.accounts.program,
+                    portLendingMarket: this.yieldSources.port.accounts.market,
+                    payer: wallet.payer.publicKey,
+                    owner: owner.publicKey,
+                    systemProgram: SystemProgram.programId,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                    clock: SYSVAR_CLOCK_PUBKEY,
+                    rent: SYSVAR_RENT_PUBKEY,
+                })
+                .instruction()
         );
 
         const txSig = await provider.sendAll([

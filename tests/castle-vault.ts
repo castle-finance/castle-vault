@@ -1049,7 +1049,7 @@ describe("castle-vault", () => {
         });
     }
 
-    describe("Equal allocation strategy", () => {
+    xdescribe("Equal allocation strategy", () => {
         describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -1061,7 +1061,7 @@ describe("castle-vault", () => {
             testDepositAndWithdrawal();
         });
 
-        describe("Deposit cap and vault flags", () => {
+        xdescribe("Deposit cap and vault flags", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -1074,7 +1074,7 @@ describe("castle-vault", () => {
             testVaultFlags();
         });
 
-        describe("Rebalance", () => {
+        xdescribe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -1103,7 +1103,7 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Max yield calculator", () => {
+    xdescribe("Max yield calculator", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -1120,7 +1120,7 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Max yield proof checker", () => {
+    xdescribe("Max yield proof checker", () => {
         describe("Rebalance", () => {
             const rebalanceMode = RebalanceModes.proofChecker;
             before(initLendingMarkets);
@@ -1139,7 +1139,7 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Refresh Check", () => {
+    xdescribe("Refresh Check", () => {
         before(initLendingMarkets);
         before(async function () {
             await initializeVault({
@@ -1204,7 +1204,7 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Disabled pools", () => {
+    xdescribe("Disabled pools", () => {
         describe("Rebalance with equal allocation strategy missing 1 pool", () => {
             const rebalanceMode = RebalanceModes.calculator;
             before(initLendingMarkets);
