@@ -55,7 +55,6 @@ pub struct PortAccounts<'info> {
     #[account(mut)]
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
-    // CHECK: safe
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"port_obligation".as_ref()],
@@ -70,15 +69,13 @@ pub struct PortAccounts<'info> {
     )]
     pub vault_port_stake_account: Box<Account<'info, PortStakeAccount>>,
 
-    /// CHECK: safe
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"port_reward".as_ref()],
         bump = port_additional_states.vault_port_reward_token_bump
     )]
-    pub vault_port_reward_token: AccountInfo<'info>,
+    pub vault_port_reward_token: Box<Account<'info, TokenAccount>>,
 
-    /// CHECK: safe
     /// ID of the staking pool
     #[account(mut)]
     pub port_staking_pool: Box<Account<'info, PortStakingPool>>,
@@ -97,7 +94,6 @@ pub struct PortAccounts<'info> {
     )]
     pub port_stake_program: AccountInfo<'info>,
 
-    /// CHECK: safe
     #[account(mut)]
     pub port_staking_reward_pool: Box<Account<'info, TokenAccount>>,
 
@@ -105,7 +101,6 @@ pub struct PortAccounts<'info> {
     //#[soteria(ignore)]
     pub port_staking_authority: AccountInfo<'info>,
 
-    /// CHECK: safe
     // Account to which the token should be transfered for the purpose of staking
     #[account(mut)]
     pub port_lp_token_account: Box<Account<'info, TokenAccount>>,
@@ -114,19 +109,16 @@ pub struct PortAccounts<'info> {
     //#[soteria(ignore)]
     pub port_market_authority: AccountInfo<'info>,
 
-    /// CHECK: safe
     //#[soteria(ignore)]
     pub port_market: Box<Account<'info, PortLendingMarket>>,
 
     #[account(mut)]
     pub port_reserve: Box<Account<'info, PortReserve>>,
 
-    /// CHECK: safe
     #[account(mut)]
     //#[soteria(ignore)]
     pub port_lp_mint: Box<Account<'info, Mint>>,
 
-    /// CHECK: safe
     #[account(mut)]
     //#[soteria(ignore)]
     pub port_reserve_token: Box<Account<'info, TokenAccount>>,
@@ -380,8 +372,7 @@ pub struct InitializePort<'info> {
     pub vault_port_lp_token: Box<Account<'info, TokenAccount>>,
 
     /// Mint of the port lp token
-    /// CHECK: safe
-    pub port_lp_token_mint: AccountInfo<'info>,
+    pub port_lp_token_mint: Box<Account<'info, Mint>>,
 
     pub port_reserve: Box<Account<'info, PortReserve>>,
 

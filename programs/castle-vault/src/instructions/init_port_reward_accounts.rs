@@ -1,9 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Token, TokenAccount},
+    token::{Mint, Token, TokenAccount},
 };
-use port_anchor_adaptor::{port_lending_id, port_staking_id, PortObligation, PortStakeAccount};
+use port_anchor_adaptor::{
+    port_lending_id, port_staking_id, PortLendingMarket, PortObligation, PortStakeAccount,
+    PortStakingPool,
+};
 use std::convert::Into;
 
 use crate::state::*;
@@ -72,21 +75,17 @@ pub struct InitializePortRewardAccounts<'info> {
     )]
     pub vault_port_sub_reward_token: Box<Account<'info, TokenAccount>>,
 
-    /// CHECK: safe
     // Account to which the token should be transfered for the purpose of staking
-    pub port_lp_token_account: AccountInfo<'info>,
+    pub port_lp_token_account: Box<Account<'info, TokenAccount>>,
 
-    /// CHECK: safe
     /// Mint of the port finance token (liquidity reward will be issued by this one)
-    pub port_reward_token_mint: AccountInfo<'info>,
+    pub port_reward_token_mint: Box<Account<'info, Mint>>,
 
-    /// CHECK: safe
     /// Mint of the port stake sub-reward token
-    pub port_sub_reward_token_mint: AccountInfo<'info>,
+    pub port_sub_reward_token_mint: Box<Account<'info, Mint>>,
 
-    /// CHECK: safe
     /// ID of the staking pool
-    pub port_staking_pool: AccountInfo<'info>,
+    pub port_staking_pool: Box<Account<'info, PortStakingPool>>,
 
     /// CHECK: safe
     pub port_staking_reward_pool: AccountInfo<'info>,
@@ -108,8 +107,7 @@ pub struct InitializePortRewardAccounts<'info> {
     )]
     pub port_lend_program: AccountInfo<'info>,
 
-    /// CHECK: safe
-    pub port_lending_market: AccountInfo<'info>,
+    pub port_lending_market: Box<Account<'info, PortLendingMarket>>,
 
     /// Account that pays for above account inits
     #[account(mut)]
