@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use boolinator::Boolinator;
-use port_anchor_adaptor::{port_lending_id, port_staking_id};
+use anchor_spl::token::TokenAccount;
+use port_anchor_adaptor::{port_lending_id, port_staking_id, PortStakeAccount, PortStakingPool};
 
 use crate::state::{Vault, VaultPortAdditionalState};
 
@@ -27,30 +28,26 @@ pub struct ClaimPortReward<'info> {
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
-    /// CHECK: safe
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"port_stake".as_ref()], 
         bump = port_additional_states.vault_port_stake_account_bump
     )]
-    pub vault_port_stake_account: AccountInfo<'info>,
+    pub vault_port_stake_account: Box<Account<'info, PortStakeAccount>>,
 
-    /// CHECK: safe
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"port_reward".as_ref()], 
         bump = port_additional_states.vault_port_reward_token_bump
     )]
-    pub vault_port_reward_token: AccountInfo<'info>,
+    pub vault_port_reward_token: Box<Account<'info, TokenAccount>>,
 
-    /// CHECK: safe
     #[account(mut)]
-    pub vault_port_sub_reward_token: AccountInfo<'info>,
+    pub vault_port_sub_reward_token: Box<Account<'info, TokenAccount>>,
 
-    /// CHECK: safe
     /// ID of the staking pool
     #[account(mut)]
-    pub port_staking_pool: AccountInfo<'info>,
+    pub port_staking_pool: Box<Account<'info, PortStakingPool>>,
 
     /// CHECK: safe
     #[account(
@@ -88,10 +85,10 @@ pub fn handler(ctx: Context<ClaimPortReward>) -> Result<()> {
         ctx.accounts.port_stake_program.clone(),
         port_anchor_adaptor::ClaimReward {
             stake_account_owner: ctx.accounts.vault_authority.clone(),
-            stake_account: ctx.accounts.vault_port_stake_account.clone(),
-            staking_pool: ctx.accounts.port_staking_pool.clone(),
+            stake_account: ctx.accounts.vault_port_stake_account.to_account_info(),
+            staking_pool: ctx.accounts.port_staking_pool.to_account_info(),
             reward_token_pool: ctx.accounts.port_staking_reward_pool.clone(),
-            reward_dest: ctx.accounts.vault_port_reward_token.clone(),
+            reward_dest: ctx.accounts.vault_port_reward_token.to_account_info(),
             staking_program_authority: ctx.accounts.port_staking_authority.clone(),
             clock: ctx.accounts.clock.to_account_info(),
             token_program: ctx.accounts.port_lend_program.clone(),
@@ -117,6 +114,6 @@ pub fn handler(ctx: Context<ClaimPortReward>) -> Result<()> {
         ctx.accounts
             .port_additional_states
             .sub_reward_available
-            .as_some(ctx.accounts.vault_port_sub_reward_token.clone()),
+            .as_some(ctx.accounts.vault_port_sub_reward_token.to_account_info()),
     )
 }
