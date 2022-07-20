@@ -189,7 +189,7 @@ describe("castle-vault", () => {
         return { primary: primFee, referral: refFee };
     }
 
-    async function initLendingMarkets() {
+    async function initLendingMarkets(createPortSubReward: boolean = false) {
         const sig = await provider.connection.requestAirdrop(
             owner.publicKey,
             1000000000
@@ -250,7 +250,8 @@ describe("castle-vault", () => {
             reserveToken.publicKey,
             pythPrice,
             ownerReserveTokenAccount,
-            initialReserveAmount
+            initialReserveAmount,
+            createPortSubReward
         );
 
         const borrowAmount = initialReserveAmount / 2;
@@ -1049,7 +1050,146 @@ describe("castle-vault", () => {
         });
     }
 
-    xdescribe("Equal allocation strategy", () => {
+    function testPortRewardClaiming(subReward: boolean) {
+        const depositQty = 1024502;
+
+        before(async () => {
+            await mintReserveToken(userReserveTokenAccount, depositQty);
+            await depositToVault(depositQty);
+        });
+
+        it("Stake port LP token when rebalancing", async () => {
+            await performRebalance({
+                solend: 0,
+                port: 10000,
+            });
+
+            const maxDiffAllowed = 1;
+            const totalValue = await getVaultTotalValue();
+            assert.isAtMost(
+                Math.abs(totalValue - Math.floor(depositQty)),
+                maxDiffAllowed
+            );
+            const portValue = (
+                await vaultClient.getVaultPortLpTokenAccountValue()
+            ).lamports.toNumber();
+            assert.isAtMost(
+                Math.abs(portValue - Math.floor(depositQty)),
+                maxDiffAllowed
+            );
+
+            const stakingAccountRaw = await provider.connection.getAccountInfo(
+                new PublicKey(port.accounts.vaultPortStakeAccount)
+            );
+            const stakingAccount = StakeAccount.fromRaw({
+                pubkey: port.accounts.vaultPortStakeAccount,
+                account: stakingAccountRaw,
+            });
+            assert.isAtMost(
+                Math.abs(
+                    stakingAccount.getDepositAmount().toU64().toNumber() -
+                        depositQty
+                ),
+                maxDiffAllowed
+            );
+        });
+
+        it("Withdraws", async function () {
+            const oldVaultValue = await getVaultTotalValue();
+            const oldLpTokenSupply = await getLpTokenSupply();
+
+            const withdrawQty = 922051;
+            await withdrawFromVault(withdrawQty);
+
+            const newUserReserveBalance = await getUserReserveTokenBalance();
+            const newVaultValue = await getVaultTotalValue();
+            const newLpTokenSupply = await getLpTokenSupply();
+
+            const stakingAccountRaw = await provider.connection.getAccountInfo(
+                new PublicKey(port.accounts.vaultPortStakeAccount)
+            );
+            const stakingAccount = StakeAccount.fromRaw({
+                pubkey: port.accounts.vaultPortStakeAccount,
+                account: stakingAccountRaw,
+            });
+
+            // TODO why are we leaking more than two tokens here?
+            // should be at most one from deposit and one from withdraw
+            let wiggleRoom = 3;
+            assert.isAtMost(
+                Math.abs(
+                    depositQty -
+                        withdrawQty -
+                        stakingAccount.getDepositAmount().toU64().toNumber()
+                ),
+                wiggleRoom
+            );
+
+            // Allow max different of 1 token because of rounding error.
+            const actualWithdrawAmount = oldVaultValue - newVaultValue;
+            const maxDiffAllowed = 1;
+            assert.isAtMost(
+                Math.abs(actualWithdrawAmount - withdrawQty),
+                maxDiffAllowed
+            );
+            // Actual should <= requested because we rounds down.
+            assert.isAtMost(actualWithdrawAmount, withdrawQty);
+            assert.equal(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
+            assert.equal(newUserReserveBalance, actualWithdrawAmount);
+        });
+
+        it("Claim reward", async function () {
+            const accumulatedRewardAmount =
+                await port.getUnclaimedStakingRewards(program);
+            assert.isAtLeast(accumulatedRewardAmount, 1);
+
+            await vaultClient.claimPortReward();
+
+            const stakingAccountRaw2 = await provider.connection.getAccountInfo(
+                new PublicKey(port.accounts.vaultPortStakeAccount)
+            );
+            const stakingAccount2 = StakeAccount.fromRaw({
+                pubkey: port.accounts.vaultPortStakeAccount,
+                account: stakingAccountRaw2,
+            });
+            const rewardAmountAfterClaiming =
+                await port.getUnclaimedStakingRewards(program);
+            assert.equal(rewardAmountAfterClaiming, 0);
+
+            const mint = port.accounts.stakingRewardTokenMint;
+            const rewardToken = new Token(
+                program.provider.connection,
+                mint,
+                TOKEN_PROGRAM_ID,
+                Keypair.generate()
+            );
+            const claimedRewardAmount = (
+                await rewardToken.getAccountInfo(
+                    port.accounts.vaultPortRewardToken
+                )
+            ).amount.toNumber();
+            assert.isAtLeast(claimedRewardAmount, accumulatedRewardAmount);
+
+            if (subReward) {
+                const subRewardMint = port.accounts.stakingSubRewardTokenMint;
+                const subRewardToken = new Token(
+                    program.provider.connection,
+                    subRewardMint,
+                    TOKEN_PROGRAM_ID,
+                    Keypair.generate()
+                );
+                const claimedSubRewardAmount = (
+                    await subRewardToken.getAccountInfo(
+                        port.accounts.vaultPortSubRewardToken
+                    )
+                ).amount.toNumber();
+
+                assert.isAtLeast(claimedSubRewardAmount, 1);
+            }
+        });
+    }
+
+    describe("Equal allocation strategy", () => {
         describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -1061,7 +1201,7 @@ describe("castle-vault", () => {
             testDepositAndWithdrawal();
         });
 
-        xdescribe("Deposit cap and vault flags", () => {
+        describe("Deposit cap and vault flags", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -1074,7 +1214,7 @@ describe("castle-vault", () => {
             testVaultFlags();
         });
 
-        xdescribe("Rebalance", () => {
+        describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
@@ -1149,7 +1289,9 @@ describe("castle-vault", () => {
             });
         });
 
-        it("Incomplete refresh after rebalance should not succeed", async function () {
+        it("Reject incomplete refresh after rebalance", async function () {
+            suppressLogs();
+
             const depositQty = 3000000;
             await mintReserveToken(userReserveTokenAccount, depositQty);
             await depositToVault(depositQty);
@@ -1178,7 +1320,6 @@ describe("castle-vault", () => {
             const expectedErrorCode = program.idl.errors
                 .find((e) => e.name == "AllocationIsNotUpdated")
                 .code.toString();
-            console.log(expectedErrorCode);
 
             try {
                 const sig = await program.provider.sendAndConfirm(refreshTx);
@@ -1201,6 +1342,8 @@ describe("castle-vault", () => {
                 Math.abs(vaultValueStoredOnChain - Math.floor(depositQty)),
                 maxDiffAllowed
             );
+
+            restoreLogs();
         });
     });
 
@@ -1228,138 +1371,42 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Stake Port LP token and claim reward", () => {
-        before(initLendingMarkets);
-        before(async function () {
-            await initializeVault(
-                {
-                    allocationCapPct: 100,
-                    strategyType: { [StrategyTypes.equalAllocation]: {} },
-                    rebalanceMode: { [RebalanceModes.calculator]: {} },
-                },
-                false,
-                true
-            );
+    xdescribe("Stake Port LP token and claim reward", () => {
+        describe("Sub-reward enabled", () => {
+            before(async function () {
+                await initLendingMarkets(true);
+            });
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: 100,
+                        strategyType: { [StrategyTypes.equalAllocation]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                    },
+                    false,
+                    true
+                );
+            });
+            testPortRewardClaiming(true);
         });
 
-        const depositQty = 1024502;
-
-        before(async () => {
-            await mintReserveToken(userReserveTokenAccount, depositQty);
-            await depositToVault(depositQty);
-        });
-
-        it("Stake port LP token when rebalancing", async () => {
-            await performRebalance({
-                solend: 0,
-                port: 10000,
+        describe("Sub-reward disabled", () => {
+            before(async function () {
+                await initLendingMarkets(false);
+            });
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: 100,
+                        strategyType: { [StrategyTypes.equalAllocation]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                    },
+                    false,
+                    true
+                );
             });
 
-            const maxDiffAllowed = 1;
-            const totalValue = await getVaultTotalValue();
-            assert.isAtMost(
-                Math.abs(totalValue - Math.floor(depositQty)),
-                maxDiffAllowed
-            );
-            const portValue = (
-                await vaultClient.getVaultPortLpTokenAccountValue()
-            ).lamports.toNumber();
-            assert.isAtMost(
-                Math.abs(portValue - Math.floor(depositQty)),
-                maxDiffAllowed
-            );
-
-            const stakingAccountRaw = await provider.connection.getAccountInfo(
-                new PublicKey(port.accounts.vaultPortStakeAccount)
-            );
-            const stakingAccount = StakeAccount.fromRaw({
-                pubkey: port.accounts.vaultPortStakeAccount,
-                account: stakingAccountRaw,
-            });
-            assert.isAtMost(
-                Math.abs(
-                    stakingAccount.getDepositAmount().toU64().toNumber() -
-                        depositQty
-                ),
-                maxDiffAllowed
-            );
-        });
-
-        it("Withdraws", async function () {
-            const oldVaultValue = await getVaultTotalValue();
-            const oldLpTokenSupply = await getLpTokenSupply();
-
-            const withdrawQty = 922051;
-            await withdrawFromVault(withdrawQty);
-
-            const newUserReserveBalance = await getUserReserveTokenBalance();
-            const newVaultValue = await getVaultTotalValue();
-            const newLpTokenSupply = await getLpTokenSupply();
-
-            const stakingAccountRaw = await provider.connection.getAccountInfo(
-                new PublicKey(port.accounts.vaultPortStakeAccount)
-            );
-            const stakingAccount = StakeAccount.fromRaw({
-                pubkey: port.accounts.vaultPortStakeAccount,
-                account: stakingAccountRaw,
-            });
-
-            // TODO why are we leaking more than two tokens here?
-            // should one from deposit and one from withdraw
-            let wiggleRoom = 3;
-            assert.isAtMost(
-                Math.abs(
-                    depositQty -
-                        withdrawQty -
-                        stakingAccount.getDepositAmount().toU64().toNumber()
-                ),
-                wiggleRoom
-            );
-
-            // Allow max difference of 1 token because of rounding error.
-            const actualWithdrawAmount = oldVaultValue - newVaultValue;
-            const maxDiffAllowed = 1;
-            assert.isAtMost(
-                Math.abs(actualWithdrawAmount - withdrawQty),
-                maxDiffAllowed
-            );
-            // Actual should <= requested because we round down.
-            assert.isAtMost(actualWithdrawAmount, withdrawQty);
-            assert.equal(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
-            assert.equal(newUserReserveBalance, actualWithdrawAmount);
-        });
-
-        it("Claim reward", async function () {
-            const accumulatedRewardAmount =
-                await port.getUnclaimedStakingRewards(program);
-            assert.isAtLeast(accumulatedRewardAmount, 1);
-
-            await vaultClient.claimPortReward();
-
-            const stakingAccountRaw2 = await provider.connection.getAccountInfo(
-                new PublicKey(port.accounts.vaultPortStakeAccount)
-            );
-            const stakingAccount2 = StakeAccount.fromRaw({
-                pubkey: port.accounts.vaultPortStakeAccount,
-                account: stakingAccountRaw2,
-            });
-            const rewardAmountAfterClaiming =
-                await port.getUnclaimedStakingRewards(program);
-            assert.equal(rewardAmountAfterClaiming, 0);
-
-            const mint = port.accounts.stakingRewardTokenMint;
-            const rewardToken = new Token(
-                program.provider.connection,
-                mint,
-                TOKEN_PROGRAM_ID,
-                Keypair.generate()
-            );
-            const claimedRewardAmount = (
-                await rewardToken.getAccountInfo(
-                    port.accounts.vaultPortRewardToken
-                )
-            ).amount.toNumber();
-            assert.isAtLeast(claimedRewardAmount, accumulatedRewardAmount);
+            testPortRewardClaiming(false);
         });
     });
 });

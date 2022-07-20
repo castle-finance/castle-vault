@@ -262,6 +262,10 @@ export type CastleVault = {
                 {
                     name: "subRewardBump";
                     type: "u8";
+                },
+                {
+                    name: "subRewardAvailable";
+                    type: "bool";
                 }
             ];
         },
@@ -1139,9 +1143,13 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
+                        name: "subRewardAvailable";
+                        type: "bool";
+                    },
+                    {
                         name: "reserved0";
                         type: {
-                            array: ["u8", 4];
+                            array: ["u8", 3];
                         };
                     },
                     {
@@ -1822,6 +1830,10 @@ export const IDL: CastleVault = {
                 {
                     name: "subRewardBump",
                     type: "u8",
+                },
+                {
+                    name: "subRewardAvailable",
+                    type: "bool",
                 },
             ],
         },
@@ -2699,9 +2711,13 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
+                        name: "subRewardAvailable",
+                        type: "bool",
+                    },
+                    {
                         name: "reserved0",
                         type: {
-                            array: ["u8", 4],
+                            array: ["u8", 3],
                         },
                     },
                     {

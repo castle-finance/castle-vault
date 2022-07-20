@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
+use boolinator::Boolinator;
 use port_anchor_adaptor::{port_lending_id, port_staking_id};
 
 use crate::state::{Vault, VaultPortAdditionalState};
@@ -23,7 +24,6 @@ pub struct ClaimPortReward<'info> {
         bump = vault.vault_port_additional_state_bump,
         has_one = port_staking_pool,
         has_one = port_staking_reward_pool,
-        has_one = port_staking_sub_reward_pool,
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
@@ -98,9 +98,25 @@ pub fn handler(ctx: Context<ClaimPortReward>) -> Result<()> {
         },
     );
 
+    if ctx.accounts.port_additional_states.sub_reward_available
+        && ctx
+            .accounts
+            .port_additional_states
+            .port_staking_sub_reward_pool
+            != ctx.accounts.port_staking_sub_reward_pool.key()
+    {
+        return Err(ProgramError::InvalidAccountData.into());
+    }
+
     port_anchor_adaptor::claim_reward(
         claim_reward_context.with_signer(&[&ctx.accounts.vault.authority_seeds()]),
-        Some(ctx.accounts.port_staking_sub_reward_pool.clone()),
-        Some(ctx.accounts.vault_port_sub_reward_token.clone()),
+        ctx.accounts
+            .port_additional_states
+            .sub_reward_available
+            .as_some(ctx.accounts.port_staking_sub_reward_pool.clone()),
+        ctx.accounts
+            .port_additional_states
+            .sub_reward_available
+            .as_some(ctx.accounts.vault_port_sub_reward_token.clone()),
     )
 }

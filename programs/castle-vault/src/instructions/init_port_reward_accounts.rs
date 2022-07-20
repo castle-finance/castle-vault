@@ -137,6 +137,7 @@ pub fn handler(
     stake_bump: u8,
     reward_bump: u8,
     sub_reward_bump: u8,
+    sub_reward_available: bool,
 ) -> Result<()> {
     let init_obligation_ctx = CpiContext::new(
         ctx.accounts.port_lend_program.clone(),
@@ -189,6 +190,8 @@ pub fn handler(
     ctx.accounts
         .port_additional_states
         .port_staking_sub_reward_pool = ctx.accounts.port_staking_sub_reward_pool.key();
+
+    ctx.accounts.port_additional_states.sub_reward_available = sub_reward_available;
 
     Ok(())
 }
