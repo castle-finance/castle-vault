@@ -5,7 +5,7 @@ use std::{
 
 use anchor_lang::{prelude::*, solana_program};
 use anchor_spl::token::{Token, TokenAccount};
-use solana_maths::Rate;
+use solana_maths::{Rate, TryMul};
 use spl_token_lending::state::Reserve;
 
 use crate::{
@@ -14,7 +14,7 @@ use crate::{
     init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
     refresh::Refresher,
-    reserves::{Provider, ReserveAccessor},
+    reserves::{Provider, ReserveAccessor, ReturnCalculator},
     state::{Vault, YieldSourceFlags},
 };
 
@@ -182,6 +182,18 @@ impl ReserveAccessor for Reserve {
         reserve.liquidity.deposit(new_allocation)?;
         reserve.liquidity.withdraw(old_allocation)?;
         Ok(reserve)
+    }
+}
+
+impl ReturnCalculator for Reserve
+{
+    fn calculate_return(
+        &self,
+        new_allocation: u64,
+        old_allocation: u64,
+    ) -> Result<Rate, ProgramError> {
+        let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
+        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
     }
 }
 

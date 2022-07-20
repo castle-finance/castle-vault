@@ -76,19 +76,19 @@ pub trait ReturnCalculator {
     ) -> Result<Rate, ProgramError>;
 }
 
-impl<T> ReturnCalculator for T
-where
-    T: ReserveAccessor,
-{
-    fn calculate_return(
-        &self,
-        new_allocation: u64,
-        old_allocation: u64,
-    ) -> Result<Rate, ProgramError> {
-        let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
-        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
-    }
-}
+// impl<T> ReturnCalculator for T
+// where
+//     T: ReserveAccessor,
+// {
+//     fn calculate_return(
+//         &self,
+//         new_allocation: u64,
+//         old_allocation: u64,
+//     ) -> Result<Rate, ProgramError> {
+//         let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
+//         reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
+//     }
+// }
 
 #[derive(Clone)]
 pub enum Reserves {
@@ -126,6 +126,20 @@ impl<'a> ReserveAccessor for Reserves {
             }
             Reserves::Port(reserve) => reserve.reserve_with_deposit(new_allocation, old_allocation),
             Reserves::Jet(reserve) => reserve.reserve_with_deposit(new_allocation, old_allocation),
+        }
+    }
+}
+
+impl ReturnCalculator for Reserves {
+    fn calculate_return(
+        &self,
+        new_allocation: u64,
+        old_allocation: u64,
+    ) -> Result<Rate, ProgramError> {
+        match self {
+            Reserves::Solend(reserve) => reserve.calculate_return(new_allocation, old_allocation),
+            Reserves::Port(reserve) => reserve.calculate_return(new_allocation, old_allocation),
+            Reserves::Jet(reserve) => reserve.calculate_return(new_allocation, old_allocation),
         }
     }
 }

@@ -6,7 +6,7 @@ use jet::{
     state::{CachedReserveInfo, Reserve},
     Amount, Rounding,
 };
-use solana_maths::Rate;
+use solana_maths::{Rate, TryMul};
 
 use crate::{
     errors::ErrorCode,
@@ -14,7 +14,7 @@ use crate::{
     init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
     refresh::Refresher,
-    reserves::{Provider, ReserveAccessor},
+    reserves::{Provider, ReserveAccessor, ReturnCalculator},
     state::{Vault, YieldSourceFlags},
 };
 
@@ -197,6 +197,18 @@ impl ReserveAccessor for Reserve {
         reserve.deposit(new_allocation, 0);
         reserve.withdraw(old_allocation, 0);
         Ok(reserve)
+    }
+}
+
+impl ReturnCalculator for Reserve
+{
+    fn calculate_return(
+        &self,
+        new_allocation: u64,
+        old_allocation: u64,
+    ) -> Result<Rate, ProgramError> {
+        let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
+        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
     }
 }
 

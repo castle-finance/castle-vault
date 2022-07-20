@@ -4,7 +4,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
 use port_anchor_adaptor::{port_lending_id, port_staking_id, PortReserve, PortStakeAccount};
 use port_variable_rate_lending_instructions::state::Reserve;
-use solana_maths::Rate;
+use solana_maths::{Rate, TryMul};
 
 use crate::{
     errors::ErrorCode,
@@ -12,7 +12,7 @@ use crate::{
     init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
     refresh::Refresher,
-    reserves::{Provider, ReserveAccessor},
+    reserves::{Provider, ReserveAccessor, ReturnCalculator},
     state::{Vault, VaultPortAdditionalState, YieldSourceFlags},
 };
 
@@ -282,6 +282,18 @@ impl ReserveAccessor for Reserve {
             .checked_sub(old_allocation)
             .ok_or(ErrorCode::OverflowError)?;
         Ok(reserve)
+    }
+}
+
+impl ReturnCalculator for Reserve
+{
+    fn calculate_return(
+        &self,
+        new_allocation: u64,
+        old_allocation: u64,
+    ) -> Result<Rate, ProgramError> {
+        let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
+        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
     }
 }
 
