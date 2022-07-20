@@ -1,5 +1,5 @@
 import { Cluster, Connection, PublicKey } from "@solana/web3.js";
-import { Program, Provider, Wallet } from "@project-serum/anchor";
+import { Program, Wallet, AnchorProvider } from "@project-serum/anchor";
 import { NATIVE_MINT } from "@solana/spl-token";
 
 import {
@@ -9,7 +9,6 @@ import {
 } from "@castlefinance/vault-core";
 
 import {
-    JetReserveAsset,
     PortReserveAsset,
     SolendReserveAsset,
     VaultClient,
@@ -24,7 +23,7 @@ const main = async () => {
     );
     const wallet = Wallet.local();
     const owner = wallet.payer;
-    const provider = new Provider(connection, wallet, {
+    const provider = new AnchorProvider(connection, wallet, {
         commitment: "confirmed",
     });
 
@@ -46,7 +45,7 @@ const main = async () => {
             strategyType: { [StrategyTypes.maxYield]: {} },
         }
     );
-    console.log("Vauld ID: ", vaultClient.vaultId.toString());
+    console.log("Vault ID: ", vaultClient.vaultId.toString());
 
     // When the reserve token is not available on a lending pool, the load instruction will fail.
     // This is how we detect if we should disable (i.e. not initialize) a lending pool.
@@ -69,17 +68,16 @@ const main = async () => {
             reserveMint
         );
         await vaultClient.initializePort(wallet, port, owner);
+        await vaultClient.initializePortAdditionalState(wallet, owner);
+        await vaultClient.initializePortRewardAccounts(
+            wallet,
+            owner,
+            provider,
+            DeploymentEnvs.mainnet
+        );
         console.log("Succesfully initialized Port");
     } catch (error) {
         console.log("Failed to initialize Port: ", error);
-    }
-
-    try {
-        const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
-        await vaultClient.initializeJet(wallet, jet, owner);
-        console.log("Succesfully initialized Jet");
-    } catch (error) {
-        console.log("Failed to initialize Jet: ", error);
     }
 };
 

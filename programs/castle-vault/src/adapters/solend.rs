@@ -9,6 +9,7 @@ use solana_maths::Rate;
 use spl_token_lending::state::Reserve;
 
 use crate::{
+    errors::ErrorCode,
     impl_has_vault,
     init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
@@ -78,7 +79,7 @@ pub struct SolendAccounts<'info> {
 impl_has_vault!(SolendAccounts<'_>);
 
 impl<'info> LendingMarket for SolendAccounts<'info> {
-    fn deposit(&self, amount: u64) -> Result<()> {
+    fn deposit(&mut self, amount: u64) -> Result<()> {
         let context = CpiContext::new(
             self.solend_program.clone(),
             DepositReserveLiquidity {
@@ -101,9 +102,16 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
                 context.with_signer(&[&self.vault.authority_seeds()]),
                 amount,
             ),
-        }
+        }?;
+
+        let solend_value = self.vault.actual_allocations[Provider::Solend]
+            .value
+            .checked_add(amount)
+            .ok_or(ErrorCode::MathError)?;
+        self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
+        Ok(())
     }
-    fn redeem(&self, amount: u64) -> Result<()> {
+    fn redeem(&mut self, amount: u64) -> Result<()> {
         let context = CpiContext::new(
             self.solend_program.clone(),
             RedeemReserveCollateral {
@@ -126,7 +134,15 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
                 context.with_signer(&[&self.vault.authority_seeds()]),
                 amount,
             ),
-        }
+        }?;
+
+        let vault_reserve_vault_delta = self.convert_amount_lp_to_reserve(amount)?;
+        let solend_value = self.vault.actual_allocations[Provider::Solend]
+            .value
+            .checked_sub(vault_reserve_vault_delta)
+            .ok_or(ErrorCode::MathError)?;
+        self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
+        Ok(())
     }
     fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64> {
         let exchange_rate = self.solend_reserve.collateral_exchange_rate()?;

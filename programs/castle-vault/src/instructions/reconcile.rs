@@ -14,8 +14,8 @@ const MAX_SLOTS_SINCE_ALLOC_UPDATE: u64 = 100;
 // move this somewhere else?
 // Split into CPI, Data, Vault traits?
 pub trait LendingMarket {
-    fn deposit(&self, amount: u64) -> Result<()>;
-    fn redeem(&self, amount: u64) -> Result<()>;
+    fn deposit(&mut self, amount: u64) -> Result<()>;
+    fn redeem(&mut self, amount: u64) -> Result<()>;
 
     // TODO separate these fns into ExchangeRate struct
     // OR Amount struct like Jet does which handles conversions implicitly

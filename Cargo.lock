@@ -649,7 +649,7 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "castle-vault"
-version = "3.2.1"
+version = "3.3.1"
 dependencies = [
  "anchor-lang 0.24.2",
  "anchor-spl 0.24.2",
@@ -661,6 +661,7 @@ dependencies = [
  "port-anchor-adaptor",
  "port-variable-rate-lending-instructions",
  "solana-maths",
+ "solana-program",
  "solana-security-txt",
  "spl-math",
  "spl-token-lending",
@@ -1179,7 +1180,7 @@ dependencies = [
 [[package]]
 name = "port-anchor-adaptor"
 version = "0.3.7"
-source = "git+https://github.com/udbhav1/port-24.git#261ebb5aab9ab97abac4f5f1306b9e27b5392802"
+source = "git+https://github.com/udbhav1/port-24.git?branch=claim-reward-bugfix#0245ecb6d58f85377386294fd40f66043b7ba70f"
 dependencies = [
  "anchor-lang 0.24.2",
  "num-derive",
@@ -1209,8 +1210,7 @@ dependencies = [
 [[package]]
 name = "port-staking-instructions"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58a0376f07714b1c0813b6140c8ee39eaa39a0482545b4c7dc4d894f74a9c7a9"
+source = "git+https://github.com/udbhav1/port-staking-instructions.git?branch=optional_sub_reward#01ccd39f06696bdc49bf471e5e9602941da8d3fa"
 dependencies = [
  "arrayref",
  "bytemuck",

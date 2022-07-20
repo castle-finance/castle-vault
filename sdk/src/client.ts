@@ -98,7 +98,7 @@ export class VaultClient {
             vaultState
         );
 
-        return new VaultClient(
+        let client = new VaultClient(
             program,
             vaultId,
             vaultState,
@@ -106,6 +106,72 @@ export class VaultClient {
             reserveToken,
             lpToken
         );
+        await client.loadPortAdditionalAccounts();
+        return client;
+    }
+
+    async loadPortAdditionalAccounts() {
+        const vaultPortAdditionalStateAddress =
+            await PublicKey.createProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_additional_state"),
+                    new Uint8Array([
+                        this.vaultState.vaultPortAdditionalStateBump,
+                    ]),
+                ],
+                this.program.programId
+            );
+        const vaultPortAdditionalStates =
+            await this.program.account.vaultPortAdditionalState.fetch(
+                vaultPortAdditionalStateAddress
+            );
+        this.yieldSources.port.accounts.vaultPortAdditionalStates =
+            vaultPortAdditionalStateAddress;
+        this.yieldSources.port.accounts.vaultPortObligation =
+            await PublicKey.createProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_obligation"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortObligationBump,
+                    ]),
+                ],
+                this.program.programId
+            );
+        this.yieldSources.port.accounts.vaultPortStakeAccount =
+            await PublicKey.createProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_stake"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortStakeAccountBump,
+                    ]),
+                ],
+                this.program.programId
+            );
+        this.yieldSources.port.accounts.vaultPortRewardToken =
+            await PublicKey.createProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_reward"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortRewardTokenBump,
+                    ]),
+                ],
+                this.program.programId
+            );
+        this.yieldSources.port.accounts.vaultPortSubRewardToken =
+            await PublicKey.createProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_sub_reward"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortSubRewardTokenBump,
+                    ]),
+                ],
+                this.program.programId
+            );
     }
 
     async reload() {
@@ -236,6 +302,165 @@ export class VaultClient {
             {},
             reserveToken,
             lpToken
+        );
+    }
+
+    async initializePortAdditionalState(wallet: anchor.Wallet, owner: Keypair) {
+        const [pda, bump] = await PublicKey.findProgramAddress(
+            [
+                this.vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("port_additional_state"),
+            ],
+            this.program.programId
+        );
+
+        const tx = new Transaction();
+        tx.add(
+            await this.program.methods
+                .initializePortAdditionalState(bump)
+                .accounts({
+                    vault: this.vaultId,
+                    portAdditionalStates: pda,
+                    payer: wallet.payer.publicKey,
+                    owner: owner.publicKey,
+                    systemProgram: SystemProgram.programId,
+                })
+                .instruction()
+        );
+
+        const txSig = await this.program.provider.sendAll([
+            { tx: tx, signers: [owner, wallet.payer] },
+        ]);
+
+        await this.program.provider.connection.confirmTransaction(
+            txSig[0],
+            "finalized"
+        );
+    }
+
+    async initializePortRewardAccounts(
+        wallet: anchor.Wallet,
+        owner: Keypair,
+        provider: anchor.AnchorProvider,
+        env: DeploymentEnv,
+        program?: anchor.Program<CastleVault>
+    ) {
+        if (program == null) {
+            program = (await anchor.Program.at(
+                PROGRAM_IDS[env],
+                provider
+            )) as anchor.Program<CastleVault>;
+        }
+
+        await this.reload();
+        const vaultPortAdditionalStateAddress =
+            await PublicKey.createProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_additional_state"),
+                    new Uint8Array([
+                        this.vaultState.vaultPortAdditionalStateBump,
+                    ]),
+                ],
+                program.programId
+            );
+        this.yieldSources.port.accounts.vaultPortAdditionalStates =
+            vaultPortAdditionalStateAddress;
+
+        const [vaultPortObligationAccount, portObligationBump] =
+            await PublicKey.findProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_obligation"),
+                ],
+                this.program.programId
+            );
+
+        const [vaultPortStakeAccount, portStakeBump] =
+            await PublicKey.findProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_stake"),
+                ],
+                this.program.programId
+            );
+
+        const [vaultPortRewardTokenAccount, portRewardBump] =
+            await PublicKey.findProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_reward"),
+                ],
+                this.program.programId
+            );
+
+        const [vaultPortSubRewardTokenAccount, portSubRewardBump] =
+            await PublicKey.findProgramAddress(
+                [
+                    this.vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_sub_reward"),
+                ],
+                this.program.programId
+            );
+
+        const tx = new Transaction();
+        tx.add(
+            this.program.instruction.initializePortRewardAccounts(
+                portObligationBump,
+                portStakeBump,
+                portRewardBump,
+                portSubRewardBump,
+                {
+                    accounts: {
+                        vault: this.vaultId,
+                        vaultAuthority: this.vaultState.vaultAuthority,
+                        portAdditionalStates:
+                            this.yieldSources.port.accounts
+                                .vaultPortAdditionalStates,
+                        vaultPortObligation: vaultPortObligationAccount,
+                        vaultPortStakeAccount: vaultPortStakeAccount,
+                        vaultPortRewardToken: vaultPortRewardTokenAccount,
+                        vaultPortSubRewardToken: vaultPortSubRewardTokenAccount,
+                        portLpTokenAccount:
+                            this.yieldSources.port.accounts.lpTokenAccount,
+                        portRewardTokenMint:
+                            this.yieldSources.port.accounts
+                                .stakingRewardTokenMint,
+                        portSubRewardTokenMint:
+                            this.yieldSources.port.accounts
+                                .stakingSubRewardTokenMint,
+                        portStakingPool:
+                            this.yieldSources.port.accounts.stakingPool,
+                        portStakingRewardPool:
+                            this.yieldSources.port.accounts.stakingRewardPool,
+                        portStakingSubRewardPool:
+                            this.yieldSources.port.accounts
+                                .stakingSubRewardPool,
+                        portStakeProgram:
+                            this.yieldSources.port.accounts.stakingProgram,
+                        portLendProgram:
+                            this.yieldSources.port.accounts.program,
+                        portLendingMarket:
+                            this.yieldSources.port.accounts.market,
+                        payer: wallet.payer.publicKey,
+                        owner: owner.publicKey,
+                        systemProgram: SystemProgram.programId,
+                        tokenProgram: TOKEN_PROGRAM_ID,
+                        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                        clock: SYSVAR_CLOCK_PUBKEY,
+                        rent: SYSVAR_RENT_PUBKEY,
+                    },
+                }
+            )
+        );
+
+        const txSig = await provider.sendAll([
+            { tx: tx, signers: [owner, wallet.payer] },
+        ]);
+
+        await this.program.provider.connection.confirmTransaction(
+            txSig[0],
+            "finalized"
         );
     }
 
@@ -406,14 +631,6 @@ export class VaultClient {
                 vault: this.vaultId,
                 vaultAuthority: this.vaultState.vaultAuthority,
                 vaultReserveToken: this.vaultState.vaultReserveToken,
-                vaultSolendLpToken:
-                    this.yieldSources.solend != null
-                        ? this.vaultState.vaultSolendLpToken
-                        : Keypair.generate().publicKey,
-                vaultPortLpToken:
-                    this.yieldSources.port != null
-                        ? this.vaultState.vaultPortLpToken
-                        : Keypair.generate().publicKey,
                 lpTokenMint: this.vaultState.lpTokenMint,
                 tokenProgram: TOKEN_PROGRAM_ID,
             })
@@ -752,17 +969,16 @@ export class VaultClient {
                 )
             ).sort((a, b) => b[0].sub(a[0]).toNumber());
 
-            const toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
+            let toReconcileAmount = convertedAmount.sub(vaultReserveAmount);
             let reconciledAmount = Big(0);
             let n = 0;
             while (reconciledAmount.lt(toReconcileAmount)) {
                 const [alloc, k] = reconcileIxs[n];
 
                 // min of alloc and toWithdrawAmount - withdrawnAmount
-                const reconcileAmount = alloc.gt(
-                    toReconcileAmount.sub(reconciledAmount)
-                )
-                    ? toReconcileAmount
+                const remainingAmount = toReconcileAmount.sub(reconciledAmount);
+                const reconcileAmount = alloc.gt(remainingAmount)
+                    ? remainingAmount
                     : alloc;
 
                 if (!Big(0).eq(reconcileAmount)) {
@@ -916,6 +1132,18 @@ export class VaultClient {
         ];
 
         return this.program.provider.sendAll(txs);
+    }
+
+    async claimPortReward(): Promise<TransactionSignature> {
+        const tx = new Transaction();
+        tx.add(
+            await this.yieldSources.port.getClaimRewardIx(
+                this.program,
+                this.vaultId,
+                this.vaultState
+            )
+        );
+        return this.program.provider.sendAndConfirm(tx);
     }
 
     async emergencyBrake(): Promise<TransactionSignature[]> {

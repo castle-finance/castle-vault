@@ -33,3 +33,6 @@ program = "deps/solend_token_lending.so"
 [[test.genesis]]
 address = "pdQ2rQQU5zH2rDgZ7xH2azMBJegUzUyunJ5Jd637hC4"
 program = "deps/port_finance_variable_rate_lending.so"
+[[test.genesis]]
+address = "stkarvwmSzv2BygN5e2LeTwimTczLWHCKPKGC2zVLiq"
+program = "deps/port_finance_staking.so"
