@@ -15,6 +15,9 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 url = "m"
 
 [[test.clone]]
+# PORT/USD pyth product
+address = "4K6mtNyQ1qHcZuxdJVifknzwcDGwYvcbJGNi98GdwAJU"
+[[test.clone]]
 # SOL/USD pyth product
 address = "ALP8SdU9oARYVLgLR7LrqMNCYBnhtnQz1cj6bwgwQmgj"
 [[test.clone]]
