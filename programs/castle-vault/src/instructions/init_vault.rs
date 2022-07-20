@@ -69,14 +69,14 @@ pub struct Initialize<'info> {
 
     /// Token account that receives the primary ratio of fees from the vault
     /// denominated in vault lp tokens
-    #[account(mut)]
     /// CHECK: safe
+    #[account(mut)]
     pub fee_receiver: AccountInfo<'info>,
 
     /// Token account that receives the secondary ratio of fees from the vault
     /// denominated in vault lp tokens
-    #[account(mut)]
     /// CHECK: safe
+    #[account(mut)]
     pub referral_fee_receiver: AccountInfo<'info>,
 
     /// Owner of the referral fee reciever token account

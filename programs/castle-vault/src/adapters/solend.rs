@@ -50,25 +50,25 @@ pub struct SolendAccounts<'info> {
     )]
     pub solend_program: AccountInfo<'info>,
 
-    //#[soteria(ignore)]
     /// CHECK: safe
+    //#[soteria(ignore)]
     pub solend_market_authority: AccountInfo<'info>,
 
-    //#[soteria(ignore)]
     /// CHECK: safe
+    //#[soteria(ignore)]
     pub solend_market: AccountInfo<'info>,
 
     #[account(mut)]
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
+    /// CHECK: safe
     #[account(mut)]
     //#[soteria(ignore)]
-    /// CHECK: safe
     pub solend_lp_mint: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(mut)]
     //#[soteria(ignore)]
-    /// CHECK: safe
     pub solend_reserve_token: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,
@@ -465,12 +465,12 @@ pub struct RefreshSolend<'info> {
     #[account(mut)]
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
-    //#[soteria(ignore)]
     /// CHECK: safe
+    //#[soteria(ignore)]
     pub solend_pyth: AccountInfo<'info>,
 
-    //#[soteria(ignore)]
     /// CHECK: safe
+    //#[soteria(ignore)]
     pub solend_switchboard: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,
