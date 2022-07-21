@@ -30,7 +30,7 @@ pub struct PortAccounts<'info> {
         has_one = vault_authority,
         has_one = vault_reserve_token,
         has_one = vault_port_lp_token,
-        has_one = port_reserve,
+        has_one = port_reserve
     )]
     pub vault: Box<Account<'info, Vault>>,
 

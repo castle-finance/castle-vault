@@ -136,6 +136,7 @@ export class PortReserveAsset extends LendingMarket {
         } else {
             throw new Error("Cluster ${cluster} not supported");
         }
+
         const client = new Port(provider.connection, env, market);
         const reserveContext = await client.getReserveContext();
         const reserve = reserveContext.getByAssetMintId(MintId.of(reserveMint));
