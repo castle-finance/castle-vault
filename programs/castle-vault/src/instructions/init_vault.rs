@@ -129,11 +129,7 @@ impl<'info> Initialize<'info> {
     }
 }
 
-pub fn handler(
-    ctx: Context<Initialize>,
-    authority_bump: u8,
-    config: VaultConfigArg,
-) -> Result<()> {
+pub fn handler(ctx: Context<Initialize>, authority_bump: u8, config: VaultConfigArg) -> Result<()> {
     let clock = Clock::get()?;
 
     // Validating referral token address

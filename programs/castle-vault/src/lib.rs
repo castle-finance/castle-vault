@@ -39,10 +39,7 @@ pub mod castle_vault {
         ctx: Context<InitializePortRewardAccounts>,
         sub_reward_available: bool,
     ) -> Result<()> {
-        instructions::init_port_reward_accounts::handler(
-            ctx,
-            sub_reward_available,
-        )
+        instructions::init_port_reward_accounts::handler(ctx, sub_reward_available)
     }
 
     pub fn initialize_port<'info>(

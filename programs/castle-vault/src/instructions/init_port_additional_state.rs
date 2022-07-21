@@ -30,6 +30,7 @@ pub struct InitializePortAdditionalState<'info> {
 }
 
 pub fn handler(ctx: Context<InitializePortAdditionalState>) -> Result<()> {
-    ctx.accounts.vault.vault_port_additional_state_bump = *ctx.bumps.get("port_additional_states").unwrap();
+    ctx.accounts.vault.vault_port_additional_state_bump =
+        *ctx.bumps.get("port_additional_states").unwrap();
     Ok(())
 }

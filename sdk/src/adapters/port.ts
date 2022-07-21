@@ -533,11 +533,10 @@ export class PortReserveAsset extends LendingMarket {
         wallet: PublicKey,
         owner: PublicKey
     ): Promise<TransactionInstruction> {
-        const [vaultPortLpTokenAccount, ] =
-            await PublicKey.findProgramAddress(
-                [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
-                program.programId
-            );
+        const [vaultPortLpTokenAccount] = await PublicKey.findProgramAddress(
+            [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
+            program.programId
+        );
 
         return program.methods
             .initializePort()
