@@ -5,7 +5,6 @@ use std::convert::Into;
 use crate::state::*;
 
 #[derive(Accounts)]
-#[instruction(bump: u8)]
 pub struct InitializePortAdditionalState<'info> {
     #[account(
         mut,
@@ -30,7 +29,7 @@ pub struct InitializePortAdditionalState<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<InitializePortAdditionalState>, bump: u8) -> Result<()> {
-    ctx.accounts.vault.vault_port_additional_state_bump = bump;
+pub fn handler(ctx: Context<InitializePortAdditionalState>) -> Result<()> {
+    ctx.accounts.vault.vault_port_additional_state_bump = *ctx.bumps.get("port_additional_states").unwrap();
     Ok(())
 }

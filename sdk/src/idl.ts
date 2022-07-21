@@ -78,10 +78,8 @@ export type CastleVault = {
             ];
             args: [
                 {
-                    name: "bumps";
-                    type: {
-                        defined: "InitBumpSeeds";
-                    };
+                    name: "authorityBump";
+                    type: "u8";
                 },
                 {
                     name: "config";
@@ -120,12 +118,7 @@ export type CastleVault = {
                     isSigner: false;
                 }
             ];
-            args: [
-                {
-                    name: "bump";
-                    type: "u8";
-                }
-            ];
+            args: [];
         },
         {
             name: "initializePortRewardAccounts";
@@ -248,22 +241,6 @@ export type CastleVault = {
             ];
             args: [
                 {
-                    name: "obligationBump";
-                    type: "u8";
-                },
-                {
-                    name: "stakeBump";
-                    type: "u8";
-                },
-                {
-                    name: "rewardBump";
-                    type: "u8";
-                },
-                {
-                    name: "subRewardBump";
-                    type: "u8";
-                },
-                {
                     name: "subRewardAvailable";
                     type: "bool";
                 }
@@ -323,12 +300,7 @@ export type CastleVault = {
                     isSigner: false;
                 }
             ];
-            args: [
-                {
-                    name: "bump";
-                    type: "u8";
-                }
-            ];
+            args: [];
         },
         {
             name: "initializeSolend";
@@ -384,12 +356,7 @@ export type CastleVault = {
                     isSigner: false;
                 }
             ];
-            args: [
-                {
-                    name: "bump";
-                    type: "u8";
-                }
-            ];
+            args: [];
         },
         {
             name: "updateHaltFlags";
@@ -1164,26 +1131,6 @@ export type CastleVault = {
     ];
     types: [
         {
-            name: "InitBumpSeeds";
-            type: {
-                kind: "struct";
-                fields: [
-                    {
-                        name: "authority";
-                        type: "u8";
-                    },
-                    {
-                        name: "reserve";
-                        type: "u8";
-                    },
-                    {
-                        name: "lpMint";
-                        type: "u8";
-                    }
-                ];
-            };
-        },
-        {
             name: "VaultConfigArg";
             type: {
                 kind: "struct";
@@ -1646,10 +1593,8 @@ export const IDL: CastleVault = {
             ],
             args: [
                 {
-                    name: "bumps",
-                    type: {
-                        defined: "InitBumpSeeds",
-                    },
+                    name: "authorityBump",
+                    type: "u8",
                 },
                 {
                     name: "config",
@@ -1688,12 +1633,7 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
             ],
-            args: [
-                {
-                    name: "bump",
-                    type: "u8",
-                },
-            ],
+            args: [],
         },
         {
             name: "initializePortRewardAccounts",
@@ -1816,22 +1756,6 @@ export const IDL: CastleVault = {
             ],
             args: [
                 {
-                    name: "obligationBump",
-                    type: "u8",
-                },
-                {
-                    name: "stakeBump",
-                    type: "u8",
-                },
-                {
-                    name: "rewardBump",
-                    type: "u8",
-                },
-                {
-                    name: "subRewardBump",
-                    type: "u8",
-                },
-                {
                     name: "subRewardAvailable",
                     type: "bool",
                 },
@@ -1891,12 +1815,7 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
             ],
-            args: [
-                {
-                    name: "bump",
-                    type: "u8",
-                },
-            ],
+            args: [],
         },
         {
             name: "initializeSolend",
@@ -1952,12 +1871,7 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
             ],
-            args: [
-                {
-                    name: "bump",
-                    type: "u8",
-                },
-            ],
+            args: [],
         },
         {
             name: "updateHaltFlags",
@@ -2731,26 +2645,6 @@ export const IDL: CastleVault = {
         },
     ],
     types: [
-        {
-            name: "InitBumpSeeds",
-            type: {
-                kind: "struct",
-                fields: [
-                    {
-                        name: "authority",
-                        type: "u8",
-                    },
-                    {
-                        name: "reserve",
-                        type: "u8",
-                    },
-                    {
-                        name: "lpMint",
-                        type: "u8",
-                    },
-                ],
-            },
-        },
         {
             name: "VaultConfigArg",
             type: {

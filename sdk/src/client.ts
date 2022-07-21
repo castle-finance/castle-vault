@@ -210,13 +210,13 @@ export class VaultClient {
                 program.programId
             );
 
-        const [vaultReserveTokenAccount, reserveBump] =
+        const [vaultReserveTokenAccount, ] =
             await PublicKey.findProgramAddress(
                 [vaultId.publicKey.toBuffer(), reserveTokenMint.toBuffer()],
                 program.programId
             );
 
-        const [lpTokenMint, lpTokenMintBump] =
+        const [lpTokenMint, ] =
             await PublicKey.findProgramAddress(
                 [
                     vaultId.publicKey.toBuffer(),
@@ -254,11 +254,7 @@ export class VaultClient {
                 // Anchor has a bug that decodes nested types incorrectly
                 // https://github.com/project-serum/anchor/pull/1726
                 //@ts-ignore
-                {
-                    authority: authorityBump,
-                    reserve: reserveBump,
-                    lpMint: lpTokenMintBump,
-                },
+                authorityBump,
                 { ...defaultConfig, ...config }
             )
             .accounts({
@@ -306,7 +302,7 @@ export class VaultClient {
     }
 
     async initializePortAdditionalState(wallet: anchor.Wallet, owner: Keypair) {
-        const [pda, bump] = await PublicKey.findProgramAddress(
+        const [pda, ] = await PublicKey.findProgramAddress(
             [
                 this.vaultId.toBuffer(),
                 anchor.utils.bytes.utf8.encode("port_additional_state"),
@@ -317,7 +313,7 @@ export class VaultClient {
         const tx = new Transaction();
         tx.add(
             await this.program.methods
-                .initializePortAdditionalState(bump)
+                .initializePortAdditionalState()
                 .accounts({
                     vault: this.vaultId,
                     portAdditionalStates: pda,
@@ -367,7 +363,7 @@ export class VaultClient {
         this.yieldSources.port.accounts.vaultPortAdditionalStates =
             vaultPortAdditionalStateAddress;
 
-        const [vaultPortObligationAccount, portObligationBump] =
+        const [vaultPortObligationAccount, ] =
             await PublicKey.findProgramAddress(
                 [
                     this.vaultId.toBuffer(),
@@ -376,7 +372,7 @@ export class VaultClient {
                 this.program.programId
             );
 
-        const [vaultPortStakeAccount, portStakeBump] =
+        const [vaultPortStakeAccount, ] =
             await PublicKey.findProgramAddress(
                 [
                     this.vaultId.toBuffer(),
@@ -385,7 +381,7 @@ export class VaultClient {
                 this.program.programId
             );
 
-        const [vaultPortRewardTokenAccount, portRewardBump] =
+        const [vaultPortRewardTokenAccount, ] =
             await PublicKey.findProgramAddress(
                 [
                     this.vaultId.toBuffer(),
@@ -394,7 +390,7 @@ export class VaultClient {
                 this.program.programId
             );
 
-        const [vaultPortSubRewardTokenAccount, portSubRewardBump] =
+        const [vaultPortSubRewardTokenAccount, ] =
             await PublicKey.findProgramAddress(
                 [
                     this.vaultId.toBuffer(),
@@ -418,10 +414,6 @@ export class VaultClient {
         tx.add(
             await this.program.methods
                 .initializePortRewardAccounts(
-                    portObligationBump,
-                    portStakeBump,
-                    portRewardBump,
-                    portSubRewardBump,
                     subRewardAvailable
                 )
                 .accounts({

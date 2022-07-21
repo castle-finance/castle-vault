@@ -12,7 +12,6 @@ use std::convert::Into;
 use crate::state::*;
 
 #[derive(Accounts)]
-#[instruction(obligation_bump:u8, stake_bump:u8, reward_bump: u8, sub_reward_bump: u8)]
 pub struct InitializePortRewardAccounts<'info> {
     #[account(
         mut,
@@ -131,10 +130,6 @@ pub struct InitializePortRewardAccounts<'info> {
 
 pub fn handler(
     ctx: Context<InitializePortRewardAccounts>,
-    obligation_bump: u8,
-    stake_bump: u8,
-    reward_bump: u8,
-    sub_reward_bump: u8,
     sub_reward_available: bool,
 ) -> Result<()> {
     let init_obligation_ctx = CpiContext::new(
@@ -169,16 +164,16 @@ pub fn handler(
 
     ctx.accounts
         .port_additional_states
-        .vault_port_stake_account_bump = stake_bump;
+        .vault_port_stake_account_bump = *ctx.bumps.get("vault_port_stake_account").unwrap();
     ctx.accounts
         .port_additional_states
-        .vault_port_reward_token_bump = reward_bump;
+        .vault_port_reward_token_bump = *ctx.bumps.get("vault_port_reward_token").unwrap();
     ctx.accounts
         .port_additional_states
-        .vault_port_obligation_bump = obligation_bump;
+        .vault_port_obligation_bump = *ctx.bumps.get("vault_port_obligation").unwrap();
     ctx.accounts
         .port_additional_states
-        .vault_port_sub_reward_token_bump = sub_reward_bump;
+        .vault_port_sub_reward_token_bump = *ctx.bumps.get("vault_port_sub_reward_token").unwrap();
 
     ctx.accounts.port_additional_states.port_lp_token_account =
         ctx.accounts.port_lp_token_account.key();

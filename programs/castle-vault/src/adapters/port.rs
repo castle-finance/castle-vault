@@ -348,7 +348,6 @@ impl ReserveAccessor for Reserve {
 }
 
 #[derive(Accounts)]
-#[instruction(bump: u8)]
 pub struct InitializePort<'info> {
     #[account(
         mut,

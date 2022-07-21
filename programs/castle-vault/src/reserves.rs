@@ -125,6 +125,7 @@ mod test {
     #[test]
     fn test_calculate_return() {
         let mut mock_ra_inner = MockReserveAccessor::new();
+        // use 'move' and return_once to avoid Result<Rate> not implementing clone
         mock_ra_inner
             .expect_utilization_rate()
             .return_once(move || Ok(Rate::from_percent(50)));

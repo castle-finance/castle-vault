@@ -102,6 +102,7 @@ mod test {
     #[test]
     fn test_compare() {
         let mut mock_rc1 = MockReturnCalculator::new();
+        // use 'move' and return_once to avoid Result<Rate> not implementing clone
         mock_rc1
             .expect_calculate_return()
             .return_once(move |_, _| Ok(Rate::from_percent(10)));

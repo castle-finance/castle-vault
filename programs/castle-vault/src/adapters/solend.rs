@@ -390,7 +390,6 @@ impl Deref for SolendReserve {
 }
 
 #[derive(Accounts)]
-#[instruction(bump: u8)]
 pub struct InitializeSolend<'info> {
     #[account(
         mut,

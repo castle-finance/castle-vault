@@ -59,11 +59,8 @@ mod tests {
         let rates = AssetContainerGeneric::<Rate, 2> {
             inner: [Some(Rate::from_percent(59)), Some(Rate::from_percent(42))],
         };
-        // TODO fix
-        // assert_eq!(
-        //     rates.verify_weights(100),
-        //     Err(ErrorCode::InvalidProposedWeights.into())
-        // )
+
+        // TODO find a way to match a specific error
         assert!(rates.verify_weights(100).is_err())
     }
 
@@ -72,11 +69,7 @@ mod tests {
         let rates = AssetContainerGeneric::<Rate, 2> {
             inner: [Some(Rate::from_percent(59)), Some(Rate::from_percent(41))],
         };
-        // TODO fix
-        // assert_eq!(
-        //     rates.verify_weights(58),
-        //     Err(ErrorCode::InvalidProposedWeights.into())
-        // )
+
         assert!(rates.verify_weights(58).is_err())
     }
 }

@@ -299,13 +299,13 @@ export class SolendReserveAsset extends LendingMarket {
         wallet: PublicKey,
         owner: PublicKey
     ): Promise<TransactionInstruction> {
-        const [vaultSolendLpTokenAccount, solendLpBump] =
+        const [vaultSolendLpTokenAccount, ] =
             await PublicKey.findProgramAddress(
                 [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
                 program.programId
             );
         return program.methods
-            .initializeSolend(solendLpBump)
+            .initializeSolend()
             .accounts({
                 vault: vaultId,
                 vaultAuthority: vaultAuthority,

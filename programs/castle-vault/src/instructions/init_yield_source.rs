@@ -6,7 +6,6 @@ pub trait YieldSourceInitializer<'info> {
 
 pub fn handler<'info, T: YieldSourceInitializer<'info>>(
     ctx: Context<'_, '_, '_, 'info, T>,
-    _bump: u8,
 ) -> Result<()> {
     ctx.accounts.initialize_yield_source()
 }

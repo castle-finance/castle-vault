@@ -9,13 +9,6 @@ use std::convert::Into;
 use crate::state::*;
 
 #[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]
-pub struct InitBumpSeeds {
-    authority: u8,
-    reserve: u8,
-    lp_mint: u8,
-}
-
-#[derive(AnchorDeserialize, AnchorSerialize, Debug, Clone)]
 pub struct VaultConfigArg {
     pub deposit_cap: u64,
     pub fee_carry_bps: u32,
@@ -27,7 +20,7 @@ pub struct VaultConfigArg {
 }
 
 #[derive(Accounts)]
-#[instruction(bumps: InitBumpSeeds)]
+#[instruction(authority_bump: u8)]
 pub struct Initialize<'info> {
     /// Vault state account
     #[account(zero)]
@@ -38,7 +31,7 @@ pub struct Initialize<'info> {
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"authority".as_ref()],
-        bump = bumps.authority,
+        bump = authority_bump,
     )]
     pub vault_authority: AccountInfo<'info>,
 
@@ -138,7 +131,7 @@ impl<'info> Initialize<'info> {
 
 pub fn handler(
     ctx: Context<Initialize>,
-    bumps: InitBumpSeeds,
+    authority_bump: u8,
     config: VaultConfigArg,
 ) -> Result<()> {
     let clock = Clock::get()?;
@@ -151,7 +144,7 @@ pub fn handler(
     vault.owner = ctx.accounts.owner.key();
     vault.vault_authority = ctx.accounts.vault_authority.key();
     vault.authority_seed = vault.key();
-    vault.authority_bump = [bumps.authority];
+    vault.authority_bump = [authority_bump];
     vault.vault_reserve_token = ctx.accounts.vault_reserve_token.key();
     vault.lp_token_mint = ctx.accounts.lp_token_mint.key();
     vault.reserve_token_mint = ctx.accounts.reserve_token_mint.key();

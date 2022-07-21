@@ -23,49 +23,38 @@ pub mod castle_vault {
 
     pub fn initialize(
         ctx: Context<Initialize>,
-        bumps: InitBumpSeeds,
+        authority_bump: u8,
         config: VaultConfigArg,
     ) -> Result<()> {
-        instructions::init_vault::handler(ctx, bumps, config)
+        instructions::init_vault::handler(ctx, authority_bump, config)
     }
 
     pub fn initialize_port_additional_state(
         ctx: Context<InitializePortAdditionalState>,
-        bump: u8,
     ) -> Result<()> {
-        instructions::init_port_additional_state::handler(ctx, bump)
+        instructions::init_port_additional_state::handler(ctx)
     }
 
     pub fn initialize_port_reward_accounts(
         ctx: Context<InitializePortRewardAccounts>,
-        obligation_bump: u8,
-        stake_bump: u8,
-        reward_bump: u8,
-        sub_reward_bump: u8,
         sub_reward_available: bool,
     ) -> Result<()> {
         instructions::init_port_reward_accounts::handler(
             ctx,
-            obligation_bump,
-            stake_bump,
-            reward_bump,
-            sub_reward_bump,
             sub_reward_available,
         )
     }
 
     pub fn initialize_port<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializePort<'info>>,
-        bump: u8,
     ) -> Result<()> {
-        instructions::init_yield_source::handler(ctx, bump)
+        instructions::init_yield_source::handler(ctx)
     }
 
     pub fn initialize_solend<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializeSolend<'info>>,
-        bump: u8,
     ) -> Result<()> {
-        instructions::init_yield_source::handler(ctx, bump)
+        instructions::init_yield_source::handler(ctx)
     }
 
     pub fn update_halt_flags(ctx: Context<UpdateHaltFlags>, flags: u16) -> Result<()> {
