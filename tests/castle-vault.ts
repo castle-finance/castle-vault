@@ -1246,7 +1246,7 @@ describe("castle-vault", () => {
         });
     });
 
-    xdescribe("Max yield calculator", () => {
+    describe("Max yield calculator", () => {
         describe("Rebalance", () => {
             before(initLendingMarkets);
             before(async function () {
@@ -1263,7 +1263,7 @@ describe("castle-vault", () => {
         });
     });
 
-    xdescribe("Max yield proof checker", () => {
+    describe("Max yield proof checker", () => {
         describe("Rebalance", () => {
             const rebalanceMode = RebalanceModes.proofChecker;
             before(initLendingMarkets);
@@ -1282,7 +1282,7 @@ describe("castle-vault", () => {
         });
     });
 
-    xdescribe("Refresh Check", () => {
+    describe("Refresh Check", () => {
         before(initLendingMarkets);
         before(async function () {
             await initializeVault({
@@ -1350,7 +1350,7 @@ describe("castle-vault", () => {
         });
     });
 
-    xdescribe("Disabled pools", () => {
+    describe("Disabled pools", () => {
         describe("Rebalance with equal allocation strategy missing 1 pool", () => {
             const rebalanceMode = RebalanceModes.calculator;
             before(initLendingMarkets);
@@ -1374,7 +1374,7 @@ describe("castle-vault", () => {
         });
     });
 
-    xdescribe("Stake Port LP token and claim reward", () => {
+    describe("Stake Port LP token and claim reward", () => {
         describe("Sub-reward enabled", () => {
             before(async function () {
                 await initLendingMarkets(true);
