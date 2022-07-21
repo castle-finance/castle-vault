@@ -214,15 +214,15 @@ pub struct VaultPortAdditionalState {
     pub port_staking_sub_reward_pool: Pubkey,
 
     pub port_reward_token_oracle: Pubkey,
-    
+
     pub port_sub_reward_token_oracle: Pubkey,
-    
+
     pub sub_reward_available: bool,
-    
+
     _reserved0: [u8; 3],
-    
+
     pub port_reward_apy: u64,
-    
+
     pub port_sub_reward_apy: u64,
 
     _reserved1: [u64; 22],

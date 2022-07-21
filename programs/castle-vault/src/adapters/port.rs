@@ -366,8 +366,7 @@ pub struct RefreshPort<'info> {
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
         bump = vault.vault_port_additional_state_bump,
         has_one = port_staking_pool,
-        has_one = port_reward_token_oracle,
-        has_one = port_sub_reward_token_oracle,
+        has_one = port_reward_token_oracle
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
@@ -383,8 +382,6 @@ pub struct RefreshPort<'info> {
     pub port_staking_pool: Box<Account<'info, PortStakingPool>>,
 
     pub port_reward_token_oracle: AccountInfo<'info>,
-
-    pub port_sub_reward_token_oracle: AccountInfo<'info>,
 
     #[account(
         executable,
