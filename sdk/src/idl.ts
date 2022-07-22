@@ -1514,6 +1514,11 @@ export type CastleVault = {
             code: 6015;
             name: "HaltedVault";
             msg: "Vault is halted";
+        },
+        {
+            code: 6016;
+            name: "BumpError";
+            msg: "Failed to fetch bump for PDA";
         }
     ];
     metadata: {
@@ -3037,6 +3042,11 @@ export const IDL: CastleVault = {
             code: 6015,
             name: "HaltedVault",
             msg: "Vault is halted",
+        },
+        {
+            code: 6016,
+            name: "BumpError",
+            msg: "Failed to fetch bump for PDA",
         },
     ],
     metadata: {

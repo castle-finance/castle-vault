@@ -9,7 +9,7 @@ use port_anchor_adaptor::{
 };
 use std::convert::Into;
 
-use crate::state::*;
+use crate::{errors::ErrorCode, state::*};
 
 #[derive(Accounts)]
 pub struct InitializePortRewardAccounts<'info> {
@@ -164,16 +164,28 @@ pub fn handler(
 
     ctx.accounts
         .port_additional_states
-        .vault_port_stake_account_bump = *ctx.bumps.get("vault_port_stake_account").unwrap();
+        .vault_port_stake_account_bump = *ctx
+        .bumps
+        .get("vault_port_stake_account")
+        .ok_or(ErrorCode::BumpError)?;
     ctx.accounts
         .port_additional_states
-        .vault_port_reward_token_bump = *ctx.bumps.get("vault_port_reward_token").unwrap();
+        .vault_port_reward_token_bump = *ctx
+        .bumps
+        .get("vault_port_reward_token")
+        .ok_or(ErrorCode::BumpError)?;
     ctx.accounts
         .port_additional_states
-        .vault_port_obligation_bump = *ctx.bumps.get("vault_port_obligation").unwrap();
+        .vault_port_obligation_bump = *ctx
+        .bumps
+        .get("vault_port_obligation")
+        .ok_or(ErrorCode::BumpError)?;
     ctx.accounts
         .port_additional_states
-        .vault_port_sub_reward_token_bump = *ctx.bumps.get("vault_port_sub_reward_token").unwrap();
+        .vault_port_sub_reward_token_bump = *ctx
+        .bumps
+        .get("vault_port_sub_reward_token")
+        .ok_or(ErrorCode::BumpError)?;
 
     ctx.accounts.port_additional_states.port_lp_token_account =
         ctx.accounts.port_lp_token_account.key();
