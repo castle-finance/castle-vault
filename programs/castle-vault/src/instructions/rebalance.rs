@@ -209,5 +209,4 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
 
             ctx.accounts.vault.target_allocations = final_allocations;
         })
-        .map_err(|e| e.into())
 }

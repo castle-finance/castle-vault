@@ -89,7 +89,7 @@ pub enum Reserves {
 }
 
 // TODO Is there a cleaner way to do this?
-impl<'a> ReserveAccessor for Reserves {
+impl ReserveAccessor for Reserves {
     fn utilization_rate(&self) -> Result<Rate> {
         match self {
             Reserves::Solend(reserve) => reserve.utilization_rate(),

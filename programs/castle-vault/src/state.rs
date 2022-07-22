@@ -98,7 +98,7 @@ impl Vault {
     }
 
     pub fn set_halt_flags(&mut self, bits: u16) -> Result<()> {
-        VaultFlags::from_bits(bits).ok_or_else(|| ErrorCode::InvalidVaultFlags)?;
+        VaultFlags::from_bits(bits).ok_or(ErrorCode::InvalidVaultFlags)?;
         self.halt_flags = bits;
         Ok(())
     }
@@ -113,7 +113,7 @@ impl Vault {
     }
 
     pub fn set_yield_source_flags(&mut self, flags: u16) -> Result<()> {
-        YieldSourceFlags::from_bits(flags).ok_or_else(|| ErrorCode::InvalidVaultFlags)?;
+        YieldSourceFlags::from_bits(flags).ok_or(ErrorCode::InvalidVaultFlags)?;
         self.yield_source_flags = flags;
         Ok(())
     }
@@ -126,9 +126,9 @@ impl Vault {
                 .map_err(|_| ErrorCode::MathError)?;
         let new_allocation_cap = 100_u8
             .checked_div(cnt)
-            .ok_or_else(|| ErrorCode::MathError)?
+            .ok_or(ErrorCode::MathError)?
             .checked_add(1)
-            .ok_or_else(|| ErrorCode::MathError)?
+            .ok_or(ErrorCode::MathError)?
             .clamp(0, 100);
         self.config.allocation_cap_pct = self
             .config
@@ -336,10 +336,9 @@ impl_provider_index!(Allocations, SlotTrackedValue);
 impl Allocations {
     pub fn from_container(c: AssetContainer<u64>, slot: u64) -> Self {
         Provider::iter().fold(Self::default(), |mut acc, provider| {
-            match c[provider] {
-                Some(v) => acc[provider].update(v, slot),
-                None => {}
-            };
+            if let Some(v) = c[provider] {
+                acc[provider].update(v, slot)
+            }
             acc
         })
     }
