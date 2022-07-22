@@ -984,6 +984,10 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
+                        name: "jetReserve";
+                        type: "publicKey";
+                    },
+                    {
                         name: "vaultReserveToken";
                         type: "publicKey";
                     },
@@ -993,6 +997,10 @@ export type CastleVault = {
                     },
                     {
                         name: "vaultPortLpToken";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "vaultJetLpToken";
                         type: "publicKey";
                     },
                     {
@@ -1066,7 +1074,7 @@ export type CastleVault = {
                     {
                         name: "reserved2";
                         type: {
-                            array: ["u32", 28];
+                            array: ["u32", 12];
                         };
                     }
                 ];
@@ -2499,6 +2507,10 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
+                        name: "jetReserve",
+                        type: "publicKey",
+                    },
+                    {
                         name: "vaultReserveToken",
                         type: "publicKey",
                     },
@@ -2508,6 +2520,10 @@ export const IDL: CastleVault = {
                     },
                     {
                         name: "vaultPortLpToken",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "vaultJetLpToken",
                         type: "publicKey",
                     },
                     {
@@ -2581,7 +2597,7 @@ export const IDL: CastleVault = {
                     {
                         name: "reserved2",
                         type: {
-                            array: ["u32", 28],
+                            array: ["u32", 12],
                         },
                     },
                 ],

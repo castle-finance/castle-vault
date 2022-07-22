@@ -42,6 +42,9 @@ pub struct Vault {
 
     pub port_reserve: Pubkey,
 
+    /// unused - just for alignment compatibility
+    pub jet_reserve: Pubkey,
+
     /// Account where reserve tokens are stored
     pub vault_reserve_token: Pubkey,
 
@@ -50,6 +53,9 @@ pub struct Vault {
 
     /// Account where port LP tokens are stored
     pub vault_port_lp_token: Pubkey,
+
+    /// unused - just for alignment compatibility
+    pub vault_jet_lp_token: Pubkey,
 
     /// Mint address of vault LP tokens
     pub lp_token_mint: Pubkey,
@@ -82,7 +88,7 @@ pub struct Vault {
 
     _reserved0: [u8; 3],
     _reserved1: [u32; 25],
-    _reserved2: [u32; 28],
+    _reserved2: [u32; 12],
 }
 
 impl Vault {
