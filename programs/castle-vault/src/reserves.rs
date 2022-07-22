@@ -147,7 +147,9 @@ impl ReturnCalculator for Reserves {
     ) -> Result<Rate, ProgramError> {
         match self {
             Reserves::Solend(reserve) => reserve.calculate_return(new_allocation, old_allocation),
-            Reserves::Port(reserve) => reserve.reserve.calculate_return(new_allocation, old_allocation),
+            Reserves::Port(reserve) => reserve
+                .reserve
+                .calculate_return(new_allocation, old_allocation),
             Reserves::Jet(reserve) => reserve.calculate_return(new_allocation, old_allocation),
         }
     }
