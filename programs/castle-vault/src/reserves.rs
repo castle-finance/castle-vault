@@ -3,10 +3,10 @@ use mockall::*;
 
 use anchor_lang::prelude::*;
 use port_anchor_adaptor::PortReserve;
-use solana_maths::{Rate, TryMul};
+use solana_maths::{Rate, TryAdd, TryMul};
 use strum_macros::{EnumCount, EnumIter};
 
-use crate::adapters::solend::SolendReserve;
+use crate::{adapters::solend::SolendReserve, errors::ErrorCode};
 
 #[derive(
     Clone,
@@ -147,9 +147,31 @@ impl ReturnCalculator for Reserves {
     ) -> Result<Rate, ProgramError> {
         match self {
             Reserves::Solend(reserve) => reserve.calculate_return(new_allocation, old_allocation),
-            Reserves::Port(reserve) => reserve
-                .reserve
-                .calculate_return(new_allocation, old_allocation),
+            Reserves::Port(reserve) => {
+                let base_rate = reserve
+                    .reserve
+                    .calculate_return(new_allocation, old_allocation)?;
+
+                let pool_size = reserve
+                    .pool_size
+                    .checked_add(new_allocation)
+                    .ok_or(ErrorCode::MathError)?
+                    .checked_sub(old_allocation)
+                    .ok_or(ErrorCode::MathError)?;
+
+                if pool_size == 0 {
+                    return Ok(base_rate);
+                }
+
+                let reward_apr_bps = reserve
+                    .reward_per_year
+                    .checked_mul(10000)
+                    .ok_or(ErrorCode::MathError)?
+                    .checked_div(pool_size)
+                    .ok_or(ErrorCode::MathError)?;
+
+                return base_rate.try_add(Rate::from_bips(reward_apr_bps));
+            }
             Reserves::Jet(reserve) => reserve.calculate_return(new_allocation, old_allocation),
         }
     }
