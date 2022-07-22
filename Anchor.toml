@@ -16,7 +16,7 @@ url = "m"
 
 [[test.clone]]
 # PORT/USD pyth product
-address = "4K6mtNyQ1qHcZuxdJVifknzwcDGwYvcbJGNi98GdwAJU"
+address = "jrMH4afMEodMqirQ7P89q5bGNJxD8uceELcsZaVBDeh"
 [[test.clone]]
 # SOL/USD pyth product
 address = "ALP8SdU9oARYVLgLR7LrqMNCYBnhtnQz1cj6bwgwQmgj"

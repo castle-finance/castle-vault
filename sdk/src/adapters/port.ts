@@ -89,7 +89,7 @@ const DEVNET_ASSETS = [
 ];
 
 const PORT_USD_PYTH_PRICE = new PublicKey(
-    "4K6mtNyQ1qHcZuxdJVifknzwcDGwYvcbJGNi98GdwAJU"
+    "jrMH4afMEodMqirQ7P89q5bGNJxD8uceELcsZaVBDeh"
 );
 
 export class PortReserveAsset extends LendingMarket {
