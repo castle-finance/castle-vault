@@ -43,7 +43,7 @@ pub struct Vault {
     pub port_reserve: Pubkey,
 
     /// unused - just for alignment compatibility
-    pub jet_reserve: Pubkey,
+    _filler0: Pubkey,
 
     /// Account where reserve tokens are stored
     pub vault_reserve_token: Pubkey,
@@ -55,7 +55,7 @@ pub struct Vault {
     pub vault_port_lp_token: Pubkey,
 
     /// unused - just for alignment compatibility
-    pub vault_jet_lp_token: Pubkey,
+    _filler1: Pubkey,
 
     /// Mint address of vault LP tokens
     pub lp_token_mint: Pubkey,
@@ -88,7 +88,6 @@ pub struct Vault {
 
     _reserved0: [u8; 3],
     _reserved1: [u32; 25],
-    _reserved2: [u32; 12],
 }
 
 impl Vault {
@@ -324,12 +323,13 @@ bitflags::bitflags! {
     }
 }
 
-#[assert_size(aligns, 48)]
+#[assert_size(aligns, 72)]
 #[repr(C, align(8))]
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug, Default)]
 pub struct Allocations {
     pub solend: SlotTrackedValue,
     pub port: SlotTrackedValue,
+    _filler: SlotTrackedValue,
 }
 impl_provider_index!(Allocations, SlotTrackedValue);
 

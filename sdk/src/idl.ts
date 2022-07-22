@@ -984,7 +984,7 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "jetReserve";
+                        name: "_filler0";
                         type: "publicKey";
                     },
                     {
@@ -1000,7 +1000,7 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "vaultJetLpToken";
+                        name: "_filler1";
                         type: "publicKey";
                     },
                     {
@@ -1069,12 +1069,6 @@ export type CastleVault = {
                         name: "reserved1";
                         type: {
                             array: ["u32", 25];
-                        };
-                    },
-                    {
-                        name: "reserved2";
-                        type: {
-                            array: ["u32", 12];
                         };
                     }
                 ];
@@ -1253,6 +1247,12 @@ export type CastleVault = {
                     },
                     {
                         name: "port";
+                        type: {
+                            defined: "SlotTrackedValue";
+                        };
+                    },
+                    {
+                        name: "_filler";
                         type: {
                             defined: "SlotTrackedValue";
                         };
@@ -2507,7 +2507,7 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "jetReserve",
+                        name: "_filler0",
                         type: "publicKey",
                     },
                     {
@@ -2523,7 +2523,7 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "vaultJetLpToken",
+                        name: "_filler1",
                         type: "publicKey",
                     },
                     {
@@ -2592,12 +2592,6 @@ export const IDL: CastleVault = {
                         name: "reserved1",
                         type: {
                             array: ["u32", 25],
-                        },
-                    },
-                    {
-                        name: "reserved2",
-                        type: {
-                            array: ["u32", 12],
                         },
                     },
                 ],
@@ -2776,6 +2770,12 @@ export const IDL: CastleVault = {
                     },
                     {
                         name: "port",
+                        type: {
+                            defined: "SlotTrackedValue",
+                        },
+                    },
+                    {
+                        name: "_filler",
                         type: {
                             defined: "SlotTrackedValue",
                         },
