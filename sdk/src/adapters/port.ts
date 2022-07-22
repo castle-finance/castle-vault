@@ -59,6 +59,8 @@ interface PortAccounts {
     stakingSubRewardTokenMint: PublicKey;
     stakingProgram: PublicKey;
     stakingProgamAuthority: PublicKey;
+    stakingRewardOracle?: PublicKey;
+    stakingSubRewardOracle?: PublicKey;
     // Some port accounts held by the vault. The rest are still in vaultState
     // TODO refactor this in the future, maybe move all port-related accounts to this struct
     vaultPortAdditionalStates?: PublicKey;
@@ -149,6 +151,7 @@ export class PortReserveAsset extends LendingMarket {
         // Get sub-reward accounts, these are optional
         const subRewardPool = targetStakingPool.getSubRewardTokenPool();
         let subrewardMint = undefined;
+        let stakingSubRewardOracle = undefined;
         if (subRewardPool != undefined) {
             const subrewardMintRaw = await provider.connection.getAccountInfo(
                 targetStakingPool.getSubRewardTokenPool()
@@ -157,6 +160,11 @@ export class PortReserveAsset extends LendingMarket {
                 pubkey: targetStakingPool.getSubRewardTokenPool(),
                 account: subrewardMintRaw,
             }).getMintId();
+
+            // TODO get Pyth price accoutn for the subreward token vs USD
+            // This is lower priority for now, because there's only one pool with subreward
+            // and we're unlikely to create a vault for that soon.
+            stakingSubRewardOracle = Keypair.generate().publicKey;
         }
 
         const [marketAuthority] = await PublicKey.findProgramAddress(
@@ -179,6 +187,8 @@ export class PortReserveAsset extends LendingMarket {
             stakingSubRewardTokenMint: subrewardMint,
             stakingProgram: env.getStakingProgramPk(),
             stakingProgamAuthority: stakingProgamAuthority,
+            stakingRewardOracle: PORT_USD_PYTH_PRICE,
+            stakingSubRewardOracle: stakingSubRewardOracle,
         };
 
         const lpToken = await getToken(
@@ -805,5 +815,7 @@ async function createDefaultReserve(
         stakingProgram: DEVNET_STAKING_PROGRAM_ID,
         // TODO create mock authority
         stakingProgamAuthority: stakingProgamAuthority,
+        stakingRewardOracle: PORT_USD_PYTH_PRICE,
+        stakingSubRewardOracle: PORT_USD_PYTH_PRICE,
     };
 }

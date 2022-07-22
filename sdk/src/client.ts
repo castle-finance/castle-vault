@@ -453,6 +453,11 @@ export class VaultClient {
                         portStakingRewardPool:
                             this.yieldSources.port.accounts.stakingRewardPool,
                         portStakingSubRewardPool: subRewardPool,
+                        portRewardTokenOracle:
+                            this.yieldSources.port.accounts.stakingRewardOracle,
+                        portSubRewardTokenOracle:
+                            this.yieldSources.port.accounts
+                                .stakingSubRewardOracle,
                         portStakeProgram:
                             this.yieldSources.port.accounts.stakingProgram,
                         portLendProgram:
@@ -1066,6 +1071,15 @@ export class VaultClient {
                         this.yieldSources.jet != null
                             ? this.yieldSources.jet.accounts.reserve
                             : Keypair.generate().publicKey,
+
+                    portAdditionalStates:
+                        this.yieldSources.port.accounts
+                            .vaultPortAdditionalStates,
+                    portStakingPool:
+                        this.yieldSources.port.accounts.stakingPool,
+                    portRewardTokenOracle:
+                        this.yieldSources.port.accounts.stakingRewardOracle,
+
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
             })
@@ -1117,6 +1131,15 @@ export class VaultClient {
                         this.yieldSources.jet != null
                             ? this.yieldSources.jet.accounts.reserve
                             : Keypair.generate().publicKey,
+
+                    portAdditionalStates:
+                        this.yieldSources.port.accounts
+                            .vaultPortAdditionalStates,
+                    portStakingPool:
+                        this.yieldSources.port.accounts.stakingPool,
+                    portRewardTokenOracle:
+                        this.yieldSources.port.accounts.stakingRewardOracle,
+
                     clock: SYSVAR_CLOCK_PUBKEY,
                 },
                 instructions: simIx,
