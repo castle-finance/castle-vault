@@ -179,6 +179,22 @@ impl<'info> LendingMarket for PortAccounts<'info> {
             },
         );
 
+        let port_withdraw_accounts = PortWithdrawAccounts {
+            source_collateral: self.port_lp_token_account.to_account_info(),
+            destination_collateral: self.vault_port_lp_token.to_account_info(),
+            reserve: self.port_reserve.to_account_info(),
+            obligation: self.vault_port_obligation.to_account_info(),
+            lending_market: self.port_market.to_account_info(),
+            lending_market_authority: self.port_market_authority.to_account_info(),
+            stake_account: self.vault_port_stake_account.to_account_info(),
+            staking_pool: self.port_staking_pool.to_account_info(),
+            obligation_owner: self.vault_authority.to_account_info(),
+            clock: self.clock.to_account_info(),
+            token_program: self.token_program.to_account_info(),
+            port_stake_program: self.port_stake_program.to_account_info(),
+            port_lend_program: self.port_lend_program.to_account_info(),
+        };
+
         let redeem_context = CpiContext::new(
             self.port_lend_program.clone(),
             port_anchor_adaptor::Redeem {
@@ -207,19 +223,7 @@ impl<'info> LendingMarket for PortAccounts<'info> {
 
         port_withdraw_obligation_collateral(
             amount,
-            &self.port_lp_token_account.to_account_info(),
-            &self.vault_port_lp_token.to_account_info(),
-            &self.port_reserve.to_account_info(),
-            &self.vault_port_obligation.to_account_info(),
-            &self.port_market.to_account_info(),
-            &self.port_market_authority.to_account_info(),
-            &self.vault_port_stake_account.to_account_info(),
-            &self.port_staking_pool.to_account_info(),
-            &self.vault_authority.to_account_info(),
-            &self.clock.to_account_info(),
-            &self.token_program.to_account_info(),
-            &self.port_stake_program.to_account_info(),
-            &self.port_lend_program.to_account_info(),
+            &port_withdraw_accounts,
             &[&self.vault.authority_seeds()],
         )?;
 
@@ -265,52 +269,69 @@ impl<'info> LendingMarket for PortAccounts<'info> {
     }
 }
 
+pub struct PortWithdrawAccounts<'info> {
+    /// CHECK: safe
+    source_collateral: AccountInfo<'info>,
+    /// CHECK: safe
+    destination_collateral: AccountInfo<'info>,
+    /// CHECK: safe
+    reserve: AccountInfo<'info>,
+    /// CHECK: safe
+    obligation: AccountInfo<'info>,
+    /// CHECK: safe
+    lending_market: AccountInfo<'info>,
+    /// CHECK: safe
+    lending_market_authority: AccountInfo<'info>,
+    /// CHECK: safe
+    stake_account: AccountInfo<'info>,
+    /// CHECK: safe
+    staking_pool: AccountInfo<'info>,
+    /// CHECK: safe
+    obligation_owner: AccountInfo<'info>,
+    /// CHECK: safe
+    clock: AccountInfo<'info>,
+    /// CHECK: safe
+    token_program: AccountInfo<'info>,
+    /// CHECK: safe
+    port_stake_program: AccountInfo<'info>,
+    /// CHECK: safe
+    port_lend_program: AccountInfo<'info>,
+}
+
 fn port_withdraw_obligation_collateral<'info>(
     amount: u64,
-    source_collateral: &AccountInfo<'info>,
-    destination_collateral: &AccountInfo<'info>,
-    reserve: &AccountInfo<'info>,
-    obligation: &AccountInfo<'info>,
-    lending_market: &AccountInfo<'info>,
-    lending_market_authority: &AccountInfo<'info>,
-    stake_account: &AccountInfo<'info>,
-    staking_pool: &AccountInfo<'info>,
-    obligation_owner: &AccountInfo<'info>,
-    clock: &AccountInfo<'info>,
-    token_program: &AccountInfo<'info>,
-    port_stake_program: &AccountInfo<'info>,
-    port_lend_program: &AccountInfo<'info>,
+    port_withdraw_accounts: &PortWithdrawAccounts<'info>,
     signer_seeds: &[&[&[u8]]],
 ) -> Result<()> {
     let ix = withdraw_obligation_collateral(
-        port_lend_program.key(),
+        port_withdraw_accounts.port_lend_program.key(),
         amount,
-        source_collateral.key(),
-        destination_collateral.key(),
-        reserve.key(),
-        obligation.key(),
-        lending_market.key(),
-        obligation_owner.key(),
-        Some(stake_account.key()),
-        Some(staking_pool.key()),
+        port_withdraw_accounts.source_collateral.key(),
+        port_withdraw_accounts.destination_collateral.key(),
+        port_withdraw_accounts.reserve.key(),
+        port_withdraw_accounts.obligation.key(),
+        port_withdraw_accounts.lending_market.key(),
+        port_withdraw_accounts.obligation_owner.key(),
+        Some(port_withdraw_accounts.stake_account.key()),
+        Some(port_withdraw_accounts.staking_pool.key()),
     );
 
     solana_program::program::invoke_signed(
         &ix,
         &[
-            source_collateral.to_account_info(),
-            destination_collateral.to_account_info(),
-            reserve.to_account_info(),
-            obligation.to_account_info(),
-            lending_market.to_account_info(),
-            lending_market_authority.to_account_info(),
-            obligation_owner.to_account_info(),
-            clock.to_account_info(),
-            token_program.to_account_info(),
-            stake_account.to_account_info(),
-            staking_pool.to_account_info(),
-            port_stake_program.to_account_info(),
-            port_lend_program.to_account_info(),
+            port_withdraw_accounts.source_collateral.clone(),
+            port_withdraw_accounts.destination_collateral.clone(),
+            port_withdraw_accounts.reserve.clone(),
+            port_withdraw_accounts.obligation.clone(),
+            port_withdraw_accounts.lending_market.clone(),
+            port_withdraw_accounts.lending_market_authority.clone(),
+            port_withdraw_accounts.obligation_owner.clone(),
+            port_withdraw_accounts.clock.clone(),
+            port_withdraw_accounts.token_program.clone(),
+            port_withdraw_accounts.stake_account.clone(),
+            port_withdraw_accounts.staking_pool.clone(),
+            port_withdraw_accounts.port_stake_program.clone(),
+            port_withdraw_accounts.port_lend_program.clone(),
         ],
         signer_seeds,
     )

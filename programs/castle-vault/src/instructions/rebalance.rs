@@ -52,11 +52,12 @@ pub struct Rebalance<'info> {
 
     // DANGER: make sure the owner is as expected (currently done using `try_from`)
     //         and the keys match the vault (currently explicitly checked before `try_from`)
-    //#[soteria(ignore)]
     /// CHECK: safe
+    //#[soteria(ignore)]
     pub solend_reserve: AccountInfo<'info>,
-    //#[soteria(ignore)]
+
     /// CHECK: safe
+    //#[soteria(ignore)]
     pub port_reserve: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,

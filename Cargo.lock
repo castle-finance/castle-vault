@@ -1179,8 +1179,8 @@ dependencies = [
 
 [[package]]
 name = "port-anchor-adaptor"
-version = "0.3.7"
-source = "git+https://github.com/udbhav1/port-24.git?branch=claim-reward-bugfix#0245ecb6d58f85377386294fd40f66043b7ba70f"
+version = "0.3.6"
+source = "git+https://github.com/castle-finance/port-anchor-adaptor#f6b18db52bb1de509928b5f0ab59d586af92eb29"
 dependencies = [
  "anchor-lang 0.24.2",
  "num-derive",
@@ -1210,7 +1210,7 @@ dependencies = [
 [[package]]
 name = "port-staking-instructions"
 version = "0.2.0"
-source = "git+https://github.com/udbhav1/port-staking-instructions.git?branch=optional_sub_reward#01ccd39f06696bdc49bf471e5e9602941da8d3fa"
+source = "git+https://github.com/castle-finance/port-staking-instructions.git#215fe3fd767e071f2018d93857c9d8e5ad17b0f8"
 dependencies = [
  "arrayref",
  "bytemuck",
@@ -1695,7 +1695,7 @@ dependencies = [
 [[package]]
 name = "spl-token-lending"
 version = "0.1.1"
-source = "git+https://github.com/udbhav1/solana-program-library#5398258764629aa32515b0bec0658cfc0ba1b99f"
+source = "git+https://github.com/castle-finance/solana-program-library#0319d36c7f7191946b6dd15f3e144ec3bb5765a3"
 dependencies = [
  "arrayref",
  "bytemuck",

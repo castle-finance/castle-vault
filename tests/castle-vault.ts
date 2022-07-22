@@ -1228,7 +1228,7 @@ describe("castle-vault", () => {
             testRebalanceWithdraw(1 / 2, 1 / 2);
         });
 
-        xdescribe("Fees", () => {
+        describe("Fees", () => {
             const feeMgmtBps = 10000;
             const feeCarryBps = 10000;
             const referralFeePct = 20;
