@@ -196,6 +196,16 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
+                    name: "portRewardTokenOracle";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portSubRewardTokenOracle";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
                     name: "portStakeProgram";
                     isMut: false;
                     isSigner: false;
@@ -649,6 +659,21 @@ export type CastleVault = {
                 },
                 {
                     name: "jetReserve";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portAdditionalStates";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "portStakingPool";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portRewardTokenOracle";
                     isMut: false;
                     isSigner: false;
                 },
@@ -1338,6 +1363,14 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
+                        name: "portRewardTokenOracle";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "portSubRewardTokenOracle";
+                        type: "publicKey";
+                    },
+                    {
                         name: "subRewardAvailable";
                         type: "bool";
                     },
@@ -1350,7 +1383,7 @@ export type CastleVault = {
                     {
                         name: "reserved1";
                         type: {
-                            array: ["u64", 32];
+                            array: ["u64", 24];
                         };
                     }
                 ];
@@ -1933,6 +1966,16 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
+                    name: "portRewardTokenOracle",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portSubRewardTokenOracle",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
                     name: "portStakeProgram",
                     isMut: false,
                     isSigner: false,
@@ -2386,6 +2429,21 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "jetReserve",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portAdditionalStates",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "portStakingPool",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portRewardTokenOracle",
                     isMut: false,
                     isSigner: false,
                 },
@@ -3075,6 +3133,14 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
+                        name: "portRewardTokenOracle",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "portSubRewardTokenOracle",
+                        type: "publicKey",
+                    },
+                    {
                         name: "subRewardAvailable",
                         type: "bool",
                     },
@@ -3087,7 +3153,7 @@ export const IDL: CastleVault = {
                     {
                         name: "reserved1",
                         type: {
-                            array: ["u64", 32],
+                            array: ["u64", 24],
                         },
                     },
                 ],

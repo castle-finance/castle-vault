@@ -5,14 +5,18 @@ use strum::IntoEnumIterator;
 
 use anchor_lang::prelude::*;
 use port_anchor_adaptor::PortReserve;
+use port_anchor_adaptor::PortStakingPool;
 use solana_maths::Rate;
+
+use pyth_sdk_solana::load_price_feed_from_account_info;
 
 use crate::{
     adapters::SolendReserve,
     asset_container::AssetContainer,
     errors::ErrorCode,
     impl_provider_index,
-    reserves::{Provider, Reserves},
+    math::SLOTS_PER_YEAR,
+    reserves::{PortReserveWrapper, Provider, Reserves},
     state::*,
 };
 
@@ -60,6 +64,20 @@ pub struct Rebalance<'info> {
     //#[soteria(ignore)]
     pub jet_reserve: AccountInfo<'info>,
 
+    // Accounts used to get port additional reward information
+    #[account(
+        mut,
+        seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
+        bump = vault.vault_port_additional_state_bump,
+        has_one = port_staking_pool,
+        has_one = port_reward_token_oracle
+    )]
+    pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
+
+    pub port_staking_pool: Box<Account<'info, PortStakingPool>>,
+
+    pub port_reward_token_oracle: AccountInfo<'info>,
+
     pub clock: Sysvar<'info, Clock>,
 }
 
@@ -90,20 +108,49 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             })
             .transpose()?;
 
-        let port = flags
-            .contains(YieldSourceFlags::PORT)
-            .as_option()
-            .map(|()| {
-                r.port_reserve.key.eq(&r.vault.port_reserve).as_result(
-                    Ok::<_, ProgramError>(Reserves::Port(Box::new(
-                        Account::<PortReserve>::try_from(&r.port_reserve)?
-                            .deref()
-                            .clone(),
-                    ))),
-                    ErrorCode::InvalidAccount,
-                )?
-            })
-            .transpose()?;
+        let mut port: Option<Reserves> = None;
+        if flags.contains(YieldSourceFlags::PORT) {
+            let port_reserve = Box::new(
+                Account::<PortReserve>::try_from(&r.port_reserve)?
+                    .deref()
+                    .clone(),
+            );
+
+            let port_exchange_rate = port_reserve.collateral_exchange_rate()?;
+            let pool_size =
+                port_exchange_rate.collateral_to_liquidity(r.port_staking_pool.pool_size)?;
+            let rate_per_slot = r.port_staking_pool.rate_per_slot.try_floor_u64()?;
+            let price_feed =
+                load_price_feed_from_account_info(&r.port_reward_token_oracle).unwrap();
+            let current_price = price_feed.get_current_price().unwrap();
+            let price_raw = current_price.price as u64;
+            let oracle_factor = (10 as u64).pow(current_price.expo.abs() as u32);
+            let port_reward_per_year = rate_per_slot
+                .checked_mul(price_raw)
+                .ok_or(ErrorCode::MathError)?
+                .checked_mul(SLOTS_PER_YEAR)
+                .ok_or(ErrorCode::MathError)?
+                .checked_div(oracle_factor)
+                .ok_or(ErrorCode::MathError)?;
+
+            #[cfg(feature = "debug")]
+            {
+                msg!("price_raw: {}", price_raw);
+                msg!("rate_per_slot: {}", rate_per_slot);
+                msg!("Rate per slot: {}", rate_per_slot);
+                msg!("oracle_factor: {}", oracle_factor);
+                msg!("SLOTS_PER_YEAR: {}", SLOTS_PER_YEAR);
+                msg!("pool_size: {}", pool_size);
+                msg!("Expo: {}", current_price.expo);
+                msg!("Reward per year: {}", port_reward_per_year);
+            }
+
+            port = Some(Reserves::Port(PortReserveWrapper {
+                reserve: port_reserve,
+                reward_per_year: port_reward_per_year,
+                pool_size: pool_size,
+            }));
+        }
 
         let jet = flags
             .contains(YieldSourceFlags::JET)

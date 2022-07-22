@@ -2,18 +2,14 @@ use std::ops::{Deref, DerefMut};
 
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Token, TokenAccount};
-use port_anchor_adaptor::{
-    port_lending_id, port_staking_id, PortReserve, PortStakeAccount, PortStakingPool,
-};
+use port_anchor_adaptor::{port_lending_id, port_staking_id, PortReserve, PortStakeAccount};
 use port_variable_rate_lending_instructions::state::Reserve;
-use pyth_sdk_solana::{load_price_feed_from_account_info};
 use solana_maths::{Rate, TryMul};
 
 use crate::{
     errors::ErrorCode,
     impl_has_vault,
     init_yield_source::YieldSourceInitializer,
-    math::SLOTS_PER_YEAR,
     reconcile::LendingMarket,
     refresh::Refresher,
     reserves::{Provider, ReserveAccessor, ReturnCalculator},
@@ -365,8 +361,6 @@ pub struct RefreshPort<'info> {
     #[account(
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
         bump = vault.vault_port_additional_state_bump,
-        has_one = port_staking_pool,
-        has_one = port_reward_token_oracle
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
@@ -378,10 +372,6 @@ pub struct RefreshPort<'info> {
         bump = port_additional_states.vault_port_stake_account_bump
     )]
     pub vault_port_stake_account: Box<Account<'info, PortStakeAccount>>,
-
-    pub port_staking_pool: Box<Account<'info, PortStakingPool>>,
-
-    pub port_reward_token_oracle: AccountInfo<'info>,
 
     #[account(
         executable,
@@ -411,8 +401,6 @@ impl<'info> RefreshPort<'info> {
     }
 }
 
-const LAMPORTS_PER_PORT_TOKEN: u64 = 1000000;
-
 impl<'info> Refresher<'info> for RefreshPort<'info> {
     fn update_actual_allocation(
         &mut self,
@@ -440,46 +428,6 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
 
             #[cfg(feature = "debug")]
             msg!("Refresh port reserve token value: {}", port_value);
-
-            self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
-
-            // Compute port staking reward APY.
-            // Must consider current price of the reward token.
-            let rate_per_slot = self.port_staking_pool.rate_per_slot.try_floor_u64()?;
-            let pool_size =
-                port_exchange_rate.collateral_to_liquidity(self.port_staking_pool.pool_size)?;
-            let price_feed =
-                load_price_feed_from_account_info(&self.port_reward_token_oracle).unwrap();
-            let current_price = price_feed.get_current_price().unwrap();
-            let price_raw = current_price.price as u64;
-
-            // pyth oracle price consists of an integer price_raw and an exponent (expo), the actual price is price_raw * 10 ^ expo
-            // rate_per_slot has unit of lamports, 1 port token equals 10^6. However, oracle expo == 8 != 6.
-            // so we need the following conversion.
-            let oracle_factor = (10 as u64).pow(current_price.expo.abs() as u32);
-            let converted_price = price_raw
-                .checked_mul(oracle_factor)
-                .ok_or(ErrorCode::MathError)?
-                .checked_div(LAMPORTS_PER_PORT_TOKEN)
-                .ok_or(ErrorCode::MathError)?;
-
-            self.port_additional_states.port_reward_apy = rate_per_slot
-                .checked_mul(converted_price)
-                .ok_or(ErrorCode::MathError)?
-                .checked_mul(SLOTS_PER_YEAR)
-                .ok_or(ErrorCode::MathError)?
-                .checked_div(pool_size)
-                .ok_or(ErrorCode::MathError)?;
-
-            #[cfg(feature = "debug")]
-            {
-                msg!("Port price raw: {}", price_raw);
-                msg!("Rate per slot: {}", rate_per_slot);
-                msg!(
-                    "Reward APR: {}",
-                    self.port_additional_states.port_reward_apy
-                );
-            }
         }
 
         Ok(())
