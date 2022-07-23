@@ -23,9 +23,6 @@ address = "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"
 [[test.validator.clone]]
 # SOL/USD switchboard feed
 address = "AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL"
-[[test.validator.clone]]
-# Something to do with jet--serum?
-address = "CjqQ9kx9STBLtSUdypHTjNJsLE4t6uQossjdSzq9jdmY"
 
 [[test.genesis]]
 address = "ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx"
