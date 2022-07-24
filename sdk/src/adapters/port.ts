@@ -435,7 +435,6 @@ export class PortReserveAsset extends LendingMarket {
                     portStakingPool: this.accounts.stakingPool,
                     portLendProgram: this.accounts.program,
                     portStakeProgram: this.accounts.stakingProgram,
-                    portStakingRewardPool: this.accounts.stakingRewardPool,
                     portStakingAuthority: this.accounts.stakingProgamAuthority,
                     portLpTokenAccount: this.accounts.lpTokenAccount,
                     portMarketAuthority: this.accounts.marketAuthority,

@@ -36,7 +36,6 @@ pub struct PortAccounts<'info> {
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
         bump = vault.vault_port_additional_state_bump,
         has_one = port_staking_pool,
-        has_one = port_staking_reward_pool,
         has_one = port_lp_token_account
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
@@ -85,9 +84,6 @@ pub struct PortAccounts<'info> {
         address = port_staking_id(),
     )]
     pub port_stake_program: AccountInfo<'info>,
-
-    #[account(mut)]
-    pub port_staking_reward_pool: AccountInfo<'info>,
 
     //#[soteria(ignore)]
     pub port_staking_authority: AccountInfo<'info>,

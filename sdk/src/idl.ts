@@ -309,16 +309,6 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portStakingRewardPool";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "portStakingSubRewardPool";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
                     name: "portStakeProgram";
                     isMut: false;
                     isSigner: false;
@@ -1094,11 +1084,6 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portStakingRewardPool";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
                     name: "portStakingAuthority";
                     isMut: false;
                     isSigner: false;
@@ -1543,14 +1528,6 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "portStakingRewardPool";
-                        type: "publicKey";
-                    },
-                    {
-                        name: "portStakingSubRewardPool";
-                        type: "publicKey";
-                    },
-                    {
                         name: "subRewardAvailable";
                         type: "bool";
                     },
@@ -1562,6 +1539,12 @@ export type CastleVault = {
                     },
                     {
                         name: "reserved1";
+                        type: {
+                            array: ["u64", 8];
+                        };
+                    },
+                    {
+                        name: "reserved2";
                         type: {
                             array: ["u64", 32];
                         };
@@ -2302,16 +2285,6 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "portStakingPool",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "portStakingRewardPool",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "portStakingSubRewardPool",
                     isMut: false,
                     isSigner: false,
                 },
@@ -3091,11 +3064,6 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "portStakingRewardPool",
-                    isMut: true,
-                    isSigner: false,
-                },
-                {
                     name: "portStakingAuthority",
                     isMut: false,
                     isSigner: false,
@@ -3540,14 +3508,6 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "portStakingRewardPool",
-                        type: "publicKey",
-                    },
-                    {
-                        name: "portStakingSubRewardPool",
-                        type: "publicKey",
-                    },
-                    {
                         name: "subRewardAvailable",
                         type: "bool",
                     },
@@ -3559,6 +3519,12 @@ export const IDL: CastleVault = {
                     },
                     {
                         name: "reserved1",
+                        type: {
+                            array: ["u64", 8],
+                        },
+                    },
+                    {
+                        name: "reserved2",
                         type: {
                             array: ["u64", 32],
                         },

@@ -512,9 +512,6 @@ export class VaultClient {
         const subRewardMint = subRewardAvailable
             ? this.yieldSources.port.accounts.stakingSubRewardTokenMint
             : this.yieldSources.port.accounts.stakingRewardTokenMint;
-        const subRewardPool = subRewardAvailable
-            ? this.yieldSources.port.accounts.stakingSubRewardPool
-            : Keypair.generate().publicKey;
 
         const tx = new Transaction();
         tx.add(
@@ -543,9 +540,6 @@ export class VaultClient {
                         portSubRewardTokenMint: subRewardMint,
                         portStakingPool:
                             this.yieldSources.port.accounts.stakingPool,
-                        portStakingRewardPool:
-                            this.yieldSources.port.accounts.stakingRewardPool,
-                        portStakingSubRewardPool: subRewardPool,
                         portStakeProgram:
                             this.yieldSources.port.accounts.stakingProgram,
                         portLendProgram:

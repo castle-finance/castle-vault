@@ -212,14 +212,11 @@ pub struct VaultPortAdditionalState {
 
     pub port_staking_pool: Pubkey,
 
-    pub port_staking_reward_pool: Pubkey,
-
-    pub port_staking_sub_reward_pool: Pubkey,
-
     pub sub_reward_available: bool,
 
     _reserved0: [u8; 3],
-    _reserved1: [u64; 32],
+    _reserved1: [u64; 8],
+    _reserved2: [u64; 32],
 }
 
 #[assert_size(128)]
