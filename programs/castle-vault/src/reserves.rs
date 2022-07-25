@@ -176,7 +176,7 @@ mod test {
                 &self,
                 new_allocation: u64,
                 old_allocation: u64,
-            ) -> Result<Rate, ProgramError> {
+            ) -> Result<Rate> {
                 let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
                 reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
             }
