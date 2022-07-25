@@ -52,23 +52,23 @@ pub struct SellPortReward<'info> {
     pub orca_swap_authority: AccountInfo<'info>,
 
     /// CHECK: safe
-    //#[soteria(ignore)]
     #[account(mut)]
+    //#[soteria(ignore)]
     pub orca_input_token_account: AccountInfo<'info>,
 
     /// CHECK: safe
-    //#[soteria(ignore)]
     #[account(mut)]
+    //#[soteria(ignore)]
     pub orca_output_token_account: AccountInfo<'info>,
 
     /// CHECK: safe
-    //#[soteria(ignore)]
     #[account(mut)]
+    //#[soteria(ignore)]
     pub orca_swap_token_mint: AccountInfo<'info>,
 
     /// CHECK: safe
-    //#[soteria(ignore)]
     #[account(mut)]
+    //#[soteria(ignore)]
     pub orca_fee_account: AccountInfo<'info>,
 
     /// CHECK: safe
