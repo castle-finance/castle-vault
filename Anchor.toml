@@ -12,20 +12,17 @@ wallet = "~/.config/solana/id.json"
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
 [test.validator]
-url = "m"
+url = "https://api.mainnet-beta.solana.com"
 
-[[test.clone]]
+[[test.validator.clone]]
 # SOL/USD pyth product
 address = "ALP8SdU9oARYVLgLR7LrqMNCYBnhtnQz1cj6bwgwQmgj"
-[[test.clone]]
+[[test.validator.clone]]
 # SOL/USD pyth price
 address = "H6ARHf6YXhGYeQfUzQNGk6rDNnLBQKrenN712K4AQJEG"
-[[test.clone]]
+[[test.validator.clone]]
 # SOL/USD switchboard feed
 address = "AdtRGGhmqvom3Jemp5YNrxd9q9unX36BZk1pujkkXijL"
-[[test.clone]]
-# Something to do with jet--serum?
-address = "CjqQ9kx9STBLtSUdypHTjNJsLE4t6uQossjdSzq9jdmY"
 
 [[test.genesis]]
 address = "ALend7Ketfx5bxh6ghsCDXAoDrhvEmsXT3cynB6aPLgx"
@@ -36,6 +33,3 @@ program = "deps/port_finance_variable_rate_lending.so"
 [[test.genesis]]
 address = "stkarvwmSzv2BygN5e2LeTwimTczLWHCKPKGC2zVLiq"
 program = "deps/port_finance_staking.so"
-[[test.genesis]]
-address = "JPv1rCqrhagNNmJVM5J1he7msQ5ybtvE1nNuHpDHMNU"
-program = "deps/jet.so"

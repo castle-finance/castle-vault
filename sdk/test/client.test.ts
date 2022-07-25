@@ -1,10 +1,8 @@
 import { assert } from "chai";
-import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { NATIVE_MINT } from "@solana/spl-token";
-import { Wallet, Provider } from "@project-serum/anchor";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { Wallet, AnchorProvider } from "@project-serum/anchor";
 
 import {
-    JetReserveAsset,
     PortReserveAsset,
     SolendReserveAsset,
     VaultClient,
@@ -19,14 +17,13 @@ describe("VaultClient", () => {
         //"https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
     );
     const wallet = Wallet.local();
-    const provider = new Provider(connection, wallet, {
+    const provider = new AnchorProvider(connection, wallet, {
         commitment: "confirmed",
     });
 
     const depositAmount = new TokenAmount(Big(0.05), 9);
 
     let vaultClient: VaultClient;
-    let jet: JetReserveAsset;
     let solend: SolendReserveAsset;
     let port: PortReserveAsset;
 
@@ -54,19 +51,6 @@ describe("VaultClient", () => {
             (await vaultClient.getTotalValue()).getAmount()
         );
         console.log("APY: ", (await vaultClient.getApy()).toNumber());
-
-        jet = vaultClient.getJet();
-        solend = vaultClient.getSolend();
-        port = vaultClient.getPort();
-
-        console.log("Jet");
-        console.log(
-            "value: ",
-            (await vaultClient.getVaultJetLpTokenAccountValue()).getAmount()
-        );
-        console.log((await jet.getApy()).toNumber());
-        console.log((await jet.getBorrowedAmount()).getAmount());
-        console.log((await jet.getDepositedAmount()).getAmount());
 
         console.log("Solend");
         console.log(

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-#[error]
+#[error_code]
 pub enum ErrorCode {
     #[msg("failed to perform some math operation safely")]
     MathError,
@@ -49,4 +49,7 @@ pub enum ErrorCode {
 
     #[msg("Vault is halted")]
     HaltedVault,
+
+    #[msg("Failed to fetch bump for PDA")]
+    BumpError,
 }

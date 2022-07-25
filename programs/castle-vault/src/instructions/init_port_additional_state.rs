@@ -2,10 +2,9 @@ use anchor_lang::prelude::*;
 
 use std::convert::Into;
 
-use crate::state::*;
+use crate::{errors::ErrorCode, state::*};
 
 #[derive(Accounts)]
-#[instruction(bump: u8)]
 pub struct InitializePortAdditionalState<'info> {
     #[account(
         mut,
@@ -16,8 +15,9 @@ pub struct InitializePortAdditionalState<'info> {
     #[account(
         init,
         payer = payer,
+        space = 8 + 392,
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()],
-        bump = bump,
+        bump,
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
@@ -29,7 +29,10 @@ pub struct InitializePortAdditionalState<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<InitializePortAdditionalState>, bump: u8) -> ProgramResult {
-    ctx.accounts.vault.vault_port_additional_state_bump = bump;
+pub fn handler(ctx: Context<InitializePortAdditionalState>) -> Result<()> {
+    ctx.accounts.vault.vault_port_additional_state_bump = *ctx
+        .bumps
+        .get("port_additional_states")
+        .ok_or(ErrorCode::BumpError)?;
     Ok(())
 }

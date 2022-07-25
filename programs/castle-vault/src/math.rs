@@ -1,8 +1,8 @@
+use anchor_lang::prelude::*;
 use std::convert::TryFrom;
 
-use anchor_lang::{
-    prelude::ProgramError,
-    solana_program::clock::{DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY},
+use anchor_lang::solana_program::clock::{
+    DEFAULT_TICKS_PER_SECOND, DEFAULT_TICKS_PER_SLOT, SECONDS_PER_DAY,
 };
 use spl_math::precise_number::PreciseNumber;
 
@@ -59,14 +59,14 @@ pub const SLOTS_PER_YEAR: u64 =
 
 pub const ONE_AS_BPS: u64 = 10000;
 
-pub fn calc_carry_fees(profit: u64, fee_bps: u64) -> Result<u64, ProgramError> {
+pub fn calc_carry_fees(profit: u64, fee_bps: u64) -> Result<u64> {
     profit
         .checked_mul(fee_bps)
         .map(|n| n / ONE_AS_BPS)
         .ok_or_else(|| ErrorCode::OverflowError.into())
 }
 
-pub fn calc_mgmt_fees(aum: u64, fee_bps: u64, slots_elapsed: u64) -> Result<u64, ProgramError> {
+pub fn calc_mgmt_fees(aum: u64, fee_bps: u64, slots_elapsed: u64) -> Result<u64> {
     [fee_bps, slots_elapsed]
         .iter()
         .try_fold(aum, |acc, r| acc.checked_mul(*r))
@@ -99,11 +99,11 @@ mod tests {
 
     #[test]
     fn test_carry_fees() {
-        assert_eq!(calc_carry_fees(50000, 10), Ok(50))
+        assert_eq!(calc_carry_fees(50000, 10).unwrap(), 50)
     }
 
     #[test]
     fn test_mgmt_fees() {
-        assert_eq!(calc_mgmt_fees(1261440000, 1000, 100), Ok(200))
+        assert_eq!(calc_mgmt_fees(1261440000, 1000, 100).unwrap(), 200)
     }
 }
