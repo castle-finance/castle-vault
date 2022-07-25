@@ -1221,12 +1221,6 @@ describe("castle-vault", () => {
                     port.accounts.stakingSubRewardTokenMint,
                     port.accounts.vaultPortSubRewardToken
                 );
-                // const claimedSubRewardAmount = (
-                //     await subRewardToken.getAccountInfo(
-                //         port.accounts.vaultPortSubRewardToken
-                //     )
-                // ).amount.toNumber();
-
                 assert.isAtLeast(claimedSubRewardAmount, 1);
             }
         });
