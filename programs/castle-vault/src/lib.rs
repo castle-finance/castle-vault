@@ -23,123 +23,89 @@ pub mod castle_vault {
 
     pub fn initialize(
         ctx: Context<Initialize>,
-        bumps: InitBumpSeeds,
+        authority_bump: u8,
         config: VaultConfigArg,
-    ) -> ProgramResult {
-        instructions::init_vault::handler(ctx, bumps, config)
+    ) -> Result<()> {
+        instructions::init_vault::handler(ctx, authority_bump, config)
     }
 
     pub fn initialize_port_additional_state(
         ctx: Context<InitializePortAdditionalState>,
-        bump: u8,
-    ) -> ProgramResult {
-        instructions::init_port_additional_state::handler(ctx, bump)
+    ) -> Result<()> {
+        instructions::init_port_additional_state::handler(ctx)
     }
 
     pub fn initialize_port_reward_accounts(
         ctx: Context<InitializePortRewardAccounts>,
-        obligation_bump: u8,
-        stake_bump: u8,
-        reward_bump: u8,
-        sub_reward_bump: u8,
         sub_reward_available: bool,
-    ) -> ProgramResult {
-        instructions::init_port_reward_accounts::handler(
-            ctx,
-            obligation_bump,
-            stake_bump,
-            reward_bump,
-            sub_reward_bump,
-            sub_reward_available,
-        )
-    }
-
-    pub fn initialize_jet<'info>(
-        ctx: Context<'_, '_, '_, 'info, InitializeJet<'info>>,
-        bump: u8,
-    ) -> ProgramResult {
-        instructions::init_yield_source::handler(ctx, bump)
+    ) -> Result<()> {
+        instructions::init_port_reward_accounts::handler(ctx, sub_reward_available)
     }
 
     pub fn initialize_port<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializePort<'info>>,
-        bump: u8,
-    ) -> ProgramResult {
-        instructions::init_yield_source::handler(ctx, bump)
+    ) -> Result<()> {
+        instructions::init_yield_source::handler(ctx)
     }
 
     pub fn initialize_solend<'info>(
         ctx: Context<'_, '_, '_, 'info, InitializeSolend<'info>>,
-        bump: u8,
-    ) -> ProgramResult {
-        instructions::init_yield_source::handler(ctx, bump)
+    ) -> Result<()> {
+        instructions::init_yield_source::handler(ctx)
     }
 
-    pub fn update_halt_flags(ctx: Context<UpdateHaltFlags>, flags: u16) -> ProgramResult {
+    pub fn update_halt_flags(ctx: Context<UpdateHaltFlags>, flags: u16) -> Result<()> {
         instructions::update_halt_flags::handler(ctx, flags)
     }
 
     pub fn update_yield_source_flags(
         ctx: Context<UpdateYieldSourceFlags>,
         flags: u16,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::update_yield_source_flags::handler(ctx, flags)
     }
 
-    pub fn update_config(ctx: Context<UpdateConfig>, new_config: VaultConfigArg) -> ProgramResult {
+    pub fn update_config(ctx: Context<UpdateConfig>, new_config: VaultConfigArg) -> Result<()> {
         instructions::update_config::handler(ctx, new_config)
     }
 
-    pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> ProgramResult {
+    pub fn deposit(ctx: Context<Deposit>, reserve_token_amount: u64) -> Result<()> {
         instructions::deposit::handler(ctx, reserve_token_amount)
     }
 
-    pub fn withdraw(ctx: Context<Withdraw>, lp_token_amount: u64) -> ProgramResult {
+    pub fn withdraw(ctx: Context<Withdraw>, lp_token_amount: u64) -> Result<()> {
         instructions::withdraw::handler(ctx, lp_token_amount)
     }
 
-    pub fn rebalance(
-        ctx: Context<Rebalance>,
-        proposed_weights: StrategyWeightsArg,
-    ) -> ProgramResult {
+    pub fn rebalance(ctx: Context<Rebalance>, proposed_weights: StrategyWeightsArg) -> Result<()> {
         instructions::rebalance::handler(ctx, proposed_weights)
     }
 
     pub fn refresh_solend<'info>(
         ctx: Context<'_, '_, '_, 'info, RefreshSolend<'info>>,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::refresh::handler(ctx)
     }
 
-    pub fn refresh_port<'info>(
-        ctx: Context<'_, '_, '_, 'info, RefreshPort<'info>>,
-    ) -> ProgramResult {
-        instructions::refresh::handler(ctx)
-    }
-
-    pub fn refresh_jet<'info>(ctx: Context<'_, '_, '_, 'info, RefreshJet<'info>>) -> ProgramResult {
+    pub fn refresh_port<'info>(ctx: Context<'_, '_, '_, 'info, RefreshPort<'info>>) -> Result<()> {
         instructions::refresh::handler(ctx)
     }
 
     pub fn consolidate_refresh<'info>(
         ctx: Context<'_, '_, '_, 'info, ConsolidateRefresh<'info>>,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         instructions::consolidate_refresh::handler(ctx)
     }
 
-    pub fn reconcile_solend(ctx: Context<SolendAccounts>, withdraw_option: u64) -> ProgramResult {
+    pub fn reconcile_solend(ctx: Context<SolendAccounts>, withdraw_option: u64) -> Result<()> {
         instructions::reconcile::handler(ctx, withdraw_option)
     }
 
-    pub fn reconcile_port(ctx: Context<PortAccounts>, withdraw_option: u64) -> ProgramResult {
+    pub fn reconcile_port(ctx: Context<PortAccounts>, withdraw_option: u64) -> Result<()> {
         instructions::reconcile::handler(ctx, withdraw_option)
     }
 
-    pub fn reconcile_jet(ctx: Context<JetAccounts>, withdraw_option: u64) -> ProgramResult {
-        instructions::reconcile::handler(ctx, withdraw_option)
-    }
-
-    pub fn claim_port_reward(ctx: Context<ClaimPortReward>) -> ProgramResult {
+    pub fn claim_port_reward(ctx: Context<ClaimPortReward>) -> Result<()> {
         instructions::claim_port_reward::handler(ctx)
     }
 }

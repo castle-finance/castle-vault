@@ -31,7 +31,6 @@ pub struct RebalanceEvent {
 pub struct RebalanceDataEvent {
     solend: u64,
     port: u64,
-    jet: u64,
 }
 impl_provider_index!(RebalanceDataEvent, u64);
 
@@ -57,12 +56,13 @@ pub struct Rebalance<'info> {
 
     // DANGER: make sure the owner is as expected (currently done using `try_from`)
     //         and the keys match the vault (currently explicitly checked before `try_from`)
+    /// CHECK: safe
     //#[soteria(ignore)]
     pub solend_reserve: AccountInfo<'info>,
+
+    /// CHECK: safe
     //#[soteria(ignore)]
     pub port_reserve: AccountInfo<'info>,
-    //#[soteria(ignore)]
-    pub jet_reserve: AccountInfo<'info>,
 
     // Accounts used to get port additional reward information
     #[account(
@@ -76,14 +76,15 @@ pub struct Rebalance<'info> {
 
     pub port_staking_pool: Box<Account<'info, PortStakingPool>>,
 
+    /// CHECK: safe
     pub port_reward_token_oracle: AccountInfo<'info>,
 
     pub clock: Sysvar<'info, Clock>,
 }
 
 impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
-    type Error = ProgramError;
-    fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>, Self::Error> {
+    type Error = Error;
+    fn try_from(r: &Rebalance<'_>) -> Result<AssetContainer<Reserves>> {
         let flags: YieldSourceFlags = r.vault.get_yield_source_flags();
 
         // NOTE: I tried pretty hard to get rid of these clones and only use the references.
@@ -98,7 +99,7 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             .as_option()
             .map(|()| {
                 r.solend_reserve.key.eq(&r.vault.solend_reserve).as_result(
-                    Ok::<_, ProgramError>(Reserves::Solend(Box::new(
+                    Ok::<_, Error>(Reserves::Solend(Box::new(
                         Account::<SolendReserve>::try_from(&r.solend_reserve)?
                             .deref()
                             .clone(),
@@ -152,22 +153,8 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             }));
         }
 
-        let jet = flags
-            .contains(YieldSourceFlags::JET)
-            .as_option()
-            .map(|()| {
-                r.jet_reserve.key.eq(&r.vault.jet_reserve).as_result(
-                    Ok::<_, ProgramError>(Reserves::Jet(Box::new(
-                        *(AccountLoader::<jet::state::Reserve>::try_from(&r.jet_reserve)?)
-                            .load()?,
-                    ))),
-                    ErrorCode::InvalidAccount,
-                )?
-            })
-            .transpose()?;
-
         Ok(AssetContainer {
-            inner: [solend, port, jet],
+            inner: [solend, port],
         })
     }
 }
@@ -176,7 +163,6 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
 pub struct StrategyWeightsArg {
     solend: u16,
     port: u16,
-    jet: u16,
 }
 impl_provider_index!(StrategyWeightsArg, u16);
 
@@ -191,7 +177,7 @@ impl From<StrategyWeightsArg> for AssetContainer<Rate> {
 }
 
 /// Calculate and store optimal allocations to downstream lending markets
-pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> ProgramResult {
+pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg) -> Result<()> {
     #[cfg(feature = "debug")]
     msg!("Rebalancing");
 

@@ -1,15 +1,17 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Token, TokenAccount},
+    token::{Mint, Token, TokenAccount},
 };
-use port_anchor_adaptor::{port_lending_id, port_staking_id, PortObligation, PortStakeAccount};
+use port_anchor_adaptor::{
+    port_lending_id, port_staking_id, PortLendingMarket, PortObligation, PortStakeAccount,
+    PortStakingPool,
+};
 use std::convert::Into;
 
-use crate::state::*;
+use crate::{errors::ErrorCode, state::*};
 
 #[derive(Accounts)]
-#[instruction(obligation_bump:u8, stake_bump:u8, reward_bump: u8, sub_reward_bump: u8)]
 pub struct InitializePortRewardAccounts<'info> {
     #[account(
         mut,
@@ -18,30 +20,33 @@ pub struct InitializePortRewardAccounts<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
-        bump = vault.vault_port_additional_state_bump
+        bump,
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
+    /// CHECK: safe
     #[account(
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), b"port_obligation".as_ref()],
-        bump = obligation_bump,
+        bump,
         space = PortObligation::LEN,
         owner = port_lend_program.key(),
     )]
     pub vault_port_obligation: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), b"port_stake".as_ref()],
-        bump = stake_bump,
+        bump,
         space = PortStakeAccount::LEN,
         owner = port_stake_program.key(),
     )]
@@ -52,7 +57,7 @@ pub struct InitializePortRewardAccounts<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), b"port_reward".as_ref()],
-        bump = reward_bump,
+        bump,
         token::authority = vault_authority,
         token::mint = port_reward_token_mint,
     )]
@@ -63,45 +68,51 @@ pub struct InitializePortRewardAccounts<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), b"port_sub_reward".as_ref()],
-        bump = sub_reward_bump,
+        bump,
         token::authority = vault_authority,
         token::mint = port_sub_reward_token_mint,
     )]
     pub vault_port_sub_reward_token: Box<Account<'info, TokenAccount>>,
 
     // Account to which the token should be transfered for the purpose of staking
-    pub port_lp_token_account: AccountInfo<'info>,
+    pub port_lp_token_account: Box<Account<'info, TokenAccount>>,
 
     /// Mint of the port finance token (liquidity reward will be issued by this one)
-    pub port_reward_token_mint: AccountInfo<'info>,
+    pub port_reward_token_mint: Box<Account<'info, Mint>>,
 
     /// Mint of the port stake sub-reward token
-    pub port_sub_reward_token_mint: AccountInfo<'info>,
+    pub port_sub_reward_token_mint: Box<Account<'info, Mint>>,
 
     /// ID of the staking pool
-    pub port_staking_pool: AccountInfo<'info>,
+    pub port_staking_pool: Box<Account<'info, PortStakingPool>>,
 
+    /// CHECK: safe
     pub port_staking_reward_pool: AccountInfo<'info>,
 
+    /// CHECK: safe
     pub port_staking_sub_reward_pool: AccountInfo<'info>,
 
+    /// CHECK: safe
     pub port_reward_token_oracle: AccountInfo<'info>,
 
+    /// CHECK: safe
     pub port_sub_reward_token_oracle: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(
         executable,
         address = port_staking_id(),
     )]
     pub port_stake_program: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(
         executable,
         address = port_lending_id(),
     )]
     pub port_lend_program: AccountInfo<'info>,
 
-    pub port_lending_market: AccountInfo<'info>,
+    pub port_lending_market: Box<Account<'info, PortLendingMarket>>,
 
     /// Account that pays for above account inits
     #[account(mut)]
@@ -125,12 +136,8 @@ pub struct InitializePortRewardAccounts<'info> {
 
 pub fn handler(
     ctx: Context<InitializePortRewardAccounts>,
-    obligation_bump: u8,
-    stake_bump: u8,
-    reward_bump: u8,
-    sub_reward_bump: u8,
     sub_reward_available: bool,
-) -> ProgramResult {
+) -> Result<()> {
     let init_obligation_ctx = CpiContext::new(
         ctx.accounts.port_lend_program.clone(),
         port_anchor_adaptor::InitObligation {
@@ -163,16 +170,28 @@ pub fn handler(
 
     ctx.accounts
         .port_additional_states
-        .vault_port_stake_account_bump = stake_bump;
+        .vault_port_stake_account_bump = *ctx
+        .bumps
+        .get("vault_port_stake_account")
+        .ok_or(ErrorCode::BumpError)?;
     ctx.accounts
         .port_additional_states
-        .vault_port_reward_token_bump = reward_bump;
+        .vault_port_reward_token_bump = *ctx
+        .bumps
+        .get("vault_port_reward_token")
+        .ok_or(ErrorCode::BumpError)?;
     ctx.accounts
         .port_additional_states
-        .vault_port_obligation_bump = obligation_bump;
+        .vault_port_obligation_bump = *ctx
+        .bumps
+        .get("vault_port_obligation")
+        .ok_or(ErrorCode::BumpError)?;
     ctx.accounts
         .port_additional_states
-        .vault_port_sub_reward_token_bump = sub_reward_bump;
+        .vault_port_sub_reward_token_bump = *ctx
+        .bumps
+        .get("vault_port_sub_reward_token")
+        .ok_or(ErrorCode::BumpError)?;
 
     ctx.accounts.port_additional_states.port_lp_token_account =
         ctx.accounts.port_lp_token_account.key();

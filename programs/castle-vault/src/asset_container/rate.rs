@@ -1,4 +1,4 @@
-use anchor_lang::prelude::ProgramError;
+use anchor_lang::prelude::*;
 use boolinator::Boolinator;
 use solana_maths::{Rate, TryAdd};
 
@@ -9,7 +9,7 @@ use super::AssetContainerGeneric;
 impl<const N: usize> AssetContainerGeneric<Rate, N> {
     /// Return error if weights do not add up to 100%
     /// OR if any are greater than the allocation cap
-    pub fn verify_weights(&self, allocation_cap_pct: u8) -> Result<(), ProgramError> {
+    pub fn verify_weights(&self, allocation_cap_pct: u8) -> Result<()> {
         let cap = &Rate::from_percent(allocation_cap_pct);
         let max = self
             .into_iter()
@@ -40,55 +40,36 @@ mod tests {
 
     #[test]
     fn test_verify_weights_happy() {
-        let rates = AssetContainerGeneric::<Rate, 3> {
-            inner: [
-                Some(Rate::from_percent(0)),
-                Some(Rate::from_percent(0)),
-                Some(Rate::from_percent(100)),
-            ],
+        let rates = AssetContainerGeneric::<Rate, 2> {
+            inner: [Some(Rate::from_percent(0)), Some(Rate::from_percent(100))],
         };
         assert!(rates.verify_weights(100).is_ok())
     }
 
     #[test]
     fn test_verify_weights_happy2() {
-        let rates = AssetContainerGeneric::<Rate, 3> {
-            inner: [
-                Some(Rate::from_percent(1)),
-                Some(Rate::from_percent(59)),
-                Some(Rate::from_percent(40)),
-            ],
+        let rates = AssetContainerGeneric::<Rate, 2> {
+            inner: [Some(Rate::from_percent(59)), Some(Rate::from_percent(41))],
         };
         assert!(rates.verify_weights(59).is_ok())
     }
 
     #[test]
     fn test_verify_weights_unhappy_gt1() {
-        let rates = AssetContainerGeneric::<Rate, 3> {
-            inner: [
-                Some(Rate::from_percent(2)),
-                Some(Rate::from_percent(59)),
-                Some(Rate::from_percent(40)),
-            ],
+        let rates = AssetContainerGeneric::<Rate, 2> {
+            inner: [Some(Rate::from_percent(59)), Some(Rate::from_percent(42))],
         };
-        assert_eq!(
-            rates.verify_weights(100),
-            Err(ErrorCode::InvalidProposedWeights.into())
-        )
+
+        // TODO find a way to match a specific error
+        assert!(rates.verify_weights(100).is_err())
     }
 
     #[test]
     fn test_verify_weights_unhappy_alloc_cap() {
-        let rates = AssetContainerGeneric::<Rate, 3> {
-            inner: [
-                Some(Rate::from_percent(1)),
-                Some(Rate::from_percent(59)),
-                Some(Rate::from_percent(40)),
-            ],
+        let rates = AssetContainerGeneric::<Rate, 2> {
+            inner: [Some(Rate::from_percent(59)), Some(Rate::from_percent(41))],
         };
-        assert_eq!(
-            rates.verify_weights(58),
-            Err(ErrorCode::InvalidProposedWeights.into())
-        )
+
+        assert!(rates.verify_weights(58).is_err())
     }
 }

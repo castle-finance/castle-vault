@@ -30,17 +30,16 @@ no-entrypoint = []
 no-idl = []
 
 [dependencies]
-anchor-lang = "0.18.2"
-anchor-spl = "0.18.2"
+anchor-lang = "0.24.2"
+anchor-spl = "0.24.2"
 bitflags = "1.3"
 boolinator = "2.4.0"
 itertools = "0.10"
-jet = {git = "https://github.com/jet-lab/jet-v1/", version = "0.2.0", features = ["no-entrypoint", "cpi"]}
-jet-proto-math = "1.0.1"
 jet-proto-proc-macros = "1.0.3"
-port-anchor-adaptor = {git = "https://github.com/castle-finance/port-anchor-adaptor.git", branch = "claim-reward-bugfix"}
+port-anchor-adaptor = {git = "https://github.com/castle-finance/port-anchor-adaptor"}
 port-variable-rate-lending-instructions = "0.2.9"
 solana-maths = "0.1.1"
+solana-program = "1.9.13"
 solana-security-txt = "1.0.1"
 spl-math = {version = "0.1", features = ["no-entrypoint"]}
 spl-token-lending = {git = "https://github.com/castle-finance/solana-program-library", version = "0.1.1", features = ["no-entrypoint"]}

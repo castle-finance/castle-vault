@@ -32,6 +32,7 @@ pub struct SolendAccounts<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     /// Token account for the vault's reserve tokens
@@ -42,25 +43,30 @@ pub struct SolendAccounts<'info> {
     #[account(mut)]
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// CHECK: safe
     #[account(
         executable,
         address = spl_token_lending::ID,
     )]
     pub solend_program: AccountInfo<'info>,
 
+    /// CHECK: safe
     //#[soteria(ignore)]
     pub solend_market_authority: AccountInfo<'info>,
 
+    /// CHECK: safe
     //#[soteria(ignore)]
     pub solend_market: AccountInfo<'info>,
 
     #[account(mut)]
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
+    /// CHECK: safe
     #[account(mut)]
     //#[soteria(ignore)]
     pub solend_lp_mint: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(mut)]
     //#[soteria(ignore)]
     pub solend_reserve_token: AccountInfo<'info>,
@@ -73,7 +79,7 @@ pub struct SolendAccounts<'info> {
 impl_has_vault!(SolendAccounts<'_>);
 
 impl<'info> LendingMarket for SolendAccounts<'info> {
-    fn deposit(&mut self, amount: u64) -> ProgramResult {
+    fn deposit(&mut self, amount: u64) -> Result<()> {
         let context = CpiContext::new(
             self.solend_program.clone(),
             DepositReserveLiquidity {
@@ -105,7 +111,7 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
         self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
         Ok(())
     }
-    fn redeem(&mut self, amount: u64) -> ProgramResult {
+    fn redeem(&mut self, amount: u64) -> Result<()> {
         let context = CpiContext::new(
             self.solend_program.clone(),
             RedeemReserveCollateral {
@@ -138,13 +144,13 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
         self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
         Ok(())
     }
-    fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64, ProgramError> {
+    fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64> {
         let exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
-        exchange_rate.liquidity_to_collateral(amount)
+        Ok(exchange_rate.liquidity_to_collateral(amount)?)
     }
-    fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64, ProgramError> {
+    fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64> {
         let exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
-        exchange_rate.collateral_to_liquidity(amount)
+        Ok(exchange_rate.collateral_to_liquidity(amount)?)
     }
 
     fn reserve_tokens_in_vault(&self) -> u64 {
@@ -161,13 +167,13 @@ impl<'info> LendingMarket for SolendAccounts<'info> {
 }
 
 impl ReserveAccessor for Reserve {
-    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+    fn utilization_rate(&self) -> Result<Rate> {
         Ok(Rate::from_scaled_val(
             self.liquidity.utilization_rate()?.to_scaled_val() as u64,
         ))
     }
 
-    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+    fn borrow_rate(&self) -> Result<Rate> {
         Ok(Rate::from_scaled_val(
             self.current_borrow_rate()?.to_scaled_val() as u64,
         ))
@@ -177,7 +183,7 @@ impl ReserveAccessor for Reserve {
         &self,
         new_allocation: u64,
         old_allocation: u64,
-    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+    ) -> Result<Box<dyn ReserveAccessor>> {
         let mut reserve = Box::new(self.clone());
         reserve.liquidity.deposit(new_allocation)?;
         reserve.liquidity.withdraw(old_allocation)?;
@@ -185,22 +191,19 @@ impl ReserveAccessor for Reserve {
     }
 }
 
-impl ReturnCalculator for Reserve
-{
-    fn calculate_return(
-        &self,
-        new_allocation: u64,
-        old_allocation: u64,
-    ) -> Result<Rate, ProgramError> {
+impl ReturnCalculator for Reserve {
+    fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate> {
         let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
-        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
+        Ok(reserve
+            .utilization_rate()?
+            .try_mul(reserve.borrow_rate()?)?)
     }
 }
 
 pub fn deposit_reserve_liquidity<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, DepositReserveLiquidity<'info>>,
     liquidity_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token_lending::instruction::deposit_reserve_liquidity(
         *ctx.accounts.lending_program.key,
         liquidity_amount,
@@ -225,7 +228,7 @@ pub fn deposit_reserve_liquidity<'info>(
 pub fn redeem_reserve_collateral<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, RedeemReserveCollateral<'info>>,
     collateral_amount: u64,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token_lending::instruction::redeem_reserve_collateral(
         *ctx.accounts.lending_program.key,
         collateral_amount,
@@ -249,7 +252,7 @@ pub fn redeem_reserve_collateral<'info>(
 
 pub fn refresh_reserve<'info>(
     ctx: CpiContext<'_, '_, '_, 'info, RefreshReserve<'info>>,
-) -> ProgramResult {
+) -> Result<()> {
     let ix = spl_token_lending::instruction::refresh_reserve(
         *ctx.accounts.lending_program.key,
         *ctx.accounts.reserve.key,
@@ -269,68 +272,95 @@ pub fn refresh_reserve<'info>(
 #[derive(Accounts)]
 pub struct DepositReserveLiquidity<'info> {
     // Lending program
+    /// CHECK: safe
     pub lending_program: AccountInfo<'info>,
     // Token account for asset to deposit into reserve
+    /// CHECK: safe
     pub source_liquidity: AccountInfo<'info>,
     // Token account for reserve collateral token
+    /// CHECK: safe
     pub destination_collateral_account: AccountInfo<'info>,
     // Reserve state account
+    /// CHECK: safe
     pub reserve: AccountInfo<'info>,
     // Token mint for reserve collateral token
+    /// CHECK: safe
     pub reserve_collateral_mint: AccountInfo<'info>,
     // Reserve liquidity supply SPL token account
+    /// CHECK: safe
     pub reserve_liquidity_supply: AccountInfo<'info>,
     // Lending market account
+    /// CHECK: safe
     pub lending_market: AccountInfo<'info>,
     // Lending market authority (PDA)
+    /// CHECK: safe
     pub lending_market_authority: AccountInfo<'info>,
     // Transfer authority for accounts 1 and 2
+    /// CHECK: safe
     pub transfer_authority: AccountInfo<'info>,
     // Clock
+    /// CHECK: safe
     pub clock: AccountInfo<'info>,
     // Token program ID
+    /// CHECK: safe
     pub token_program_id: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct RedeemReserveCollateral<'info> {
     // Lending program
+    /// CHECK: safe
     pub lending_program: AccountInfo<'info>,
     // Source token account for reserve collateral token
+    /// CHECK: safe
     pub source_collateral: AccountInfo<'info>,
     // Destination liquidity token account
+    /// CHECK: safe
     pub destination_liquidity: AccountInfo<'info>,
     // Refreshed reserve account
+    /// CHECK: safe
     pub reserve: AccountInfo<'info>,
     // Reserve collateral mint account
+    /// CHECK: safe
     pub reserve_collateral_mint: AccountInfo<'info>,
     // Reserve liquidity supply SPL Token account.
+    /// CHECK: safe
     pub reserve_liquidity_supply: AccountInfo<'info>,
     // Lending market account
+    /// CHECK: safe
     pub lending_market: AccountInfo<'info>,
     // Lending market authority - PDA
+    /// CHECK: safe
     pub lending_market_authority: AccountInfo<'info>,
     // User transfer authority
+    /// CHECK: safe
     pub transfer_authority: AccountInfo<'info>,
     // Clock
+    /// CHECK: safe
     pub clock: AccountInfo<'info>,
     // Token program ID
+    /// CHECK: safe
     pub token_program_id: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
 pub struct RefreshReserve<'info> {
     // Lending program
+    /// CHECK: safe
     pub lending_program: AccountInfo<'info>,
     // Reserve account
+    /// CHECK: safe
     pub reserve: AccountInfo<'info>,
     // Pyth reserve liquidity oracle
     // Must be the pyth price account specified in InitReserve
+    /// CHECK: safe
     pub pyth_reserve_liquidity_oracle: AccountInfo<'info>,
     // Switchboard Reserve liquidity oracle account
     // Must be the switchboard price account specified in InitReserve
+    /// CHECK: safe
     pub switchboard_reserve_liquidity_oracle: AccountInfo<'info>,
     // Clock
+    /// CHECK: safe
     pub clock: AccountInfo<'info>,
 }
 
@@ -338,17 +368,17 @@ pub struct RefreshReserve<'info> {
 pub struct SolendReserve(Reserve);
 
 impl anchor_lang::AccountDeserialize for SolendReserve {
-    fn try_deserialize(buf: &mut &[u8]) -> Result<Self, ProgramError> {
+    fn try_deserialize(buf: &mut &[u8]) -> Result<Self> {
         SolendReserve::try_deserialize_unchecked(buf)
     }
 
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self, ProgramError> {
-        <Reserve as solana_program::program_pack::Pack>::unpack(buf).map(SolendReserve)
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> Result<Self> {
+        Ok(<Reserve as solana_program::program_pack::Pack>::unpack(buf).map(SolendReserve)?)
     }
 }
 
 impl anchor_lang::AccountSerialize for SolendReserve {
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<(), ProgramError> {
+    fn try_serialize<W: Write>(&self, _writer: &mut W) -> Result<()> {
         // no-op
         Ok(())
     }
@@ -369,7 +399,6 @@ impl Deref for SolendReserve {
 }
 
 #[derive(Accounts)]
-#[instruction(bump: u8)]
 pub struct InitializeSolend<'info> {
     #[account(
         mut,
@@ -378,6 +407,7 @@ pub struct InitializeSolend<'info> {
     )]
     pub vault: Box<Account<'info, Vault>>,
 
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     /// Token account for the vault's solend lp tokens
@@ -385,12 +415,13 @@ pub struct InitializeSolend<'info> {
         init,
         payer = payer,
         seeds = [vault.key().as_ref(), solend_lp_token_mint.key().as_ref()],
-        bump = bump,
+        bump,
         token::authority = vault_authority,
         token::mint = solend_lp_token_mint,
     )]
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// CHECK: safe
     pub solend_lp_token_mint: AccountInfo<'info>,
 
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
@@ -408,7 +439,7 @@ pub struct InitializeSolend<'info> {
 }
 
 impl<'info> YieldSourceInitializer<'info> for InitializeSolend<'info> {
-    fn initialize_yield_source(&mut self) -> ProgramResult {
+    fn initialize_yield_source(&mut self) -> Result<()> {
         self.vault.solend_reserve = self.solend_reserve.key();
         self.vault.vault_solend_lp_token = self.vault_solend_lp_token.key();
 
@@ -432,6 +463,7 @@ pub struct RefreshSolend<'info> {
     /// Token account for the vault's solend lp tokens
     pub vault_solend_lp_token: Box<Account<'info, TokenAccount>>,
 
+    /// CHECK: safe
     #[account(
         executable,
         address = spl_token_lending::ID,
@@ -441,9 +473,11 @@ pub struct RefreshSolend<'info> {
     #[account(mut)]
     pub solend_reserve: Box<Account<'info, SolendReserve>>,
 
+    /// CHECK: safe
     //#[soteria(ignore)]
     pub solend_pyth: AccountInfo<'info>,
 
+    /// CHECK: safe
     //#[soteria(ignore)]
     pub solend_switchboard: AccountInfo<'info>,
 
@@ -471,7 +505,7 @@ impl<'info> Refresher<'info> for RefreshSolend<'info> {
     fn update_actual_allocation(
         &mut self,
         _remaining_accounts: &[AccountInfo<'info>],
-    ) -> ProgramResult {
+    ) -> Result<()> {
         #[cfg(feature = "debug")]
         msg!("Refreshing solend");
 

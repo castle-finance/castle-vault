@@ -11,14 +11,12 @@ use crate::{
 };
 
 pub trait Refresher<'info> {
-    fn update_actual_allocation(
-        &mut self,
-        remaining_accounts: &[AccountInfo<'info>],
-    ) -> ProgramResult;
+    fn update_actual_allocation(&mut self, remaining_accounts: &[AccountInfo<'info>])
+        -> Result<()>;
 }
 
 /// Refreshes the reserves of downstream lending markets
-pub fn handler<'info, T: Refresher<'info>>(ctx: Context<'_, '_, '_, 'info, T>) -> ProgramResult {
+pub fn handler<'info, T: Refresher<'info>>(ctx: Context<'_, '_, '_, 'info, T>) -> Result<()> {
     #[cfg(feature = "debug")]
     msg!("Refreshing yield source");
 

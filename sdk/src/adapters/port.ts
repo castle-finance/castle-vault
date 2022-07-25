@@ -9,8 +9,14 @@ import {
     TransactionInstruction,
     SYSVAR_CLOCK_PUBKEY,
     SYSVAR_RENT_PUBKEY,
+    TransactionSignature,
+    Signer,
     LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
+import {
+    getAssociatedTokenAddress,
+    createAssociatedTokenAccount,
+} from "@project-serum/associated-token";
 import { TOKEN_PROGRAM_ID, Token as SplToken } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
 import * as anchor from "@project-serum/anchor";
@@ -23,9 +29,6 @@ import {
     AssetPriceConfig,
     DEFAULT_PORT_LENDING_MARKET,
     Environment,
-    initLendingMarketInstruction,
-    initReserveInstruction,
-    initStakingPoolInstruction,
     MintId,
     Port,
     PORT_STAKING,
@@ -34,6 +37,15 @@ import {
     TokenAccount,
     StakeAccount,
     StakingPoolLayout,
+    initLendingMarketInstruction,
+    initReserveInstruction,
+    initStakingPoolInstruction,
+    initObligationInstruction,
+    createStakeAccountInstruction,
+    refreshReserveInstruction,
+    refreshObligationInstruction,
+    depositReserveLiquidityAndAddCollateralInstruction,
+    borrowObligationLiquidityInstruction,
 } from "@castlefinance/port-sdk";
 
 import { CastleVault } from "../idl";
@@ -51,6 +63,7 @@ interface PortAccounts {
     collateralMint: PublicKey;
     oracle: PublicKey;
     liquiditySupply: PublicKey;
+    liquidityFeeReceiver: PublicKey;
     lpTokenAccount: PublicKey;
     stakingPool: PublicKey;
     stakingRewardPool: PublicKey;
@@ -96,7 +109,7 @@ const PORT_USD_PYTH_PRICE = new PublicKey(
 
 export class PortReserveAsset extends LendingMarket {
     private constructor(
-        public provider: anchor.Provider,
+        public provider: anchor.AnchorProvider,
         public accounts: PortAccounts,
         public client: Port,
         public reserveToken: Token,
@@ -106,7 +119,7 @@ export class PortReserveAsset extends LendingMarket {
     }
 
     static async load(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         cluster: Cluster,
         reserveMint: PublicKey
     ): Promise<PortReserveAsset> {
@@ -179,6 +192,7 @@ export class PortReserveAsset extends LendingMarket {
             collateralMint: reserve.getShareMintId(),
             oracle: reserve.getOracleId(),
             liquiditySupply: reserve.getAssetBalanceId(),
+            liquidityFeeReceiver: reserve.getFeeBalanceId(),
             lpTokenAccount: reserve.getShareBalanceId(),
             stakingPool: targetStakingPool.getId(),
             stakingRewardPool: targetStakingPool.getRewardTokenPool(),
@@ -210,7 +224,7 @@ export class PortReserveAsset extends LendingMarket {
     }
 
     static async initialize(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         owner: Keypair,
         reserveTokenMint: PublicKey,
         pythPrice: PublicKey,
@@ -238,6 +252,7 @@ export class PortReserveAsset extends LendingMarket {
             createSubRewardPool
         );
         const client = new Port(provider.connection, env, market.publicKey);
+
         const lpToken = await getToken(
             provider.connection,
             accounts.collateralMint
@@ -254,6 +269,133 @@ export class PortReserveAsset extends LendingMarket {
             reserveToken,
             lpToken
         );
+    }
+
+    async borrow(
+        user: Signer,
+        userReserveTokenAccount: PublicKey,
+        borrowAmount: number
+    ): Promise<TransactionSignature[]> {
+        const depositAmount = borrowAmount * 1.5;
+
+        const userCollateralTokenAccount = await getAssociatedTokenAddress(
+            user.publicKey,
+            this.accounts.collateralMint
+        );
+
+        const ataInitTx = new Transaction().add(
+            await createAssociatedTokenAccount(
+                user.publicKey,
+                user.publicKey,
+                this.accounts.collateralMint
+            )
+        );
+        const ataInitSig = await this.provider.sendAndConfirm(ataInitTx, [
+            user,
+        ]);
+
+        const userObligation = await createAccount(
+            this.provider,
+            OBLIGATION_LEN,
+            DEVNET_LENDING_PROGRAM_ID
+        );
+
+        const userStake = await createAccount(
+            this.provider,
+            STAKE_LEN,
+            DEVNET_STAKING_PROGRAM_ID
+        );
+
+        const depositTx = new Transaction()
+            .add(
+                initObligationInstruction(
+                    userObligation.publicKey,
+                    this.accounts.market,
+                    user.publicKey,
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                createStakeAccountInstruction(
+                    userStake.publicKey,
+                    this.accounts.stakingPool,
+                    user.publicKey,
+                    DEVNET_STAKING_PROGRAM_ID
+                )
+            )
+            .add(
+                refreshReserveInstruction(
+                    this.accounts.reserve,
+                    this.accounts.oracle,
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                refreshObligationInstruction(
+                    userObligation.publicKey,
+                    [],
+                    [],
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                depositReserveLiquidityAndAddCollateralInstruction(
+                    depositAmount,
+                    userReserveTokenAccount,
+                    userCollateralTokenAccount,
+                    this.accounts.reserve,
+                    this.accounts.liquiditySupply,
+                    this.accounts.collateralMint,
+                    this.accounts.market,
+                    this.accounts.marketAuthority,
+                    this.accounts.lpTokenAccount,
+                    userObligation.publicKey,
+                    user.publicKey,
+                    user.publicKey,
+                    DEVNET_LENDING_PROGRAM_ID,
+                    userStake.publicKey,
+                    this.accounts.stakingPool,
+                    DEVNET_STAKING_PROGRAM_ID
+                )
+            );
+
+        const borrowTx = new Transaction()
+            .add(
+                refreshReserveInstruction(
+                    this.accounts.reserve,
+                    this.accounts.oracle,
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                refreshObligationInstruction(
+                    userObligation.publicKey,
+                    [this.accounts.reserve],
+                    [],
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            )
+            .add(
+                borrowObligationLiquidityInstruction(
+                    borrowAmount,
+                    this.accounts.liquiditySupply,
+                    userReserveTokenAccount,
+                    this.accounts.reserve,
+                    this.accounts.liquidityFeeReceiver,
+                    userObligation.publicKey,
+                    this.accounts.market,
+                    this.accounts.marketAuthority,
+                    user.publicKey,
+                    DEVNET_LENDING_PROGRAM_ID
+                )
+            );
+
+        const sigs = await this.provider.sendAll([
+            { tx: depositTx, signers: [user] },
+            { tx: borrowTx, signers: [user] },
+        ]);
+
+        return [ataInitSig, ...sigs];
     }
 
     async getLpTokenAccountValue(vaultState: Vault): Promise<TokenAmount> {
@@ -275,9 +417,8 @@ export class PortReserveAsset extends LendingMarket {
             ).amount.toNumber()
         );
 
-        // We retrive the amount of tokens staked and add it to total port LP token value
-        // Note that this is the amount of Port LP tokens. We need to convert to Castle LP token
-        // using the exchange rate.
+        // We retrieve the amount of tokens staked and add it to the total Port LP token value.
+        // Note that this is the amount of Port LP tokens. We need to convert to Castle LP tokens using the exchange rate.
         const raw = await this.provider.connection.getAccountInfo(
             new PublicKey(this.accounts.vaultPortStakeAccount)
         );
@@ -334,13 +475,14 @@ export class PortReserveAsset extends LendingMarket {
         return TokenAmount.fromToken(this.reserveToken, total.getRaw().round());
     }
 
-    getRefreshIx(
+    async getRefreshIx(
         program: anchor.Program<CastleVault>,
         vaultId: PublicKey,
         vaultState: Vault
-    ): TransactionInstruction {
-        return program.instruction.refreshPort({
-            accounts: {
+    ): Promise<TransactionInstruction> {
+        return program.methods
+            .refreshPort()
+            .accounts({
                 vault: vaultId,
                 portAdditionalStates: this.accounts.vaultPortAdditionalStates,
                 vaultPortLpToken: vaultState.vaultPortLpToken,
@@ -348,8 +490,8 @@ export class PortReserveAsset extends LendingMarket {
                 portLendProgram: this.accounts.program,
                 portReserve: this.accounts.reserve,
                 clock: SYSVAR_CLOCK_PUBKEY,
-            },
-            remainingAccounts:
+            })
+            .remainingAccounts(
                 this.accounts.oracle == null
                     ? []
                     : [
@@ -358,55 +500,85 @@ export class PortReserveAsset extends LendingMarket {
                               isWritable: false,
                               pubkey: this.accounts.oracle,
                           },
-                      ],
-        });
+                      ]
+            )
+            .instruction();
     }
 
-    getReconcileIx(
+    async getReconcileIx(
         program: anchor.Program<CastleVault>,
         vaultId: PublicKey,
         vaultState: Vault,
         withdrawOption?: anchor.BN
-    ): TransactionInstruction {
-        return program.instruction.reconcilePort(
-            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
-            {
-                accounts: {
-                    vault: vaultId,
-                    vaultAuthority: vaultState.vaultAuthority,
-                    vaultReserveToken: vaultState.vaultReserveToken,
-                    vaultPortLpToken: vaultState.vaultPortLpToken,
-                    portAdditionalStates:
-                        this.accounts.vaultPortAdditionalStates,
-                    vaultPortObligation: this.accounts.vaultPortObligation,
-                    vaultPortStakeAccount: this.accounts.vaultPortStakeAccount,
-                    vaultPortRewardToken: this.accounts.vaultPortRewardToken,
-                    portStakingPool: this.accounts.stakingPool,
-                    portLendProgram: this.accounts.program,
-                    portStakeProgram: this.accounts.stakingProgram,
-                    portStakingRewardPool: this.accounts.stakingRewardPool,
-                    portStakingAuthority: this.accounts.stakingProgamAuthority,
-                    portLpTokenAccount: this.accounts.lpTokenAccount,
-                    portMarketAuthority: this.accounts.marketAuthority,
-                    portMarket: this.accounts.market,
-                    portReserve: this.accounts.reserve,
-                    portLpMint: this.accounts.collateralMint,
-                    portReserveToken: this.accounts.liquiditySupply,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                },
-            }
-        );
+    ): Promise<TransactionInstruction> {
+        return program.methods
+            .reconcilePort(
+                withdrawOption == null ? new anchor.BN(0) : withdrawOption
+            )
+            .accounts({
+                vault: vaultId,
+                vaultAuthority: vaultState.vaultAuthority,
+                vaultReserveToken: vaultState.vaultReserveToken,
+                vaultPortLpToken: vaultState.vaultPortLpToken,
+                portAdditionalStates: this.accounts.vaultPortAdditionalStates,
+                vaultPortObligation: this.accounts.vaultPortObligation,
+                vaultPortStakeAccount: this.accounts.vaultPortStakeAccount,
+                vaultPortRewardToken: this.accounts.vaultPortRewardToken,
+                portStakingPool: this.accounts.stakingPool,
+                portLendProgram: DEVNET_LENDING_PROGRAM_ID,
+                portStakeProgram: DEVNET_STAKING_PROGRAM_ID,
+                portStakingRewardPool: this.accounts.stakingRewardPool,
+                portStakingAuthority: this.accounts.stakingProgamAuthority,
+                portLpTokenAccount: this.accounts.lpTokenAccount,
+                portMarketAuthority: this.accounts.marketAuthority,
+                portMarket: this.accounts.market,
+                portReserve: this.accounts.reserve,
+                portLpMint: this.accounts.collateralMint,
+                portReserveToken: this.accounts.liquiditySupply,
+                clock: SYSVAR_CLOCK_PUBKEY,
+                tokenProgram: TOKEN_PROGRAM_ID,
+            })
+            .instruction();
     }
 
-    getClaimRewardIx(
+    async getInitializeIx(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultAuthority: PublicKey,
+        wallet: PublicKey,
+        owner: PublicKey
+    ): Promise<TransactionInstruction> {
+        const [vaultPortLpTokenAccount] = await PublicKey.findProgramAddress(
+            [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
+            program.programId
+        );
+
+        return program.methods
+            .initializePort()
+            .accounts({
+                vault: vaultId,
+                vaultAuthority: vaultAuthority,
+                vaultPortLpToken: vaultPortLpTokenAccount,
+                portLpTokenMint: this.accounts.collateralMint,
+                portReserve: this.accounts.reserve,
+                owner: owner,
+                payer: wallet,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+                rent: SYSVAR_RENT_PUBKEY,
+            })
+            .instruction();
+    }
+
+    async getClaimRewardIx(
         program: anchor.Program<CastleVault>,
         vaultId: PublicKey,
         vaultState: Vault
-    ): TransactionInstruction {
+    ): Promise<TransactionInstruction> {
         const dummyKey = Keypair.generate().publicKey;
-        return program.instruction.claimPortReward({
-            accounts: {
+        return program.methods
+            .claimPortReward()
+            .accounts({
                 vault: vaultId,
                 vaultAuthority: vaultState.vaultAuthority,
                 portAdditionalStates: this.accounts.vaultPortAdditionalStates,
@@ -424,37 +596,8 @@ export class PortReserveAsset extends LendingMarket {
                 portStakingAuthority: this.accounts.stakingProgamAuthority,
                 clock: SYSVAR_CLOCK_PUBKEY,
                 tokenProgram: TOKEN_PROGRAM_ID,
-            },
-        });
-    }
-
-    async getInitializeIx(
-        program: anchor.Program<CastleVault>,
-        vaultId: PublicKey,
-        vaultAuthority: PublicKey,
-        wallet: PublicKey,
-        owner: PublicKey
-    ): Promise<TransactionInstruction> {
-        const [vaultPortLpTokenAccount, portLpBump] =
-            await PublicKey.findProgramAddress(
-                [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
-                program.programId
-            );
-
-        return program.instruction.initializePort(portLpBump, {
-            accounts: {
-                vault: vaultId,
-                vaultAuthority: vaultAuthority,
-                vaultPortLpToken: vaultPortLpTokenAccount,
-                portLpTokenMint: this.accounts.collateralMint,
-                portReserve: this.accounts.reserve,
-                owner: owner,
-                payer: wallet,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                systemProgram: SystemProgram.programId,
-                rent: SYSVAR_RENT_PUBKEY,
-            },
-        });
+            })
+            .instruction();
     }
 
     async getUnclaimedStakingRewards(
@@ -482,6 +625,8 @@ const TOKEN_ACCOUNT_LEN = 165;
 const TOKEN_MINT_LEN = 82;
 const RESERVE_LEN = 575;
 const LENDING_MARKET_LEN = 258;
+const OBLIGATION_LEN = 916;
+const STAKE_LEN = 1 + 16 + 32 + 32 + 8 + 16 + 16 + 1 + 16 + 1 + 94;
 
 const DEFAULT_RESERVE_CONFIG: ReserveConfigProto = {
     optimalUtilizationRate: 80,
@@ -502,7 +647,7 @@ const DEFAULT_RESERVE_CONFIG: ReserveConfigProto = {
 
 // TODO move to common utils
 const createAccount = async (
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     space: number,
     owner: PublicKey
 ): Promise<Keypair> => {
@@ -519,19 +664,19 @@ const createAccount = async (
             space,
         })
     );
-    await provider.send(createTx, [newAccount]);
+    await provider.sendAndConfirm(createTx, [newAccount]);
     return newAccount;
 };
 
 async function createLendingMarket(
-    provider: anchor.Provider
+    provider: anchor.AnchorProvider
 ): Promise<Keypair> {
     const lendingMarket = await createAccount(
         provider,
         LENDING_MARKET_LEN,
         DEVNET_LENDING_PROGRAM_ID
     );
-    await provider.send(
+    await provider.sendAndConfirm(
         (() => {
             const tx = new Transaction();
             tx.add(
@@ -553,7 +698,7 @@ async function createLendingMarket(
 }
 
 async function createStakingPool(
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     supply: number,
     duration: number,
     rewardTime: number,
@@ -656,14 +801,14 @@ async function createStakingPool(
         )
     );
 
-    const sig1 = await provider.send(tx, [wallet]);
-    await provider.connection.confirmTransaction(sig1, "finalized");
+    const sig1 = await provider.sendAll([{ tx: tx, signers: [wallet] }]);
+    await provider.connection.confirmTransaction(sig1[0], "finalized");
 
     return stakingPool.publicKey;
 }
 
 async function createDefaultReserve(
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     env: Environment,
     initialLiquidity: number | anchor.BN,
     liquidityMint: PublicKey,
@@ -762,8 +907,7 @@ async function createDefaultReserve(
         )
     );
 
-    const sig = await provider.send(tx, [owner]);
-    await provider.connection.confirmTransaction(sig, "finalized");
+    await provider.sendAndConfirm(tx, [owner]);
 
     // Double check account values
     const client = new Port(provider.connection, env, lendingMarket);
@@ -806,6 +950,7 @@ async function createDefaultReserve(
         oracle: oracle,
         collateralMint: collateralMintAccount.publicKey,
         liquiditySupply: liquiditySupplyTokenAccount.publicKey,
+        liquidityFeeReceiver: liquidityFeeReceiver.publicKey,
         lpTokenAccount: collateralSupplyTokenAccount.publicKey,
         stakingPool: targetStakingPool.getId(),
         stakingRewardPool: targetStakingPool.getRewardTokenPool(),
