@@ -78,7 +78,7 @@ export class OrcaLegacySwap {
 
     // This is used ONLY to create a mock orca swap for testing
     static async initialize(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         owner: Keypair, // owner of the pool
         tokenA: Token, // mint of token A
         tokenB: Token, // mint of token B
@@ -98,7 +98,7 @@ export class OrcaLegacySwap {
 }
 
 const createAccount = async (
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     space: number,
     owner: PublicKey
 ): Promise<Keypair> => {
@@ -115,7 +115,7 @@ const createAccount = async (
             space,
         })
     );
-    await provider.send(createTx, [newAccount]);
+    await provider.sendAndConfirm(createTx, [newAccount]);
     return newAccount;
 };
 
@@ -156,7 +156,7 @@ const initOrcaSwapIxDataLayout = BufferLayout.struct<InitOrcaSwapIxData>([
 ]);
 
 async function createMockSwap(
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     owner: Keypair, // owner of the pool
     tokenA: Token, // mint of token A
     tokenB: Token, // mint of token B
@@ -260,7 +260,7 @@ async function createMockSwap(
         })
     );
 
-    await provider.send(tx, [owner]);
+    await provider.sendAndConfirm(tx, [owner]);
 
     const orcaAccounts: OrcaLegacyAccounts = {
         marketId: 0,

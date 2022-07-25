@@ -1,5 +1,5 @@
 import { Cluster, Connection, PublicKey } from "@solana/web3.js";
-import { Program, Provider, Wallet } from "@project-serum/anchor";
+import { Program, Wallet, AnchorProvider } from "@project-serum/anchor";
 import { NATIVE_MINT } from "@solana/spl-token";
 
 import {
@@ -9,7 +9,6 @@ import {
 } from "@castlefinance/vault-core";
 
 import {
-    JetReserveAsset,
     PortReserveAsset,
     SolendReserveAsset,
     VaultClient,
@@ -24,7 +23,7 @@ const main = async () => {
     );
     const wallet = Wallet.local();
     const owner = wallet.payer;
-    const provider = new Provider(connection, wallet, {
+    const provider = new AnchorProvider(connection, wallet, {
         commitment: "confirmed",
     });
 
@@ -46,7 +45,7 @@ const main = async () => {
             strategyType: { [StrategyTypes.maxYield]: {} },
         }
     );
-    console.log("Vauld ID: ", vaultClient.vaultId.toString());
+    console.log("Vault ID: ", vaultClient.vaultId.toString());
 
     // This step creates the PDA that holds DEX account date.
     // The DEX are used to sell the liquidity mining rewards.
@@ -89,14 +88,6 @@ const main = async () => {
         console.log("Succesfully initialized Port");
     } catch (error) {
         console.log("Failed to initialize Port: ", error);
-    }
-
-    try {
-        const jet = await JetReserveAsset.load(provider, cluster, reserveMint);
-        await vaultClient.initializeJet(wallet, jet, owner);
-        console.log("Succesfully initialized Jet");
-    } catch (error) {
-        console.log("Failed to initialize Jet: ", error);
     }
 };
 

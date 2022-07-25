@@ -45,7 +45,7 @@ export interface SolendAccounts {
 
 export class SolendReserveAsset extends LendingMarket {
     private constructor(
-        public provider: anchor.Provider,
+        public provider: anchor.AnchorProvider,
         public accounts: SolendAccounts,
         public reserve: SolendReserve,
         public reserveToken: Token,
@@ -56,7 +56,7 @@ export class SolendReserveAsset extends LendingMarket {
 
     // TODO change to connection instead of provider so it doesn't need to be reloaded when wallet changes
     static async load(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         cluster: Cluster,
         reserveMint: PublicKey
     ): Promise<SolendReserveAsset> {
@@ -112,7 +112,7 @@ export class SolendReserveAsset extends LendingMarket {
     }
 
     static async initialize(
-        provider: anchor.Provider,
+        provider: anchor.AnchorProvider,
         owner: Keypair,
         wallet: anchor.Wallet,
         reserveTokenMint: PublicKey,
@@ -182,14 +182,6 @@ export class SolendReserveAsset extends LendingMarket {
         );
     }
 
-    //async borrow(amount: number): Promise<TransactionSignature> {
-    //    const borrowTx = SolendAction.buildBorrowTxns(
-    //        this.provider.connection,
-    //        new anchor.BN(amount),
-    //
-    //    )
-    //}
-
     private async reload() {
         await this.reserve.load();
     }
@@ -254,13 +246,14 @@ export class SolendReserveAsset extends LendingMarket {
         );
     }
 
-    getRefreshIx(
+    async getRefreshIx(
         program: anchor.Program<CastleVault>,
         vaultId: PublicKey,
         vaultState: Vault
-    ): TransactionInstruction {
-        return program.instruction.refreshSolend({
-            accounts: {
+    ): Promise<TransactionInstruction> {
+        return program.methods
+            .refreshSolend()
+            .accounts({
                 vault: vaultId,
                 vaultSolendLpToken: vaultState.vaultSolendLpToken,
                 solendProgram: this.accounts.program,
@@ -268,35 +261,35 @@ export class SolendReserveAsset extends LendingMarket {
                 solendPyth: this.accounts.pythPrice,
                 solendSwitchboard: this.accounts.switchboardFeed,
                 clock: SYSVAR_CLOCK_PUBKEY,
-            },
-        });
+            })
+            .instruction();
     }
 
-    getReconcileIx(
+    async getReconcileIx(
         program: anchor.Program<CastleVault>,
         vaultId: PublicKey,
         vaultState: Vault,
         withdrawOption?: anchor.BN
-    ): TransactionInstruction {
-        return program.instruction.reconcileSolend(
-            withdrawOption == null ? new anchor.BN(0) : withdrawOption,
-            {
-                accounts: {
-                    vault: vaultId,
-                    vaultAuthority: vaultState.vaultAuthority,
-                    vaultReserveToken: vaultState.vaultReserveToken,
-                    vaultSolendLpToken: vaultState.vaultSolendLpToken,
-                    solendProgram: this.accounts.program,
-                    solendMarketAuthority: this.accounts.marketAuthority,
-                    solendMarket: this.accounts.market,
-                    solendReserve: this.accounts.reserve,
-                    solendLpMint: this.accounts.collateralMint,
-                    solendReserveToken: this.accounts.liquiditySupply,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                },
-            }
-        );
+    ): Promise<TransactionInstruction> {
+        return program.methods
+            .reconcileSolend(
+                withdrawOption == null ? new anchor.BN(0) : withdrawOption
+            )
+            .accounts({
+                vault: vaultId,
+                vaultAuthority: vaultState.vaultAuthority,
+                vaultReserveToken: vaultState.vaultReserveToken,
+                vaultSolendLpToken: vaultState.vaultSolendLpToken,
+                solendProgram: this.accounts.program,
+                solendMarketAuthority: this.accounts.marketAuthority,
+                solendMarket: this.accounts.market,
+                solendReserve: this.accounts.reserve,
+                solendLpMint: this.accounts.collateralMint,
+                solendReserveToken: this.accounts.liquiditySupply,
+                clock: SYSVAR_CLOCK_PUBKEY,
+                tokenProgram: TOKEN_PROGRAM_ID,
+            })
+            .instruction();
     }
 
     async getInitializeIx(
@@ -306,13 +299,13 @@ export class SolendReserveAsset extends LendingMarket {
         wallet: PublicKey,
         owner: PublicKey
     ): Promise<TransactionInstruction> {
-        const [vaultSolendLpTokenAccount, solendLpBump] =
-            await PublicKey.findProgramAddress(
-                [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
-                program.programId
-            );
-        return program.instruction.initializeSolend(solendLpBump, {
-            accounts: {
+        const [vaultSolendLpTokenAccount] = await PublicKey.findProgramAddress(
+            [vaultId.toBuffer(), this.accounts.collateralMint.toBuffer()],
+            program.programId
+        );
+        return program.methods
+            .initializeSolend()
+            .accounts({
                 vault: vaultId,
                 vaultAuthority: vaultAuthority,
                 vaultSolendLpToken: vaultSolendLpTokenAccount,
@@ -323,8 +316,8 @@ export class SolendReserveAsset extends LendingMarket {
                 tokenProgram: TOKEN_PROGRAM_ID,
                 systemProgram: SystemProgram.programId,
                 rent: SYSVAR_RENT_PUBKEY,
-            },
-        });
+            })
+            .instruction();
     }
 }
 
@@ -333,7 +326,7 @@ const DEVNET_PROGRAM_ID = new PublicKey(
 );
 
 export async function initLendingMarket(
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     owner: PublicKey,
     payer: Keypair,
     pythProgramId: PublicKey,
@@ -365,12 +358,12 @@ export async function initLendingMarket(
                 DEVNET_PROGRAM_ID
             )
         );
-    await provider.send(initTx, [payer, lendingMarketAccount]);
+    await provider.sendAndConfirm(initTx, [payer, lendingMarketAccount]);
     return lendingMarketAccount;
 }
 
 export async function addReserve(
-    provider: anchor.Provider,
+    provider: anchor.AnchorProvider,
     liquidityAmount: number,
     ownerReserveTokenAccount: PublicKey,
     owner: Keypair,

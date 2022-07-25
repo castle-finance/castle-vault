@@ -25,7 +25,6 @@ use crate::adapters::solend::SolendReserve;
 pub enum Provider {
     Solend = 0,
     Port,
-    Jet,
 }
 
 #[macro_export]
@@ -38,7 +37,6 @@ macro_rules! impl_provider_index {
                 match provider {
                     Provider::Solend => &self.solend,
                     Provider::Port => &self.port,
-                    Provider::Jet => &self.jet,
                 }
             }
         }
@@ -48,7 +46,6 @@ macro_rules! impl_provider_index {
                 match provider {
                     Provider::Solend => &mut self.solend,
                     Provider::Port => &mut self.port,
-                    Provider::Jet => &mut self.jet,
                 }
             }
         }
@@ -57,36 +54,31 @@ macro_rules! impl_provider_index {
 
 #[cfg_attr(test, automock)]
 pub trait ReserveAccessor {
-    fn utilization_rate(&self) -> Result<Rate, ProgramError>;
-    fn borrow_rate(&self) -> Result<Rate, ProgramError>;
+    fn utilization_rate(&self) -> Result<Rate>;
+    fn borrow_rate(&self) -> Result<Rate>;
 
     fn reserve_with_deposit(
         &self,
         new_allocation: u64,
         old_allocation: u64,
-    ) -> Result<Box<dyn ReserveAccessor>, ProgramError>;
+    ) -> Result<Box<dyn ReserveAccessor>>;
 }
 
 #[cfg_attr(test, automock)]
 pub trait ReturnCalculator {
-    fn calculate_return(
-        &self,
-        new_allocation: u64,
-        old_allocation: u64,
-    ) -> Result<Rate, ProgramError>;
+    fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate>;
 }
 
 impl<T> ReturnCalculator for T
 where
     T: ReserveAccessor,
 {
-    fn calculate_return(
-        &self,
-        new_allocation: u64,
-        old_allocation: u64,
-    ) -> Result<Rate, ProgramError> {
+    fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate> {
         let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
-        reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
+        reserve
+            .utilization_rate()?
+            .try_mul(reserve.borrow_rate()?)
+            .map_err(|e| e.into())
     }
 }
 
@@ -94,24 +86,21 @@ where
 pub enum Reserves {
     Solend(Box<SolendReserve>),
     Port(Box<PortReserve>),
-    Jet(Box<jet::state::Reserve>),
 }
 
 // TODO Is there a cleaner way to do this?
-impl<'a> ReserveAccessor for Reserves {
-    fn utilization_rate(&self) -> Result<Rate, ProgramError> {
+impl ReserveAccessor for Reserves {
+    fn utilization_rate(&self) -> Result<Rate> {
         match self {
             Reserves::Solend(reserve) => reserve.utilization_rate(),
             Reserves::Port(reserve) => reserve.utilization_rate(),
-            Reserves::Jet(reserve) => reserve.utilization_rate(),
         }
     }
 
-    fn borrow_rate(&self) -> Result<Rate, ProgramError> {
+    fn borrow_rate(&self) -> Result<Rate> {
         match self {
             Reserves::Solend(reserve) => reserve.borrow_rate(),
             Reserves::Port(reserve) => reserve.borrow_rate(),
-            Reserves::Jet(reserve) => reserve.borrow_rate(),
         }
     }
 
@@ -119,13 +108,12 @@ impl<'a> ReserveAccessor for Reserves {
         &self,
         new_allocation: u64,
         old_allocation: u64,
-    ) -> Result<Box<dyn ReserveAccessor>, ProgramError> {
+    ) -> Result<Box<dyn ReserveAccessor>> {
         match self {
             Reserves::Solend(reserve) => {
                 reserve.reserve_with_deposit(new_allocation, old_allocation)
             }
             Reserves::Port(reserve) => reserve.reserve_with_deposit(new_allocation, old_allocation),
-            Reserves::Jet(reserve) => reserve.reserve_with_deposit(new_allocation, old_allocation),
         }
     }
 }
@@ -137,18 +125,22 @@ mod test {
     #[test]
     fn test_calculate_return() {
         let mut mock_ra_inner = MockReserveAccessor::new();
+        // use 'move' and return_once to avoid Result<Rate> not implementing clone
         mock_ra_inner
             .expect_utilization_rate()
-            .return_const(Ok(Rate::from_percent(50)));
+            .return_once(move || Ok(Rate::from_percent(50)));
         mock_ra_inner
             .expect_borrow_rate()
-            .return_const(Ok(Rate::from_percent(80)));
+            .return_once(move || Ok(Rate::from_percent(80)));
 
         let mut mock_ra = MockReserveAccessor::new();
         mock_ra
             .expect_reserve_with_deposit()
             .return_once(|_, _| Ok(Box::new(mock_ra_inner)));
 
-        assert_eq!(mock_ra.calculate_return(10, 0), Ok(Rate::from_percent(40)));
+        assert_eq!(
+            mock_ra.calculate_return(10, 0).unwrap(),
+            Rate::from_percent(40)
+        );
     }
 }

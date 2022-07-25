@@ -19,47 +19,55 @@ pub struct SellPortReward<'info> {
     pub vault: Box<Account<'info, Vault>>,
 
     /// Authority that the vault uses for lp token mints/burns and transfers to/from downstream assets
+    /// CHECK: safe
     pub vault_authority: AccountInfo<'info>,
 
     #[account(
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
-        bump = vault.vault_port_additional_state_bump
+        bump
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
     #[account(
         seeds = [vault.key().as_ref(), b"dex_states".as_ref()], 
-        bump = vault.dex_states_bump,
+        bump
     )]
     pub dex_states: Box<Account<'info, DexStates>>,
 
     #[account(
         seeds = [vault.key().as_ref(), b"dex_orca_legacy".as_ref()],
-        bump = dex_states.orca_legacy_accounts_bump,
+        bump,
         has_one = orca_swap_program,
     )]
     pub orca_legacy_accounts: Box<Account<'info, OrcaLegacyAccounts>>,
 
+    /// CHECK: safe
     pub orca_swap_state: AccountInfo<'info>,
 
     // DANGER why can we ignore this? because the the Orca program will check this
     //        and fail the CPI if this account is invalid
     // TODO Security audit to ensure it's really ok.
+    /// CHECK: safe
     //#[soteria(ignore)]
     pub orca_swap_authority: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(mut)]
     pub orca_input_token_account: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(mut)]
     pub orca_output_token_account: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(mut)]
     pub orca_swap_token_mint: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(mut)]
     pub orca_fee_account: AccountInfo<'info>,
 
+    /// CHECK: safe
     #[account(executable)]
     pub orca_swap_program: AccountInfo<'info>,
 
@@ -75,7 +83,7 @@ pub struct SellPortReward<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-pub fn handler(ctx: Context<SellPortReward>, market_id: u8) -> ProgramResult {
+pub fn handler(ctx: Context<SellPortReward>, market_id: u8) -> Result<()> {
     if market_id as usize > ctx.accounts.orca_legacy_accounts.orca_markets.len() {
         msg!("Invalid market Id");
         return Err(ErrorCode::InvalidArgument.into());

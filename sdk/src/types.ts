@@ -15,11 +15,9 @@ export interface Vault {
     authorityBump: number[];
     solendReserve: PublicKey;
     portReserve: PublicKey;
-    jetReserve: PublicKey;
     vaultReserveToken: PublicKey;
     vaultSolendLpToken: PublicKey;
     vaultPortLpToken: PublicKey;
-    vaultJetLpToken: PublicKey;
     lpTokenMint: PublicKey;
     reserveTokenMint: PublicKey;
     feeReceiver: PublicKey;
@@ -69,19 +67,16 @@ export interface SlotTrackedValue {
 export interface Allocations {
     solend: SlotTrackedValue;
     port: SlotTrackedValue;
-    jet: SlotTrackedValue;
 }
 
 export interface ProposedWeightsBps {
     solend: number;
     port: number;
-    jet: number;
 }
 
 export interface RebalanceDataEvent {
     solend: BN;
     port: BN;
-    jet: BN;
 }
 
 export enum VaultFlags {
@@ -94,5 +89,4 @@ export enum VaultFlags {
 export enum YieldSourceFlags {
     Solend = 1 << 0,
     Port = 1 << 1,
-    Jet = 1 << 2,
 }

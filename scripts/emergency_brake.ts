@@ -1,5 +1,5 @@
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
-import { Provider, Wallet } from "@project-serum/anchor";
+import { AnchorProvider, Wallet } from "@project-serum/anchor";
 
 import { DeploymentEnvs } from "@castlefinance/vault-core";
 
@@ -18,7 +18,7 @@ const main = async () => {
     const wallet = Wallet.local();
     // TODO figure out how to use ledger as owner
     const owner = wallet.payer;
-    const provider = new Provider(connection, wallet, {});
+    const provider = new AnchorProvider(connection, wallet, {});
 
     const vaultClient = await VaultClient.load(
         provider,

@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
 use std::convert::Into;
 
-use crate::state::*;
+use crate::{errors::ErrorCode, state::*};
+
+use std::mem;
 
 #[derive(Accounts)]
-#[instruction(bump: u8)]
 pub struct InitializeDexOrcaLegacy<'info> {
     #[account(
         mut,
@@ -15,18 +16,21 @@ pub struct InitializeDexOrcaLegacy<'info> {
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"dex_states".as_ref()], 
-        bump = vault.dex_states_bump
+        bump
     )]
     pub dex_states: Box<Account<'info, DexStates>>,
 
     #[account(
         init,
+        space = 672 + 8,
         payer = payer,
         seeds = [vault.key().as_ref(), b"dex_orca_legacy".as_ref()],
-        bump = bump
+        bump
     )]
     pub orca_legacy_accounts: Box<Account<'info, OrcaLegacyAccounts>>,
 
+    /// CHECK: safe
+    //#[soteria(ignore)]
     #[account(executable)]
     pub orca_swap_program: AccountInfo<'info>,
 
@@ -43,8 +47,11 @@ pub struct InitializeDexOrcaLegacy<'info> {
 }
 
 // Create a PDA that stores Orca swap information (should only do it once)
-pub fn handler(ctx: Context<InitializeDexOrcaLegacy>, bump: u8) -> ProgramResult {
-    ctx.accounts.dex_states.orca_legacy_accounts_bump = bump;
+pub fn handler(ctx: Context<InitializeDexOrcaLegacy>) -> Result<()> {
+    ctx.accounts.dex_states.orca_legacy_accounts_bump = *ctx
+        .bumps
+        .get("orca_legacy_accounts")
+        .ok_or(ErrorCode::BumpError)?;
     // All orca markets have the same program ID
     ctx.accounts.orca_legacy_accounts.orca_swap_program = ctx.accounts.orca_swap_program.key();
     Ok(())
