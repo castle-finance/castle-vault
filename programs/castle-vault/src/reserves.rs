@@ -129,11 +129,7 @@ impl ReserveAccessor for Reserves {
 }
 
 impl ReturnCalculator for Reserves {
-    fn calculate_return(
-        &self,
-        new_allocation: u64,
-        old_allocation: u64,
-    ) -> Result<Rate> {
+    fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate> {
         match self {
             Reserves::Solend(reserve) => reserve.calculate_return(new_allocation, old_allocation),
             Reserves::Port(reserve) => {
@@ -159,7 +155,7 @@ impl ReturnCalculator for Reserves {
                     .checked_div(pool_size)
                     .ok_or(ErrorCode::MathError)?;
 
-                return Ok(base_rate.try_add(Rate::from_bips(reward_apr_bps))?);
+                Ok(base_rate.try_add(Rate::from_bips(reward_apr_bps))?)
             }
         }
     }
@@ -172,11 +168,7 @@ mod test {
     #[test]
     fn test_calculate_return() {
         impl ReturnCalculator for MockReserveAccessor {
-            fn calculate_return(
-                &self,
-                new_allocation: u64,
-                old_allocation: u64,
-            ) -> Result<Rate> {
+            fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate> {
                 let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
                 reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
             }

@@ -49,7 +49,7 @@ describe("castle-vault", () => {
     let oldConsoleError;
 
     const slotsPerYear = 63072000;
-    const initialReserveAmount = 10000000;
+    const initialReserveAmount = 10000000 * 1000;
     const initialCollateralRatio = 1.0;
     const referralFeeOwner = Keypair.generate().publicKey;
     const vaultDepositCap = 10 * 10 ** 9;
@@ -919,7 +919,10 @@ describe("castle-vault", () => {
             // Actual should <= requested because we rounds down.
             assert.isAtMost(actualWithdrawAmount, withdrawQty);
             assert.equal(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
-            assert.equal(newUserReserveBalance, actualWithdrawAmount);
+            assert.isAtMost(
+                Math.abs(newUserReserveBalance - actualWithdrawAmount),
+                maxDiffAllowed
+            );
         });
     }
 
@@ -1258,8 +1261,6 @@ describe("castle-vault", () => {
                 1 - vaultAllocationCap / 100,
                 vaultAllocationCap / 100
             );
-
-            // TODO borrow from solend to get higher apy and ensure we switch
         });
     });
 

@@ -138,10 +138,10 @@ impl TryFrom<&Rebalance<'_>> for AssetContainer<Reserves> {
             {
                 msg!("price_raw: {}", price_raw);
                 msg!("rate_per_slot: {}", rate_per_slot);
-                msg!("Rate per slot: {}", rate_per_slot);
                 msg!("oracle_factor: {}", oracle_factor);
                 msg!("SLOTS_PER_YEAR: {}", SLOTS_PER_YEAR);
                 msg!("pool_size: {}", pool_size);
+                msg!("pool_size_lp: {}", r.port_staking_pool.pool_size);
                 msg!("Expo: {}", current_price.expo);
                 msg!("Reward per year: {}", port_reward_per_year);
             }
