@@ -1226,38 +1226,35 @@ export class VaultClient {
 
     async sellPortReward(): Promise<TransactionSignature> {
         const tx = new Transaction().add(
-            this.program.instruction.sellPortReward(
-                this.dex.orcaLegacy.accounts.marketId,
-                {
-                    accounts: {
-                        vault: this.vaultId,
-                        vaultAuthority: this.vaultState.vaultAuthority,
-                        portAdditionalStates:
-                            this.yieldSources.port.accounts
-                                .vaultPortAdditionalStates,
-                        dexStates: this.dex.dexStates,
-                        orcaLegacyAccounts:
-                            this.dex.orcaLegacy.accounts.vaultOrcaLegacyAccount,
-                        orcaSwapState: this.dex.orcaLegacy.accounts.swapProgram,
-                        orcaSwapAuthority:
-                            this.dex.orcaLegacy.accounts.swapAuthority,
+            await this.program.methods
+                .sellPortReward(this.dex.orcaLegacy.accounts.marketId)
+                .accounts({
+                    vault: this.vaultId,
+                    vaultAuthority: this.vaultState.vaultAuthority,
+                    portAdditionalStates:
+                        this.yieldSources.port.accounts
+                            .vaultPortAdditionalStates,
+                    dexStates: this.dex.dexStates,
+                    orcaLegacyAccounts:
+                        this.dex.orcaLegacy.accounts.vaultOrcaLegacyAccount,
+                    orcaSwapState: this.dex.orcaLegacy.accounts.swapProgram,
+                    orcaSwapAuthority:
+                        this.dex.orcaLegacy.accounts.swapAuthority,
 
-                        orcaInputTokenAccount:
-                            this.dex.orcaLegacy.accounts.tokenAccountA,
-                        orcaOutputTokenAccount:
-                            this.dex.orcaLegacy.accounts.tokenAccountB,
-                        orcaSwapTokenMint:
-                            this.dex.orcaLegacy.accounts.poolTokenMint,
-                        orcaFeeAccount: this.dex.orcaLegacy.accounts.feeAccount,
-                        orcaSwapProgram: this.dex.orcaLegacy.accounts.programId,
-                        vaultPortRewardToken:
-                            this.yieldSources.port.accounts
-                                .vaultPortRewardToken,
-                        vaultReserveToken: this.vaultState.vaultReserveToken,
-                        tokenProgram: TOKEN_PROGRAM_ID,
-                    },
-                }
-            )
+                    orcaInputTokenAccount:
+                        this.dex.orcaLegacy.accounts.tokenAccountA,
+                    orcaOutputTokenAccount:
+                        this.dex.orcaLegacy.accounts.tokenAccountB,
+                    orcaSwapTokenMint:
+                        this.dex.orcaLegacy.accounts.poolTokenMint,
+                    orcaFeeAccount: this.dex.orcaLegacy.accounts.feeAccount,
+                    orcaSwapProgram: this.dex.orcaLegacy.accounts.programId,
+                    vaultPortRewardToken:
+                        this.yieldSources.port.accounts.vaultPortRewardToken,
+                    vaultReserveToken: this.vaultState.vaultReserveToken,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                })
+                .instruction()
         );
         return this.program.provider.sendAndConfirm(tx);
     }

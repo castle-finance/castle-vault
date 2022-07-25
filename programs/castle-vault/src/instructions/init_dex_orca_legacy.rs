@@ -3,8 +3,6 @@ use std::convert::Into;
 
 use crate::{errors::ErrorCode, state::*};
 
-use std::mem;
-
 #[derive(Accounts)]
 pub struct InitializeDexOrcaLegacy<'info> {
     #[account(
