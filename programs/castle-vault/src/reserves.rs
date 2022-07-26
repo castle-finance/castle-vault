@@ -69,20 +69,6 @@ pub trait ReturnCalculator {
     fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate>;
 }
 
-// impl<T> ReturnCalculator for T
-// where
-//     T: ReserveAccessor,
-// {
-//     fn calculate_return(
-//         &self,
-//         new_allocation: u64,
-//         old_allocation: u64,
-//     ) -> Result<Rate, ProgramError> {
-//         let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
-//         reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
-//     }
-// }
-
 #[derive(Clone)]
 pub struct PortReserveWrapper {
     pub reserve: Box<PortReserve>,
