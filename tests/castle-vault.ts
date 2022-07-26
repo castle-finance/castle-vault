@@ -7,7 +7,7 @@ import {
     Transaction,
     TransactionSignature,
 } from "@solana/web3.js";
-import { StakeAccount } from "@castlefinance/port-sdk";
+import { StakeAccount, AssetPrice, MintId } from "@castlefinance/port-sdk";
 
 import {
     SolendReserveAsset,
@@ -1057,7 +1057,7 @@ describe("castle-vault", () => {
     }
 
     function testPortRewardClaiming(subReward: boolean) {
-        const depositQty = 1024502;
+        const depositQty = 3025004087;
 
         before(async () => {
             await mintReserveToken(userReserveTokenAccount, depositQty);
@@ -1084,6 +1084,7 @@ describe("castle-vault", () => {
                 maxDiffAllowed
             );
 
+            // Check that all allocations to port are staked for earning rewards
             const stakingAccountRaw = await provider.connection.getAccountInfo(
                 new PublicKey(port.accounts.vaultPortStakeAccount)
             );
@@ -1091,11 +1092,14 @@ describe("castle-vault", () => {
                 pubkey: port.accounts.vaultPortStakeAccount,
                 account: stakingAccountRaw,
             });
+            const reserve = await port.client.getReserve(port.accounts.reserve);
+            const exchangeRate = reserve.getExchangeRatio();
+            const stakedTokenValue = AssetPrice.of(
+                MintId.of(port.accounts.stakingRewardTokenMint),
+                stakingAccount.getDepositAmount().toU64().toNumber()
+            ).divide(exchangeRate.getUnchecked());
             assert.isAtMost(
-                Math.abs(
-                    stakingAccount.getDepositAmount().toU64().toNumber() -
-                        depositQty
-                ),
+                Math.abs(stakedTokenValue.getRaw().toNumber() - depositQty),
                 maxDiffAllowed
             );
         });
@@ -1111,6 +1115,8 @@ describe("castle-vault", () => {
             const newVaultValue = await getVaultTotalValue();
             const newLpTokenSupply = await getLpTokenSupply();
 
+            // Make sure that the correct amount is un-staked when the user withdraws
+            let wiggleRoom = 3;
             const stakingAccountRaw = await provider.connection.getAccountInfo(
                 new PublicKey(port.accounts.vaultPortStakeAccount)
             );
@@ -1118,15 +1124,18 @@ describe("castle-vault", () => {
                 pubkey: port.accounts.vaultPortStakeAccount,
                 account: stakingAccountRaw,
             });
+            const reserve = await port.client.getReserve(port.accounts.reserve);
+            const exchangeRate = reserve.getExchangeRatio();
+            const stakedTokenValue = AssetPrice.of(
+                MintId.of(port.accounts.stakingRewardTokenMint),
+                stakingAccount.getDepositAmount().toU64().toNumber()
+            ).divide(exchangeRate.getUnchecked());
 
-            // TODO why are we leaking more than two tokens here?
-            // should be at most one from deposit and one from withdraw
-            let wiggleRoom = 3;
             assert.isAtMost(
                 Math.abs(
                     depositQty -
                         withdrawQty -
-                        stakingAccount.getDepositAmount().toU64().toNumber()
+                        stakedTokenValue.getRaw().toNumber()
                 ),
                 wiggleRoom
             );
