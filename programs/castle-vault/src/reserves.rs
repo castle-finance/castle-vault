@@ -170,7 +170,9 @@ mod test {
         impl ReturnCalculator for MockReserveAccessor {
             fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate> {
                 let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
-                reserve.utilization_rate()?.try_mul(reserve.borrow_rate()?)
+                reserve
+                    .utilization_rate()?
+                    .try_mul(reserve.borrow_rate().map_err(|e| e.into()))
             }
         }
 
