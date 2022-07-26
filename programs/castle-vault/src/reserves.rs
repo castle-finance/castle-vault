@@ -172,7 +172,8 @@ mod test {
                 let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
                 reserve
                     .utilization_rate()?
-                    .try_mul(reserve.borrow_rate().map_err(|e| e.into()))
+                    .try_mul(reserve.borrow_rate()?)
+                    .map_err(|e| e.into())
             }
         }
 
