@@ -1008,6 +1008,7 @@ export class VaultClient {
         (await this.getRefreshIxs()).forEach((element) => {
             rebalanceTx.add(element);
         });
+        const dummyKey = Keypair.generate().publicKey;
         rebalanceTx.add(
             await this.program.methods
                 .rebalance(proposedWeights)
@@ -1022,12 +1023,19 @@ export class VaultClient {
                             ? this.yieldSources.port.accounts.reserve
                             : Keypair.generate().publicKey,
                     portAdditionalStates:
-                        this.yieldSources.port.accounts
-                            .vaultPortAdditionalStates,
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts
+                                  .vaultPortAdditionalStates
+                            : dummyKey,
                     portStakingPool:
-                        this.yieldSources.port.accounts.stakingPool,
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts.stakingPool
+                            : dummyKey,
                     portRewardTokenOracle:
-                        this.yieldSources.port.accounts.stakingRewardOracle,
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts
+                                  .stakingRewardOracle
+                            : dummyKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 })
                 .instruction()
@@ -1065,6 +1073,7 @@ export class VaultClient {
         simIx = simIx.concat([await this.getConsolidateRefreshIx()]);
 
         // Sort ixs in descending order of outflows
+        const dummyKey = Keypair.generate().publicKey;
         const newAllocations = (
             await this.program.methods
                 .rebalance(proposedWeights)
@@ -1073,18 +1082,25 @@ export class VaultClient {
                     solendReserve:
                         this.yieldSources.solend != null
                             ? this.yieldSources.solend.accounts.reserve
-                            : Keypair.generate().publicKey,
+                            : dummyKey,
                     portReserve:
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
-                            : Keypair.generate().publicKey,
+                            : dummyKey,
                     portAdditionalStates:
-                        this.yieldSources.port.accounts
-                            .vaultPortAdditionalStates,
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts
+                                  .vaultPortAdditionalStates
+                            : dummyKey,
                     portStakingPool:
-                        this.yieldSources.port.accounts.stakingPool,
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts.stakingPool
+                            : dummyKey,
                     portRewardTokenOracle:
-                        this.yieldSources.port.accounts.stakingRewardOracle,
+                        this.yieldSources.port != null
+                            ? this.yieldSources.port.accounts
+                                  .stakingRewardOracle
+                            : dummyKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 })
                 .preInstructions(simIx)
