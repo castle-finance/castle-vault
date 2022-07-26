@@ -75,10 +75,11 @@ pub struct SellPortReward<'info> {
     #[account(executable)]
     pub orca_swap_program: AccountInfo<'info>,
 
-    #[account(mut)]
-    // No need to check this account because coins in it will be sold
-    // and vault_reserve_token collects the revenue.
-    // We only have to check the integrity of vault_reserve_token
+    #[account(
+        mut,
+        seeds = [vault.key().as_ref(), b"port_reward".as_ref()],
+        bump
+    )]
     pub vault_port_reward_token: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
