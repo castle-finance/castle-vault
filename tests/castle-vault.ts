@@ -1116,7 +1116,7 @@ describe("castle-vault", () => {
             const newLpTokenSupply = await getLpTokenSupply();
 
             // Make sure that the correct amount is un-staked when the user withdraws
-            let wiggleRoom = 3;
+            let maxDiffAllowed = 3;
             const stakingAccountRaw = await provider.connection.getAccountInfo(
                 new PublicKey(port.accounts.vaultPortStakeAccount)
             );
@@ -1137,20 +1137,22 @@ describe("castle-vault", () => {
                         withdrawQty -
                         stakedTokenValue.getRaw().toNumber()
                 ),
-                wiggleRoom
+                maxDiffAllowed
             );
 
             // Allow max different of 1 token because of rounding error.
             const actualWithdrawAmount = oldVaultValue - newVaultValue;
-            const maxDiffAllowed = 1;
             assert.isAtMost(
                 Math.abs(actualWithdrawAmount - withdrawQty),
                 maxDiffAllowed
             );
             // Actual should <= requested because we rounds down.
             assert.isAtMost(actualWithdrawAmount, withdrawQty);
-            assert.equal(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
-            assert.equal(newUserReserveBalance, actualWithdrawAmount);
+            assert.isAtMost(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
+            assert.isAtMost(
+                Math.abs(newUserReserveBalance - actualWithdrawAmount),
+                maxDiffAllowed
+            );
         });
 
         it("Claim reward", async function () {
