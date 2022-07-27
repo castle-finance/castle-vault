@@ -4,6 +4,12 @@ version = 3
 
 [[package]]
 name = "ahash"
+version = "0.4.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "739f4a8db6605981345c5654f3a85b056ce52f37a39d34da03f25bf2151ea16e"
+
+[[package]]
+name = "ahash"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcb51a0695d8f838b1ee009b3fbf66bda078cd64590202a864a8f3e8c4315c47"
@@ -173,7 +179,7 @@ dependencies = [
  "anchor-lang",
  "solana-program",
  "spl-associated-token-account",
- "spl-token",
+ "spl-token 3.3.0",
 ]
 
 [[package]]
@@ -313,12 +319,22 @@ dependencies = [
 
 [[package]]
 name = "borsh"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09a7111f797cc721407885a323fb071636aee57f750b1a4ddc27397eba168a74"
+dependencies = [
+ "borsh-derive 0.8.2",
+ "hashbrown 0.9.1",
+]
+
+[[package]]
+name = "borsh"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15bf3650200d8bffa99015595e10f1fbd17de07abbc25bb067da79e769939bfa"
 dependencies = [
  "borsh-derive 0.9.3",
- "hashbrown",
+ "hashbrown 0.11.2",
 ]
 
 [[package]]
@@ -481,7 +497,7 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "castle-vault"
-version = "3.4.1"
+version = "3.5.1"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -496,8 +512,9 @@ dependencies = [
  "solana-maths",
  "solana-program",
  "solana-security-txt",
- "spl-math",
+ "spl-math 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "spl-token-lending",
+ "spl-token-swap",
  "static_assertions",
  "strum",
  "strum_macros",
@@ -635,6 +652,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f107b87b6afc2a64fd13cac55fe06d6c8859f12d4b14cbcdd2c67d0976781be"
 
 [[package]]
+name = "enum_dispatch"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0eb359f1476bf611266ac1f5355bc14aeca37b299d0ebccc038ee7058891c9cb"
+dependencies = [
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -705,11 +734,20 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7afe4a420e3fe79967a00898cc1f4db7c8a49a9333a29f8a4bd76a253d5cd04"
+dependencies = [
+ "ahash 0.4.7",
+]
+
+[[package]]
+name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
 dependencies = [
- "ahash",
+ "ahash 0.7.6",
 ]
 
 [[package]]
@@ -1062,7 +1100,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "solana-program",
- "spl-token",
+ "spl-token 3.3.0",
  "thiserror",
  "uint 0.8.5",
 ]
@@ -1078,7 +1116,7 @@ dependencies = [
  "num-traits",
  "solana-maths",
  "solana-program",
- "spl-token",
+ "spl-token 3.3.0",
  "thiserror",
  "uint 0.8.5",
 ]
@@ -1095,7 +1133,7 @@ dependencies = [
  "num-traits",
  "port-staking-instructions 0.1.7",
  "solana-program",
- "spl-token",
+ "spl-token 3.3.0",
  "thiserror",
  "uint 0.8.5",
 ]
@@ -1585,7 +1623,7 @@ checksum = "2b013067447a1396303ddfc294f36e3d260a32f8a16c501c295bcdc7de39b490"
 dependencies = [
  "borsh 0.9.3",
  "solana-program",
- "spl-token",
+ "spl-token 3.3.0",
 ]
 
 [[package]]
@@ -1601,6 +1639,33 @@ dependencies = [
  "solana-program",
  "thiserror",
  "uint 0.8.5",
+]
+
+[[package]]
+name = "spl-math"
+version = "0.1.0"
+source = "git+https://github.com/solana-labs/solana-program-library/?rev=813aa3304022528cbf3cf7a3d32bca339194a492#813aa3304022528cbf3cf7a3d32bca339194a492"
+dependencies = [
+ "borsh 0.8.2",
+ "borsh-derive 0.8.2",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "thiserror",
+ "uint 0.8.5",
+]
+
+[[package]]
+name = "spl-token"
+version = "3.1.1"
+source = "git+https://github.com/solana-labs/solana-program-library/?rev=813aa3304022528cbf3cf7a3d32bca339194a492#813aa3304022528cbf3cf7a3d32bca339194a492"
+dependencies = [
+ "arrayref",
+ "num-derive",
+ "num-traits",
+ "num_enum",
+ "solana-program",
+ "thiserror",
 ]
 
 [[package]]
@@ -1627,11 +1692,26 @@ dependencies = [
  "num-derive",
  "num-traits",
  "solana-program",
- "spl-token",
+ "spl-token 3.3.0",
  "switchboard-program",
  "switchboard-v2",
  "thiserror",
  "uint 0.9.3",
+]
+
+[[package]]
+name = "spl-token-swap"
+version = "2.1.0"
+source = "git+https://github.com/solana-labs/solana-program-library/?rev=813aa3304022528cbf3cf7a3d32bca339194a492#813aa3304022528cbf3cf7a3d32bca339194a492"
+dependencies = [
+ "arrayref",
+ "enum_dispatch",
+ "num-derive",
+ "num-traits",
+ "solana-program",
+ "spl-math 0.1.0 (git+https://github.com/solana-labs/solana-program-library/?rev=813aa3304022528cbf3cf7a3d32bca339194a492)",
+ "spl-token 3.1.1",
+ "thiserror",
 ]
 
 [[package]]

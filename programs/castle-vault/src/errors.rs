@@ -50,6 +50,9 @@ pub enum ErrorCode {
     #[msg("Vault is halted")]
     HaltedVault,
 
+    #[msg("Invalid argument")]
+    InvalidArgument,
+
     #[msg("Failed to fetch bump for PDA")]
     BumpError,
 }

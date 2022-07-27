@@ -1,6 +1,6 @@
 {
     "name": "@castlefinance/vault-sdk",
-    "version": "3.4.1",
+    "version": "3.5.1",
     "license": "MIT",
     "main": "./lib/index.js",
     "typings": "./lib/index.d.ts",
@@ -13,6 +13,7 @@
         "@solana/spl-token": "^0.1.8",
         "@solana/web3.js": "^1.31.0",
         "@solendprotocol/solend-sdk": "^0.4.4",
+        "@orca-so/sdk": "1.2.25",
         "big.js": "^6.1.1",
         "bigint-buffer": "^1.1.5",
         "buffer-layout": "^1.2.2"

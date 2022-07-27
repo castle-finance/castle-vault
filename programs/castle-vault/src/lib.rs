@@ -29,6 +29,21 @@ pub mod castle_vault {
         instructions::init_vault::handler(ctx, authority_bump, config)
     }
 
+    pub fn initialize_dex_states(ctx: Context<InitializeDexStates>) -> Result<()> {
+        instructions::init_dex_states::handler(ctx)
+    }
+
+    pub fn initialize_dex_orca_legacy(ctx: Context<InitializeDexOrcaLegacy>) -> Result<()> {
+        instructions::init_dex_orca_legacy::handler(ctx)
+    }
+
+    pub fn initialize_dex_orca_legacy_market(
+        ctx: Context<InitializeDexOrcaLegacyMarket>,
+        market_id: u8,
+    ) -> Result<()> {
+        instructions::init_dex_orca_legacy_market::handler(ctx, market_id)
+    }
+
     pub fn initialize_port_additional_state(
         ctx: Context<InitializePortAdditionalState>,
     ) -> Result<()> {
@@ -107,6 +122,10 @@ pub mod castle_vault {
 
     pub fn claim_port_reward(ctx: Context<ClaimPortReward>) -> Result<()> {
         instructions::claim_port_reward::handler(ctx)
+    }
+
+    pub fn sell_port_reward(ctx: Context<SellPortReward>, market_id: u8) -> Result<()> {
+        instructions::sell_port_reward::handler(ctx, market_id)
     }
 }
 

@@ -24,7 +24,6 @@ pub struct ClaimPortReward<'info> {
         seeds = [vault.key().as_ref(), b"port_additional_state".as_ref()], 
         bump = vault.vault_port_additional_state_bump,
         has_one = port_staking_pool,
-        has_one = port_staking_reward_pool,
     )]
     pub port_additional_states: Box<Account<'info, VaultPortAdditionalState>>,
 
@@ -63,12 +62,16 @@ pub struct ClaimPortReward<'info> {
     )]
     pub port_stake_program: AccountInfo<'info>,
 
+    // NOTE safe to ignore port_staking_reward_pool and  port_staking_sub_reward_pool
+    // because they are checked by port_stake_program
     /// CHECK: safe
     #[account(mut)]
+    //#[soteria(ignore)]
     pub port_staking_reward_pool: AccountInfo<'info>,
 
     /// CHECK: safe
     #[account(mut)]
+    //#[soteria(ignore)]
     pub port_staking_sub_reward_pool: AccountInfo<'info>,
 
     /// CHECK: safe
@@ -94,16 +97,6 @@ pub fn handler(ctx: Context<ClaimPortReward>) -> Result<()> {
             token_program: ctx.accounts.port_lend_program.clone(),
         },
     );
-
-    if ctx.accounts.port_additional_states.sub_reward_available
-        && ctx
-            .accounts
-            .port_additional_states
-            .port_staking_sub_reward_pool
-            != ctx.accounts.port_staking_sub_reward_pool.key()
-    {
-        return Err(ProgramError::InvalidAccountData.into());
-    }
 
     port_anchor_adaptor::claim_reward(
         claim_reward_context.with_signer(&[&ctx.accounts.vault.authority_seeds()]),

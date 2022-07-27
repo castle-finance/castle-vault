@@ -24,6 +24,7 @@ import {
     RebalanceModes,
     StrategyTypes,
 } from "@castlefinance/vault-core";
+import { OrcaLegacySwap } from "../sdk/src/dex";
 
 describe("castle-vault", () => {
     const provider = anchor.AnchorProvider.env();
@@ -59,6 +60,7 @@ describe("castle-vault", () => {
 
     let solend: SolendReserveAsset;
     let port: PortReserveAsset;
+    let orca: OrcaLegacySwap;
 
     let vaultClient: VaultClient;
     let userReserveTokenAccount: PublicKey;
@@ -261,9 +263,26 @@ describe("castle-vault", () => {
             ownerReserveTokenAccount,
             borrowAmount
         );
+
         for (let tx of portBorrowTxs) {
             await provider.connection.confirmTransaction(tx, "finalized");
         }
+
+        const tokenMintA = new Token(
+            program.provider.connection,
+            port.accounts.stakingRewardTokenMint,
+            TOKEN_PROGRAM_ID,
+            owner
+        );
+        const tokenMintB = reserveToken;
+        orca = await OrcaLegacySwap.initialize(
+            provider,
+            wallet.payer,
+            tokenMintA,
+            tokenMintB,
+            owner,
+            owner
+        );
     }
 
     async function initializeVault(
@@ -299,11 +318,17 @@ describe("castle-vault", () => {
                 : {},
         ]);
 
+        await vaultClient.initializeDexStates(
+            provider.wallet as anchor.Wallet,
+            owner
+        );
+
         if (portAvailable) {
             await vaultClient.initializePortAdditionalState(
                 provider.wallet as anchor.Wallet,
                 owner
             );
+
             await vaultClient.initializePortRewardAccounts(
                 provider.wallet as anchor.Wallet,
                 owner,
@@ -311,7 +336,20 @@ describe("castle-vault", () => {
                 DeploymentEnvs.devnetStaging,
                 program
             );
+
             await vaultClient.loadPortAdditionalAccounts();
+
+            await vaultClient.initializeOrcaLegacy(
+                provider.wallet as anchor.Wallet,
+                owner,
+                DeploymentEnvs.devnetStaging,
+                orca
+            );
+
+            await vaultClient.initializeOrcaLegacyMarket(
+                provider.wallet as anchor.Wallet,
+                owner
+            );
         }
 
         await vaultClient.reload();
@@ -319,6 +357,19 @@ describe("castle-vault", () => {
         userReserveTokenAccount = await reserveToken.createAccount(
             wallet.publicKey
         );
+    }
+
+    async function getSplTokenAccountBalance(
+        mint: PublicKey,
+        account: PublicKey
+    ): Promise<number> {
+        const tokenMint = new Token(
+            program.provider.connection,
+            mint,
+            TOKEN_PROGRAM_ID,
+            Keypair.generate()
+        );
+        return (await tokenMint.getAccountInfo(account)).amount.toNumber();
     }
 
     async function getReserveTokenBalance(account: PublicKey): Promise<number> {
@@ -1173,36 +1224,41 @@ describe("castle-vault", () => {
                 await port.getUnclaimedStakingRewards(program);
             assert.equal(rewardAmountAfterClaiming, 0);
 
-            const mint = port.accounts.stakingRewardTokenMint;
-            const rewardToken = new Token(
-                program.provider.connection,
-                mint,
-                TOKEN_PROGRAM_ID,
-                Keypair.generate()
+            const claimedRewardAmount = await getSplTokenAccountBalance(
+                port.accounts.stakingRewardTokenMint,
+                port.accounts.vaultPortRewardToken
             );
-            const claimedRewardAmount = (
-                await rewardToken.getAccountInfo(
-                    port.accounts.vaultPortRewardToken
-                )
-            ).amount.toNumber();
             assert.isAtLeast(claimedRewardAmount, accumulatedRewardAmount);
 
             if (subReward) {
-                const subRewardMint = port.accounts.stakingSubRewardTokenMint;
-                const subRewardToken = new Token(
-                    program.provider.connection,
-                    subRewardMint,
-                    TOKEN_PROGRAM_ID,
-                    Keypair.generate()
+                const claimedSubRewardAmount = await getSplTokenAccountBalance(
+                    port.accounts.stakingSubRewardTokenMint,
+                    port.accounts.vaultPortSubRewardToken
                 );
-                const claimedSubRewardAmount = (
-                    await subRewardToken.getAccountInfo(
-                        port.accounts.vaultPortSubRewardToken
-                    )
-                ).amount.toNumber();
-
                 assert.isAtLeast(claimedSubRewardAmount, 1);
             }
+        });
+
+        it("Sell reward", async function () {
+            const claimedRewardAmount = await getSplTokenAccountBalance(
+                port.accounts.stakingRewardTokenMint,
+                port.accounts.vaultPortRewardToken
+            );
+            const oldReserveBalance = await getVaultReserveTokenBalance();
+
+            await vaultClient.sellPortReward();
+
+            const remainingAmount = await getSplTokenAccountBalance(
+                port.accounts.stakingRewardTokenMint,
+                port.accounts.vaultPortRewardToken
+            );
+            const newReserveBalance = await getVaultReserveTokenBalance();
+
+            assert.isAtMost(remainingAmount, 1);
+            assert.isAtLeast(
+                newReserveBalance - oldReserveBalance,
+                claimedRewardAmount
+            );
         });
     }
 
@@ -1348,6 +1404,7 @@ describe("castle-vault", () => {
                     `Error code ${expectedErrorCode} not included in error message: ${err}`
                 );
             }
+            restoreLogs();
 
             await vaultClient.reload();
             const vaultValueStoredOnChain = vaultClient
@@ -1402,6 +1459,7 @@ describe("castle-vault", () => {
                     true
                 );
             });
+
             testPortRewardClaiming(true);
         });
 

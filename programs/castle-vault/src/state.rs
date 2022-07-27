@@ -86,7 +86,10 @@ pub struct Vault {
 
     pub vault_port_additional_state_bump: u8,
 
-    _reserved0: [u8; 3],
+    // Stores accounts needed for interacting with DEX
+    pub dex_states_bump: u8,
+
+    _reserved0: [u8; 2],
     _reserved1: [u32; 25],
 }
 
@@ -207,18 +210,38 @@ pub struct VaultPortAdditionalState {
 
     pub port_staking_pool: Pubkey,
 
-    pub port_staking_reward_pool: Pubkey,
+    pub sub_reward_available: bool,
 
-    pub port_staking_sub_reward_pool: Pubkey,
+    _reserved0: [u8; 3],
 
     pub port_reward_token_oracle: Pubkey,
 
     pub port_sub_reward_token_oracle: Pubkey,
+    
+    _reserved2: [u64; 32],
+}
 
-    pub sub_reward_available: bool,
+#[assert_size(128)]
+#[account]
+#[repr(C, align(8))]
+#[derive(Debug, Default)]
+#[cfg_attr(test, derive(TypeLayout))]
+pub struct DexStates {
+    pub orca_legacy_accounts_bump: u8,
 
-    _reserved0: [u8; 3],
-    _reserved1: [u64; 24],
+    _reserved0: [u8; 7],
+    _reserved1: [u64; 15],
+}
+
+#[assert_size(672)]
+#[account]
+#[repr(C, align(8))]
+#[derive(Debug, Default)]
+#[cfg_attr(test, derive(TypeLayout))]
+pub struct OrcaLegacyAccounts {
+    pub orca_swap_program: Pubkey,
+
+    pub orca_markets: [Pubkey; 20],
 }
 
 #[assert_size(aligns, 32)]
