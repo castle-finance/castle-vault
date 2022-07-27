@@ -1,5 +1,5 @@
 export type CastleVault = {
-    version: "0.0.0";
+    version: "3.4.1";
     name: "castle_vault";
     instructions: [
         {
@@ -90,6 +90,119 @@ export type CastleVault = {
             ];
         },
         {
+            name: "initializeDexStates";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "dexStates";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
+        },
+        {
+            name: "initializeDexOrcaLegacy";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "dexStates";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaLegacyAccounts";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
+        },
+        {
+            name: "initializeDexOrcaLegacyMarket";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "dexStates";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaLegacyAccounts";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapState";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "marketId";
+                    type: "u8";
+                }
+            ];
+        },
+        {
             name: "initializePortAdditionalState";
             accounts: [
                 {
@@ -175,16 +288,6 @@ export type CastleVault = {
                 },
                 {
                     name: "portStakingPool";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "portStakingRewardPool";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "portStakingSubRewardPool";
                     isMut: false;
                     isSigner: false;
                 },
@@ -811,11 +914,6 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portStakingRewardPool";
-                    isMut: true;
-                    isSigner: false;
-                },
-                {
                     name: "portStakingAuthority";
                     isMut: false;
                     isSigner: false;
@@ -943,6 +1041,92 @@ export type CastleVault = {
                 }
             ];
             args: [];
+        },
+        {
+            name: "sellPortReward";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portAdditionalStates";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "dexStates";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaLegacyAccounts";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapState";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaInputTokenAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaOutputTokenAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapTokenMint";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaFeeAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "orcaSwapProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultPortRewardToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultReserveToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [
+                {
+                    name: "marketId";
+                    type: "u8";
+                }
+            ];
         }
     ];
     accounts: [
@@ -984,7 +1168,7 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "_filler0";
+                        name: "filler0";
                         type: "publicKey";
                     },
                     {
@@ -1000,7 +1184,7 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "_filler1";
+                        name: "filler1";
                         type: "publicKey";
                     },
                     {
@@ -1060,9 +1244,13 @@ export type CastleVault = {
                         type: "u8";
                     },
                     {
+                        name: "dexStatesBump";
+                        type: "u8";
+                    },
+                    {
                         name: "reserved0";
                         type: {
-                            array: ["u8", 3];
+                            array: ["u8", 2];
                         };
                     },
                     {
@@ -1104,14 +1292,6 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "portStakingRewardPool";
-                        type: "publicKey";
-                    },
-                    {
-                        name: "portStakingSubRewardPool";
-                        type: "publicKey";
-                    },
-                    {
                         name: "subRewardAvailable";
                         type: "bool";
                     },
@@ -1124,7 +1304,55 @@ export type CastleVault = {
                     {
                         name: "reserved1";
                         type: {
+                            array: ["u64", 8];
+                        };
+                    },
+                    {
+                        name: "reserved2";
+                        type: {
                             array: ["u64", 32];
+                        };
+                    }
+                ];
+            };
+        },
+        {
+            name: "dexStates";
+            type: {
+                kind: "struct";
+                fields: [
+                    {
+                        name: "orcaLegacyAccountsBump";
+                        type: "u8";
+                    },
+                    {
+                        name: "reserved0";
+                        type: {
+                            array: ["u8", 7];
+                        };
+                    },
+                    {
+                        name: "reserved1";
+                        type: {
+                            array: ["u64", 15];
+                        };
+                    }
+                ];
+            };
+        },
+        {
+            name: "orcaLegacyAccounts";
+            type: {
+                kind: "struct";
+                fields: [
+                    {
+                        name: "orcaSwapProgram";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "orcaMarkets";
+                        type: {
+                            array: ["publicKey", 20];
                         };
                     }
                 ];
@@ -1252,7 +1480,7 @@ export type CastleVault = {
                         };
                     },
                     {
-                        name: "_filler";
+                        name: "filler";
                         type: {
                             defined: "SlotTrackedValue";
                         };
@@ -1517,17 +1745,19 @@ export type CastleVault = {
         },
         {
             code: 6016;
+            name: "InvalidArgument";
+            msg: "Invalid argument";
+        },
+        {
+            code: 6017;
             name: "BumpError";
             msg: "Failed to fetch bump for PDA";
         }
     ];
-    metadata: {
-        address: "4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK";
-    };
 };
 
 export const IDL: CastleVault = {
-    version: "0.0.0",
+    version: "3.4.1",
     name: "castle_vault",
     instructions: [
         {
@@ -1618,6 +1848,119 @@ export const IDL: CastleVault = {
             ],
         },
         {
+            name: "initializeDexStates",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "dexStates",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
+        },
+        {
+            name: "initializeDexOrcaLegacy",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "dexStates",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaLegacyAccounts",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
+        },
+        {
+            name: "initializeDexOrcaLegacyMarket",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "dexStates",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaLegacyAccounts",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapState",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "marketId",
+                    type: "u8",
+                },
+            ],
+        },
+        {
             name: "initializePortAdditionalState",
             accounts: [
                 {
@@ -1703,16 +2046,6 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "portStakingPool",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "portStakingRewardPool",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "portStakingSubRewardPool",
                     isMut: false,
                     isSigner: false,
                 },
@@ -2339,11 +2672,6 @@ export const IDL: CastleVault = {
                     isSigner: false,
                 },
                 {
-                    name: "portStakingRewardPool",
-                    isMut: true,
-                    isSigner: false,
-                },
-                {
                     name: "portStakingAuthority",
                     isMut: false,
                     isSigner: false,
@@ -2472,6 +2800,92 @@ export const IDL: CastleVault = {
             ],
             args: [],
         },
+        {
+            name: "sellPortReward",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portAdditionalStates",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "dexStates",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaLegacyAccounts",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapState",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaInputTokenAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaOutputTokenAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapTokenMint",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaFeeAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "orcaSwapProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultPortRewardToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultReserveToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [
+                {
+                    name: "marketId",
+                    type: "u8",
+                },
+            ],
+        },
     ],
     accounts: [
         {
@@ -2512,7 +2926,7 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "_filler0",
+                        name: "filler0",
                         type: "publicKey",
                     },
                     {
@@ -2528,7 +2942,7 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "_filler1",
+                        name: "filler1",
                         type: "publicKey",
                     },
                     {
@@ -2588,9 +3002,13 @@ export const IDL: CastleVault = {
                         type: "u8",
                     },
                     {
+                        name: "dexStatesBump",
+                        type: "u8",
+                    },
+                    {
                         name: "reserved0",
                         type: {
-                            array: ["u8", 3],
+                            array: ["u8", 2],
                         },
                     },
                     {
@@ -2632,14 +3050,6 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "portStakingRewardPool",
-                        type: "publicKey",
-                    },
-                    {
-                        name: "portStakingSubRewardPool",
-                        type: "publicKey",
-                    },
-                    {
                         name: "subRewardAvailable",
                         type: "bool",
                     },
@@ -2652,7 +3062,55 @@ export const IDL: CastleVault = {
                     {
                         name: "reserved1",
                         type: {
+                            array: ["u64", 8],
+                        },
+                    },
+                    {
+                        name: "reserved2",
+                        type: {
                             array: ["u64", 32],
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            name: "dexStates",
+            type: {
+                kind: "struct",
+                fields: [
+                    {
+                        name: "orcaLegacyAccountsBump",
+                        type: "u8",
+                    },
+                    {
+                        name: "reserved0",
+                        type: {
+                            array: ["u8", 7],
+                        },
+                    },
+                    {
+                        name: "reserved1",
+                        type: {
+                            array: ["u64", 15],
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            name: "orcaLegacyAccounts",
+            type: {
+                kind: "struct",
+                fields: [
+                    {
+                        name: "orcaSwapProgram",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "orcaMarkets",
+                        type: {
+                            array: ["publicKey", 20],
                         },
                     },
                 ],
@@ -2780,7 +3238,7 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
-                        name: "_filler",
+                        name: "filler",
                         type: {
                             defined: "SlotTrackedValue",
                         },
@@ -3045,11 +3503,13 @@ export const IDL: CastleVault = {
         },
         {
             code: 6016,
+            name: "InvalidArgument",
+            msg: "Invalid argument",
+        },
+        {
+            code: 6017,
             name: "BumpError",
             msg: "Failed to fetch bump for PDA",
         },
     ],
-    metadata: {
-        address: "4tSMVfVbnwZcDwZB1M1j27dx9hdjL72VR9GM8AykpAvK",
-    },
 };

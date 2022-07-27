@@ -33,3 +33,6 @@ program = "deps/port_finance_variable_rate_lending.so"
 [[test.genesis]]
 address = "stkarvwmSzv2BygN5e2LeTwimTczLWHCKPKGC2zVLiq"
 program = "deps/port_finance_staking.so"
+[[test.genesis]]
+address = "3xQ8SWv2GaFXXpHZNqkXsdxq5DZciHBz6ZFoPPfbFd7U"
+program = "deps/orca_legacy_pool.so"

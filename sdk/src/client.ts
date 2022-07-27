@@ -37,6 +37,7 @@ import {
     PortReserveAsset,
     SolendReserveAsset,
 } from "./adapters";
+import { OrcaLegacySwap } from "./dex";
 import {
     ProposedWeightsBps,
     RebalanceDataEvent,
@@ -52,12 +53,18 @@ interface YieldSources {
     port?: PortReserveAsset;
 }
 
+interface ExchangeMarkets {
+    dexStates?: PublicKey;
+    orcaLegacy?: OrcaLegacySwap;
+}
+
 export class VaultClient {
     private constructor(
         public program: anchor.Program<CastleVault>,
         public vaultId: PublicKey,
         private vaultState: Vault,
         private yieldSources: YieldSources,
+        private dex: ExchangeMarkets,
         private reserveToken: Token,
         private lpToken: Token,
         private feesEnabled: boolean = false
@@ -77,6 +84,16 @@ export class VaultClient {
         const cluster = CLUSTER_MAP[env];
         const reserveMint = vaultState.reserveTokenMint;
 
+        const dexStatesAddress = await PublicKey.createProgramAddress(
+            [
+                vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("dex_states"),
+                new Uint8Array([vaultState.dexStatesBump]),
+            ],
+            program.programId
+        );
+        let dex: ExchangeMarkets = { dexStates: dexStatesAddress };
+
         let yieldSources: YieldSources = {};
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Solend) {
             yieldSources.solend = await SolendReserveAsset.load(
@@ -91,6 +108,25 @@ export class VaultClient {
                 cluster,
                 reserveMint
             );
+            await yieldSources.port.loadAdditionalAccounts(
+                program,
+                vaultId,
+                vaultState
+            );
+            // Get PDA addr that stores orca account info.
+            // Only available for Port
+            const dexStates = await program.account.dexStates.fetch(
+                dexStatesAddress
+            );
+            const orcaLegacyAddress = await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("dex_orca_legacy"),
+                    new Uint8Array([dexStates.orcaLegacyAccountsBump]),
+                ],
+                program.programId
+            );
+            dex.orcaLegacy.accounts.vaultOrcaLegacyAccount = orcaLegacyAddress;
         }
 
         const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
@@ -98,85 +134,27 @@ export class VaultClient {
             vaultState
         );
 
-        let client = new VaultClient(
+        return new VaultClient(
             program,
             vaultId,
             vaultState,
             yieldSources,
+            dex,
             reserveToken,
             lpToken
         );
-        await client.loadPortAdditionalAccounts();
-        return client;
     }
 
     async loadPortAdditionalAccounts() {
-        const vaultPortAdditionalStateAddress =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_additional_state"),
-                    new Uint8Array([
-                        this.vaultState.vaultPortAdditionalStateBump,
-                    ]),
-                ],
-                this.program.programId
-            );
-        const vaultPortAdditionalStates =
-            await this.program.account.vaultPortAdditionalState.fetch(
-                vaultPortAdditionalStateAddress
-            );
-        this.yieldSources.port.accounts.vaultPortAdditionalStates =
-            vaultPortAdditionalStateAddress;
-        this.yieldSources.port.accounts.vaultPortObligation =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_obligation"),
-                    new Uint8Array([
-                        vaultPortAdditionalStates.vaultPortObligationBump,
-                    ]),
-                ],
-                this.program.programId
-            );
-        this.yieldSources.port.accounts.vaultPortStakeAccount =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_stake"),
-                    new Uint8Array([
-                        vaultPortAdditionalStates.vaultPortStakeAccountBump,
-                    ]),
-                ],
-                this.program.programId
-            );
-        this.yieldSources.port.accounts.vaultPortRewardToken =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_reward"),
-                    new Uint8Array([
-                        vaultPortAdditionalStates.vaultPortRewardTokenBump,
-                    ]),
-                ],
-                this.program.programId
-            );
-        this.yieldSources.port.accounts.vaultPortSubRewardToken =
-            await PublicKey.createProgramAddress(
-                [
-                    this.vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("port_sub_reward"),
-                    new Uint8Array([
-                        vaultPortAdditionalStates.vaultPortSubRewardTokenBump,
-                    ]),
-                ],
-                this.program.programId
-            );
+        this.yieldSources.port.loadAdditionalAccounts(
+            this.program,
+            this.vaultId,
+            this.vaultState
+        );
     }
 
     async reload() {
         this.vaultState = await this.program.account.vault.fetch(this.vaultId);
-        // TODO reload underlying asset data also?
     }
 
     static async initialize(
@@ -283,7 +261,6 @@ export class VaultClient {
         );
 
         const vaultState = await program.account.vault.fetch(vaultId.publicKey);
-
         const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
             provider.connection,
             vaultState
@@ -294,8 +271,124 @@ export class VaultClient {
             vaultId.publicKey,
             vaultState,
             {},
+            {},
             reserveToken,
             lpToken
+        );
+    }
+
+    async initializeDexStates(wallet: anchor.Wallet, owner: Keypair) {
+        const [pda] = await PublicKey.findProgramAddress(
+            [
+                this.vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("dex_states"),
+            ],
+            this.program.programId
+        );
+
+        const tx = new Transaction().add(
+            await this.program.methods
+                .initializeDexStates()
+                .accounts({
+                    vault: this.vaultId,
+                    dexStates: pda,
+                    payer: wallet.payer.publicKey,
+                    owner: owner.publicKey,
+                    systemProgram: SystemProgram.programId,
+                })
+                .instruction()
+        );
+
+        const txSig = await this.program.provider.sendAll([
+            { tx: tx, signers: [owner, wallet.payer] },
+        ]);
+
+        await this.program.provider.connection.confirmTransaction(
+            txSig[0],
+            "finalized"
+        );
+
+        this.dex.dexStates = pda;
+    }
+
+    async initializeOrcaLegacy(
+        wallet: anchor.Wallet,
+        owner: Keypair,
+        env: DeploymentEnv,
+        orca?: OrcaLegacySwap
+    ) {
+        const [pda] = await PublicKey.findProgramAddress(
+            [
+                this.vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("dex_orca_legacy"),
+            ],
+            this.program.programId
+        );
+
+        // We allow user to pass existing orca swap struct, for test purpose.
+        // TODO can be do better? don't like mixing test and production stuff in such an non-obvious way.
+        let orcaMarket: OrcaLegacySwap = orca;
+        if (orcaMarket == undefined) {
+            const cluster = CLUSTER_MAP[env];
+            const tokenA =
+                this.yieldSources.port.accounts.stakingRewardTokenMint;
+            const tokenB = this.vaultState.reserveTokenMint;
+            orcaMarket = OrcaLegacySwap.load(tokenA, tokenB, cluster);
+        }
+
+        const tx = new Transaction().add(
+            await this.program.methods
+                .initializeDexOrcaLegacy()
+                .accounts({
+                    vault: this.vaultId,
+                    dexStates: this.dex.dexStates,
+                    orcaLegacyAccounts: pda,
+                    orcaSwapProgram: orcaMarket.accounts.programId,
+                    payer: wallet.payer.publicKey,
+                    owner: owner.publicKey,
+                    systemProgram: SystemProgram.programId,
+                })
+                .instruction()
+        );
+
+        const txSig = await this.program.provider.sendAll([
+            { tx: tx, signers: [owner, wallet.payer] },
+        ]);
+
+        await this.program.provider.connection.confirmTransaction(
+            txSig[0],
+            "finalized"
+        );
+
+        orcaMarket.accounts.vaultOrcaLegacyAccount = pda;
+        this.dex.orcaLegacy = orcaMarket;
+    }
+
+    async initializeOrcaLegacyMarket(wallet: anchor.Wallet, owner: Keypair) {
+        const tx = new Transaction().add(
+            await this.program.methods
+                .initializeDexOrcaLegacyMarket(
+                    this.dex.orcaLegacy.accounts.marketId
+                )
+                .accounts({
+                    vault: this.vaultId,
+                    dexStates: this.dex.dexStates,
+                    orcaLegacyAccounts:
+                        this.dex.orcaLegacy.accounts.vaultOrcaLegacyAccount,
+                    orcaSwapState: this.dex.orcaLegacy.accounts.swapProgram,
+                    owner: owner.publicKey,
+                    systemProgram: SystemProgram.programId,
+                })
+                .instruction()
+        );
+
+        const txSig = await this.program.provider.sendAll([
+            { tx: tx, signers: [owner, wallet.payer] },
+        ]);
+
+        await this.program.provider.connection.confirmTransaction(
+            txSig[0],
+            "finalized"
         );
     }
 
@@ -402,9 +495,6 @@ export class VaultClient {
         const subRewardMint = subRewardAvailable
             ? this.yieldSources.port.accounts.stakingSubRewardTokenMint
             : this.yieldSources.port.accounts.stakingRewardTokenMint;
-        const subRewardPool = subRewardAvailable
-            ? this.yieldSources.port.accounts.stakingSubRewardPool
-            : Keypair.generate().publicKey;
 
         const tx = new Transaction();
         tx.add(
@@ -427,9 +517,6 @@ export class VaultClient {
                     portSubRewardTokenMint: subRewardMint,
                     portStakingPool:
                         this.yieldSources.port.accounts.stakingPool,
-                    portStakingRewardPool:
-                        this.yieldSources.port.accounts.stakingRewardPool,
-                    portStakingSubRewardPool: subRewardPool,
                     portStakeProgram:
                         this.yieldSources.port.accounts.stakingProgram,
                     portLendProgram: this.yieldSources.port.accounts.program,
@@ -1133,6 +1220,41 @@ export class VaultClient {
                 this.vaultId,
                 this.vaultState
             )
+        );
+        return this.program.provider.sendAndConfirm(tx);
+    }
+
+    async sellPortReward(): Promise<TransactionSignature> {
+        const tx = new Transaction().add(
+            await this.program.methods
+                .sellPortReward(this.dex.orcaLegacy.accounts.marketId)
+                .accounts({
+                    vault: this.vaultId,
+                    vaultAuthority: this.vaultState.vaultAuthority,
+                    portAdditionalStates:
+                        this.yieldSources.port.accounts
+                            .vaultPortAdditionalStates,
+                    dexStates: this.dex.dexStates,
+                    orcaLegacyAccounts:
+                        this.dex.orcaLegacy.accounts.vaultOrcaLegacyAccount,
+                    orcaSwapState: this.dex.orcaLegacy.accounts.swapProgram,
+                    orcaSwapAuthority:
+                        this.dex.orcaLegacy.accounts.swapAuthority,
+
+                    orcaInputTokenAccount:
+                        this.dex.orcaLegacy.accounts.tokenAccountA,
+                    orcaOutputTokenAccount:
+                        this.dex.orcaLegacy.accounts.tokenAccountB,
+                    orcaSwapTokenMint:
+                        this.dex.orcaLegacy.accounts.poolTokenMint,
+                    orcaFeeAccount: this.dex.orcaLegacy.accounts.feeAccount,
+                    orcaSwapProgram: this.dex.orcaLegacy.accounts.programId,
+                    vaultPortRewardToken:
+                        this.yieldSources.port.accounts.vaultPortRewardToken,
+                    vaultReserveToken: this.vaultState.vaultReserveToken,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                })
+                .instruction()
         );
         return this.program.provider.sendAndConfirm(tx);
     }

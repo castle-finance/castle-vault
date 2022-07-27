@@ -11,7 +11,6 @@ import {
     SYSVAR_RENT_PUBKEY,
     TransactionSignature,
     Signer,
-    LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import {
     getAssociatedTokenAddress,
@@ -255,6 +254,72 @@ export class PortReserveAsset extends LendingMarket {
             reserveToken,
             lpToken
         );
+    }
+
+    async loadAdditionalAccounts(
+        program: anchor.Program<CastleVault>,
+        vaultId: PublicKey,
+        vaultState: Vault
+    ) {
+        const vaultPortAdditionalStateAddress =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_additional_state"),
+                    new Uint8Array([vaultState.vaultPortAdditionalStateBump]),
+                ],
+                program.programId
+            );
+        const vaultPortAdditionalStates =
+            await program.account.vaultPortAdditionalState.fetch(
+                vaultPortAdditionalStateAddress
+            );
+        this.accounts.vaultPortAdditionalStates =
+            vaultPortAdditionalStateAddress;
+        this.accounts.vaultPortObligation =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_obligation"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortObligationBump,
+                    ]),
+                ],
+                program.programId
+            );
+        this.accounts.vaultPortStakeAccount =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_stake"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortStakeAccountBump,
+                    ]),
+                ],
+                program.programId
+            );
+        this.accounts.vaultPortRewardToken =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_reward"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortRewardTokenBump,
+                    ]),
+                ],
+                program.programId
+            );
+        this.accounts.vaultPortSubRewardToken =
+            await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("port_sub_reward"),
+                    new Uint8Array([
+                        vaultPortAdditionalStates.vaultPortSubRewardTokenBump,
+                    ]),
+                ],
+                program.programId
+            );
     }
 
     async borrow(
@@ -513,7 +578,6 @@ export class PortReserveAsset extends LendingMarket {
                 portStakingPool: this.accounts.stakingPool,
                 portLendProgram: DEVNET_LENDING_PROGRAM_ID,
                 portStakeProgram: DEVNET_STAKING_PROGRAM_ID,
-                portStakingRewardPool: this.accounts.stakingRewardPool,
                 portStakingAuthority: this.accounts.stakingProgamAuthority,
                 portLpTokenAccount: this.accounts.lpTokenAccount,
                 portMarketAuthority: this.accounts.marketAuthority,
@@ -685,6 +749,7 @@ async function createLendingMarket(
 
 async function createStakingPool(
     provider: anchor.AnchorProvider,
+    owner: Keypair,
     supply: number,
     duration: number,
     rewardTime: number,
@@ -707,27 +772,19 @@ async function createStakingPool(
         TOKEN_PROGRAM_ID
     );
 
-    // This step will create a temporary wallet to fund subsequenc tx
-    const wallet = Keypair.generate();
-    const sig0 = await provider.connection.requestAirdrop(
-        wallet.publicKey,
-        LAMPORTS_PER_SOL
-    );
-    await provider.connection.confirmTransaction(sig0, "finalized");
-
     // This step will create a mock reward token and mint some of it for testing
     const rewardMint = await SplToken.createMint(
         provider.connection,
-        wallet,
-        wallet.publicKey,
+        owner,
+        owner.publicKey,
         null,
         6,
         TOKEN_PROGRAM_ID
     );
     const rewardSupply = await rewardMint.createAssociatedTokenAccount(
-        wallet.publicKey
+        owner.publicKey
     );
-    await rewardMint.mintTo(rewardSupply, wallet, [], supplyLamports);
+    await rewardMint.mintTo(rewardSupply, owner, [], supplyLamports);
 
     // This step will create the sub-reward token pool
     const subRewardTokenPool = await createAccount(
@@ -748,15 +805,15 @@ async function createStakingPool(
         // This step will create a mock sub-reward token
         const subRewardMint = await SplToken.createMint(
             provider.connection,
-            wallet,
-            wallet.publicKey,
+            owner,
+            owner.publicKey,
             null,
             6,
             TOKEN_PROGRAM_ID
         );
         const subRewardSupply =
-            await subRewardMint.createAssociatedTokenAccount(wallet.publicKey);
-        await subRewardMint.mintTo(subRewardSupply, wallet, [], supplyLamports);
+            await subRewardMint.createAssociatedTokenAccount(owner.publicKey);
+        await subRewardMint.mintTo(subRewardSupply, owner, [], supplyLamports);
 
         subReward = {
             supply: supplyLamports,
@@ -774,7 +831,7 @@ async function createStakingPool(
             duration,
             rewardTime,
             bumpSeed,
-            wallet.publicKey,
+            owner.publicKey,
             rewardSupply,
             rewardTokenPool.publicKey,
             stakingPool.publicKey,
@@ -787,7 +844,7 @@ async function createStakingPool(
         )
     );
 
-    const sig1 = await provider.sendAll([{ tx: tx, signers: [wallet] }]);
+    const sig1 = await provider.sendAll([{ tx: tx, signers: [owner] }]);
     await provider.connection.confirmTransaction(sig1[0], "finalized");
 
     return stakingPool.publicKey;
@@ -847,6 +904,7 @@ async function createDefaultReserve(
 
     const stakingPool = await createStakingPool(
         provider,
+        owner,
         1000,
         5184000,
         0,
