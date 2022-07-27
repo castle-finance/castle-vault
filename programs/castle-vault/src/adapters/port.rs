@@ -57,21 +57,21 @@ pub struct PortAccounts<'info> {
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"port_obligation".as_ref()],
-        bump
+        bump = port_additional_states.vault_port_obligation_bump
     )]
     pub vault_port_obligation: Box<Account<'info, PortObligation>>,
 
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"port_stake".as_ref()],
-        bump
+        bump = port_additional_states.vault_port_stake_account_bump
     )]
     pub vault_port_stake_account: Box<Account<'info, PortStakeAccount>>,
 
     #[account(
         mut,
         seeds = [vault.key().as_ref(), b"port_reward".as_ref()],
-        bump
+        bump = port_additional_states.vault_port_reward_token_bump
     )]
     pub vault_port_reward_token: Box<Account<'info, TokenAccount>>,
 
