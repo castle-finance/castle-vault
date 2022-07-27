@@ -217,7 +217,7 @@ pub struct VaultPortAdditionalState {
     pub port_reward_token_oracle: Pubkey,
 
     pub port_sub_reward_token_oracle: Pubkey,
-    
+
     _reserved2: [u64; 32],
 }
 
