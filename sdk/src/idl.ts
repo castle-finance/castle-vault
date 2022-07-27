@@ -1779,6 +1779,11 @@ export type CastleVault = {
             code: 6017;
             name: "BumpError";
             msg: "Failed to fetch bump for PDA";
+        },
+        {
+            code: 6018;
+            name: "PriceFeedError";
+            msg: "Failed to get price feed";
         }
     ];
 };
@@ -3564,6 +3569,11 @@ export const IDL: CastleVault = {
             code: 6017,
             name: "BumpError",
             msg: "Failed to fetch bump for PDA",
+        },
+        {
+            code: 6018,
+            name: "PriceFeedError",
+            msg: "Failed to get price feed",
         },
     ],
 };

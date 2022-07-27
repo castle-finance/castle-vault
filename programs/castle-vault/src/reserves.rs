@@ -72,7 +72,11 @@ pub trait ReturnCalculator {
 #[derive(Clone)]
 pub struct PortReserveWrapper {
     pub reserve: Box<PortReserve>,
+    // Reward token to be distributed per year based on current rate
+    // Denominated in vault reserve tokens (USDC).
     pub reward_per_year: u64,
+    // Size of the staking pool denominated in vault reserve tokens (USDC).
+    // Reward we receive is proportional to our share in the staking pool.
     pub pool_size: u64,
 }
 

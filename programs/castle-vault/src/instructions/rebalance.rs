@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, ops::Deref};
+use std::ops::Deref;
 
 use boolinator::Boolinator;
 use strum::IntoEnumIterator;
@@ -144,8 +144,11 @@ fn assets_from_accounts(
         let port_exchange_rate = port_reserve.collateral_exchange_rate()?;
         let pool_size = port_exchange_rate.collateral_to_liquidity(pool_data.pool_size)?;
         let rate_per_slot = pool_data.rate_per_slot.try_floor_u64()?;
-        let price_feed = load_price_feed_from_account_info(&r.port_reward_token_oracle).unwrap();
-        let current_price = price_feed.get_current_price().unwrap();
+        let price_feed = load_price_feed_from_account_info(&r.port_reward_token_oracle)
+            .map_err(|_| ErrorCode::PriceFeedError)?;
+        let current_price = price_feed
+            .get_current_price()
+            .ok_or(ErrorCode::PriceFeedError)?;
         let price_raw = current_price.price as u64;
         let oracle_factor = (10 as u64).pow(current_price.expo.abs() as u32);
         let port_reward_per_year = rate_per_slot
