@@ -1109,22 +1109,32 @@ export class VaultClient {
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
                             : Keypair.generate().publicKey,
-                    portAdditionalStates:
-                        this.yieldSources.port != null
-                            ? this.yieldSources.port.accounts
-                                  .vaultPortAdditionalStates
-                            : dummyKey,
-                    portStakingPool:
-                        this.yieldSources.port != null
-                            ? this.yieldSources.port.accounts.stakingPool
-                            : dummyKey,
-                    portRewardTokenOracle:
-                        this.yieldSources.port != null
-                            ? this.yieldSources.port.accounts
-                                  .stakingRewardOracle
-                            : dummyKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 })
+                .remainingAccounts(
+                    this.yieldSources.port != null
+                        ? [
+                              {
+                                  isSigner: false,
+                                  isWritable: false,
+                                  pubkey: this.yieldSources.port.accounts
+                                      .vaultPortAdditionalStates,
+                              },
+                              {
+                                  isSigner: false,
+                                  isWritable: false,
+                                  pubkey: this.yieldSources.port.accounts
+                                      .stakingRewardOracle,
+                              },
+                              {
+                                  isSigner: false,
+                                  isWritable: false,
+                                  pubkey: this.yieldSources.port.accounts
+                                      .stakingPool,
+                              },
+                          ]
+                        : []
+                )
                 .instruction()
         );
         return rebalanceTx;
@@ -1174,22 +1184,32 @@ export class VaultClient {
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
                             : dummyKey,
-                    portAdditionalStates:
-                        this.yieldSources.port != null
-                            ? this.yieldSources.port.accounts
-                                  .vaultPortAdditionalStates
-                            : dummyKey,
-                    portStakingPool:
-                        this.yieldSources.port != null
-                            ? this.yieldSources.port.accounts.stakingPool
-                            : dummyKey,
-                    portRewardTokenOracle:
-                        this.yieldSources.port != null
-                            ? this.yieldSources.port.accounts
-                                  .stakingRewardOracle
-                            : dummyKey,
                     clock: SYSVAR_CLOCK_PUBKEY,
                 })
+                .remainingAccounts(
+                    this.yieldSources.port != null
+                        ? [
+                              {
+                                  isSigner: false,
+                                  isWritable: false,
+                                  pubkey: this.yieldSources.port.accounts
+                                      .vaultPortAdditionalStates,
+                              },
+                              {
+                                  isSigner: false,
+                                  isWritable: false,
+                                  pubkey: this.yieldSources.port.accounts
+                                      .stakingRewardOracle,
+                              },
+                              {
+                                  isSigner: false,
+                                  isWritable: false,
+                                  pubkey: this.yieldSources.port.accounts
+                                      .stakingPool,
+                              },
+                          ]
+                        : []
+                )
                 .preInstructions(simIx)
                 .simulate()
         ).events[1].data as RebalanceDataEvent;

@@ -667,21 +667,6 @@ export type CastleVault = {
                     isSigner: false;
                 },
                 {
-                    name: "portAdditionalStates";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "portStakingPool";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "portRewardTokenOracle";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
                     name: "clock";
                     isMut: false;
                     isSigner: false;
@@ -2453,21 +2438,6 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "portReserve",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "portAdditionalStates",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "portStakingPool",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "portRewardTokenOracle",
                     isMut: false,
                     isSigner: false,
                 },

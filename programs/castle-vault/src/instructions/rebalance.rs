@@ -66,18 +66,6 @@ pub struct Rebalance<'info> {
     //#[soteria(ignore)]
     pub port_reserve: AccountInfo<'info>,
 
-    /// CHECK: safe
-    //#[soteria(ignore)]
-    pub port_additional_states: AccountInfo<'info>,
-
-    /// CHECK: safe
-    //#[soteria(ignore)]
-    pub port_staking_pool: AccountInfo<'info>,
-
-    /// CHECK: safe
-    //#[soteria(ignore)]
-    pub port_reward_token_oracle: AccountInfo<'info>,
-
     pub clock: Sysvar<'info, Clock>,
 }
 
@@ -112,25 +100,33 @@ impl TryFrom<&Context<'_, '_, '_, '_, Rebalance<'_>>> for AssetContainer<Reserve
 
         let mut port: Option<Reserves> = None;
         if flags.contains(YieldSourceFlags::PORT) {
+            if ctx.remaining_accounts.len() != 3 {
+                return Err(ErrorCode::InvalidAccount.into());
+            }
+
+            let port_additional_states = &ctx.remaining_accounts[0];
+            let port_reward_token_oracle = &ctx.remaining_accounts[1];
+            let port_staking_pool = &ctx.remaining_accounts[2];
+
             let (port_additional_states_key, _) = Pubkey::find_program_address(
                 &[r.vault.key().as_ref(), b"port_additional_state".as_ref()],
                 ctx.program_id,
             );
 
             let port_additional_states_data = Box::new(
-                Account::<VaultPortAdditionalState>::try_from(&r.port_additional_states)?,
+                Account::<VaultPortAdditionalState>::try_from(port_additional_states)?,
             );
 
             if r.port_reserve.key.ne(&r.vault.port_reserve)
-                || port_additional_states_key.ne(&r.port_additional_states.key)
+                || port_additional_states_key.ne(port_additional_states.key)
                 || port_additional_states_data
                     .port_reward_token_oracle
                     .key()
-                    .ne(&r.port_reward_token_oracle.key)
+                    .ne(port_reward_token_oracle.key)
                 || port_additional_states_data
                     .port_staking_pool
                     .key()
-                    .ne(&r.port_staking_pool.key)
+                    .ne(port_staking_pool.key)
             {
                 return Err(ErrorCode::InvalidAccount.into());
             }
@@ -141,12 +137,12 @@ impl TryFrom<&Context<'_, '_, '_, '_, Rebalance<'_>>> for AssetContainer<Reserve
                     .clone(),
             );
 
-            let pool_data = Box::new(Account::<PortStakingPool>::try_from(&r.port_staking_pool)?);
+            let pool_data = Box::new(Account::<PortStakingPool>::try_from(port_staking_pool)?);
 
             let port_exchange_rate = port_reserve.collateral_exchange_rate()?;
             let pool_size = port_exchange_rate.collateral_to_liquidity(pool_data.pool_size)?;
             let rate_per_slot = pool_data.rate_per_slot.try_floor_u64()?;
-            let price_feed = load_price_feed_from_account_info(&r.port_reward_token_oracle)
+            let price_feed = load_price_feed_from_account_info(port_reward_token_oracle)
                 .map_err(|_| ErrorCode::PriceFeedError)?;
             if price_feed.status != PriceStatus::Trading {
                 return Err(ErrorCode::PriceFeedError.into());
