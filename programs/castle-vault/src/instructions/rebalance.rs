@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{convert::TryFrom, ops::Deref};
 
 use boolinator::Boolinator;
 use pyth_sdk_solana::PriceStatus;
@@ -81,110 +81,112 @@ pub struct Rebalance<'info> {
     pub clock: Sysvar<'info, Clock>,
 }
 
-fn assets_from_accounts(
-    r: &Rebalance<'_>,
-    program_id: &Pubkey,
-) -> Result<AssetContainer<Reserves>> {
-    let flags: YieldSourceFlags = r.vault.get_yield_source_flags();
+impl TryFrom<&Context<'_, '_, '_, '_, Rebalance<'_>>> for AssetContainer<Reserves> {
+    type Error = Error;
 
-    // NOTE: I tried pretty hard to get rid of these clones and only use the references.
-    // The problem is that these references originate from a deref() (or as_ref())
-    // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
-    // which means that the lifetimes are shared, preventing any other borrows
-    // (in particular the mutable borrow required at the end to save state)
+    fn try_from(ctx: &Context<'_, '_, '_, '_, Rebalance<'_>>) -> Result<AssetContainer<Reserves>> {
+        let r = &ctx.accounts;
+        let flags: YieldSourceFlags = r.vault.get_yield_source_flags();
 
-    // TODO is there a way to eliminate duplicate code here?
-    let solend = flags
-        .contains(YieldSourceFlags::SOLEND)
-        .as_option()
-        .map(|()| {
-            r.solend_reserve.key.eq(&r.vault.solend_reserve).as_result(
-                Ok::<_, Error>(Reserves::Solend(Box::new(
-                    Account::<SolendReserve>::try_from(&r.solend_reserve)?
-                        .deref()
-                        .clone(),
-                ))),
-                ErrorCode::InvalidAccount,
-            )?
+        // NOTE: I tried pretty hard to get rid of these clones and only use the references.
+        // The problem is that these references originate from a deref() (or as_ref())
+        // and end up sharing lifetimes with the Context<Rebalance>.accounts lifetime,
+        // which means that the lifetimes are shared, preventing any other borrows
+        // (in particular the mutable borrow required at the end to save state)
+
+        // TODO is there a way to eliminate duplicate code here?
+        let solend = flags
+            .contains(YieldSourceFlags::SOLEND)
+            .as_option()
+            .map(|()| {
+                r.solend_reserve.key.eq(&r.vault.solend_reserve).as_result(
+                    Ok::<_, Error>(Reserves::Solend(Box::new(
+                        Account::<SolendReserve>::try_from(&r.solend_reserve)?
+                            .deref()
+                            .clone(),
+                    ))),
+                    ErrorCode::InvalidAccount,
+                )?
+            })
+            .transpose()?;
+
+        let mut port: Option<Reserves> = None;
+        if flags.contains(YieldSourceFlags::PORT) {
+            let (port_additional_states_key, _) = Pubkey::find_program_address(
+                &[r.vault.key().as_ref(), b"port_additional_state".as_ref()],
+                ctx.program_id,
+            );
+
+            let port_additional_states_data = Box::new(
+                Account::<VaultPortAdditionalState>::try_from(&r.port_additional_states)?,
+            );
+
+            if r.port_reserve.key.ne(&r.vault.port_reserve)
+                || port_additional_states_key.ne(&r.port_additional_states.key)
+                || port_additional_states_data
+                    .port_reward_token_oracle
+                    .key()
+                    .ne(&r.port_reward_token_oracle.key)
+                || port_additional_states_data
+                    .port_staking_pool
+                    .key()
+                    .ne(&r.port_staking_pool.key)
+            {
+                return Err(ErrorCode::InvalidAccount.into());
+            }
+
+            let port_reserve = Box::new(
+                Account::<PortReserve>::try_from(&r.port_reserve)?
+                    .deref()
+                    .clone(),
+            );
+
+            let pool_data = Box::new(Account::<PortStakingPool>::try_from(&r.port_staking_pool)?);
+
+            let port_exchange_rate = port_reserve.collateral_exchange_rate()?;
+            let pool_size = port_exchange_rate.collateral_to_liquidity(pool_data.pool_size)?;
+            let rate_per_slot = pool_data.rate_per_slot.try_floor_u64()?;
+            let price_feed = load_price_feed_from_account_info(&r.port_reward_token_oracle)
+                .map_err(|_| ErrorCode::PriceFeedError)?;
+            if price_feed.status != PriceStatus::Trading {
+                return Err(ErrorCode::PriceFeedError.into());
+            }
+            let current_price = price_feed
+                .get_current_price()
+                .ok_or(ErrorCode::PriceFeedError)?;
+            let price_raw = current_price.price as u64;
+            let oracle_factor = (10 as u64).pow(current_price.expo.abs() as u32);
+            let port_reward_per_year = rate_per_slot
+                .checked_mul(price_raw)
+                .ok_or(ErrorCode::MathError)?
+                .checked_mul(SLOTS_PER_YEAR)
+                .ok_or(ErrorCode::MathError)?
+                .checked_div(oracle_factor)
+                .ok_or(ErrorCode::MathError)?;
+
+            #[cfg(feature = "debug")]
+            {
+                msg!("price_raw: {}", price_raw);
+                msg!("rate_per_slot: {}", rate_per_slot);
+                msg!("oracle_factor: {}", oracle_factor);
+                msg!("SLOTS_PER_YEAR: {}", SLOTS_PER_YEAR);
+                msg!("pool_size: {}", pool_size);
+                msg!("pool_size_lp: {}", pool_data.pool_size);
+                msg!("Expo: {}", current_price.expo);
+                msg!("Reward per year: {}", port_reward_per_year);
+            }
+
+            port = Some(Reserves::Port(PortReserveWrapper {
+                reserve: port_reserve,
+                reward_per_year: port_reward_per_year,
+                pool_size: pool_size,
+            }));
+        }
+
+        Ok(AssetContainer {
+            inner: [solend, port],
         })
-        .transpose()?;
-
-    let mut port: Option<Reserves> = None;
-    if flags.contains(YieldSourceFlags::PORT) {
-        let (port_additional_states_key, _) = Pubkey::find_program_address(
-            &[r.vault.key().as_ref(), b"port_additional_state".as_ref()],
-            program_id,
-        );
-
-        let port_additional_states_data = Box::new(Account::<VaultPortAdditionalState>::try_from(
-            &r.port_additional_states,
-        )?);
-
-        if r.port_reserve.key.ne(&r.vault.port_reserve)
-            || port_additional_states_key.ne(&r.port_additional_states.key)
-            || port_additional_states_data
-                .port_reward_token_oracle
-                .key()
-                .ne(&r.port_reward_token_oracle.key)
-            || port_additional_states_data
-                .port_staking_pool
-                .key()
-                .ne(&r.port_staking_pool.key)
-        {
-            return Err(ErrorCode::InvalidAccount.into());
-        }
-
-        let port_reserve = Box::new(
-            Account::<PortReserve>::try_from(&r.port_reserve)?
-                .deref()
-                .clone(),
-        );
-
-        let pool_data = Box::new(Account::<PortStakingPool>::try_from(&r.port_staking_pool)?);
-
-        let port_exchange_rate = port_reserve.collateral_exchange_rate()?;
-        let pool_size = port_exchange_rate.collateral_to_liquidity(pool_data.pool_size)?;
-        let rate_per_slot = pool_data.rate_per_slot.try_floor_u64()?;
-        let price_feed = load_price_feed_from_account_info(&r.port_reward_token_oracle)
-            .map_err(|_| ErrorCode::PriceFeedError)?;
-        if price_feed.status != PriceStatus::Trading {
-            return Err(ErrorCode::PriceFeedError.into());
-        }
-        let current_price = price_feed
-            .get_current_price()
-            .ok_or(ErrorCode::PriceFeedError)?;
-        let price_raw = current_price.price as u64;
-        let oracle_factor = (10 as u64).pow(current_price.expo.abs() as u32);
-        let port_reward_per_year = rate_per_slot
-            .checked_mul(price_raw)
-            .ok_or(ErrorCode::MathError)?
-            .checked_mul(SLOTS_PER_YEAR)
-            .ok_or(ErrorCode::MathError)?
-            .checked_div(oracle_factor)
-            .ok_or(ErrorCode::MathError)?;
-
-        #[cfg(feature = "debug")]
-        {
-            msg!("price_raw: {}", price_raw);
-            msg!("rate_per_slot: {}", rate_per_slot);
-            msg!("oracle_factor: {}", oracle_factor);
-            msg!("SLOTS_PER_YEAR: {}", SLOTS_PER_YEAR);
-            msg!("pool_size: {}", pool_size);
-            msg!("pool_size_lp: {}", pool_data.pool_size);
-            msg!("Expo: {}", current_price.expo);
-            msg!("Reward per year: {}", port_reward_per_year);
-        }
-
-        port = Some(Reserves::Port(PortReserveWrapper {
-            reserve: port_reserve,
-            reward_per_year: port_reward_per_year,
-            pool_size: pool_size,
-        }));
     }
-
-    Ok(AssetContainer {
-        inner: [solend, port],
-    })
 }
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, Copy, Debug)]
@@ -212,7 +214,7 @@ pub fn handler(ctx: Context<Rebalance>, proposed_weights_arg: StrategyWeightsArg
     let vault_value = ctx.accounts.vault.value.value;
     let slot = Clock::get()?.slot;
 
-    let assets = Box::new(assets_from_accounts(&*ctx.accounts, &ctx.program_id)?);
+    let assets = Box::new(AssetContainer::<Reserves>::try_from(&ctx)?);
     let strategy_weights = assets.calculate_weights(
         ctx.accounts.vault.config.strategy_type,
         ctx.accounts.vault.config.allocation_cap_pct,
