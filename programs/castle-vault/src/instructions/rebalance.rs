@@ -1,6 +1,7 @@
 use std::ops::Deref;
 
 use boolinator::Boolinator;
+use pyth_sdk_solana::PriceStatus;
 use strum::IntoEnumIterator;
 
 use anchor_lang::prelude::*;
@@ -146,6 +147,9 @@ fn assets_from_accounts(
         let rate_per_slot = pool_data.rate_per_slot.try_floor_u64()?;
         let price_feed = load_price_feed_from_account_info(&r.port_reward_token_oracle)
             .map_err(|_| ErrorCode::PriceFeedError)?;
+        if price_feed.status != PriceStatus::Trading {
+            return Err(ErrorCode::PriceFeedError.into());
+        }
         let current_price = price_feed
             .get_current_price()
             .ok_or(ErrorCode::PriceFeedError)?;
