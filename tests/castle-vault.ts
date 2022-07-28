@@ -1484,7 +1484,7 @@ describe("castle-vault", () => {
     });
 
     describe("Orca swap", () => {
-        it("Find market", () => {
+        it("Find market mainnet", () => {
             const portToken = new PublicKey(
                 "PoRTjZMPXb9T7dyU7tpLEZRQj7e6ssfAE62j2oQuc6y"
             );
@@ -1504,6 +1504,25 @@ describe("castle-vault", () => {
                 orca.accounts.swapProgram.toString(),
                 // ORCA mainnet market for PORT/USDC
                 "4if9Gy7dvjU7XwunKxdnCcPsaT3yAHPXdz2XS1eo19LG"
+            );
+        });
+
+        it("Find market devnet", () => {
+            const solToken = new PublicKey(
+                "So11111111111111111111111111111111111111112"
+            );
+            const usdcToken = new PublicKey(
+                "EmXq3Ni9gfudTiyNKzzYvpnQqnJEMRw2ttnVXoJXjLo1"
+            );
+            const orca = OrcaLegacySwap.load(solToken, usdcToken, "devnet");
+
+            assert.equal(orca.accounts.marketId, 0);
+            assert.equal(orca.accounts.tokenAccountA, solToken);
+            assert.equal(orca.accounts.tokenAccountB, usdcToken);
+            assert.equal(
+                orca.accounts.swapProgram.toString(),
+                // ORCA devnet market for SOL/USDC
+                "8DT1oKJPHcdJzdSf3cb2WT7L8eRjLUJeDFSe7M2QDtQE"
             );
         });
     });
