@@ -1482,4 +1482,29 @@ describe("castle-vault", () => {
             testPortRewardClaiming(false);
         });
     });
+
+    describe("Orca swaap", () => {
+        it("Find market", () => {
+            const portToken = new PublicKey(
+                "PoRTjZMPXb9T7dyU7tpLEZRQj7e6ssfAE62j2oQuc6y"
+            );
+            const usdcToken = new PublicKey(
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            );
+            const orca = OrcaLegacySwap.load(
+                portToken,
+                usdcToken,
+                "mainnet-beta"
+            );
+
+            assert.equal(orca.accounts.marketId, 0);
+            assert.equal(orca.accounts.tokenAccountA, portToken);
+            assert.equal(orca.accounts.tokenAccountB, usdcToken);
+            assert.equal(
+                orca.accounts.swapProgram.toString(),
+                // ORCA mainnet market for PORT/USDC
+                "4if9Gy7dvjU7XwunKxdnCcPsaT3yAHPXdz2XS1eo19LG"
+            );
+        });
+    });
 });
