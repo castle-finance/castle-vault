@@ -1483,7 +1483,7 @@ describe("castle-vault", () => {
         });
     });
 
-    describe("Orca swaap", () => {
+    describe("Orca swap", () => {
         it("Find market", () => {
             const portToken = new PublicKey(
                 "PoRTjZMPXb9T7dyU7tpLEZRQj7e6ssfAE62j2oQuc6y"
