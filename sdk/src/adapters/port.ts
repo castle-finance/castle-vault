@@ -102,8 +102,11 @@ const DEVNET_ASSETS = [
     ),
 ];
 
-const PORT_USD_PYTH_PRICE = new PublicKey(
+const PORT_USD_PYTH_PRICE_MAINNET = new PublicKey(
     "jrMH4afMEodMqirQ7P89q5bGNJxD8uceELcsZaVBDeh"
+);
+const PORT_USD_PYTH_PRICE_DEVNET = new PublicKey(
+    "33ugpDWbC2mLrYSQvu1BHfykR8bt3MVc4S3YuuXMVRH3"
 );
 
 export class PortReserveAsset extends LendingMarket {
@@ -124,6 +127,7 @@ export class PortReserveAsset extends LendingMarket {
     ): Promise<PortReserveAsset> {
         let env: Environment;
         let market: PublicKey;
+        let portUsdPythPrice: PublicKey;
         if (cluster == "devnet") {
             env = new Environment(
                 ENV.Devnet,
@@ -135,9 +139,11 @@ export class PortReserveAsset extends LendingMarket {
             market = new PublicKey(
                 "H27Quk3DSbu55T4dCr1NddTTSAezXwHU67FPCZVKLhSW"
             );
+            portUsdPythPrice = PORT_USD_PYTH_PRICE_DEVNET;
         } else if (cluster == "mainnet-beta") {
             env = Environment.forMainNet();
             market = DEFAULT_PORT_LENDING_MARKET;
+            portUsdPythPrice = PORT_USD_PYTH_PRICE_MAINNET;
         } else {
             throw new Error("Cluster ${cluster} not supported");
         }
@@ -200,7 +206,7 @@ export class PortReserveAsset extends LendingMarket {
             stakingSubRewardTokenMint: subrewardMint,
             stakingProgram: env.getStakingProgramPk(),
             stakingProgamAuthority: stakingProgamAuthority,
-            stakingRewardOracle: PORT_USD_PYTH_PRICE,
+            stakingRewardOracle: portUsdPythPrice,
             stakingSubRewardOracle: stakingSubRewardOracle,
         };
 
@@ -1016,9 +1022,10 @@ async function createDefaultReserve(
         stakingSubRewardPool: subRewardPool,
         stakingSubRewardTokenMint: subrewardMint,
         stakingProgram: DEVNET_STAKING_PROGRAM_ID,
-        // TODO create mock authority
         stakingProgamAuthority: stakingProgamAuthority,
-        stakingRewardOracle: PORT_USD_PYTH_PRICE,
-        stakingSubRewardOracle: PORT_USD_PYTH_PRICE,
+        // We use mainnet pyth acct for the test suit
+        // Because we copy the mainnet pyth acct over to the test validator
+        stakingRewardOracle: PORT_USD_PYTH_PRICE_MAINNET,
+        stakingSubRewardOracle: PORT_USD_PYTH_PRICE_MAINNET,
     };
 }
