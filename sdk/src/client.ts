@@ -84,15 +84,23 @@ export class VaultClient {
         const cluster = CLUSTER_MAP[env];
         const reserveMint = vaultState.reserveTokenMint;
 
-        const dexStatesAddress = await PublicKey.createProgramAddress(
-            [
-                vaultId.toBuffer(),
-                anchor.utils.bytes.utf8.encode("dex_states"),
-                new Uint8Array([vaultState.dexStatesBump]),
-            ],
-            program.programId
-        );
-        let dex: ExchangeMarkets = { dexStates: dexStatesAddress };
+        let dex: ExchangeMarkets;
+        let dexStatesAddress: PublicKey;
+        try {
+            dexStatesAddress = await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("dex_states"),
+                    new Uint8Array([vaultState.dexStatesBump]),
+                ],
+                program.programId
+            );
+            dex = { dexStates: dexStatesAddress };
+        } catch (error) {
+            console.log(
+                "Failed to load DEX states, maybe DEX states are not initialized?"
+            );
+        }
 
         let yieldSources: YieldSources = {};
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Solend) {
@@ -108,25 +116,33 @@ export class VaultClient {
                 cluster,
                 reserveMint
             );
-            await yieldSources.port.loadAdditionalAccounts(
-                program,
-                vaultId,
-                vaultState
-            );
-            // Get PDA addr that stores orca account info.
-            // Only available for Port
-            const dexStates = await program.account.dexStates.fetch(
-                dexStatesAddress
-            );
-            const orcaLegacyAddress = await PublicKey.createProgramAddress(
-                [
-                    vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("dex_orca_legacy"),
-                    new Uint8Array([dexStates.orcaLegacyAccountsBump]),
-                ],
-                program.programId
-            );
-            dex.orcaLegacy.accounts.vaultOrcaLegacyAccount = orcaLegacyAddress;
+
+            try {
+                await yieldSources.port.loadAdditionalAccounts(
+                    program,
+                    vaultId,
+                    vaultState
+                );
+                // Get PDA addr that stores orca account info.
+                // Only available for Port
+                const dexStates = await program.account.dexStates.fetch(
+                    dexStatesAddress
+                );
+                const orcaLegacyAddress = await PublicKey.createProgramAddress(
+                    [
+                        vaultId.toBuffer(),
+                        anchor.utils.bytes.utf8.encode("dex_orca_legacy"),
+                        new Uint8Array([dexStates.orcaLegacyAccountsBump]),
+                    ],
+                    program.programId
+                );
+                dex.orcaLegacy.accounts.vaultOrcaLegacyAccount =
+                    orcaLegacyAddress;
+            } catch (error) {
+                console.log(
+                    "Failed to load Port additional features, maybe not initialized?"
+                );
+            }
         }
 
         const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
