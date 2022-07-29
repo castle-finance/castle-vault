@@ -128,6 +128,21 @@ export class VaultClient {
                 const dexStates = await program.account.dexStates.fetch(
                     dexStatesAddress
                 );
+
+                try {
+                    const cluster = CLUSTER_MAP[env];
+                    const tokenA =
+                        yieldSources.port.accounts.stakingRewardTokenMint;
+                    const tokenB = vaultState.reserveTokenMint;
+                    dex.orcaLegacy = OrcaLegacySwap.load(
+                        tokenA,
+                        tokenB,
+                        cluster
+                    );
+                } catch (error) {
+                    console.log("Failed to load Orca DEX market");
+                }
+
                 const orcaLegacyAddress = await PublicKey.createProgramAddress(
                     [
                         vaultId.toBuffer(),
