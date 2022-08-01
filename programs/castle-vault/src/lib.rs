@@ -127,6 +127,10 @@ pub mod castle_vault {
     pub fn sell_port_reward(ctx: Context<SellPortReward>, market_id: u8) -> Result<()> {
         instructions::sell_port_reward::handler(ctx, market_id)
     }
+
+    pub fn sync_lp_token_supply(ctx: Context<SyncLpTokenSupply>) -> Result<()> {
+        instructions::sync_lp_token_supply::handler(ctx)
+    }
 }
 
 solana_security_txt::security_txt! {

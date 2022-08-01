@@ -1137,6 +1137,27 @@ export type CastleVault = {
                     type: "u8";
                 }
             ];
+        },
+        {
+            name: "syncLpTokenSupply";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "lpTokenMint";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                }
+            ];
+            args: [];
         }
     ];
     accounts: [
@@ -1648,6 +1669,26 @@ export type CastleVault = {
                 },
                 {
                     name: "port";
+                    type: "u64";
+                    index: false;
+                }
+            ];
+        },
+        {
+            name: "WithdrawEvent";
+            fields: [
+                {
+                    name: "vault";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "user";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "amount";
                     type: "u64";
                     index: false;
                 }
@@ -2913,6 +2954,27 @@ export const IDL: CastleVault = {
                 },
             ],
         },
+        {
+            name: "syncLpTokenSupply",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "lpTokenMint",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+            ],
+            args: [],
+        },
     ],
     accounts: [
         {
@@ -3423,6 +3485,26 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "port",
+                    type: "u64",
+                    index: false,
+                },
+            ],
+        },
+        {
+            name: "WithdrawEvent",
+            fields: [
+                {
+                    name: "vault",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "user",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "amount",
                     type: "u64",
                     index: false,
                 },
