@@ -123,13 +123,14 @@ export class VaultClient {
                     vaultId,
                     vaultState
                 );
-                // Get PDA addr that stores orca account info.
-                // Only available for Port
-                const dexStates = await program.account.dexStates.fetch(
-                    dexStatesAddress
-                );
 
                 try {
+                    // Get PDA addr that stores orca account info.
+                    // Only available for Port
+                    const dexStates = await program.account.dexStates.fetch(
+                        dexStatesAddress
+                    );
+
                     const cluster = CLUSTER_MAP[env];
                     const tokenA =
                         yieldSources.port.accounts.stakingRewardTokenMint;
@@ -139,20 +140,25 @@ export class VaultClient {
                         tokenB,
                         cluster
                     );
+
+                    const orcaLegacyAddress =
+                        await PublicKey.createProgramAddress(
+                            [
+                                vaultId.toBuffer(),
+                                anchor.utils.bytes.utf8.encode(
+                                    "dex_orca_legacy"
+                                ),
+                                new Uint8Array([
+                                    dexStates.orcaLegacyAccountsBump,
+                                ]),
+                            ],
+                            program.programId
+                        );
+                    dex.orcaLegacy.accounts.vaultOrcaLegacyAccount =
+                        orcaLegacyAddress;
                 } catch (error) {
                     console.log("Failed to load Orca DEX market");
                 }
-
-                const orcaLegacyAddress = await PublicKey.createProgramAddress(
-                    [
-                        vaultId.toBuffer(),
-                        anchor.utils.bytes.utf8.encode("dex_orca_legacy"),
-                        new Uint8Array([dexStates.orcaLegacyAccountsBump]),
-                    ],
-                    program.programId
-                );
-                dex.orcaLegacy.accounts.vaultOrcaLegacyAccount =
-                    orcaLegacyAddress;
             } catch (error) {
                 console.log(
                     "Failed to load Port additional features, maybe not initialized?"
@@ -1202,48 +1208,53 @@ export class VaultClient {
 
         // Sort ixs in descending order of outflows
         const dummyKey = Keypair.generate().publicKey;
-        const newAllocations = (
-            await this.program.methods
-                .rebalance(proposedWeights)
-                .accounts({
-                    vault: this.vaultId,
-                    solendReserve:
-                        this.yieldSources.solend != null
-                            ? this.yieldSources.solend.accounts.reserve
-                            : dummyKey,
-                    portReserve:
+        let newAllocations: RebalanceDataEvent;
+        try {
+            newAllocations = (
+                await this.program.methods
+                    .rebalance(proposedWeights)
+                    .accounts({
+                        vault: this.vaultId,
+                        solendReserve:
+                            this.yieldSources.solend != null
+                                ? this.yieldSources.solend.accounts.reserve
+                                : dummyKey,
+                        portReserve:
+                            this.yieldSources.port != null
+                                ? this.yieldSources.port.accounts.reserve
+                                : dummyKey,
+                        clock: SYSVAR_CLOCK_PUBKEY,
+                    })
+                    .remainingAccounts(
                         this.yieldSources.port != null
-                            ? this.yieldSources.port.accounts.reserve
-                            : dummyKey,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                })
-                .remainingAccounts(
-                    this.yieldSources.port != null
-                        ? [
-                              {
-                                  isSigner: false,
-                                  isWritable: false,
-                                  pubkey: this.yieldSources.port.accounts
-                                      .vaultPortAdditionalStates,
-                              },
-                              {
-                                  isSigner: false,
-                                  isWritable: false,
-                                  pubkey: this.yieldSources.port.accounts
-                                      .stakingRewardOracle,
-                              },
-                              {
-                                  isSigner: false,
-                                  isWritable: false,
-                                  pubkey: this.yieldSources.port.accounts
-                                      .stakingPool,
-                              },
-                          ]
-                        : []
-                )
-                .preInstructions(simIx)
-                .simulate()
-        ).events[1].data as RebalanceDataEvent;
+                            ? [
+                                  {
+                                      isSigner: false,
+                                      isWritable: false,
+                                      pubkey: this.yieldSources.port.accounts
+                                          .vaultPortAdditionalStates,
+                                  },
+                                  {
+                                      isSigner: false,
+                                      isWritable: false,
+                                      pubkey: this.yieldSources.port.accounts
+                                          .stakingRewardOracle,
+                                  },
+                                  {
+                                      isSigner: false,
+                                      isWritable: false,
+                                      pubkey: this.yieldSources.port.accounts
+                                          .stakingPool,
+                                  },
+                              ]
+                            : []
+                    )
+                    .preInstructions(simIx)
+                    .simulate()
+            ).events[1].data as RebalanceDataEvent;
+        } catch (error) {
+            console.log(error);
+        }
 
         const newAndOldallocations = await Promise.all(
             Object.entries(this.yieldSources).map(
