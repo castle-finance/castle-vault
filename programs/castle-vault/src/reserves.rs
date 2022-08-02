@@ -144,8 +144,15 @@ impl ReturnCalculator for Reserves {
                     .ok_or(ErrorCode::MathError)?
                     .checked_div(pool_size)
                     .ok_or(ErrorCode::MathError)?;
+                let reward_rate = Rate::from_bips(reward_apr_bps);
 
-                Ok(base_rate.try_add(Rate::from_bips(reward_apr_bps))?)
+                #[cfg(feature = "debug")]
+                {
+                    msg!("base rate: {}", base_rate);
+                    msg!("reward rate: {}", reward_rate);
+                }
+
+                Ok(base_rate.try_add(reward_rate)?)
             }
         }
     }
