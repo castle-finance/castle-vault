@@ -507,7 +507,7 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
             #[cfg(feature = "debug")]
             msg!("Refresh port reserve token value: {}", port_value);
 
-            self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
+            self.vault.actual_allocations[Provider::Port].update(port_value, Clock::get()?.slot);
         }
 
         Ok(())

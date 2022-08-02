@@ -1146,7 +1146,6 @@ export class VaultClient {
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
                             : Keypair.generate().publicKey,
-                    clock: SYSVAR_CLOCK_PUBKEY,
                 })
                 .remainingAccounts(
                     this.yieldSources.port != null
@@ -1223,7 +1222,6 @@ export class VaultClient {
                             this.yieldSources.port != null
                                 ? this.yieldSources.port.accounts.reserve
                                 : dummyKey,
-                        clock: SYSVAR_CLOCK_PUBKEY,
                     })
                     .remainingAccounts(
                         this.yieldSources.port != null

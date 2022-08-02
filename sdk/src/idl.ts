@@ -665,11 +665,6 @@ export type CastleVault = {
                     name: "portReserve";
                     isMut: false;
                     isSigner: false;
-                },
-                {
-                    name: "clock";
-                    isMut: false;
-                    isSigner: false;
                 }
             ];
             args: [
@@ -2479,11 +2474,6 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "portReserve",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "clock",
                     isMut: false,
                     isSigner: false,
                 },

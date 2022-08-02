@@ -52,7 +52,7 @@ pub struct Rebalance<'info> {
     /// Checks that the accounts passed in are correct
     #[account(
         mut,
-        constraint = !vault.value.last_update.is_stale(clock.slot)? @ ErrorCode::VaultIsNotRefreshed,
+        constraint = !vault.value.last_update.is_stale(Clock::get()?.slot)? @ ErrorCode::VaultIsNotRefreshed,
     )]
     pub vault: Box<Account<'info, Vault>>,
 
@@ -65,8 +65,6 @@ pub struct Rebalance<'info> {
     /// CHECK: safe
     //#[soteria(ignore)]
     pub port_reserve: AccountInfo<'info>,
-
-    pub clock: Sysvar<'info, Clock>,
 }
 
 impl TryFrom<&Context<'_, '_, '_, '_, Rebalance<'_>>> for AssetContainer<Reserves> {

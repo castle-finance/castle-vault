@@ -518,7 +518,7 @@ impl<'info> Refresher<'info> for RefreshSolend<'info> {
         #[cfg(feature = "debug")]
         msg!("Value: {}", solend_value);
 
-        self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
+        self.vault.actual_allocations[Provider::Solend].update(solend_value, Clock::get()?.slot);
 
         Ok(())
     }
