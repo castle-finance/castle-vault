@@ -1481,6 +1481,93 @@ describe("castle-vault", () => {
 
             testPortRewardClaiming(false);
         });
+
+        describe("Multi-pool max-yield rebalance", () => {
+            let allocationCap = 0.6;
+            let portExpectedRatio = allocationCap;
+            let solendExpectedRatio = 1 - allocationCap;
+
+            before(async function () {
+                await initLendingMarkets(false);
+            });
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: allocationCap * 100,
+                        strategyType: { [StrategyTypes.maxYield]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                    },
+                    true,
+                    true
+                );
+            });
+
+            const depositQty = 3025004087;
+
+            before(async () => {
+                await mintReserveToken(userReserveTokenAccount, depositQty);
+                await depositToVault(depositQty);
+            });
+
+            it("Stake port LP token when rebalancing", async () => {
+                await performRebalance({
+                    solend: 6000,
+                    port: 4000,
+                });
+
+                const maxDiffAllowed = 1;
+                const totalValue = await getVaultTotalValue();
+                const portValue = (
+                    await vaultClient.getVaultPortLpTokenAccountValue()
+                ).lamports.toNumber();
+                const solendVaLue = (
+                    await vaultClient.getVaultSolendLpTokenAccountValue()
+                ).lamports.toNumber();
+
+                assert.isAtMost(
+                    Math.abs(totalValue - Math.floor(depositQty)),
+                    maxDiffAllowed
+                );
+                assert.isAtMost(
+                    Math.abs(
+                        portValue - Math.floor(depositQty * portExpectedRatio)
+                    ),
+                    maxDiffAllowed
+                );
+                assert.isAtMost(
+                    Math.abs(
+                        solendVaLue -
+                            Math.floor(depositQty * solendExpectedRatio)
+                    ),
+                    maxDiffAllowed
+                );
+
+                // Check that all allocations to port are staked for earning rewards
+                const stakingAccountRaw =
+                    await provider.connection.getAccountInfo(
+                        new PublicKey(port.accounts.vaultPortStakeAccount)
+                    );
+                const stakingAccount = StakeAccount.fromRaw({
+                    pubkey: port.accounts.vaultPortStakeAccount,
+                    account: stakingAccountRaw,
+                });
+                const reserve = await port.client.getReserve(
+                    port.accounts.reserve
+                );
+                const exchangeRate = reserve.getExchangeRatio();
+                const stakedTokenValue = AssetPrice.of(
+                    MintId.of(port.accounts.stakingRewardTokenMint),
+                    stakingAccount.getDepositAmount().toU64().toNumber()
+                ).divide(exchangeRate.getUnchecked());
+                assert.isAtMost(
+                    Math.abs(
+                        stakedTokenValue.getRaw().toNumber() -
+                            Math.floor(depositQty * portExpectedRatio)
+                    ),
+                    maxDiffAllowed
+                );
+            });
+        });
     });
 
     describe("Orca swap", () => {
