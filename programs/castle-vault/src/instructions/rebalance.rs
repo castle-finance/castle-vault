@@ -151,7 +151,7 @@ impl TryFrom<&Context<'_, '_, '_, '_, Rebalance<'_>>> for AssetContainer<Reserve
                 .get_current_price()
                 .ok_or(ErrorCode::PriceFeedError)?;
             let price_raw = current_price.price as u64;
-            let oracle_factor = (10 as u64).pow(current_price.expo.abs() as u32);
+            let oracle_factor = (10_u64).pow(current_price.expo.unsigned_abs());
             let port_reward_per_year = rate_per_slot
                 .checked_mul(price_raw)
                 .ok_or(ErrorCode::MathError)?
@@ -175,7 +175,7 @@ impl TryFrom<&Context<'_, '_, '_, '_, Rebalance<'_>>> for AssetContainer<Reserve
             port = Some(Reserves::Port(PortReserveWrapper {
                 reserve: port_reserve,
                 reward_per_year: port_reward_per_year,
-                pool_size: pool_size,
+                pool_size,
             }));
         }
 
