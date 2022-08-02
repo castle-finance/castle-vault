@@ -121,7 +121,14 @@ impl ReserveAccessor for Reserves {
 impl ReturnCalculator for Reserves {
     fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate> {
         match self {
-            Reserves::Solend(reserve) => reserve.calculate_return(new_allocation, old_allocation),
+            Reserves::Solend(reserve) => {
+                let rate = reserve.calculate_return(new_allocation, old_allocation)?;
+                #[cfg(feature = "debug")]
+                {
+                    msg!("solend rate: {}", rate);
+                }
+                Ok(rate)
+            }
             Reserves::Port(reserve) => {
                 let base_rate = reserve
                     .reserve
@@ -148,8 +155,8 @@ impl ReturnCalculator for Reserves {
 
                 #[cfg(feature = "debug")]
                 {
-                    msg!("base rate: {}", base_rate);
-                    msg!("reward rate: {}", reward_rate);
+                    msg!("port base rate: {}", base_rate);
+                    msg!("port reward rate: {}", reward_rate);
                 }
 
                 Ok(base_rate.try_add(reward_rate)?)
