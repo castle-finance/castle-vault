@@ -169,7 +169,7 @@ export class PortReserveAsset extends LendingMarket {
         // Get sub-reward accounts, these are optional
         const subRewardPool = targetStakingPool.getSubRewardTokenPool();
         let subrewardMint = undefined;
-        let stakingSubRewardOracle = undefined;
+        let stakingSubRewardOracle = Keypair.generate().publicKey;
         if (subRewardPool != undefined) {
             const subrewardMintRaw = await provider.connection.getAccountInfo(
                 targetStakingPool.getSubRewardTokenPool()
