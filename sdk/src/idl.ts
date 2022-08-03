@@ -1,5 +1,5 @@
 export type CastleVault = {
-    version: "3.4.1";
+    version: "3.6.1";
     name: "castle_vault";
     instructions: [
         {
@@ -288,6 +288,16 @@ export type CastleVault = {
                 },
                 {
                     name: "portStakingPool";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portRewardTokenOracle";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "portSubRewardTokenOracle";
                     isMut: false;
                     isSigner: false;
                 },
@@ -653,11 +663,6 @@ export type CastleVault = {
                 },
                 {
                     name: "portReserve";
-                    isMut: false;
-                    isSigner: false;
-                },
-                {
-                    name: "clock";
                     isMut: false;
                     isSigner: false;
                 }
@@ -1127,6 +1132,27 @@ export type CastleVault = {
                     type: "u8";
                 }
             ];
+        },
+        {
+            name: "syncLpTokenSupply";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "lpTokenMint";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                }
+            ];
+            args: [];
         }
     ];
     accounts: [
@@ -1302,10 +1328,12 @@ export type CastleVault = {
                         };
                     },
                     {
-                        name: "reserved1";
-                        type: {
-                            array: ["u64", 8];
-                        };
+                        name: "portRewardTokenOracle";
+                        type: "publicKey";
+                    },
+                    {
+                        name: "portSubRewardTokenOracle";
+                        type: "publicKey";
                     },
                     {
                         name: "reserved2";
@@ -1559,7 +1587,7 @@ export type CastleVault = {
                         name: "Port";
                         fields: [
                             {
-                                defined: "Box<PortReserve>";
+                                defined: "PortReserveWrapper";
                             }
                         ];
                     }
@@ -1636,6 +1664,26 @@ export type CastleVault = {
                 },
                 {
                     name: "port";
+                    type: "u64";
+                    index: false;
+                }
+            ];
+        },
+        {
+            name: "WithdrawEvent";
+            fields: [
+                {
+                    name: "vault";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "user";
+                    type: "publicKey";
+                    index: false;
+                },
+                {
+                    name: "amount";
                     type: "u64";
                     index: false;
                 }
@@ -1752,12 +1800,17 @@ export type CastleVault = {
             code: 6017;
             name: "BumpError";
             msg: "Failed to fetch bump for PDA";
+        },
+        {
+            code: 6018;
+            name: "PriceFeedError";
+            msg: "Failed to get price feed";
         }
     ];
 };
 
 export const IDL: CastleVault = {
-    version: "3.4.1",
+    version: "3.6.1",
     name: "castle_vault",
     instructions: [
         {
@@ -2046,6 +2099,16 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "portStakingPool",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portRewardTokenOracle",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "portSubRewardTokenOracle",
                     isMut: false,
                     isSigner: false,
                 },
@@ -2411,11 +2474,6 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "portReserve",
-                    isMut: false,
-                    isSigner: false,
-                },
-                {
-                    name: "clock",
                     isMut: false,
                     isSigner: false,
                 },
@@ -2886,6 +2944,27 @@ export const IDL: CastleVault = {
                 },
             ],
         },
+        {
+            name: "syncLpTokenSupply",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "lpTokenMint",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+            ],
+            args: [],
+        },
     ],
     accounts: [
         {
@@ -3060,10 +3139,12 @@ export const IDL: CastleVault = {
                         },
                     },
                     {
-                        name: "reserved1",
-                        type: {
-                            array: ["u64", 8],
-                        },
+                        name: "portRewardTokenOracle",
+                        type: "publicKey",
+                    },
+                    {
+                        name: "portSubRewardTokenOracle",
+                        type: "publicKey",
                     },
                     {
                         name: "reserved2",
@@ -3317,7 +3398,7 @@ export const IDL: CastleVault = {
                         name: "Port",
                         fields: [
                             {
-                                defined: "Box<PortReserve>",
+                                defined: "PortReserveWrapper",
                             },
                         ],
                     },
@@ -3394,6 +3475,26 @@ export const IDL: CastleVault = {
                 },
                 {
                     name: "port",
+                    type: "u64",
+                    index: false,
+                },
+            ],
+        },
+        {
+            name: "WithdrawEvent",
+            fields: [
+                {
+                    name: "vault",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "user",
+                    type: "publicKey",
+                    index: false,
+                },
+                {
+                    name: "amount",
                     type: "u64",
                     index: false,
                 },
@@ -3510,6 +3611,11 @@ export const IDL: CastleVault = {
             code: 6017,
             name: "BumpError",
             msg: "Failed to fetch bump for PDA",
+        },
+        {
+            code: 6018,
+            name: "PriceFeedError",
+            msg: "Failed to get price feed",
         },
     ],
 };

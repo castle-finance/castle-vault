@@ -6,7 +6,7 @@ homepage = "https://castle.finance"
 license = "GPL-3.0-or-later"
 name = "castle-vault"
 repository = "https://github.com/castle-finance/castle-vault/"
-version = "3.5.1"
+version = "3.6.1"
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -47,6 +47,7 @@ spl-token-swap = {git = "https://github.com/solana-labs/solana-program-library/"
 static_assertions = "1.1.0"
 strum = "0.24"
 strum_macros = "0.24"
+pyth-sdk-solana = "0.4.2"
 
 [dev-dependencies]
 mockall = "0.11"

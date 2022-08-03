@@ -87,6 +87,12 @@ pub struct InitializePortRewardAccounts<'info> {
     pub port_staking_pool: Box<Account<'info, PortStakingPool>>,
 
     /// CHECK: safe
+    pub port_reward_token_oracle: AccountInfo<'info>,
+
+    /// CHECK: safe
+    pub port_sub_reward_token_oracle: AccountInfo<'info>,
+
+    /// CHECK: safe
     #[account(
         executable,
         address = port_staking_id(),
@@ -186,6 +192,12 @@ pub fn handler(
     ctx.accounts.port_additional_states.port_staking_pool = ctx.accounts.port_staking_pool.key();
 
     ctx.accounts.port_additional_states.sub_reward_available = sub_reward_available;
+
+    ctx.accounts.port_additional_states.port_reward_token_oracle =
+        ctx.accounts.port_reward_token_oracle.key();
+    ctx.accounts
+        .port_additional_states
+        .port_sub_reward_token_oracle = ctx.accounts.port_sub_reward_token_oracle.key();
 
     Ok(())
 }

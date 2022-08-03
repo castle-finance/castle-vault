@@ -71,6 +71,8 @@ interface PortAccounts {
     stakingSubRewardTokenMint: PublicKey;
     stakingProgram: PublicKey;
     stakingProgamAuthority: PublicKey;
+    stakingRewardOracle?: PublicKey;
+    stakingSubRewardOracle?: PublicKey;
     // Some port accounts held by the vault. The rest are still in vaultState
     // TODO refactor this in the future, maybe move all port-related accounts to this struct
     vaultPortAdditionalStates?: PublicKey;
@@ -100,6 +102,13 @@ const DEVNET_ASSETS = [
     ),
 ];
 
+const PORT_USD_PYTH_PRICE_MAINNET = new PublicKey(
+    "jrMH4afMEodMqirQ7P89q5bGNJxD8uceELcsZaVBDeh"
+);
+const PORT_USD_PYTH_PRICE_DEVNET = new PublicKey(
+    "33ugpDWbC2mLrYSQvu1BHfykR8bt3MVc4S3YuuXMVRH3"
+);
+
 export class PortReserveAsset extends LendingMarket {
     private constructor(
         public provider: anchor.AnchorProvider,
@@ -118,6 +127,7 @@ export class PortReserveAsset extends LendingMarket {
     ): Promise<PortReserveAsset> {
         let env: Environment;
         let market: PublicKey;
+        let portUsdPythPrice: PublicKey;
         if (cluster == "devnet") {
             env = new Environment(
                 ENV.Devnet,
@@ -129,9 +139,11 @@ export class PortReserveAsset extends LendingMarket {
             market = new PublicKey(
                 "H27Quk3DSbu55T4dCr1NddTTSAezXwHU67FPCZVKLhSW"
             );
+            portUsdPythPrice = PORT_USD_PYTH_PRICE_DEVNET;
         } else if (cluster == "mainnet-beta") {
             env = Environment.forMainNet();
             market = DEFAULT_PORT_LENDING_MARKET;
+            portUsdPythPrice = PORT_USD_PYTH_PRICE_MAINNET;
         } else {
             throw new Error("Cluster ${cluster} not supported");
         }
@@ -157,6 +169,7 @@ export class PortReserveAsset extends LendingMarket {
         // Get sub-reward accounts, these are optional
         const subRewardPool = targetStakingPool.getSubRewardTokenPool();
         let subrewardMint = undefined;
+        let stakingSubRewardOracle = Keypair.generate().publicKey;
         if (subRewardPool != undefined) {
             const subrewardMintRaw = await provider.connection.getAccountInfo(
                 targetStakingPool.getSubRewardTokenPool()
@@ -165,6 +178,11 @@ export class PortReserveAsset extends LendingMarket {
                 pubkey: targetStakingPool.getSubRewardTokenPool(),
                 account: subrewardMintRaw,
             }).getMintId();
+
+            // TODO get Pyth price accoutn for the subreward token vs USD
+            // This is lower priority for now, because there's only one pool with subreward
+            // and we're unlikely to create a vault for that soon.
+            stakingSubRewardOracle = Keypair.generate().publicKey;
         }
 
         const [marketAuthority] = await PublicKey.findProgramAddress(
@@ -188,6 +206,8 @@ export class PortReserveAsset extends LendingMarket {
             stakingSubRewardTokenMint: subrewardMint,
             stakingProgram: env.getStakingProgramPk(),
             stakingProgamAuthority: stakingProgamAuthority,
+            stakingRewardOracle: portUsdPythPrice,
+            stakingSubRewardOracle: stakingSubRewardOracle,
         };
 
         const lpToken = await getToken(
@@ -1002,7 +1022,10 @@ async function createDefaultReserve(
         stakingSubRewardPool: subRewardPool,
         stakingSubRewardTokenMint: subrewardMint,
         stakingProgram: DEVNET_STAKING_PROGRAM_ID,
-        // TODO create mock authority
         stakingProgamAuthority: stakingProgamAuthority,
+        // We use mainnet pyth acct for the test suit
+        // Because we copy the mainnet pyth acct over to the test validator
+        stakingRewardOracle: PORT_USD_PYTH_PRICE_MAINNET,
+        stakingSubRewardOracle: PORT_USD_PYTH_PRICE_MAINNET,
     };
 }

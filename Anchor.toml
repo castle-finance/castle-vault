@@ -15,6 +15,9 @@ test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 url = "https://api.mainnet-beta.solana.com"
 
 [[test.validator.clone]]
+# PORT/USD pyth product
+address = "jrMH4afMEodMqirQ7P89q5bGNJxD8uceELcsZaVBDeh"
+[[test.validator.clone]]
 # SOL/USD pyth product
 address = "ALP8SdU9oARYVLgLR7LrqMNCYBnhtnQz1cj6bwgwQmgj"
 [[test.validator.clone]]

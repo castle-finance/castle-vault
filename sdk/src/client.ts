@@ -84,15 +84,23 @@ export class VaultClient {
         const cluster = CLUSTER_MAP[env];
         const reserveMint = vaultState.reserveTokenMint;
 
-        const dexStatesAddress = await PublicKey.createProgramAddress(
-            [
-                vaultId.toBuffer(),
-                anchor.utils.bytes.utf8.encode("dex_states"),
-                new Uint8Array([vaultState.dexStatesBump]),
-            ],
-            program.programId
-        );
-        let dex: ExchangeMarkets = { dexStates: dexStatesAddress };
+        let dex: ExchangeMarkets;
+        let dexStatesAddress: PublicKey;
+        try {
+            dexStatesAddress = await PublicKey.createProgramAddress(
+                [
+                    vaultId.toBuffer(),
+                    anchor.utils.bytes.utf8.encode("dex_states"),
+                    new Uint8Array([vaultState.dexStatesBump]),
+                ],
+                program.programId
+            );
+            dex = { dexStates: dexStatesAddress };
+        } catch (error) {
+            console.log(
+                "Failed to load DEX states, maybe DEX states are not initialized?"
+            );
+        }
 
         let yieldSources: YieldSources = {};
         if (vaultState.yieldSourceFlags & YieldSourceFlags.Solend) {
@@ -108,25 +116,54 @@ export class VaultClient {
                 cluster,
                 reserveMint
             );
-            await yieldSources.port.loadAdditionalAccounts(
-                program,
-                vaultId,
-                vaultState
-            );
-            // Get PDA addr that stores orca account info.
-            // Only available for Port
-            const dexStates = await program.account.dexStates.fetch(
-                dexStatesAddress
-            );
-            const orcaLegacyAddress = await PublicKey.createProgramAddress(
-                [
-                    vaultId.toBuffer(),
-                    anchor.utils.bytes.utf8.encode("dex_orca_legacy"),
-                    new Uint8Array([dexStates.orcaLegacyAccountsBump]),
-                ],
-                program.programId
-            );
-            dex.orcaLegacy.accounts.vaultOrcaLegacyAccount = orcaLegacyAddress;
+
+            try {
+                await yieldSources.port.loadAdditionalAccounts(
+                    program,
+                    vaultId,
+                    vaultState
+                );
+
+                try {
+                    // Get PDA addr that stores orca account info.
+                    // Only available for Port
+                    const dexStates = await program.account.dexStates.fetch(
+                        dexStatesAddress
+                    );
+
+                    const cluster = CLUSTER_MAP[env];
+                    const tokenA =
+                        yieldSources.port.accounts.stakingRewardTokenMint;
+                    const tokenB = vaultState.reserveTokenMint;
+                    dex.orcaLegacy = OrcaLegacySwap.load(
+                        tokenA,
+                        tokenB,
+                        cluster
+                    );
+
+                    const orcaLegacyAddress =
+                        await PublicKey.createProgramAddress(
+                            [
+                                vaultId.toBuffer(),
+                                anchor.utils.bytes.utf8.encode(
+                                    "dex_orca_legacy"
+                                ),
+                                new Uint8Array([
+                                    dexStates.orcaLegacyAccountsBump,
+                                ]),
+                            ],
+                            program.programId
+                        );
+                    dex.orcaLegacy.accounts.vaultOrcaLegacyAccount =
+                        orcaLegacyAddress;
+                } catch (error) {
+                    console.log("Failed to load Orca DEX market");
+                }
+            } catch (error) {
+                console.log(
+                    "Failed to load Port additional features, maybe not initialized?"
+                );
+            }
         }
 
         const [reserveToken, lpToken] = await this.getReserveAndLpTokens(
@@ -517,6 +554,10 @@ export class VaultClient {
                     portSubRewardTokenMint: subRewardMint,
                     portStakingPool:
                         this.yieldSources.port.accounts.stakingPool,
+                    portRewardTokenOracle:
+                        this.yieldSources.port.accounts.stakingRewardOracle,
+                    portSubRewardTokenOracle:
+                        this.yieldSources.port.accounts.stakingSubRewardOracle,
                     portStakeProgram:
                         this.yieldSources.port.accounts.stakingProgram,
                     portLendProgram: this.yieldSources.port.accounts.program,
@@ -1091,6 +1132,7 @@ export class VaultClient {
         (await this.getRefreshIxs()).forEach((element) => {
             rebalanceTx.add(element);
         });
+        const dummyKey = Keypair.generate().publicKey;
         rebalanceTx.add(
             await this.program.methods
                 .rebalance(proposedWeights)
@@ -1104,8 +1146,31 @@ export class VaultClient {
                         this.yieldSources.port != null
                             ? this.yieldSources.port.accounts.reserve
                             : Keypair.generate().publicKey,
-                    clock: SYSVAR_CLOCK_PUBKEY,
                 })
+                .remainingAccounts(
+                    this.yieldSources.port != null
+                        ? [
+                              {
+                                  isSigner: false,
+                                  isWritable: false,
+                                  pubkey: this.yieldSources.port.accounts
+                                      .vaultPortAdditionalStates,
+                              },
+                              {
+                                  isSigner: false,
+                                  isWritable: false,
+                                  pubkey: this.yieldSources.port.accounts
+                                      .stakingRewardOracle,
+                              },
+                              {
+                                  isSigner: false,
+                                  isWritable: false,
+                                  pubkey: this.yieldSources.port.accounts
+                                      .stakingPool,
+                              },
+                          ]
+                        : []
+                )
                 .instruction()
         );
         return rebalanceTx;
@@ -1141,24 +1206,53 @@ export class VaultClient {
         simIx = simIx.concat([await this.getConsolidateRefreshIx()]);
 
         // Sort ixs in descending order of outflows
-        const newAllocations = (
-            await this.program.methods
-                .rebalance(proposedWeights)
-                .accounts({
-                    vault: this.vaultId,
-                    solendReserve:
-                        this.yieldSources.solend != null
-                            ? this.yieldSources.solend.accounts.reserve
-                            : Keypair.generate().publicKey,
-                    portReserve:
+        const dummyKey = Keypair.generate().publicKey;
+        let newAllocations: RebalanceDataEvent;
+        try {
+            newAllocations = (
+                await this.program.methods
+                    .rebalance(proposedWeights)
+                    .accounts({
+                        vault: this.vaultId,
+                        solendReserve:
+                            this.yieldSources.solend != null
+                                ? this.yieldSources.solend.accounts.reserve
+                                : dummyKey,
+                        portReserve:
+                            this.yieldSources.port != null
+                                ? this.yieldSources.port.accounts.reserve
+                                : dummyKey,
+                    })
+                    .remainingAccounts(
                         this.yieldSources.port != null
-                            ? this.yieldSources.port.accounts.reserve
-                            : Keypair.generate().publicKey,
-                    clock: SYSVAR_CLOCK_PUBKEY,
-                })
-                .preInstructions(simIx)
-                .simulate()
-        ).events[1].data as RebalanceDataEvent;
+                            ? [
+                                  {
+                                      isSigner: false,
+                                      isWritable: false,
+                                      pubkey: this.yieldSources.port.accounts
+                                          .vaultPortAdditionalStates,
+                                  },
+                                  {
+                                      isSigner: false,
+                                      isWritable: false,
+                                      pubkey: this.yieldSources.port.accounts
+                                          .stakingRewardOracle,
+                                  },
+                                  {
+                                      isSigner: false,
+                                      isWritable: false,
+                                      pubkey: this.yieldSources.port.accounts
+                                          .stakingPool,
+                                  },
+                              ]
+                            : []
+                    )
+                    .preInstructions(simIx)
+                    .simulate()
+            ).events[1].data as RebalanceDataEvent;
+        } catch (error) {
+            console.log(error);
+        }
 
         const newAndOldallocations = await Promise.all(
             Object.entries(this.yieldSources).map(

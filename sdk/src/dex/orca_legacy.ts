@@ -11,6 +11,8 @@ import * as BufferLayout from "@solana/buffer-layout";
 import * as anchor from "@project-serum/anchor";
 import { OrcaPoolConfig } from "@orca-so/sdk";
 import { orcaPoolConfigs } from "@orca-so/sdk/dist/constants/pools";
+import { OrcaPoolConfig as OrcaDevnetPoolConfig } from "@orca-so/sdk/dist/public/devnet/pools/config";
+import { orcaDevnetPoolConfigs } from "@orca-so/sdk/dist/constants/devnet/pools";
 import { OrcaPoolParams } from "@orca-so/sdk/dist/model/orca/pool/pool-types";
 
 export interface OrcaLegacyAccounts {
@@ -36,11 +38,20 @@ export class OrcaLegacySwap {
         const tokenPairSig = tokenA.toString() + tokenB.toString();
         let tokenPairToOrcaLegacyPool;
 
+        // Load orca pool parameters from the sdk for look-up.
+        // Because the sdk doesn't support look-up using token mint pubkeys.
         if (cluster == "devnet") {
-            // TODO mock orca pool
+            tokenPairToOrcaLegacyPool = Object.fromEntries(
+                Object.values(OrcaDevnetPoolConfig).map((v) => {
+                    const params = orcaDevnetPoolConfigs[v];
+                    const tokens = Object.keys(params.tokens);
+                    return [
+                        tokens[0].toString() + tokens[1].toString(),
+                        params,
+                    ];
+                })
+            );
         } else if (cluster == "mainnet-beta") {
-            // Load orca pool parameters from the sdk for look-up.
-            // Because the sdk doesn't support look-up using token mint pubkeys.
             tokenPairToOrcaLegacyPool = Object.fromEntries(
                 Object.values(OrcaPoolConfig).map((v) => {
                     const params = orcaPoolConfigs[v];

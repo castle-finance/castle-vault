@@ -55,4 +55,7 @@ pub enum ErrorCode {
 
     #[msg("Failed to fetch bump for PDA")]
     BumpError,
+
+    #[msg("Failed to get price feed")]
+    PriceFeedError,
 }

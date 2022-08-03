@@ -9,7 +9,7 @@ use port_anchor_adaptor::{
 use port_variable_rate_lending_instructions::{
     instruction::withdraw_obligation_collateral, state::Reserve,
 };
-use solana_maths::Rate;
+use solana_maths::{Rate, TryMul};
 
 use crate::{
     errors::ErrorCode,
@@ -17,7 +17,7 @@ use crate::{
     init_yield_source::YieldSourceInitializer,
     reconcile::LendingMarket,
     refresh::Refresher,
-    reserves::{Provider, ReserveAccessor},
+    reserves::{Provider, ReserveAccessor, ReturnCalculator},
     state::{Vault, VaultPortAdditionalState, YieldSourceFlags},
 };
 
@@ -364,6 +364,15 @@ impl ReserveAccessor for Reserve {
     }
 }
 
+impl ReturnCalculator for Reserve {
+    fn calculate_return(&self, new_allocation: u64, old_allocation: u64) -> Result<Rate> {
+        let reserve = self.reserve_with_deposit(new_allocation, old_allocation)?;
+        Ok(reserve
+            .utilization_rate()?
+            .try_mul(reserve.borrow_rate()?)?)
+    }
+}
+
 #[derive(Accounts)]
 pub struct InitializePort<'info> {
     #[account(
@@ -498,7 +507,7 @@ impl<'info> Refresher<'info> for RefreshPort<'info> {
             #[cfg(feature = "debug")]
             msg!("Refresh port reserve token value: {}", port_value);
 
-            self.vault.actual_allocations[Provider::Port].update(port_value, self.clock.slot);
+            self.vault.actual_allocations[Provider::Port].update(port_value, Clock::get()?.slot);
         }
 
         Ok(())

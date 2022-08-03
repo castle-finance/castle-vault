@@ -7,7 +7,7 @@ import {
     Transaction,
     TransactionSignature,
 } from "@solana/web3.js";
-import { StakeAccount } from "@castlefinance/port-sdk";
+import { StakeAccount, AssetPrice, MintId } from "@castlefinance/port-sdk";
 
 import {
     SolendReserveAsset,
@@ -50,7 +50,7 @@ describe("castle-vault", () => {
     let oldConsoleError;
 
     const slotsPerYear = 63072000;
-    const initialReserveAmount = 10000000;
+    const initialReserveAmount = 10000000 * 1000;
     const initialCollateralRatio = 1.0;
     const referralFeeOwner = Keypair.generate().publicKey;
     const vaultDepositCap = 10 * 10 ** 9;
@@ -970,7 +970,10 @@ describe("castle-vault", () => {
             // Actual should <= requested because we rounds down.
             assert.isAtMost(actualWithdrawAmount, withdrawQty);
             assert.equal(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
-            assert.equal(newUserReserveBalance, actualWithdrawAmount);
+            assert.isAtMost(
+                Math.abs(newUserReserveBalance - actualWithdrawAmount),
+                maxDiffAllowed
+            );
         });
     }
 
@@ -1105,7 +1108,7 @@ describe("castle-vault", () => {
     }
 
     function testPortRewardClaiming(subReward: boolean) {
-        const depositQty = 1024502;
+        const depositQty = 3025004087;
 
         before(async () => {
             await mintReserveToken(userReserveTokenAccount, depositQty);
@@ -1132,6 +1135,7 @@ describe("castle-vault", () => {
                 maxDiffAllowed
             );
 
+            // Check that all allocations to port are staked for earning rewards
             const stakingAccountRaw = await provider.connection.getAccountInfo(
                 new PublicKey(port.accounts.vaultPortStakeAccount)
             );
@@ -1139,11 +1143,14 @@ describe("castle-vault", () => {
                 pubkey: port.accounts.vaultPortStakeAccount,
                 account: stakingAccountRaw,
             });
+            const reserve = await port.client.getReserve(port.accounts.reserve);
+            const exchangeRate = reserve.getExchangeRatio();
+            const stakedTokenValue = AssetPrice.of(
+                MintId.of(port.accounts.stakingRewardTokenMint),
+                stakingAccount.getDepositAmount().toU64().toNumber()
+            ).divide(exchangeRate.getUnchecked());
             assert.isAtMost(
-                Math.abs(
-                    stakingAccount.getDepositAmount().toU64().toNumber() -
-                        depositQty
-                ),
+                Math.abs(stakedTokenValue.getRaw().toNumber() - depositQty),
                 maxDiffAllowed
             );
         });
@@ -1159,6 +1166,8 @@ describe("castle-vault", () => {
             const newVaultValue = await getVaultTotalValue();
             const newLpTokenSupply = await getLpTokenSupply();
 
+            // Make sure that the correct amount is un-staked when the user withdraws
+            let maxDiffAllowed = 3;
             const stakingAccountRaw = await provider.connection.getAccountInfo(
                 new PublicKey(port.accounts.vaultPortStakeAccount)
             );
@@ -1166,30 +1175,35 @@ describe("castle-vault", () => {
                 pubkey: port.accounts.vaultPortStakeAccount,
                 account: stakingAccountRaw,
             });
+            const reserve = await port.client.getReserve(port.accounts.reserve);
+            const exchangeRate = reserve.getExchangeRatio();
+            const stakedTokenValue = AssetPrice.of(
+                MintId.of(port.accounts.stakingRewardTokenMint),
+                stakingAccount.getDepositAmount().toU64().toNumber()
+            ).divide(exchangeRate.getUnchecked());
 
-            // TODO why are we leaking more than two tokens here?
-            // should be at most one from deposit and one from withdraw
-            let wiggleRoom = 3;
             assert.isAtMost(
                 Math.abs(
                     depositQty -
                         withdrawQty -
-                        stakingAccount.getDepositAmount().toU64().toNumber()
+                        stakedTokenValue.getRaw().toNumber()
                 ),
-                wiggleRoom
+                maxDiffAllowed
             );
 
             // Allow max different of 1 token because of rounding error.
             const actualWithdrawAmount = oldVaultValue - newVaultValue;
-            const maxDiffAllowed = 1;
             assert.isAtMost(
                 Math.abs(actualWithdrawAmount - withdrawQty),
                 maxDiffAllowed
             );
             // Actual should <= requested because we rounds down.
             assert.isAtMost(actualWithdrawAmount, withdrawQty);
-            assert.equal(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
-            assert.equal(newUserReserveBalance, actualWithdrawAmount);
+            assert.isAtMost(oldLpTokenSupply - newLpTokenSupply, withdrawQty);
+            assert.isAtMost(
+                Math.abs(newUserReserveBalance - actualWithdrawAmount),
+                maxDiffAllowed
+            );
         });
 
         it("Claim reward", async function () {
@@ -1314,8 +1328,6 @@ describe("castle-vault", () => {
                 1 - vaultAllocationCap / 100,
                 vaultAllocationCap / 100
             );
-
-            // TODO borrow from solend to get higher apy and ensure we switch
         });
     });
 
@@ -1468,6 +1480,137 @@ describe("castle-vault", () => {
             });
 
             testPortRewardClaiming(false);
+        });
+
+        describe("Multi-pool max-yield rebalance", () => {
+            let allocationCap = 0.6;
+            let portExpectedRatio = allocationCap;
+            let solendExpectedRatio = 1 - allocationCap;
+
+            before(async function () {
+                await initLendingMarkets(false);
+            });
+            before(async function () {
+                await initializeVault(
+                    {
+                        allocationCapPct: allocationCap * 100,
+                        strategyType: { [StrategyTypes.maxYield]: {} },
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                    },
+                    true,
+                    true
+                );
+            });
+
+            const depositQty = 3025004087;
+
+            before(async () => {
+                await mintReserveToken(userReserveTokenAccount, depositQty);
+                await depositToVault(depositQty);
+            });
+
+            it("Stake port LP token when rebalancing", async () => {
+                await performRebalance({
+                    solend: 6000,
+                    port: 4000,
+                });
+
+                const maxDiffAllowed = 1;
+                const totalValue = await getVaultTotalValue();
+                const portValue = (
+                    await vaultClient.getVaultPortLpTokenAccountValue()
+                ).lamports.toNumber();
+                const solendVaLue = (
+                    await vaultClient.getVaultSolendLpTokenAccountValue()
+                ).lamports.toNumber();
+
+                assert.isAtMost(
+                    Math.abs(totalValue - Math.floor(depositQty)),
+                    maxDiffAllowed
+                );
+                assert.isAtMost(
+                    Math.abs(
+                        portValue - Math.floor(depositQty * portExpectedRatio)
+                    ),
+                    maxDiffAllowed
+                );
+                assert.isAtMost(
+                    Math.abs(
+                        solendVaLue -
+                            Math.floor(depositQty * solendExpectedRatio)
+                    ),
+                    maxDiffAllowed
+                );
+
+                // Check that all allocations to port are staked for earning rewards
+                const stakingAccountRaw =
+                    await provider.connection.getAccountInfo(
+                        new PublicKey(port.accounts.vaultPortStakeAccount)
+                    );
+                const stakingAccount = StakeAccount.fromRaw({
+                    pubkey: port.accounts.vaultPortStakeAccount,
+                    account: stakingAccountRaw,
+                });
+                const reserve = await port.client.getReserve(
+                    port.accounts.reserve
+                );
+                const exchangeRate = reserve.getExchangeRatio();
+                const stakedTokenValue = AssetPrice.of(
+                    MintId.of(port.accounts.stakingRewardTokenMint),
+                    stakingAccount.getDepositAmount().toU64().toNumber()
+                ).divide(exchangeRate.getUnchecked());
+                assert.isAtMost(
+                    Math.abs(
+                        stakedTokenValue.getRaw().toNumber() -
+                            Math.floor(depositQty * portExpectedRatio)
+                    ),
+                    maxDiffAllowed
+                );
+            });
+        });
+    });
+
+    describe("Orca swap", () => {
+        it("Find market mainnet", () => {
+            const portToken = new PublicKey(
+                "PoRTjZMPXb9T7dyU7tpLEZRQj7e6ssfAE62j2oQuc6y"
+            );
+            const usdcToken = new PublicKey(
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            );
+            const orca = OrcaLegacySwap.load(
+                portToken,
+                usdcToken,
+                "mainnet-beta"
+            );
+
+            assert.equal(orca.accounts.marketId, 0);
+            assert.equal(orca.accounts.tokenAccountA, portToken);
+            assert.equal(orca.accounts.tokenAccountB, usdcToken);
+            assert.equal(
+                orca.accounts.swapProgram.toString(),
+                // ORCA mainnet market for PORT/USDC
+                "4if9Gy7dvjU7XwunKxdnCcPsaT3yAHPXdz2XS1eo19LG"
+            );
+        });
+
+        it("Find market devnet", () => {
+            const solToken = new PublicKey(
+                "So11111111111111111111111111111111111111112"
+            );
+            const usdcToken = new PublicKey(
+                "EmXq3Ni9gfudTiyNKzzYvpnQqnJEMRw2ttnVXoJXjLo1"
+            );
+            const orca = OrcaLegacySwap.load(solToken, usdcToken, "devnet");
+
+            assert.equal(orca.accounts.marketId, 0);
+            assert.equal(orca.accounts.tokenAccountA, solToken);
+            assert.equal(orca.accounts.tokenAccountB, usdcToken);
+            assert.equal(
+                orca.accounts.swapProgram.toString(),
+                // ORCA devnet market for SOL/USDC
+                "8DT1oKJPHcdJzdSf3cb2WT7L8eRjLUJeDFSe7M2QDtQE"
+            );
         });
     });
 });
