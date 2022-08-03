@@ -29,6 +29,9 @@ pub struct SyncLpTokenSupply<'info> {
     pub owner: Signer<'info>,
 }
 
+// Sync vault-tracked lp_token_supply with the value provided by the lp token mint
+// Needed because when updating existing vault to newer version, the vault-tracked lp_token_supply can be outdated.
+// TODO consider removing this when no longer needed (e.g. when all vaults are updated)
 pub fn handler(ctx: Context<SyncLpTokenSupply>) -> Result<()> {
     #[cfg(feature = "debug")]
     msg!("Sync vault.lp_token_supply with lp_token_mint.supply");
