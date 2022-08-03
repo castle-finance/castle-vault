@@ -1,5 +1,5 @@
 export type CastleVault = {
-    version: "3.5.1";
+    version: "3.6.1";
     name: "castle_vault";
     instructions: [
         {
@@ -1810,7 +1810,7 @@ export type CastleVault = {
 };
 
 export const IDL: CastleVault = {
-    version: "3.5.1",
+    version: "3.6.1",
     name: "castle_vault",
     instructions: [
         {
