@@ -1,5 +1,5 @@
 import { AnchorProvider, Wallet } from "@project-serum/anchor";
-import { Connection, PublicKey, Transaction , Keypair} from "@solana/web3.js";
+import { Connection, PublicKey, Transaction, Keypair } from "@solana/web3.js";
 import {
     TOKEN_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID,
@@ -87,6 +87,14 @@ const main = async () => {
         );
         console.log("Port claimed & unsold reward:", claimedRewardAmount);
 
+        const referralAccountInfo =
+            await vaultClient.getReferralFeeReceiverAccountInfo();
+        const feeAccountInfo = await vaultClient.getFeeReceiverAccountInfo();
+        const actualReferralFees = referralAccountInfo.amount.toNumber();
+        const actualMgmtFees = feeAccountInfo.amount.toNumber();
+        console.log("Collected fees:");
+        console.log("    mgmt: ", actualMgmtFees);
+        console.log("    referal: ", actualReferralFees);
     } else if (args[0] == "deposit") {
         let value = parseFloat(args[1]);
         console.log("deposit: ", value);
@@ -166,7 +174,7 @@ const main = async () => {
     } else if (args[0] == "halt_flags_off") {
         console.log("Vault enabled");
         await vaultClient.updateHaltFlags(owner, 0b0);
-    }else if (args[0] == "claim_port_reward") {
+    } else if (args[0] == "claim_port_reward") {
         console.log("Claim port reward");
         await vaultClient.claimPortReward();
     }
