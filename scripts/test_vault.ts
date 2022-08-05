@@ -95,6 +95,9 @@ const main = async () => {
         console.log("Collected fees:");
         console.log("    mgmt: ", actualMgmtFees);
         console.log("    referal: ", actualReferralFees);
+
+        const vaultConfig = vaultClient.getVaultConfig();
+        console.log("Config: ", vaultConfig);
     } else if (args[0] == "deposit") {
         let value = parseFloat(args[1]);
         console.log("deposit: ", value);
@@ -177,6 +180,17 @@ const main = async () => {
     } else if (args[0] == "claim_port_reward") {
         console.log("Claim port reward");
         await vaultClient.claimPortReward();
+    } else if (args[0] == "update_fees") {
+        let feeRateBps = parseFloat(args[1]);
+
+        const oldConfig = vaultClient.getVaultConfig();
+        const newConfig = {
+            ...oldConfig,
+            feeCarryBps: feeRateBps,
+            feeMgmtBps: feeRateBps,
+            referralFeePct: 0,
+        };
+        const txSig = await vaultClient.updateConfig(owner, newConfig);
     }
 };
 
