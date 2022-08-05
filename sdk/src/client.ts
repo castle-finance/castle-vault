@@ -66,8 +66,7 @@ export class VaultClient {
         private yieldSources: YieldSources,
         private dex: ExchangeMarkets,
         private reserveToken: Token,
-        private lpToken: Token,
-        private feesEnabled: boolean = false
+        private lpToken: Token
     ) {}
 
     static async load(
@@ -727,20 +726,18 @@ export class VaultClient {
     }
 
     getConsolidateRefreshIx(): Promise<TransactionInstruction> {
-        const feeAccounts = this.feesEnabled
-            ? [
-                  {
-                      isSigner: false,
-                      isWritable: true,
-                      pubkey: this.vaultState.feeReceiver,
-                  },
-                  {
-                      isSigner: false,
-                      isWritable: true,
-                      pubkey: this.vaultState.referralFeeReceiver,
-                  },
-              ]
-            : [];
+        const feeAccounts = [
+            {
+                isSigner: false,
+                isWritable: true,
+                pubkey: this.vaultState.feeReceiver,
+            },
+            {
+                isSigner: false,
+                isWritable: true,
+                pubkey: this.vaultState.referralFeeReceiver,
+            },
+        ];
 
         // We include the vault lp token account for ALL lending pools here
         // Because we use them to make sure on-chain that all lending pools with non-zero allocation are refreshed.
