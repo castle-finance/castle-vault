@@ -74,6 +74,7 @@ function restoreLogs() {
 const BORROW_INDEX = 0;
 const QUOTE_INDEX = 15;
 
+const VALID_INTERVAL = 5;
 const OPTIMAL_UTIL = 0.7;
 const OPTIMAL_RATE = 0.06;
 const MAX_RATE = 1.5;
@@ -117,7 +118,7 @@ export class MangoReserveAsset extends LendingMarket {
         reserveToken: SplToken,
         feesVault: PublicKey
     ): Promise<MangoReserveAsset> {
-        // mango sdk functions console.log() in sendTransaction for some reason
+        // mango sdk has console.log()s in sendTransaction for some reason
         suppressLogs();
 
         // set up eth as non-quote token for cross collat mango group
@@ -153,26 +154,17 @@ export class MangoReserveAsset extends LendingMarket {
             ZERO_KEY,
             DEVNET_SERUM_ID,
             feesVault,
-            5000,
-            0.7,
-            0.06,
-            1.5,
+            VALID_INTERVAL,
+            OPTIMAL_UTIL,
+            OPTIMAL_RATE,
+            MAX_RATE,
             owner
         );
         let group = await client.getMangoGroup(groupKey);
 
         // set up user and owner mango accounts
-        let ownerMangoPk = await client.initMangoAccount(group, owner);
-        let ownerMangoAccount = await client.getMangoAccount(
-            ownerMangoPk,
-            DEVNET_SERUM_ID
-        );
-
-        let userMangoPk = await client.initMangoAccount(group, user);
-        let userMangoAccount = await client.getMangoAccount(
-            userMangoPk,
-            DEVNET_SERUM_ID
-        );
+        let ownerMangoPubkey = await client.initMangoAccount(group, owner);
+        let userMangoPubkey = await client.initMangoAccount(group, user);
 
         // list and add serum market to mango group
         let ethSpotMarket = await listMarket(
@@ -194,88 +186,39 @@ export class MangoReserveAsset extends LendingMarket {
             2000
         );
 
-        group = await client.getMangoGroup(groupKey);
-        let cache = await group.loadCache(provider.connection);
-        let rootBanks = await group.loadRootBanks(client.connection);
-        let usdcRootBank = rootBanks[QUOTE_INDEX];
-        let ethRootBank = rootBanks[BORROW_INDEX];
-        let nodeBanks = await usdcRootBank.loadNodeBanks(client.connection);
-        let filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
-
-        // owner deposits usdc
-        await client.deposit(
-            group,
-            ownerMangoAccount,
+        await depositMango(
+            client,
+            groupKey,
             owner,
-            group.tokens[QUOTE_INDEX].rootBank,
-            usdcRootBank.nodeBanks[0],
-            filteredNodeBanks[0]!.vault,
+            ownerMangoPubkey,
             ownerReserveTokenAccount,
+            QUOTE_INDEX,
             10000
         );
 
-        group = await client.getMangoGroup(groupKey);
-        rootBanks = await group.loadRootBanks(client.connection);
-        usdcRootBank = rootBanks[QUOTE_INDEX];
-        ethRootBank = rootBanks[BORROW_INDEX];
-        nodeBanks = await ethRootBank.loadNodeBanks(client.connection);
-        filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
-
-        // user deposits eth
-        await client.deposit(
-            group,
-            userMangoAccount,
+        await depositMango(
+            client,
+            groupKey,
             user,
-            group.tokens[BORROW_INDEX].rootBank,
-            ethRootBank.nodeBanks[0],
-            filteredNodeBanks[0]!.vault,
+            userMangoPubkey,
             userEthTokenAccount,
+            BORROW_INDEX,
             100
         );
 
-        group = await client.getMangoGroup(groupKey);
-        cache = await group.loadCache(provider.connection);
-        rootBanks = await group.loadRootBanks(client.connection);
-        usdcRootBank = rootBanks[QUOTE_INDEX];
-        ethRootBank = rootBanks[BORROW_INDEX];
-        nodeBanks = await ethRootBank.loadNodeBanks(client.connection);
-        filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
-        userMangoAccount = await client.getMangoAccount(
-            userMangoPk,
-            DEVNET_SERUM_ID
-        );
-
-        // cache banks and prices in preparation to borrow
-        await cacheRootBanks(client, owner, group, [BORROW_INDEX, QUOTE_INDEX]);
-
-        await cachePrices(client, owner, group, [BORROW_INDEX]);
-
-        // owner borrows eth
-        await client.withdraw(
-            group,
-            ownerMangoAccount,
+        await borrowMango(
+            client,
+            groupKey,
             owner,
-            group.tokens[BORROW_INDEX].rootBank,
-            ethRootBank.nodeBanks[0],
-            filteredNodeBanks[0]!.vault,
-            1,
-            true
-        );
-
-        group = await client.getMangoGroup(groupKey);
-        cache = await group.loadCache(provider.connection);
-        rootBanks = await group.loadRootBanks(client.connection);
-        usdcRootBank = rootBanks[QUOTE_INDEX];
-        ethRootBank = rootBanks[BORROW_INDEX];
-        ownerMangoAccount = await client.getMangoAccount(
-            ownerMangoPk,
-            DEVNET_SERUM_ID
+            ownerMangoPubkey,
+            BORROW_INDEX,
+            1
         );
 
         restoreLogs();
 
-        logGroup(group);
-        logAccount(ownerMangoAccount, group, cache, usdcRootBank, ethRootBank);
+        await logGroup(client, groupKey);
+        await logAccount(client, groupKey, ownerMangoPubkey);
 
         return new MangoReserveAsset(provider, null, null, null, null);
     }
@@ -614,7 +557,86 @@ async function cacheRootBanks(
     );
 }
 
-function logGroup(group: MangoGroup) {
+async function depositMango(
+    client: MangoClient,
+    groupKey: PublicKey,
+    depositor: Keypair,
+    depositorMangoPubkey: PublicKey,
+    depositorTokenAccount: PublicKey,
+    assetIndex: number,
+    amount: number
+): Promise<void> {
+    let depositorMangoAccount = await client.getMangoAccount(
+        depositorMangoPubkey,
+        DEVNET_SERUM_ID
+    );
+
+    let group = await client.getMangoGroup(groupKey);
+    let rootBanks = await group.loadRootBanks(client.connection);
+    let rootBank = rootBanks[assetIndex];
+    let nodeBanks = await rootBank.loadNodeBanks(client.connection);
+    let filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
+
+    await client.deposit(
+        group,
+        depositorMangoAccount,
+        depositor,
+        group.tokens[assetIndex].rootBank,
+        rootBank.nodeBanks[0],
+        filteredNodeBanks[0]!.vault,
+        depositorTokenAccount,
+        amount
+    )
+}
+
+async function borrowMango(
+    client: MangoClient,
+    groupKey: PublicKey,
+    user: Keypair,
+    userMangoPubkey: PublicKey,
+    assetIndex: number,
+    amount: number,
+): Promise<void> {
+    let userMangoAccount = await client.getMangoAccount(
+        userMangoPubkey,
+        DEVNET_SERUM_ID
+    );
+
+    let group = await client.getMangoGroup(groupKey);
+    let rootBanks = await group.loadRootBanks(client.connection);
+    let rootBank = rootBanks[assetIndex];
+    let nodeBanks = await rootBank.loadNodeBanks(client.connection);
+    let filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
+
+    let rootBanksToCache = [assetIndex];
+    if (assetIndex != QUOTE_INDEX) {
+        rootBanksToCache.push(QUOTE_INDEX);
+    }
+
+    // must cache banks and prices before borrowing
+    await cacheRootBanks(client, user, group, rootBanksToCache);
+    await cachePrices(client, user, group, [assetIndex]);
+
+    await client.withdraw(
+        group,
+        userMangoAccount,
+        user,
+        group.tokens[BORROW_INDEX].rootBank,
+        rootBank.nodeBanks[0],
+        filteredNodeBanks[0]!.vault,
+        amount,
+        true
+    );
+}
+
+async function logGroup(
+    client: MangoClient,
+    groupKey: PublicKey
+): Promise<void> {
+    let group = await client.getMangoGroup(groupKey);
+    // have to reload root banks
+    await group.loadRootBanks(client.connection);
+
     console.log("Mango Group Info:");
     console.log(
         "- Quote Borrow Rate:",
@@ -650,13 +672,22 @@ function logGroup(group: MangoGroup) {
     );
 }
 
-function logAccount(
-    account: MangoAccount,
-    group: MangoGroup,
-    cache: MangoCache,
-    quoteRootBank: RootBank,
-    ethRootBank: RootBank
-) {
+async function logAccount(
+    client: MangoClient,
+    groupKey: PublicKey,
+    accountPubkey: PublicKey,
+): Promise<void> {
+    let group = await client.getMangoGroup(groupKey);
+    let account = await client.getMangoAccount(
+        accountPubkey,
+        DEVNET_SERUM_ID
+    );
+    let cache = await group.loadCache(client.connection);
+    console.log("here")
+    let rootBanks = await group.loadRootBanks(client.connection);
+    let quoteRootBank = rootBanks[QUOTE_INDEX];
+    let ethRootBank = rootBanks[BORROW_INDEX];
+
     console.log("Mango Account Info:");
     console.log(
         "- Assets Value:",
