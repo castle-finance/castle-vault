@@ -196,12 +196,12 @@ describe("castle-vault", () => {
     async function initLendingMarkets(createPortSubReward: boolean = false) {
         const sig = await provider.connection.requestAirdrop(
             owner.publicKey,
-            1000000000
+            10000000000
         );
 
         const supplSig = await provider.connection.requestAirdrop(
             referralFeeOwner,
-            1000000000
+            10000000000
         );
 
         await provider.connection.confirmTransaction(sig, "singleGossip");
@@ -224,7 +224,7 @@ describe("castle-vault", () => {
             ownerReserveTokenAccount,
             owner,
             [],
-            3 * initialReserveAmount
+            4 * initialReserveAmount
         );
 
         const pythProgram = new PublicKey(
@@ -234,6 +234,7 @@ describe("castle-vault", () => {
             "DtmE9D2CSB4L5D6A15mraeEjrGMm6auWVzgaD8hK2tZM"
         );
 
+        console.log("initing solend")
         solend = await SolendReserveAsset.initialize(
             provider,
             owner,
@@ -248,6 +249,7 @@ describe("castle-vault", () => {
             initialReserveAmount
         );
 
+        console.log("initing port")
         port = await PortReserveAsset.initialize(
             provider,
             owner,
@@ -258,8 +260,20 @@ describe("castle-vault", () => {
             createPortSubReward
         );
 
+        console.log("initing mango")
+        mango = await MangoReserveAsset.initialize(
+            provider,
+            owner,
+            ownerReserveTokenAccount,
+            reserveToken.publicKey,
+            ownerReserveTokenAccount,
+            initialReserveAmount,
+            initialReserveAmount/2,
+        );
+
         const borrowAmount = initialReserveAmount / 2;
 
+        console.log("borrowing port")
         let portBorrowTxs = await port.borrow(
             owner,
             ownerReserveTokenAccount,
@@ -277,6 +291,7 @@ describe("castle-vault", () => {
             owner
         );
         const tokenMintB = reserveToken;
+        console.log("initing orca")
         orca = await OrcaLegacySwap.initialize(
             provider,
             wallet.payer,
@@ -1266,8 +1281,6 @@ describe("castle-vault", () => {
 
     function testMango() {
         it("Test Mango", async function () {
-            let user = Keypair.generate();
-
             const sig1 = await provider.connection.requestAirdrop(
                 owner.publicKey,
                 100000000000
@@ -1299,8 +1312,10 @@ describe("castle-vault", () => {
                 provider,
                 owner,
                 ownerReserveTokenAccount,
-                reserveToken,
-                ownerReserveTokenAccount
+                reserveToken.publicKey,
+                ownerReserveTokenAccount,
+                initialReserveAmount,
+                initialReserveAmount/2,
             );
 
             assert.isNotNull(mango);
@@ -1308,11 +1323,11 @@ describe("castle-vault", () => {
     }
 
     describe("Equal allocation strategy", () => {
-        describe("Mango Setup", () => {
+        xdescribe("Mango Setup", () => {
             testMango();
         });
 
-        xdescribe("Deposit and withdrawal", () => {
+        describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
             before(async function () {
                 await initializeVault({
