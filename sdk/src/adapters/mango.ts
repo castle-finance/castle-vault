@@ -83,13 +83,12 @@ const ZERO_KEY = new PublicKey(new Uint8Array(32));
 
 export interface MangoAccounts {
     program: PublicKey;
+    dexProgram: PublicKey;
     market: PublicKey;
-    marketAuthority: PublicKey;
-    reserve: PublicKey;
-    pythPrice: PublicKey;
-    switchboardFeed: PublicKey;
+    mangoGroupKey: PublicKey;
     collateralMint: PublicKey;
-    liquiditySupply: PublicKey;
+    ethToken: SplToken;
+    feesVault: PublicKey;
 }
 
 export class MangoReserveAsset extends LendingMarket {
@@ -186,6 +185,7 @@ export class MangoReserveAsset extends LendingMarket {
             2000
         );
 
+        // owner deposits usdc
         await depositMango(
             client,
             groupKey,
@@ -196,6 +196,7 @@ export class MangoReserveAsset extends LendingMarket {
             10000
         );
 
+        // user deposits eth as collateral
         await depositMango(
             client,
             groupKey,
@@ -206,19 +207,20 @@ export class MangoReserveAsset extends LendingMarket {
             100
         );
 
+        // user borrows usdc
         await borrowMango(
             client,
             groupKey,
-            owner,
-            ownerMangoPubkey,
-            BORROW_INDEX,
-            1
+            user,
+            userMangoPubkey,
+            QUOTE_INDEX,
+            10000
         );
 
         restoreLogs();
 
         await logGroup(client, groupKey);
-        await logAccount(client, groupKey, ownerMangoPubkey);
+        await logAccount(client, groupKey, userMangoPubkey);
 
         return new MangoReserveAsset(provider, null, null, null, null);
     }
@@ -608,20 +610,17 @@ async function borrowMango(
     let nodeBanks = await rootBank.loadNodeBanks(client.connection);
     let filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
 
-    let rootBanksToCache = [assetIndex];
-    if (assetIndex != QUOTE_INDEX) {
-        rootBanksToCache.push(QUOTE_INDEX);
-    }
+    let rootBanksToCache = [QUOTE_INDEX, BORROW_INDEX];
 
-    // must cache banks and prices before borrowing
+    // must cache banks and non-quote prices before borrowing
     await cacheRootBanks(client, user, group, rootBanksToCache);
-    await cachePrices(client, user, group, [assetIndex]);
+    await cachePrices(client, user, group, [BORROW_INDEX]);
 
     await client.withdraw(
         group,
         userMangoAccount,
         user,
-        group.tokens[BORROW_INDEX].rootBank,
+        group.tokens[assetIndex].rootBank,
         rootBank.nodeBanks[0],
         filteredNodeBanks[0]!.vault,
         amount,
@@ -683,7 +682,6 @@ async function logAccount(
         DEVNET_SERUM_ID
     );
     let cache = await group.loadCache(client.connection);
-    console.log("here")
     let rootBanks = await group.loadRootBanks(client.connection);
     let quoteRootBank = rootBanks[QUOTE_INDEX];
     let ethRootBank = rootBanks[BORROW_INDEX];
@@ -702,12 +700,12 @@ async function logAccount(
         account.getUiDeposit(quoteRootBank, group, QUOTE_INDEX).toNumber()
     );
     console.log(
-        "- ETH Deposits:",
-        account.getUiDeposit(ethRootBank, group, BORROW_INDEX).toNumber()
-    );
-    console.log(
         "- Quote Borrows:",
         account.getUiBorrow(quoteRootBank, group, QUOTE_INDEX).toNumber()
+    );
+    console.log(
+        "- ETH Deposits:",
+        account.getUiDeposit(ethRootBank, group, BORROW_INDEX).toNumber()
     );
     console.log(
         "- ETH Borrows:",
