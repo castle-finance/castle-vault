@@ -203,7 +203,7 @@ export type CastleVault = {
             ];
         },
         {
-            name: "initializeMangoAdditionalState",
+            name: "initializeMangoAdditionalState";
             accounts: [
                 {
                     name: "vault";
@@ -280,8 +280,8 @@ export type CastleVault = {
                     isMut: false;
                     isSigner: false;
                 }
-            ],
-            args: []
+            ];
+            args: [];
         },
         {
             name: "initializePortAdditionalState";
@@ -2100,80 +2100,80 @@ export const IDL: CastleVault = {
                 {
                     name: "vault",
                     isMut: true,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "mangoAdditionalState",
                     isMut: true,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "mangoLpTokenMint",
                     isMut: true,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "vaultMangoLpToken",
                     isMut: true,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "reserveTokenMint",
                     isMut: false,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "vaultAuthority",
                     isMut: false,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "mangoAccount",
                     isMut: true,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "mangoGroup",
                     isMut: true,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "payer",
                     isMut: true,
-                    isSigner: true
+                    isSigner: true,
                 },
                 {
                     name: "owner",
                     isMut: false,
-                    isSigner: true
+                    isSigner: true,
                 },
                 {
                     name: "mangoProgram",
                     isMut: false,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "systemProgram",
                     isMut: false,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "tokenProgram",
                     isMut: false,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "associatedTokenProgram",
                     isMut: false,
-                    isSigner: false
+                    isSigner: false,
                 },
                 {
                     name: "rent",
                     isMut: false,
-                    isSigner: false
-                }
+                    isSigner: false,
+                },
             ],
-            args: []
+            args: [],
         },
         {
             name: "initializePortAdditionalState",

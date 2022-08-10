@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::{AssociatedToken},
+    associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
 };
 
@@ -92,7 +92,7 @@ pub fn handler(ctx: Context<InitializeMangoAdditionalState>) -> Result<()> {
         &ctx.accounts.vault_authority.key(),
         &ctx.accounts.system_program.key(),
         &ctx.accounts.payer.key(),
-        1
+        1,
     )?;
 
     solana_program::program::invoke_signed(

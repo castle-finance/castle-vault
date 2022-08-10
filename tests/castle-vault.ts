@@ -234,7 +234,7 @@ describe("castle-vault", () => {
             "DtmE9D2CSB4L5D6A15mraeEjrGMm6auWVzgaD8hK2tZM"
         );
 
-        console.log("initing solend")
+        console.log("initing solend");
         solend = await SolendReserveAsset.initialize(
             provider,
             owner,
@@ -260,7 +260,7 @@ describe("castle-vault", () => {
         //     createPortSubReward
         // );
 
-        console.log("initing mango")
+        console.log("initing mango");
         mango = await MangoReserveAsset.initialize(
             provider,
             owner,
@@ -268,7 +268,7 @@ describe("castle-vault", () => {
             reserveToken.publicKey,
             ownerReserveTokenAccount,
             initialReserveAmount,
-            initialReserveAmount/2,
+            initialReserveAmount / 2
         );
 
         // const borrowAmount = initialReserveAmount / 2;
@@ -1331,7 +1331,7 @@ describe("castle-vault", () => {
                 reserveToken.publicKey,
                 ownerReserveTokenAccount,
                 initialReserveAmount,
-                initialReserveAmount/2,
+                initialReserveAmount / 2
             );
 
             assert.isNotNull(mango);
@@ -1346,10 +1346,14 @@ describe("castle-vault", () => {
         describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
             before(async function () {
-                await initializeVault({
-                    rebalanceMode: { [RebalanceModes.calculator]: {} },
-                    strategyType: { [StrategyTypes.equalAllocation]: {} },
-                }, true, false);
+                await initializeVault(
+                    {
+                        rebalanceMode: { [RebalanceModes.calculator]: {} },
+                        strategyType: { [StrategyTypes.equalAllocation]: {} },
+                    },
+                    true,
+                    false
+                );
             });
             testDepositAndWithdrawal();
         });

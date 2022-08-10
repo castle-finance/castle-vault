@@ -95,7 +95,7 @@ export class MangoReserveAsset extends LendingMarket {
         public provider: anchor.AnchorProvider,
         public accounts: MangoAccounts,
         public client: MangoClient,
-        public reserveToken: PublicKey,
+        public reserveToken: PublicKey
     ) {
         super();
     }
@@ -115,7 +115,7 @@ export class MangoReserveAsset extends LendingMarket {
         reserveToken: PublicKey,
         feesVault: PublicKey,
         initialReserveAmount: number,
-        borrowAmount: number,
+        borrowAmount: number
     ): Promise<MangoReserveAsset> {
         // mango functions take ui amounts, not actual token amounts
         initialReserveAmount /= 100;
@@ -146,7 +146,12 @@ export class MangoReserveAsset extends LendingMarket {
         );
 
         let userEthTokenAccount = await ethToken.createAccount(user.publicKey);
-        await ethToken.mintTo(userEthTokenAccount, owner, [], initialReserveAmount*100);
+        await ethToken.mintTo(
+            userEthTokenAccount,
+            owner,
+            [],
+            initialReserveAmount * 100
+        );
 
         // set up mango group
         let client: MangoClient;
@@ -206,7 +211,7 @@ export class MangoReserveAsset extends LendingMarket {
             ownerMangoPubkey,
             ownerReserveTokenAccount,
             QUOTE_INDEX,
-            initialReserveAmount,
+            initialReserveAmount
         );
 
         // user deposits eth as collateral
@@ -217,7 +222,7 @@ export class MangoReserveAsset extends LendingMarket {
             userMangoPubkey,
             userEthTokenAccount,
             BORROW_INDEX,
-            initialReserveAmount*100/ethPrice,
+            (initialReserveAmount * 100) / ethPrice
         );
 
         // user borrows usdc
@@ -242,7 +247,7 @@ export class MangoReserveAsset extends LendingMarket {
             mangoGroupKey: groupKey,
             ethToken: ethToken,
             feesVault: feesVault,
-        }
+        };
 
         let airdrop2 = await provider.connection.requestAirdrop(
             owner.publicKey,
@@ -250,12 +255,7 @@ export class MangoReserveAsset extends LendingMarket {
         );
         await provider.connection.confirmTransaction(airdrop2, "singleGossip");
 
-        return new MangoReserveAsset(
-            provider,
-            accounts,
-            client,
-            reserveToken,
-        );
+        return new MangoReserveAsset(provider, accounts, client, reserveToken);
     }
 
     async getLpTokenAccountValue(vaultState: Vault): Promise<TokenAmount> {
@@ -621,7 +621,7 @@ async function depositMango(
         filteredNodeBanks[0]!.vault,
         depositorTokenAccount,
         amount
-    )
+    );
 }
 
 async function borrowMango(
@@ -630,7 +630,7 @@ async function borrowMango(
     user: Keypair,
     userMangoPubkey: PublicKey,
     assetIndex: number,
-    amount: number,
+    amount: number
 ): Promise<void> {
     let userMangoAccount = await client.getMangoAccount(
         userMangoPubkey,
@@ -707,13 +707,10 @@ async function logGroup(
 async function logAccount(
     client: MangoClient,
     groupKey: PublicKey,
-    accountPubkey: PublicKey,
+    accountPubkey: PublicKey
 ): Promise<void> {
     let group = await client.getMangoGroup(groupKey);
-    let account = await client.getMangoAccount(
-        accountPubkey,
-        DEVNET_SERUM_ID
-    );
+    let account = await client.getMangoAccount(accountPubkey, DEVNET_SERUM_ID);
     let cache = await group.loadCache(client.connection);
     let rootBanks = await group.loadRootBanks(client.connection);
     let quoteRootBank = rootBanks[QUOTE_INDEX];

@@ -52,7 +52,7 @@ import { ExchangeRate, Rate, Token, TokenAmount } from "./utils";
 interface YieldSources {
     solend?: SolendReserveAsset;
     port?: PortReserveAsset;
-    mango? : MangoReserveAsset;
+    mango?: MangoReserveAsset;
 }
 
 interface ExchangeMarkets {
@@ -431,10 +431,14 @@ export class VaultClient {
         );
     }
 
-    async initializeMangoAdditionalState(wallet: anchor.Wallet, mango: MangoReserveAsset, owner: Keypair) {
-        console.log("reloading vault")
+    async initializeMangoAdditionalState(
+        wallet: anchor.Wallet,
+        mango: MangoReserveAsset,
+        owner: Keypair
+    ) {
+        console.log("reloading vault");
         await this.reload();
-        console.log("deriving pdas")
+        console.log("deriving pdas");
         // this.yieldSources.mango = mango;
         const [mangoAdditionalStatePda] = await PublicKey.findProgramAddress(
             [
@@ -452,22 +456,20 @@ export class VaultClient {
             this.program.programId
         );
 
-        const [vaultMangoLpTokenAccountPda] = await PublicKey.findProgramAddress(
-            [
-                this.vaultId.toBuffer(),
-                mangoLpTokenMintPda.toBuffer(),
-            ],
-            this.program.programId
-        );
+        const [vaultMangoLpTokenAccountPda] =
+            await PublicKey.findProgramAddress(
+                [this.vaultId.toBuffer(), mangoLpTokenMintPda.toBuffer()],
+                this.program.programId
+            );
 
         const accountNum = 1;
         const accountNumBN = new anchor.BN(accountNum);
 
         const [mangoAccountPda] = await PublicKey.findProgramAddress(
             [
-              mango.accounts.mangoGroupKey.toBytes(),
-              this.vaultState.vaultAuthority.toBytes(),
-              accountNumBN.toBuffer('le', 8),
+                mango.accounts.mangoGroupKey.toBytes(),
+                this.vaultState.vaultAuthority.toBytes(),
+                accountNumBN.toBuffer("le", 8),
             ],
             mango.accounts.program
         );
@@ -497,22 +499,22 @@ export class VaultClient {
                 .instruction()
         );
 
-        console.log("sending tx")
+        console.log("sending tx");
         try {
             const txSig = await this.program.provider.sendAll([
                 { tx: tx, signers: [owner, wallet.payer] },
             ]);
 
-            console.log("confirming mango additional accounts tx")
+            console.log("confirming mango additional accounts tx");
             await this.program.provider.connection.confirmTransaction(
                 txSig[0],
                 "finalized"
             );
         } catch (e) {
-            console.log(e)
+            console.log(e);
         }
 
-        console.log("finished")
+        console.log("finished");
     }
 
     async initializePortAdditionalState(wallet: anchor.Wallet, owner: Keypair) {
