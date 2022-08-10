@@ -1122,10 +1122,29 @@ export class VaultClient {
         return txs;
     }
 
+    getComputeBudgetIx(newLimit: number, additionalFees: number) {
+        const data = Buffer.from(
+            Uint8Array.of(
+                0,
+                ...new anchor.BN(newLimit).toArray("le", 4),
+                ...new anchor.BN(additionalFees).toArray("le", 4)
+            )
+        );
+        return new TransactionInstruction({
+            keys: [],
+            programId: new PublicKey(
+                "ComputeBudget111111111111111111111111111111"
+            ),
+            data,
+        });
+    }
+
     async getRebalanceTx(
         proposedWeights: ProposedWeightsBps
     ): Promise<Transaction> {
         const rebalanceTx = new Transaction();
+        rebalanceTx.add(this.getComputeBudgetIx(500000, 0));
+
         (await this.getRefreshIxs()).forEach((element) => {
             rebalanceTx.add(element);
         });
@@ -1190,7 +1209,7 @@ export class VaultClient {
             );
         }
 
-        let simIx = [];
+        let simIx = [this.getComputeBudgetIx(500000, 0)];
         for (let v of Object.values(this.yieldSources)) {
             simIx.push(
                 await v.getRefreshIx(
