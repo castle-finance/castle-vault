@@ -249,16 +249,16 @@ describe("castle-vault", () => {
             initialReserveAmount
         );
 
-        console.log("initing port")
-        port = await PortReserveAsset.initialize(
-            provider,
-            owner,
-            reserveToken.publicKey,
-            pythPrice,
-            ownerReserveTokenAccount,
-            initialReserveAmount,
-            createPortSubReward
-        );
+        // console.log("initing port")
+        // port = await PortReserveAsset.initialize(
+        //     provider,
+        //     owner,
+        //     reserveToken.publicKey,
+        //     pythPrice,
+        //     ownerReserveTokenAccount,
+        //     initialReserveAmount,
+        //     createPortSubReward
+        // );
 
         console.log("initing mango")
         mango = await MangoReserveAsset.initialize(
@@ -271,41 +271,42 @@ describe("castle-vault", () => {
             initialReserveAmount/2,
         );
 
-        const borrowAmount = initialReserveAmount / 2;
+        // const borrowAmount = initialReserveAmount / 2;
 
-        console.log("borrowing port")
-        let portBorrowTxs = await port.borrow(
-            owner,
-            ownerReserveTokenAccount,
-            borrowAmount
-        );
+        // console.log("borrowing port")
+        // let portBorrowTxs = await port.borrow(
+        //     owner,
+        //     ownerReserveTokenAccount,
+        //     borrowAmount
+        // );
 
-        for (let tx of portBorrowTxs) {
-            await provider.connection.confirmTransaction(tx, "finalized");
-        }
+        // for (let tx of portBorrowTxs) {
+        //     await provider.connection.confirmTransaction(tx, "finalized");
+        // }
 
-        const tokenMintA = new Token(
-            program.provider.connection,
-            port.accounts.stakingRewardTokenMint,
-            TOKEN_PROGRAM_ID,
-            owner
-        );
-        const tokenMintB = reserveToken;
-        console.log("initing orca")
-        orca = await OrcaLegacySwap.initialize(
-            provider,
-            wallet.payer,
-            tokenMintA,
-            tokenMintB,
-            owner,
-            owner
-        );
+        // const tokenMintA = new Token(
+        //     program.provider.connection,
+        //     port.accounts.stakingRewardTokenMint,
+        //     TOKEN_PROGRAM_ID,
+        //     owner
+        // );
+        // const tokenMintB = reserveToken;
+        // console.log("initing orca")
+        // orca = await OrcaLegacySwap.initialize(
+        //     provider,
+        //     wallet.payer,
+        //     tokenMintA,
+        //     tokenMintB,
+        //     owner,
+        //     owner
+        // );
     }
 
     async function initializeVault(
         config: VaultConfig,
         solendAvailable: boolean = true,
-        portAvailable: boolean = true
+        portAvailable: boolean = true,
+        mangoAvailable: boolean = true
     ) {
         vaultClient = await VaultClient.initialize(
             provider,
@@ -333,12 +334,27 @@ describe("castle-vault", () => {
                       owner
                   )
                 : {},
+            // mangoAvailable
+            //     ? await vaultClient.initializeMango(
+            //           provider.wallet as anchor.Wallet,
+            //           mango,
+            //           owner
+            //       )
+            //     : {},
         ]);
 
-        await vaultClient.initializeDexStates(
-            provider.wallet as anchor.Wallet,
-            owner
-        );
+        if (mangoAvailable) {
+            await vaultClient.initializeMangoAdditionalState(
+                provider.wallet as anchor.Wallet,
+                mango,
+                owner
+            );
+        }
+
+        // await vaultClient.initializeDexStates(
+        //     provider.wallet as anchor.Wallet,
+        //     owner
+        // );
 
         if (portAvailable) {
             await vaultClient.initializePortAdditionalState(
@@ -505,7 +521,7 @@ describe("castle-vault", () => {
                 vaultClient.getAllocationCap().asPercent().toNumber(),
                 100
             );
-            assert.equal(0b11, vaultClient.getYieldSourceFlags());
+            // assert.equal(0b11, vaultClient.getYieldSourceFlags());
         });
 
         it("Deposits to vault reserves", async function () {
@@ -1333,7 +1349,7 @@ describe("castle-vault", () => {
                 await initializeVault({
                     rebalanceMode: { [RebalanceModes.calculator]: {} },
                     strategyType: { [StrategyTypes.equalAllocation]: {} },
-                });
+                }, true, false);
             });
             testDepositAndWithdrawal();
         });

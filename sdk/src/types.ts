@@ -18,6 +18,7 @@ export interface Vault {
     vaultReserveToken: PublicKey;
     vaultSolendLpToken: PublicKey;
     vaultPortLpToken: PublicKey;
+    vaultMangoLpToken: PublicKey;
     lpTokenMint: PublicKey;
     reserveTokenMint: PublicKey;
     feeReceiver: PublicKey;

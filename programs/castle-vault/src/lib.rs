@@ -44,6 +44,12 @@ pub mod castle_vault {
         instructions::init_dex_orca_legacy_market::handler(ctx, market_id)
     }
 
+    pub fn initialize_mango_additional_state(
+        ctx: Context<InitializeMangoAdditionalState>,
+    ) -> Result<()> {
+        instructions::init_mango_additional_state::handler(ctx)
+    }
+
     pub fn initialize_port_additional_state(
         ctx: Context<InitializePortAdditionalState>,
     ) -> Result<()> {

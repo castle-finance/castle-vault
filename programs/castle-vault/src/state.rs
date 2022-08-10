@@ -42,8 +42,8 @@ pub struct Vault {
 
     pub port_reserve: Pubkey,
 
-    /// unused - just for alignment compatibility
-    _filler0: Pubkey,
+    /// Vault's mango account for deposits
+    pub vault_mango_account: Pubkey,
 
     /// Account where reserve tokens are stored
     pub vault_reserve_token: Pubkey,
@@ -54,8 +54,8 @@ pub struct Vault {
     /// Account where port LP tokens are stored
     pub vault_port_lp_token: Pubkey,
 
-    /// unused - just for alignment compatibility
-    _filler1: Pubkey,
+    /// Account where our custom mango LP tokens are stored
+    pub vault_mango_lp_token: Pubkey,
 
     /// Mint address of vault LP tokens
     pub lp_token_mint: Pubkey,
@@ -86,10 +86,12 @@ pub struct Vault {
 
     pub vault_port_additional_state_bump: u8,
 
+    pub vault_mango_additional_state_bump: u8,
+
     // Stores accounts needed for interacting with DEX
     pub dex_states_bump: u8,
 
-    _reserved0: [u8; 2],
+    _reserved0: [u8; 1],
     _reserved1: [u32; 25],
 }
 
@@ -217,6 +219,17 @@ pub struct VaultPortAdditionalState {
     pub port_reward_token_oracle: Pubkey,
 
     pub port_sub_reward_token_oracle: Pubkey,
+
+    _reserved2: [u64; 32],
+}
+
+#[assert_size(288)]
+#[account]
+#[repr(C, align(8))]
+#[derive(Debug, Default)]
+#[cfg_attr(test, derive(TypeLayout))]
+pub struct VaultMangoAdditionalState {
+    pub mango_lp_token_mint: Pubkey,
 
     _reserved2: [u64; 32],
 }
