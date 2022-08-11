@@ -12,6 +12,7 @@
         "@project-serum/associated-token": "^0.1.1",
         "@solana/spl-token": "^0.1.8",
         "@solana/web3.js": "^1.31.0",
+        "@ledgerhq/hw-transport-node-hid": "^6.27.2",
         "@solendprotocol/solend-sdk": "^0.4.4",
         "@orca-so/sdk": "1.2.25",
         "big.js": "^6.1.1",
