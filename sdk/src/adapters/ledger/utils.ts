@@ -1,8 +1,8 @@
-import type Transport from '@ledgerhq/hw-transport';
-import { StatusCodes, TransportStatusError } from '@ledgerhq/hw-transport';
-import type { Transaction } from '@solana/web3.js';
-import { PublicKey } from '@solana/web3.js';
-import { Buffer } from 'buffer';
+import type Transport from "@ledgerhq/hw-transport";
+import { StatusCodes, TransportStatusError } from "@ledgerhq/hw-transport";
+import type { Transaction } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
+import { Buffer } from "buffer";
 
 export function getDerivationPath(account?: number, change?: number): Buffer {
     const length = account !== undefined ? (change === undefined ? 3 : 4) : 2;
@@ -42,8 +42,16 @@ const MAX_PAYLOAD = 255;
 const LEDGER_CLA = 0xe0;
 
 /** @internal */
-export async function getPublicKey(transport: Transport, derivationPath: Buffer): Promise<PublicKey> {
-    const bytes = await send(transport, INS_GET_PUBKEY, P1_NON_CONFIRM, derivationPath);
+export async function getPublicKey(
+    transport: Transport,
+    derivationPath: Buffer
+): Promise<PublicKey> {
+    const bytes = await send(
+        transport,
+        INS_GET_PUBKEY,
+        P1_NON_CONFIRM,
+        derivationPath
+    );
     return new PublicKey(bytes);
 }
 
@@ -62,16 +70,28 @@ export async function signTransaction(
     return await send(transport, INS_SIGN_MESSAGE, P1_CONFIRM, data);
 }
 
-async function send(transport: Transport, instruction: number, p1: number, data: Buffer): Promise<Buffer> {
+async function send(
+    transport: Transport,
+    instruction: number,
+    p1: number,
+    data: Buffer
+): Promise<Buffer> {
     let p2 = 0;
     let offset = 0;
 
     if (data.length > MAX_PAYLOAD) {
         while (data.length - offset > MAX_PAYLOAD) {
             const buffer = data.slice(offset, offset + MAX_PAYLOAD);
-            const response = await transport.send(LEDGER_CLA, instruction, p1, p2 | P2_MORE, buffer);
+            const response = await transport.send(
+                LEDGER_CLA,
+                instruction,
+                p1,
+                p2 | P2_MORE,
+                buffer
+            );
             // @ts-ignore
-            if (response.length !== 2) throw new TransportStatusError(StatusCodes.INCORRECT_DATA);
+            if (response.length !== 2)
+                throw new TransportStatusError(StatusCodes.INCORRECT_DATA);
 
             p2 |= P2_EXTEND;
             offset += MAX_PAYLOAD;
@@ -79,7 +99,13 @@ async function send(transport: Transport, instruction: number, p1: number, data:
     }
 
     const buffer = data.slice(offset);
-    const response = await transport.send(LEDGER_CLA, instruction, p1, p2, buffer);
+    const response = await transport.send(
+        LEDGER_CLA,
+        instruction,
+        p1,
+        p2,
+        buffer
+    );
 
     return response.slice(0, response.length - 2);
 }
