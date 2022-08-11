@@ -1143,7 +1143,7 @@ export class VaultClient {
         proposedWeights: ProposedWeightsBps
     ): Promise<Transaction> {
         const rebalanceTx = new Transaction();
-        rebalanceTx.add(this.getComputeBudgetIx(500000, 0));
+        rebalanceTx.add(this.getComputeBudgetIx(1000000, 0));
 
         (await this.getRefreshIxs()).forEach((element) => {
             rebalanceTx.add(element);
@@ -1209,7 +1209,7 @@ export class VaultClient {
             );
         }
 
-        let simIx = [this.getComputeBudgetIx(500000, 0)];
+        let simIx = [this.getComputeBudgetIx(1000000, 0)];
         for (let v of Object.values(this.yieldSources)) {
             simIx.push(
                 await v.getRefreshIx(
