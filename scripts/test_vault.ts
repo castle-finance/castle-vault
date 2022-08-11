@@ -32,8 +32,7 @@ const main = async () => {
     let vaultId: PublicKey;
     if (env == DeploymentEnvs.devnetStaging) {
         connection = new Connection("https://api.devnet.solana.com");
-        vaultId = new PublicKey("EfZQifTFaXsuZr1zykh876UeD1ay5AFu61hEmEcNJPaL");
-        // vaultId = new PublicKey("7MXreZLSP1Xm9EiLvEf2gZKsQqeuyUHuL54vVSyvFfZi");
+        vaultId = new PublicKey("FmaTu3heJTGsCFUsBondGRHNPx7bG5brYht8XBmposFC");
     } else if (env == DeploymentEnvs.mainnet) {
         connection = new Connection(
             "https://solana-api.syndica.io/access-token/lBo6ki5ZTs0yyhuG44oFo4Hq49BQdO6udrd2ZSrTCt4M8u2ipRNNS5WDply9zgaF/rpc"
@@ -122,8 +121,8 @@ const main = async () => {
         console.log("sig: ", sig);
     } else if (args[0] == "rebalance") {
         let sig = await vaultClient.rebalance({
-            solend: 6000,
-            port: 4000,
+            solend: 4000,
+            port: 6000,
         });
         console.log("sig: ", sig);
     } else if (args[0] == "refresh") {

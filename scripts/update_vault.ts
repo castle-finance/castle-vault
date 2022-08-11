@@ -13,11 +13,7 @@ const main = async () => {
     if (env == DeploymentEnvs.devnetStaging) {
         connection = new Connection("https://api.devnet.solana.com");
 
-        // Devnet staging vault
-        // vaultId = new PublicKey("7MXreZLSP1Xm9EiLvEf2gZKsQqeuyUHuL54vVSyvFfZi");
-
-        // Test vault
-        vaultId = new PublicKey("EfZQifTFaXsuZr1zykh876UeD1ay5AFu61hEmEcNJPaL");
+        vaultId = new PublicKey("FmaTu3heJTGsCFUsBondGRHNPx7bG5brYht8XBmposFC");
     } else if (env == DeploymentEnvs.mainnet) {
         connection = new Connection(
             "https://solana-api.syndica.io/access-token/lBo6ki5ZTs0yyhuG44oFo4Hq49BQdO6udrd2ZSrTCt4M8u2ipRNNS5WDply9zgaF/rpc"
