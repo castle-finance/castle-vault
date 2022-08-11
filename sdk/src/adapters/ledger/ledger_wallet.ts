@@ -8,8 +8,8 @@ export class LedgerWallet {
     private publicKey: PublicKey | null;
     private derivationPath: Buffer;
 
-    constructor() {
-        this.derivationPath = utils.getDerivationPath(0, 0);
+    constructor(account?: number, change?: number) {
+        this.derivationPath = utils.getDerivationPath(account, change);
     }
 
     async connect(): Promise<void> {
