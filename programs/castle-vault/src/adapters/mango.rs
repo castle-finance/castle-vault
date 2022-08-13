@@ -46,6 +46,7 @@ pub struct MangoAccounts<'info> {
 
     // TODO add seeds check
     /// CHECK: safe
+    #[account(mut)]
     pub mango_lp_token_mint: Box<Account<'info, Mint>>,
 
     /// Token account for the vault's reserve tokens
@@ -197,93 +198,145 @@ pub fn withdraw(ctx: Context<MangoAccounts>) -> Result<()> {
     Ok(())
 }
 
-// impl<'info> LendingMarket for MangoAccounts<'info> {
-//     fn deposit(&mut self, amount: u64) -> Result<()> {
-//         match amount {
-//             0 => Ok(()),
-//             _ => deposit_reserve_liquidity(
-//                 context.with_signer(&[&self.vault.authority_seeds()]),
-//                 amount,
-//             ),
-//         }?;
+impl<'info> LendingMarket for MangoAccounts<'info> {
+    fn deposit(&mut self, amount: u64) -> Result<()> {
+        let deposit_ix = mango_lib::instruction::deposit(
+            &self.mango_program.key(),
+            &self.mango_group.key(),
+            &self.vault_mango_account.key(),
+            &self.vault_authority.key(),
+            &self.mango_cache.key(),
+            &self.mango_root_bank.key(),
+            &self.mango_node_bank.key(),
+            &self.mango_vault.key(),
+            &self.vault_reserve_token.key(),
+            1000,
+        )?;
 
-//         let solend_value = self.vault.actual_allocations[Provider::Solend]
-//             .value
-//             .checked_add(amount)
-//             .ok_or(ErrorCode::MathError)?;
-//         self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
-//         Ok(())
-//     }
+        match amount {
+            0 => Ok(()),
+            _ => solana_program::program::invoke_signed(
+                    &deposit_ix,
+                    &[
+                        self.mango_program.to_account_info().clone(),
+                        self.mango_group.to_account_info().clone(),
+                        self.vault_mango_account.to_account_info().clone(),
+                        self.vault_authority.to_account_info().clone(),
+                        self.mango_cache.to_account_info().clone(),
+                        self.mango_root_bank.to_account_info().clone(),
+                        self.mango_node_bank.to_account_info().clone(),
+                        self.mango_vault.to_account_info().clone(),
+                        self.vault_reserve_token.to_account_info().clone(),
+                    ],
+                    &[&self.vault.authority_seeds()],
+                )
+        }?;
 
-//     fn redeem(&mut self, amount: u64) -> Result<()> {
-//         let open_orders_iter = &mut iter::empty::<Pubkey>();
+        let mint_ctx = CpiContext::new(
+            self.token_program.to_account_info(),
+            MintTo {
+                to: self.vault_mango_lp_token.to_account_info(),
+                mint: self.mango_lp_token_mint.to_account_info(),
+                authority: self.vault_authority.to_account_info(),
+            },
+        );
+    
+        token::mint_to(
+            mint_ctx.with_signer(&[&self.vault.authority_seeds()]),
+            1000,
+        )?;
 
-//         let withdraw_ix = mango_lib::instruction::withdraw2(
-//             &self.mango_program.key(),
-//             &self.mango_group.key(),
-//             &self.vault_mango_account.key(),
-//             &self.vault_authority.key(),
-//             &self.mango_cache.key(),
-//             &self.mango_root_bank.key(),
-//             &self.mango_node_bank.key(),
-//             &self.mango_vault.key(),
-//             &self.vault_reserve_token.key(),
-//             &self.mango_group_signer.key(),
-//             open_orders_iter,
-//             amount,
-//             false
-//         )?;
+        // let solend_value = self.vault.actual_allocations[Provider::Solend]
+        //     .value
+        //     .checked_add(amount)
+        //     .ok_or(ErrorCode::MathError)?;
+        // self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
+        Ok(())
+    }
 
-//         match amount {
-//             0 => Ok(()),
-//             _ => solana_program::program::invoke_signed(
-//                     &withdraw_ix,
-//                     &[
-//                         self.mango_program.to_account_info().clone(),
-//                         self.mango_group.to_account_info().clone(),
-//                         self.vault_mango_account.to_account_info().clone(),
-//                         self.vault_authority.to_account_info().clone(),
-//                         self.mango_cache.to_account_info().clone(),
-//                         self.mango_root_bank.to_account_info().clone(),
-//                         self.mango_node_bank.to_account_info().clone(),
-//                         self.mango_vault.to_account_info().clone(),
-//                         self.vault_reserve_token.to_account_info().clone(),
-//                         self.mango_group_signer.to_account_info().clone(),
-//                     ],
-//                     &[&self.vault.authority_seeds()],
-//                 )
-//         }?;
+    fn redeem(&mut self, amount: u64) -> Result<()> {
+        let open_orders_iter = &mut iter::empty::<Pubkey>();
 
-//         let vault_reserve_vault_delta = self.convert_amount_lp_to_reserve(amount)?;
-//         let solend_value = self.vault.actual_allocations[Provider::Solend]
-//             .value
-//             .checked_sub(vault_reserve_vault_delta)
-//             .ok_or(ErrorCode::MathError)?;
-//         self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
-//         Ok(())
-//     }
+        let withdraw_ix = mango_lib::instruction::withdraw2(
+            &self.mango_program.key(),
+            &self.mango_group.key(),
+            &self.vault_mango_account.key(),
+            &self.vault_authority.key(),
+            &self.mango_cache.key(),
+            &self.mango_root_bank.key(),
+            &self.mango_node_bank.key(),
+            &self.mango_vault.key(),
+            &self.vault_reserve_token.key(),
+            &self.mango_group_signer.key(),
+            open_orders_iter,
+            amount,
+            false
+        )?;
 
-//     fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64> {
-//         // let exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
-//         // Ok(exchange_rate.liquidity_to_collateral(amount)?)
-//         Ok(0)
-//     }
+        match amount {
+            0 => Ok(()),
+            _ => solana_program::program::invoke_signed(
+                    &withdraw_ix,
+                    &[
+                        self.mango_program.to_account_info().clone(),
+                        self.mango_group.to_account_info().clone(),
+                        self.vault_mango_account.to_account_info().clone(),
+                        self.vault_authority.to_account_info().clone(),
+                        self.mango_cache.to_account_info().clone(),
+                        self.mango_root_bank.to_account_info().clone(),
+                        self.mango_node_bank.to_account_info().clone(),
+                        self.mango_vault.to_account_info().clone(),
+                        self.vault_reserve_token.to_account_info().clone(),
+                        self.mango_group_signer.to_account_info().clone(),
+                    ],
+                    &[&self.vault.authority_seeds()],
+                )
+        }?;
 
-//     fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64> {
-//         // let exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
-//         // Ok(exchange_rate.collateral_to_liquidity(amount)?)
-//         Ok(0)
-//     }
+        let burn_ctx = CpiContext::new(
+            self.token_program.to_account_info(),
+            Burn {
+                mint: self.mango_lp_token_mint.to_account_info(),
+                from: self.vault_mango_lp_token.to_account_info(),
+                authority: self.vault_authority.to_account_info(),
+            },
+        );
 
-//     fn reserve_tokens_in_vault(&self) -> u64 {
-//         self.vault_reserve_token.amount
-//     }
+        token::burn(
+            burn_ctx.with_signer(&[&self.vault.authority_seeds()]),
+            1000,
+        )?;
 
-//     fn lp_tokens_in_vault(&self) -> u64 {
-//         self.vault_mango_lp_token.amount
-//     }
+        // let vault_reserve_vault_delta = self.convert_amount_lp_to_reserve(amount)?;
+        // let solend_value = self.vault.actual_allocations[Provider::Solend]
+        //     .value
+        //     .checked_sub(vault_reserve_vault_delta)
+        //     .ok_or(ErrorCode::MathError)?;
+        // self.vault.actual_allocations[Provider::Solend].update(solend_value, self.clock.slot);
+        Ok(())
+    }
 
-//     fn provider(&self) -> Provider {
-//         Provider::Solend
-//     }
-// }
+    fn convert_amount_reserve_to_lp(&self, amount: u64) -> Result<u64> {
+        // let exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
+        // Ok(exchange_rate.liquidity_to_collateral(amount)?)
+        Ok(0)
+    }
+
+    fn convert_amount_lp_to_reserve(&self, amount: u64) -> Result<u64> {
+        // let exchange_rate = self.solend_reserve.collateral_exchange_rate()?;
+        // Ok(exchange_rate.collateral_to_liquidity(amount)?)
+        Ok(0)
+    }
+
+    fn reserve_tokens_in_vault(&self) -> u64 {
+        self.vault_reserve_token.amount
+    }
+
+    fn lp_tokens_in_vault(&self) -> u64 {
+        self.vault_mango_lp_token.amount
+    }
+
+    fn provider(&self) -> Provider {
+        Provider::Solend
+    }
+}
