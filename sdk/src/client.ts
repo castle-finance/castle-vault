@@ -48,6 +48,7 @@ import {
     YieldSourceFlags,
 } from "./types";
 import { ExchangeRate, Rate, Token, TokenAmount } from "./utils";
+import { cachePrices, cacheRootBanks } from "./adapters/mango";
 
 interface YieldSources {
     solend?: SolendReserveAsset;
@@ -436,9 +437,7 @@ export class VaultClient {
         mango: MangoReserveAsset,
         owner: Keypair
     ) {
-        console.log("reloading vault");
         await this.reload();
-        console.log("deriving pdas");
         // this.yieldSources.mango = mango;
         const [mangoAdditionalStatePda] = await PublicKey.findProgramAddress(
             [
@@ -499,13 +498,192 @@ export class VaultClient {
                 .instruction()
         );
 
-        console.log("sending tx");
+        console.log("sending init tx");
         try {
             const txSig = await this.program.provider.sendAll([
                 { tx: tx, signers: [owner, wallet.payer] },
             ]);
 
             console.log("confirming mango additional accounts tx");
+            await this.program.provider.connection.confirmTransaction(
+                txSig[0],
+                "finalized"
+            );
+        } catch (e) {
+            console.log(e);
+        }
+
+        console.log("finished");
+    }
+
+    async depositMango(wallet: anchor.Wallet, mango: MangoReserveAsset, owner: Keypair) {
+        await this.reload();
+
+        const [mangoAdditionalStatePda] = await PublicKey.findProgramAddress(
+            [
+                this.vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("mango_additional_state"),
+            ],
+            this.program.programId
+        );
+
+        const [mangoLpTokenMintPda] = await PublicKey.findProgramAddress(
+            [
+                this.vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("mango_lp_mint"),
+            ],
+            this.program.programId
+        );
+
+        const [vaultMangoLpTokenAccountPda] =
+            await PublicKey.findProgramAddress(
+                [this.vaultId.toBuffer(), mangoLpTokenMintPda.toBuffer()],
+                this.program.programId
+            );
+        
+        const accountNum = 1;
+        const accountNumBN = new anchor.BN(accountNum);
+
+        const [mangoAccountPda] = await PublicKey.findProgramAddress(
+            [
+                mango.accounts.mangoGroupKey.toBytes(),
+                this.vaultState.vaultAuthority.toBytes(),
+                accountNumBN.toBuffer("le", 8),
+            ],
+            mango.accounts.program
+        );
+
+        let group = await mango.client.getMangoGroup(mango.accounts.mangoGroupKey);
+        let rootBanks = await group.loadRootBanks(this.program.provider.connection);
+        let rootBank = rootBanks[15];
+        let nodeBanks = await rootBank.loadNodeBanks(this.program.provider.connection);
+        let filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
+
+        const tx = new Transaction();
+        tx.add(
+            await this.program.methods
+                .depositMango()
+                .accounts({
+                    vault: this.vaultId,
+                    vaultAuthority: this.vaultState.vaultAuthority,
+                    mangoAdditionalState: mangoAdditionalStatePda,
+                    mangoLpTokenMint: mangoLpTokenMintPda,
+                    vaultReserveToken: this.vaultState.vaultReserveToken,
+                    vaultMangoLpToken: vaultMangoLpTokenAccountPda,
+                    vaultMangoAccount: mangoAccountPda,
+                    mangoGroup: group.publicKey,
+                    mangoGroupSigner: group.signerKey,
+                    mangoCache: group.mangoCache,
+                    mangoRootBank: rootBank.publicKey,
+                    mangoNodeBank: filteredNodeBanks[0].publicKey,
+                    mangoVault: filteredNodeBanks[0].vault,
+                    mangoProgram: mango.accounts.program,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                })
+                .instruction()
+        );
+ 
+        console.log("sending deposit tx");
+        try {
+            const txSig = await this.program.provider.sendAll([
+                {
+                    tx: tx,
+                    // signers: [owner, wallet.payer]
+                },
+            ]);
+
+            console.log("confirming mango deposit tx");
+            await this.program.provider.connection.confirmTransaction(
+                txSig[0],
+                "finalized"
+            );
+        } catch (e) {
+            console.log(e);
+        }
+
+        console.log("finished");
+    }
+
+    async withdrawMango(wallet: anchor.Wallet, mango: MangoReserveAsset, owner: Keypair) {
+        await this.reload();
+
+        const [mangoAdditionalStatePda] = await PublicKey.findProgramAddress(
+            [
+                this.vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("mango_additional_state"),
+            ],
+            this.program.programId
+        );
+
+        const [mangoLpTokenMintPda] = await PublicKey.findProgramAddress(
+            [
+                this.vaultId.toBuffer(),
+                anchor.utils.bytes.utf8.encode("mango_lp_mint"),
+            ],
+            this.program.programId
+        );
+
+        const [vaultMangoLpTokenAccountPda] =
+            await PublicKey.findProgramAddress(
+                [this.vaultId.toBuffer(), mangoLpTokenMintPda.toBuffer()],
+                this.program.programId
+            );
+        
+        const accountNum = 1;
+        const accountNumBN = new anchor.BN(accountNum);
+
+        const [mangoAccountPda] = await PublicKey.findProgramAddress(
+            [
+                mango.accounts.mangoGroupKey.toBytes(),
+                this.vaultState.vaultAuthority.toBytes(),
+                accountNumBN.toBuffer("le", 8),
+            ],
+            mango.accounts.program
+        );
+
+        let group = await mango.client.getMangoGroup(mango.accounts.mangoGroupKey);
+        let rootBanks = await group.loadRootBanks(this.program.provider.connection);
+        let rootBank = rootBanks[15];
+        let nodeBanks = await rootBank.loadNodeBanks(this.program.provider.connection);
+        let filteredNodeBanks = nodeBanks.filter((nodeBank) => !!nodeBank);
+
+        await cacheRootBanks(mango.client, owner, group, [0, 15])
+        await cachePrices(mango.client, owner, group, [0])
+
+        const tx = new Transaction();
+        tx.add(
+            await this.program.methods
+                .withdrawMango()
+                .accounts({
+                    vault: this.vaultId,
+                    vaultAuthority: this.vaultState.vaultAuthority,
+                    mangoAdditionalState: mangoAdditionalStatePda,
+                    mangoLpTokenMint: mangoLpTokenMintPda,
+                    vaultReserveToken: this.vaultState.vaultReserveToken,
+                    vaultMangoLpToken: vaultMangoLpTokenAccountPda,
+                    vaultMangoAccount: mangoAccountPda,
+                    mangoGroup: group.publicKey,
+                    mangoGroupSigner: group.signerKey,
+                    mangoCache: group.mangoCache,
+                    mangoRootBank: rootBank.publicKey,
+                    mangoNodeBank: filteredNodeBanks[0].publicKey,
+                    mangoVault: filteredNodeBanks[0].vault,
+                    mangoProgram: mango.accounts.program,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                })
+                .instruction()
+        );
+ 
+        console.log("sending withdraw tx");
+        try {
+            const txSig = await this.program.provider.sendAll([
+                {
+                    tx: tx,
+                    // signers: [owner, wallet.payer]
+                },
+            ]);
+
+            console.log("confirming mango withdraw tx");
             await this.program.provider.connection.confirmTransaction(
                 txSig[0],
                 "finalized"

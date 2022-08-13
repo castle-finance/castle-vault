@@ -556,7 +556,7 @@ async function addSpotMarketToMangoGroup(
     );
 }
 
-async function cachePrices(
+export async function cachePrices(
     client: MangoClient,
     payer: Keypair,
     mangoGroup: MangoGroup,
@@ -574,7 +574,7 @@ async function cachePrices(
     );
 }
 
-async function cacheRootBanks(
+export async function cacheRootBanks(
     client: MangoClient,
     payer: Keypair,
     mangoGroup: MangoGroup,

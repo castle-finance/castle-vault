@@ -44,6 +44,14 @@ pub mod castle_vault {
         instructions::init_dex_orca_legacy_market::handler(ctx, market_id)
     }
 
+    pub fn deposit_mango(ctx: Context<MangoAccounts>) -> Result<()> {
+        mango::deposit(ctx)
+    }
+
+    pub fn withdraw_mango(ctx: Context<MangoAccounts>) -> Result<()> {
+        mango::withdraw(ctx)
+    }
+
     pub fn initialize_mango_additional_state(
         ctx: Context<InitializeMangoAdditionalState>,
     ) -> Result<()> {

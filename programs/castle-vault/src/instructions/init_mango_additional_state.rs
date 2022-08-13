@@ -84,8 +84,13 @@ pub fn handler(ctx: Context<InitializeMangoAdditionalState>) -> Result<()> {
     ctx.accounts.mango_additional_state.mango_lp_token_mint =
         ctx.accounts.mango_lp_token_mint.key();
     ctx.accounts.vault.vault_mango_lp_token = ctx.accounts.vault_mango_lp_token.key();
+    ctx.accounts.vault.vault_mango_account = ctx.accounts.mango_account.key();
+    ctx.accounts.vault.vault_mango_additional_state_bump = *ctx
+        .bumps
+        .get("mango_additional_state")
+        .ok_or(ErrorCode::BumpError)?;
 
-    let instruction = mango::instruction::create_mango_account(
+    let create_ix = mango::instruction::create_mango_account(
         &ctx.accounts.mango_program.key(),
         &ctx.accounts.mango_group.key(),
         &ctx.accounts.mango_account.key(),
@@ -96,7 +101,7 @@ pub fn handler(ctx: Context<InitializeMangoAdditionalState>) -> Result<()> {
     )?;
 
     solana_program::program::invoke_signed(
-        &instruction,
+        &create_ix,
         &[
             ctx.accounts.mango_program.to_account_info().clone(),
             ctx.accounts.mango_group.to_account_info().clone(),

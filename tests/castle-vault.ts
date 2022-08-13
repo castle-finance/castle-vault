@@ -211,7 +211,7 @@ describe("castle-vault", () => {
             provider.connection,
             owner,
             owner.publicKey,
-            null,
+            owner.publicKey,
             2,
             TOKEN_PROGRAM_ID
         );
@@ -342,6 +342,9 @@ describe("castle-vault", () => {
             //       )
             //     : {},
         ]);
+        userReserveTokenAccount = await reserveToken.createAccount(
+            wallet.publicKey
+        );
 
         if (mangoAvailable) {
             await vaultClient.initializeMangoAdditionalState(
@@ -349,6 +352,33 @@ describe("castle-vault", () => {
                 mango,
                 owner
             );
+
+            let qty = 10000
+            await mintReserveToken(userReserveTokenAccount, qty);
+            await depositToVault(qty);
+
+            await vaultClient.depositMango(
+                provider.wallet as anchor.Wallet,
+                mango,
+                owner,
+            )
+
+            await vaultClient.withdrawMango(
+                provider.wallet as anchor.Wallet,
+                mango,
+                owner,
+            )
+
+            await withdrawFromVault(qty);
+
+            // getting 9999 back i think not 10000
+            // prob when we withdraw mango
+            // let amt = await getReserveTokenBalance(userReserveTokenAccount);
+            // try {
+            //     await reserveToken.burn(userReserveTokenAccount, owner, [], amt);
+            // } catch (e) {
+            //     console.log(e);
+            // }
         }
 
         // await vaultClient.initializeDexStates(
@@ -356,40 +386,40 @@ describe("castle-vault", () => {
         //     owner
         // );
 
-        if (portAvailable) {
-            await vaultClient.initializePortAdditionalState(
-                provider.wallet as anchor.Wallet,
-                owner
-            );
+        // if (portAvailable) {
+        //     await vaultClient.initializePortAdditionalState(
+        //         provider.wallet as anchor.Wallet,
+        //         owner
+        //     );
 
-            await vaultClient.initializePortRewardAccounts(
-                provider.wallet as anchor.Wallet,
-                owner,
-                provider,
-                DeploymentEnvs.devnetStaging,
-                program
-            );
+        //     await vaultClient.initializePortRewardAccounts(
+        //         provider.wallet as anchor.Wallet,
+        //         owner,
+        //         provider,
+        //         DeploymentEnvs.devnetStaging,
+        //         program
+        //     );
 
-            await vaultClient.loadPortAdditionalAccounts();
+        //     await vaultClient.loadPortAdditionalAccounts();
 
-            await vaultClient.initializeOrcaLegacy(
-                provider.wallet as anchor.Wallet,
-                owner,
-                DeploymentEnvs.devnetStaging,
-                orca
-            );
+        //     await vaultClient.initializeOrcaLegacy(
+        //         provider.wallet as anchor.Wallet,
+        //         owner,
+        //         DeploymentEnvs.devnetStaging,
+        //         orca
+        //     );
 
-            await vaultClient.initializeOrcaLegacyMarket(
-                provider.wallet as anchor.Wallet,
-                owner
-            );
-        }
+        //     await vaultClient.initializeOrcaLegacyMarket(
+        //         provider.wallet as anchor.Wallet,
+        //         owner
+        //     );
+        // }
 
         await vaultClient.reload();
 
-        userReserveTokenAccount = await reserveToken.createAccount(
-            wallet.publicKey
-        );
+        // userReserveTokenAccount = await reserveToken.createAccount(
+        //     wallet.publicKey
+        // );
     }
 
     async function getSplTokenAccountBalance(
@@ -1295,54 +1325,7 @@ describe("castle-vault", () => {
         });
     }
 
-    function testMango() {
-        it("Test Mango", async function () {
-            const sig1 = await provider.connection.requestAirdrop(
-                owner.publicKey,
-                100000000000
-            );
-
-            await provider.connection.confirmTransaction(sig1, "singleGossip");
-
-            reserveToken = await Token.createMint(
-                provider.connection,
-                owner,
-                owner.publicKey,
-                null,
-                2,
-                TOKEN_PROGRAM_ID
-            );
-
-            const ownerReserveTokenAccount = await reserveToken.createAccount(
-                owner.publicKey
-            );
-
-            await reserveToken.mintTo(
-                ownerReserveTokenAccount,
-                owner,
-                [],
-                3 * initialReserveAmount
-            );
-
-            mango = await MangoReserveAsset.initialize(
-                provider,
-                owner,
-                ownerReserveTokenAccount,
-                reserveToken.publicKey,
-                ownerReserveTokenAccount,
-                initialReserveAmount,
-                initialReserveAmount / 2
-            );
-
-            assert.isNotNull(mango);
-        });
-    }
-
     describe("Equal allocation strategy", () => {
-        xdescribe("Mango Setup", () => {
-            testMango();
-        });
-
         describe("Deposit and withdrawal", () => {
             before(initLendingMarkets);
             before(async function () {
