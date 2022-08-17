@@ -313,7 +313,10 @@ export class VaultClient {
         );
     }
 
-    async initializeDexStates(wallet: anchor.Wallet, owner: Keypair) {
+    async initializeDexStates(
+        wallet: anchor.Wallet,
+        owner: Keypair | anchor.WalletAdaptor
+    ) {
         const [pda] = await PublicKey.findProgramAddress(
             [
                 this.vaultId.toBuffer(),
@@ -335,21 +338,16 @@ export class VaultClient {
                 .instruction()
         );
 
-        const txSig = await this.program.provider.sendAll([
-            { tx: tx, signers: [owner, wallet.payer] },
+        const txSig = await this.program.provider.sendAndConfirm(tx, [
+            owner,
+            wallet.payer,
         ]);
-
-        await this.program.provider.connection.confirmTransaction(
-            txSig[0],
-            "finalized"
-        );
-
         this.dex.dexStates = pda;
     }
 
     async initializeOrcaLegacy(
         wallet: anchor.Wallet,
-        owner: Keypair,
+        owner: Keypair | anchor.WalletAdaptor,
         env: DeploymentEnv,
         orca?: OrcaLegacySwap
     ) {
@@ -387,20 +385,16 @@ export class VaultClient {
                 .instruction()
         );
 
-        const txSig = await this.program.provider.sendAll([
-            { tx: tx, signers: [owner, wallet.payer] },
-        ]);
-
-        await this.program.provider.connection.confirmTransaction(
-            txSig[0],
-            "finalized"
-        );
+        await this.program.provider.sendAndConfirm(tx, [owner, wallet.payer]);
 
         orcaMarket.accounts.vaultOrcaLegacyAccount = pda;
         this.dex.orcaLegacy = orcaMarket;
     }
 
-    async initializeOrcaLegacyMarket(wallet: anchor.Wallet, owner: Keypair) {
+    async initializeOrcaLegacyMarket(
+        wallet: anchor.Wallet,
+        owner: Keypair | anchor.WalletAdaptor
+    ) {
         const tx = new Transaction().add(
             await this.program.methods
                 .initializeDexOrcaLegacyMarket(
@@ -418,17 +412,13 @@ export class VaultClient {
                 .instruction()
         );
 
-        const txSig = await this.program.provider.sendAll([
-            { tx: tx, signers: [owner, wallet.payer] },
-        ]);
-
-        await this.program.provider.connection.confirmTransaction(
-            txSig[0],
-            "finalized"
-        );
+        await this.program.provider.sendAndConfirm(tx, [owner, wallet.payer]);
     }
 
-    async initializePortAdditionalState(wallet: anchor.Wallet, owner: Keypair) {
+    async initializePortAdditionalState(
+        wallet: anchor.Wallet,
+        owner: Keypair | anchor.WalletAdaptor
+    ) {
         const [pda] = await PublicKey.findProgramAddress(
             [
                 this.vaultId.toBuffer(),
@@ -451,19 +441,12 @@ export class VaultClient {
                 .instruction()
         );
 
-        const txSig = await this.program.provider.sendAll([
-            { tx: tx, signers: [owner, wallet.payer] },
-        ]);
-
-        await this.program.provider.connection.confirmTransaction(
-            txSig[0],
-            "finalized"
-        );
+        await this.program.provider.sendAndConfirm(tx, [owner, wallet.payer]);
     }
 
     async initializePortRewardAccounts(
         wallet: anchor.Wallet,
-        owner: Keypair,
+        owner: Keypair | anchor.WalletAdaptor,
         provider: anchor.AnchorProvider,
         env: DeploymentEnv,
         program?: anchor.Program<CastleVault>
@@ -572,20 +555,13 @@ export class VaultClient {
                 .instruction()
         );
 
-        const txSig = await provider.sendAll([
-            { tx: tx, signers: [owner, wallet.payer] },
-        ]);
-
-        await this.program.provider.connection.confirmTransaction(
-            txSig[0],
-            "finalized"
-        );
+        await this.program.provider.sendAndConfirm(tx, [owner, wallet.payer]);
     }
 
     async initializeSolend(
         wallet: anchor.Wallet,
         solend: SolendReserveAsset,
-        owner: Keypair
+        owner: Keypair | anchor.WalletAdaptor
     ) {
         const tx = new Transaction();
         tx.add(
@@ -598,21 +574,14 @@ export class VaultClient {
             )
         );
 
-        const txSig = await this.program.provider.sendAndConfirm(tx, [
-            owner,
-            wallet.payer,
-        ]);
-        await this.program.provider.connection.confirmTransaction(
-            txSig,
-            "finalized"
-        );
+        await this.program.provider.sendAndConfirm(tx, [owner, wallet.payer]);
         this.yieldSources.solend = solend;
     }
 
     async initializePort(
         wallet: anchor.Wallet,
         port: PortReserveAsset,
-        owner: Keypair
+        owner: Keypair | anchor.WalletAdaptor
     ) {
         const tx = new Transaction();
         tx.add(
@@ -625,14 +594,7 @@ export class VaultClient {
             )
         );
 
-        const txSig = await this.program.provider.sendAndConfirm(tx, [
-            owner,
-            wallet.payer,
-        ]);
-        await this.program.provider.connection.confirmTransaction(
-            txSig,
-            "finalized"
-        );
+        await this.program.provider.sendAndConfirm(tx, [owner, wallet.payer]);
         this.yieldSources.port = port;
     }
 
@@ -802,11 +764,10 @@ export class VaultClient {
      * @returns
      */
     async updateHaltFlags(
-        owner: Keypair,
+        owner: Keypair | anchor.WalletAdaptor,
         flags: number
     ): Promise<TransactionSignature> {
-        const updateTx = new Transaction();
-        updateTx.add(
+        const tx = new Transaction().add(
             await this.program.methods
                 .updateHaltFlags(flags)
                 .accounts({
@@ -815,21 +776,23 @@ export class VaultClient {
                 })
                 .instruction()
         );
-        return await this.program.provider.sendAndConfirm(updateTx, [owner]);
+        return await this.program.provider.sendAndConfirm(tx, [owner]);
     }
 
     async updateYieldSourceFlags(
-        owner: Keypair,
+        owner: Keypair | anchor.WalletAdaptor,
         flags: number
     ): Promise<TransactionSignature> {
-        return this.program.methods
-            .updateYieldSourceFlags(flags)
-            .accounts({
-                vault: this.vaultId,
-                owner: owner.publicKey,
-            })
-            .signers([owner])
-            .rpc();
+        const tx = new Transaction().add(
+            await this.program.methods
+                .updateYieldSourceFlags(flags)
+                .accounts({
+                    vault: this.vaultId,
+                    owner: owner.publicKey,
+                })
+                .instruction()
+        );
+        return await this.program.provider.sendAndConfirm(tx, [owner]);
     }
 
     /**
@@ -837,11 +800,10 @@ export class VaultClient {
      * @returns
      */
     async updateConfig(
-        owner: Keypair,
+        owner: Keypair | anchor.WalletAdaptor,
         config: VaultConfig
     ): Promise<TransactionSignature> {
-        const updateTx = new Transaction();
-        updateTx.add(
+        const tx = new Transaction().add(
             // Anchor has a bug that decodes nested types incorrectly
             // https://github.com/project-serum/anchor/pull/1726
             await this.program.methods
@@ -853,7 +815,7 @@ export class VaultClient {
                 })
                 .instruction()
         );
-        return await this.program.provider.sendAndConfirm(updateTx, [owner]);
+        return await this.program.provider.sendAndConfirm(tx, [owner]);
     }
 
     getDepositIx(
