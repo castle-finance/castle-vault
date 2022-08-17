@@ -4,8 +4,8 @@ import { PublicKey, Transaction } from "@solana/web3.js";
 import * as utils from "./utils";
 
 export class LedgerWallet {
+    public publicKey: PublicKey | null;
     private transport: Transport | null;
-    private publicKey: PublicKey | null;
     private derivationPath: Buffer;
 
     constructor(account?: number, change?: number) {
@@ -57,6 +57,14 @@ export class LedgerWallet {
             );
             throw error;
         }
+    }
+
+    async signAllTransactions(txs: Transaction[]): Promise<Transaction[]> {
+        return await Promise.all(
+            txs.map(async (tx): Promise<Transaction> => {
+                return await this.signTransaction(tx);
+            })
+        );
     }
 
     private disconnectCallback = () => {
