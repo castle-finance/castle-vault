@@ -458,7 +458,7 @@ export class VaultClient {
                         this.vaultState.vaultPortAdditionalStateBump,
                     ]),
                 ],
-                program.programId
+                this.program.programId
             );
         this.yieldSources.port.accounts.vaultPortAdditionalStates =
             vaultPortAdditionalStateAddress;
