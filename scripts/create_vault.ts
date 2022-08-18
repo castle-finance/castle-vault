@@ -89,17 +89,8 @@ const main = async () => {
         );
         await vaultClient.initializePort(wallet, port, owner);
         await vaultClient.initializePortAdditionalState(wallet, owner);
-        await vaultClient.initializePortRewardAccounts(
-            wallet,
-            owner,
-            provider,
-            DeploymentEnvs.mainnet
-        );
-        await vaultClient.initializeOrcaLegacy(
-            wallet,
-            owner,
-            DeploymentEnvs.mainnet
-        );
+        await vaultClient.initializePortRewardAccounts(wallet, owner);
+        await vaultClient.initializeOrcaLegacy(wallet, owner, env);
         await vaultClient.initializeOrcaLegacyMarket(wallet, owner);
         console.log("Succesfully initialized Port");
     } catch (error) {

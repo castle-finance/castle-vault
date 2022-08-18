@@ -49,12 +49,7 @@ const main = async () => {
     vaultClient = await VaultClient.load(provider, vaultId, env);
 
     console.log("initializePortRewardAccounts");
-    await vaultClient.initializePortRewardAccounts(
-        wallet,
-        owner,
-        provider,
-        env
-    );
+    await vaultClient.initializePortRewardAccounts(wallet, owner);
 
     // Update new state variables
     const tx = new Transaction().add(

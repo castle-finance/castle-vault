@@ -446,18 +446,8 @@ export class VaultClient {
 
     async initializePortRewardAccounts(
         wallet: anchor.Wallet,
-        owner: Keypair | anchor.WalletAdaptor,
-        provider: anchor.AnchorProvider,
-        env: DeploymentEnv,
-        program?: anchor.Program<CastleVault>
+        owner: Keypair | anchor.WalletAdaptor
     ) {
-        if (program == null) {
-            program = (await anchor.Program.at(
-                PROGRAM_IDS[env],
-                provider
-            )) as anchor.Program<CastleVault>;
-        }
-
         await this.reload();
         const vaultPortAdditionalStateAddress =
             await PublicKey.createProgramAddress(

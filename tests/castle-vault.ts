@@ -331,10 +331,7 @@ describe("castle-vault", () => {
 
             await vaultClient.initializePortRewardAccounts(
                 provider.wallet as anchor.Wallet,
-                owner,
-                provider,
-                DeploymentEnvs.devnetStaging,
-                program
+                owner
             );
 
             await vaultClient.loadPortAdditionalAccounts();
