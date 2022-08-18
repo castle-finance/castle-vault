@@ -19,7 +19,7 @@ const main = async () => {
     const cluster: Cluster = "devnet";
     const connection = new Connection(
         // "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
-        "https://psytrbhymqlkfrhudd.dev.genesysgo.net:8899/"
+        "https://api.devnet.solana.com"
     );
     const wallet = Wallet.local();
     const owner = wallet.payer;
