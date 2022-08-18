@@ -10,6 +10,18 @@ import * as anchor from "@project-serum/anchor";
 import { VaultClient } from "../sdk";
 import { DeploymentEnvs } from "@castlefinance/vault-core";
 
+const CONNECTION_DEVNET = new Connection("https://api.devnet.solana.com");
+const CONNECTION_MAINNET = new Connection(
+    "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
+);
+
+const VAULT_ID_DEVNET = new PublicKey(
+    "FmaTu3heJTGsCFUsBondGRHNPx7bG5brYht8XBmposFC"
+);
+const VAULT_ID_MAINNET = new PublicKey(
+    "3tBqjyYtf9Utb1NNsx4o7AV1qtzHoxsMXgkmat3rZ3y6"
+);
+
 async function getSplTokenAccountBalance(
     program: any,
     mint: PublicKey,
@@ -26,20 +38,15 @@ async function getSplTokenAccountBalance(
 
 const main = async () => {
     let env: any = DeploymentEnvs.devnetStaging;
-    // let env: any = DeploymentEnvs.mainnet;
+    let connection = CONNECTION_DEVNET;
+    let vaultId = VAULT_ID_DEVNET;
 
-    let connection: Connection;
-    let vaultId: PublicKey;
-    if (env == DeploymentEnvs.devnetStaging) {
-        connection = new Connection("https://api.devnet.solana.com");
-        vaultId = new PublicKey("FmaTu3heJTGsCFUsBondGRHNPx7bG5brYht8XBmposFC");
-    } else if (env == DeploymentEnvs.mainnet) {
-        connection = new Connection(
-            "https://solana-api.syndica.io/access-token/lBo6ki5ZTs0yyhuG44oFo4Hq49BQdO6udrd2ZSrTCt4M8u2ipRNNS5WDply9zgaF/rpc"
-        );
-        vaultId = new PublicKey("3tBqjyYtf9Utb1NNsx4o7AV1qtzHoxsMXgkmat3rZ3y6");
-    } else {
-        return;
+    let args = process.argv.slice(2);
+    if (args.includes("--mainnet")) {
+        env = DeploymentEnvs.mainnet;
+        connection = CONNECTION_MAINNET;
+        vaultId = VAULT_ID_MAINNET;
+        args.splice(args.indexOf("--mainnet"), 1);
     }
 
     // TODO replace with vault owner
@@ -51,8 +58,6 @@ const main = async () => {
     });
 
     let vaultClient = await VaultClient.load(provider, vaultId, env);
-
-    let args = process.argv.slice(2);
 
     if (args[0] == "show") {
         console.log(
