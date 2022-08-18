@@ -30,7 +30,7 @@ const main = async () => {
     const owner = wallet.payer;
 
     const provider = new AnchorProvider(connection, wallet, {
-        commitment: "confirmed",
+        commitment: "finalized",
     });
 
     let vaultClient = await VaultClient.load(provider, vaultId, env);

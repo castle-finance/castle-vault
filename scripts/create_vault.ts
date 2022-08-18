@@ -11,7 +11,7 @@ import {
 
 import { PortReserveAsset, SolendReserveAsset, VaultClient } from "../sdk/src";
 
-const CONNECTION_DEVNET = new Connection("https://api.devnet.solana.com");
+const CONNECTION_DEVNET = new Connection("https://devnet.genesysgo.net/");
 const CONNECTION_MAINNET = new Connection(
     "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
 );
@@ -30,7 +30,7 @@ const main = async () => {
 
     const wallet = Wallet.local();
     const provider = new AnchorProvider(connection, wallet, {
-        commitment: "confirmed",
+        commitment: "finalized",
     });
 
     let owner: Keypair | WalletAdaptor = wallet.payer;
@@ -40,12 +40,14 @@ const main = async () => {
         owner = ledgerWallet as WalletAdaptor;
     }
 
-    console.log("Owner:", owner.publicKey.toString());
+    console.log("Vault Owner:", owner.publicKey.toString());
 
     const reserveMint = NATIVE_MINT;
     // const reserveMint = new PublicKey(
     //     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
     // );
+
+    console.log("Vault Reserve Token:", reserveMint.toString());
 
     let vaultClient = await VaultClient.initialize(
         provider,
