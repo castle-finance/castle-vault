@@ -1,4 +1,4 @@
-import { AnchorProvider, Wallet } from "@project-serum/anchor";
+import { AnchorProvider, Wallet, WalletAdaptor } from "@project-serum/anchor";
 import { Connection, PublicKey, Transaction, Keypair } from "@solana/web3.js";
 import {
     TOKEN_PROGRAM_ID,
@@ -8,6 +8,8 @@ import {
 import * as anchor from "@project-serum/anchor";
 
 import { VaultClient } from "../sdk";
+import { LedgerWallet } from "./utils/ledger";
+
 import { DeploymentEnvs } from "@castlefinance/vault-core";
 
 const CONNECTION_DEVNET = new Connection("https://api.devnet.solana.com");
@@ -51,7 +53,14 @@ const main = async () => {
 
     // TODO replace with vault owner
     const wallet = Wallet.local();
-    const owner = wallet.payer;
+
+    let owner: Keypair | WalletAdaptor = wallet.payer;
+    if (args.includes("--ledger")) {
+        const ledgerWallet = new LedgerWallet(0);
+        await ledgerWallet.connect();
+        owner = ledgerWallet as WalletAdaptor;
+        args.splice(args.indexOf("--ledger"), 1);
+    }
 
     const provider = new AnchorProvider(connection, wallet, {
         commitment: "confirmed",

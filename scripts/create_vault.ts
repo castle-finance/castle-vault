@@ -1,7 +1,7 @@
 import { Cluster, Connection, Keypair, PublicKey } from "@solana/web3.js";
 import { WalletAdaptor, Wallet, AnchorProvider } from "@project-serum/anchor";
 import { NATIVE_MINT } from "@solana/spl-token";
-import { LedgerWallet } from "../sdk/lib";
+import { LedgerWallet } from "./utils/ledger";
 
 import {
     DeploymentEnvs,
