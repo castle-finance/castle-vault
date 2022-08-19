@@ -1,4 +1,4 @@
-import { AnchorProvider, Wallet, WalletAdaptor } from "@project-serum/anchor";
+import { AnchorProvider, Wallet, WalletAdaptor } from "@castlefinance/anchor";
 import { Connection, PublicKey, Transaction, Keypair } from "@solana/web3.js";
 
 import { VaultClient } from "../sdk";

@@ -1,6 +1,6 @@
 import { assert } from "chai";
 import { Connection, PublicKey } from "@solana/web3.js";
-import { Wallet, AnchorProvider } from "@project-serum/anchor";
+import { Wallet, AnchorProvider } from "@castlefinance/anchor";
 
 import {
     PortReserveAsset,

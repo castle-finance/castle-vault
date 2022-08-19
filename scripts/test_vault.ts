@@ -1,11 +1,11 @@
-import { AnchorProvider, Wallet, WalletAdaptor } from "@project-serum/anchor";
+import { AnchorProvider, Wallet, WalletAdaptor } from "@castlefinance/anchor";
 import { Connection, PublicKey, Transaction, Keypair } from "@solana/web3.js";
 import {
     TOKEN_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID,
     Token as SplToken,
 } from "@solana/spl-token";
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@castlefinance/anchor";
 
 import { VaultClient } from "../sdk";
 import { LedgerWallet } from "./utils/ledger";

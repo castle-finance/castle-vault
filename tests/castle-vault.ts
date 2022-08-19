@@ -1,5 +1,5 @@
 import { assert } from "chai";
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@castlefinance/anchor";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import {
     Keypair,

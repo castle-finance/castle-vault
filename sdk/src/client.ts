@@ -19,7 +19,7 @@ import {
     Token as SplToken,
     TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@castlefinance/anchor";
 import { SendTxRequest } from "@project-serum/anchor/dist/cjs/provider";
 
 import {

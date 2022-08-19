@@ -8,7 +8,7 @@ import {
 } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import * as BufferLayout from "@solana/buffer-layout";
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@castlefinance/anchor";
 import { OrcaPoolConfig } from "@orca-so/sdk";
 import { orcaPoolConfigs } from "@orca-so/sdk/dist/constants/pools";
 import { OrcaPoolConfig as OrcaDevnetPoolConfig } from "@orca-so/sdk/dist/public/devnet/pools/config";
