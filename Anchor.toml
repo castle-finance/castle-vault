@@ -39,3 +39,9 @@ program = "deps/port_finance_staking.so"
 [[test.genesis]]
 address = "3xQ8SWv2GaFXXpHZNqkXsdxq5DZciHBz6ZFoPPfbFd7U"
 program = "deps/orca_legacy_pool.so"
+[[test.genesis]]
+address = "DESVgJVGajEgKGXhb6XmqDHGz3VjdgP7rEVESBgxmroY"
+program = "deps/serum_dex.so"
+[[test.genesis]]
+address = "4skJ85cdxQAFVKbcGgfun8iZPL7BadVYXG3kGEGkufqA"
+program = "deps/mango.so"

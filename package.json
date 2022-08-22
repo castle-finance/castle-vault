@@ -2,10 +2,10 @@
     "dependencies": {
         "@castlefinance/vault-core": "^0.1.0",
         "@castlefinance/vault-sdk": "file:sdk",
+        "@orca-so/sdk": "1.2.25",
         "@project-serum/anchor": "0.24.2",
         "@solana/spl-token": "0.1.8",
-        "@solana/web3.js": "^1.31.0",
-        "@orca-so/sdk": "1.2.25"
+        "@solana/web3.js": "^1.31.0"
     },
     "devDependencies": {
         "@types/mocha": "^9.0.0",

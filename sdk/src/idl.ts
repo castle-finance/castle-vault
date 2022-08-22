@@ -203,6 +203,87 @@ export type CastleVault = {
             ];
         },
         {
+            name: "initializeMangoAdditionalState";
+            accounts: [
+                {
+                    name: "vault";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "mangoAdditionalState";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "mangoLpTokenMint";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultMangoLpToken";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "reserveTokenMint";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "vaultAuthority";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "mangoAccount";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "mangoGroup";
+                    isMut: true;
+                    isSigner: false;
+                },
+                {
+                    name: "payer";
+                    isMut: true;
+                    isSigner: true;
+                },
+                {
+                    name: "owner";
+                    isMut: false;
+                    isSigner: true;
+                },
+                {
+                    name: "mangoProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "systemProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "tokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "associatedTokenProgram";
+                    isMut: false;
+                    isSigner: false;
+                },
+                {
+                    name: "rent";
+                    isMut: false;
+                    isSigner: false;
+                }
+            ];
+            args: [];
+        },
+        {
             name: "initializePortAdditionalState";
             accounts: [
                 {
@@ -1194,7 +1275,7 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "filler0";
+                        name: "vaultMangoAccount";
                         type: "publicKey";
                     },
                     {
@@ -1210,7 +1291,7 @@ export type CastleVault = {
                         type: "publicKey";
                     },
                     {
-                        name: "filler1";
+                        name: "vaultMangoLpToken";
                         type: "publicKey";
                     },
                     {
@@ -2012,6 +2093,87 @@ export const IDL: CastleVault = {
                     type: "u8",
                 },
             ],
+        },
+        {
+            name: "initializeMangoAdditionalState",
+            accounts: [
+                {
+                    name: "vault",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "mangoAdditionalState",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "mangoLpTokenMint",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultMangoLpToken",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "reserveTokenMint",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "vaultAuthority",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "mangoAccount",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "mangoGroup",
+                    isMut: true,
+                    isSigner: false,
+                },
+                {
+                    name: "payer",
+                    isMut: true,
+                    isSigner: true,
+                },
+                {
+                    name: "owner",
+                    isMut: false,
+                    isSigner: true,
+                },
+                {
+                    name: "mangoProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "systemProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "tokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "associatedTokenProgram",
+                    isMut: false,
+                    isSigner: false,
+                },
+                {
+                    name: "rent",
+                    isMut: false,
+                    isSigner: false,
+                },
+            ],
+            args: [],
         },
         {
             name: "initializePortAdditionalState",
@@ -3005,7 +3167,7 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "filler0",
+                        name: "vaultMangoAccount",
                         type: "publicKey",
                     },
                     {
@@ -3021,7 +3183,7 @@ export const IDL: CastleVault = {
                         type: "publicKey",
                     },
                     {
-                        name: "filler1",
+                        name: "vaultMangoLpToken",
                         type: "publicKey",
                     },
                     {

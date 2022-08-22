@@ -5,6 +5,7 @@
     "main": "./lib/index.js",
     "typings": "./lib/index.d.ts",
     "dependencies": {
+        "@blockworks-foundation/mango-client": "^3.6.10",
         "@castlefinance/vault-core": "^0.1.0",
         "@jet-lab/jet-engine": "^0.2.15",
         "@castlefinance/port-sdk": "0.2.69",

@@ -30,6 +30,24 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
+"@blockworks-foundation/mango-client@^3.6.10":
+  version "3.6.10"
+  resolved "https://registry.yarnpkg.com/@blockworks-foundation/mango-client/-/mango-client-3.6.10.tgz#32b099e7bb0e04161f851e93799025135c508ae7"
+  integrity sha512-ch2LhT0i5ILfAIPHvwlPKuc6DfYaV1/PYHX+L/xxH0867LOTNDYXWS+neznRQcQUVVbCAcbrZCENDekBW+/NzQ==
+  dependencies:
+    "@project-serum/anchor" "^0.21.0"
+    "@project-serum/serum" "^0.13.65"
+    "@project-serum/sol-wallet-adapter" "^0.2.0"
+    "@solana/spl-token" "^0.1.6"
+    "@solana/web3.js" "^1.43.5"
+    big.js "^6.1.1"
+    bn.js "^5.1.0"
+    buffer-layout "^1.2.1"
+    cross-fetch "^3.1.5"
+    dotenv "^10.0.0"
+    toformat "^2.0.0"
+    yargs "^17.0.1"
+
 "@castlefinance/port-sdk@0.2.69":
   version "0.2.69"
   resolved "https://registry.yarnpkg.com/@castlefinance/port-sdk/-/port-sdk-0.2.69.tgz#5a894d8f1c5dd1ef8e4f37d775dc189e96318370"
@@ -55,8 +73,9 @@
   integrity sha512-Evq4CslcF5wsnMpd0oTGq4iNfjqprut25GQTQFI6mCTITFtrCa7G7cprw9jaBSXlyX/fpa3LI799VtPhrCoViA==
 
 "@castlefinance/vault-sdk@file:sdk":
-  version "3.4.1"
+  version "3.5.1"
   dependencies:
+    "@blockworks-foundation/mango-client" "^3.6.10"
     "@castlefinance/port-sdk" "0.2.69"
     "@castlefinance/vault-core" "^0.1.0"
     "@jet-lab/jet-engine" "^0.2.15"
@@ -284,7 +303,7 @@
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
 
-"@project-serum/serum@^0.13.60":
+"@project-serum/serum@^0.13.60", "@project-serum/serum@^0.13.65":
   version "0.13.65"
   resolved "https://registry.yarnpkg.com/@project-serum/serum/-/serum-0.13.65.tgz#6d3cf07912f13985765237f053cca716fe84b0b0"
   integrity sha512-BHRqsTqPSfFB5p+MgI2pjvMBAQtO8ibTK2fYY96boIFkCI3TTwXDt2gUmspeChKO2pqHr5aKevmexzAcXxrSRA==
@@ -294,6 +313,14 @@
     "@solana/web3.js" "^1.21.0"
     bn.js "^5.1.2"
     buffer-layout "^1.2.0"
+
+"@project-serum/sol-wallet-adapter@^0.2.0":
+  version "0.2.6"
+  resolved "https://registry.yarnpkg.com/@project-serum/sol-wallet-adapter/-/sol-wallet-adapter-0.2.6.tgz#b4cd25a566294354427c97c26d716112b91a0107"
+  integrity sha512-cpIb13aWPW8y4KzkZAPDgw+Kb+DXjCC6rZoH74MGm3I/6e/zKyGnfAuW5olb2zxonFqsYgnv7ev8MQnvSgJ3/g==
+  dependencies:
+    bs58 "^4.0.1"
+    eventemitter3 "^4.0.7"
 
 "@pythnetwork/client@^2.5.1":
   version "2.7.2"
@@ -461,7 +488,7 @@
     tweetnacl "^1.0.0"
     ws "^7.0.0"
 
-"@solana/web3.js@^1.17.0", "@solana/web3.js@^1.20.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.22.0", "@solana/web3.js@^1.24.1", "@solana/web3.js@^1.31.0", "@solana/web3.js@^1.32.0", "@solana/web3.js@^1.36.0", "@solana/web3.js@^1.42.0":
+"@solana/web3.js@^1.17.0", "@solana/web3.js@^1.20.0", "@solana/web3.js@^1.21.0", "@solana/web3.js@^1.22.0", "@solana/web3.js@^1.24.1", "@solana/web3.js@^1.31.0", "@solana/web3.js@^1.32.0", "@solana/web3.js@^1.36.0", "@solana/web3.js@^1.42.0", "@solana/web3.js@^1.43.5":
   version "1.50.1"
   resolved "https://registry.yarnpkg.com/@solana/web3.js/-/web3.js-1.50.1.tgz#dae726a06267d1bcd88b1e3cd8ae44c709302dcf"
   integrity sha512-1l9N/nS8pJEA2YibNT8wa072718O0/A1eKWE0+pdWC5wDGQgBNxZSLuv7Cq5Dcn46WsZ5J5ZstK89q8J/ZZaQA==
@@ -794,8 +821,7 @@ boolbase@~1.0.0:
 
 borsh@^0.3.1:
   version "0.3.1"
-  resolved "https://registry.yarnpkg.com/borsh/-/borsh-0.3.1.tgz#c31c3a149610e37913deada80e89073fb15cf55b"
-  integrity sha512-gJoSTnhwLxN/i2+15Y7uprU8h3CKI+Co4YKZKvrGYUy0FwHWM20x5Sx7eU8Xv4HQqV+7rb4r3P7K1cBIQe3q8A==
+  resolved "https://github.com/defactojob/borsh-js#33a0d24af281112c0a48efb3fa503f3212443de9"
   dependencies:
     "@types/bn.js" "^4.11.5"
     bn.js "^5.0.0"
@@ -3125,6 +3151,11 @@ to-regex-range@^5.0.1:
   integrity sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==
   dependencies:
     is-number "^7.0.0"
+
+toformat@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/toformat/-/toformat-2.0.0.tgz#7a043fd2dfbe9021a4e36e508835ba32056739d8"
+  integrity sha512-03SWBVop6nU8bpyZCx7SodpYznbZF5R4ljwNLBcTQzKOD9xuihRo/psX58llS1BMFhhAI08H3luot5GoXJz2pQ==
 
 toml@^3.0.0:
   version "3.0.0"
