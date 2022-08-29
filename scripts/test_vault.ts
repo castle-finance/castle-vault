@@ -1,14 +1,28 @@
-import { AnchorProvider, Wallet } from "@project-serum/anchor";
+import { AnchorProvider, Wallet, WalletAdaptor } from "@castlefinance/anchor";
 import { Connection, PublicKey, Transaction, Keypair } from "@solana/web3.js";
 import {
     TOKEN_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID,
     Token as SplToken,
 } from "@solana/spl-token";
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@castlefinance/anchor";
 
 import { VaultClient } from "../sdk";
+import { LedgerWallet } from "./utils/ledger";
+
 import { DeploymentEnvs } from "@castlefinance/vault-core";
+
+const CONNECTION_DEVNET = new Connection("https://api.devnet.solana.com");
+const CONNECTION_MAINNET = new Connection(
+    "https://solana-api.syndica.io/access-token/PBhwkfVgRLe1MEpLI5VbMDcfzXThjLKDHroc31shR5e7qrPqQi9TAUoV6aD3t0pg/rpc"
+);
+
+const VAULT_ID_DEVNET = new PublicKey(
+    "FmaTu3heJTGsCFUsBondGRHNPx7bG5brYht8XBmposFC"
+);
+const VAULT_ID_MAINNET = new PublicKey(
+    "3tBqjyYtf9Utb1NNsx4o7AV1qtzHoxsMXgkmat3rZ3y6"
+);
 
 async function getSplTokenAccountBalance(
     program: any,
@@ -26,34 +40,33 @@ async function getSplTokenAccountBalance(
 
 const main = async () => {
     let env: any = DeploymentEnvs.devnetStaging;
-    // let env: any = DeploymentEnvs.mainnet;
+    let connection = CONNECTION_DEVNET;
+    let vaultId = VAULT_ID_DEVNET;
 
-    let connection: Connection;
-    let vaultId: PublicKey;
-    if (env == DeploymentEnvs.devnetStaging) {
-        connection = new Connection("https://api.devnet.solana.com");
-        vaultId = new PublicKey("EfZQifTFaXsuZr1zykh876UeD1ay5AFu61hEmEcNJPaL");
-        // vaultId = new PublicKey("7MXreZLSP1Xm9EiLvEf2gZKsQqeuyUHuL54vVSyvFfZi");
-    } else if (env == DeploymentEnvs.mainnet) {
-        connection = new Connection(
-            "https://solana-api.syndica.io/access-token/lBo6ki5ZTs0yyhuG44oFo4Hq49BQdO6udrd2ZSrTCt4M8u2ipRNNS5WDply9zgaF/rpc"
-        );
-        vaultId = new PublicKey("3tBqjyYtf9Utb1NNsx4o7AV1qtzHoxsMXgkmat3rZ3y6");
-    } else {
-        return;
+    let args = process.argv.slice(2);
+    if (args.includes("--mainnet")) {
+        env = DeploymentEnvs.mainnet;
+        connection = CONNECTION_MAINNET;
+        vaultId = VAULT_ID_MAINNET;
+        args.splice(args.indexOf("--mainnet"), 1);
     }
 
     // TODO replace with vault owner
     const wallet = Wallet.local();
-    const owner = wallet.payer;
+
+    let owner: Keypair | WalletAdaptor = wallet.payer;
+    if (args.includes("--ledger")) {
+        const ledgerWallet = new LedgerWallet(0);
+        await ledgerWallet.connect();
+        owner = ledgerWallet as WalletAdaptor;
+        args.splice(args.indexOf("--ledger"), 1);
+    }
 
     const provider = new AnchorProvider(connection, wallet, {
         commitment: "confirmed",
     });
 
     let vaultClient = await VaultClient.load(provider, vaultId, env);
-
-    let args = process.argv.slice(2);
 
     if (args[0] == "show") {
         console.log(
@@ -122,8 +135,8 @@ const main = async () => {
         console.log("sig: ", sig);
     } else if (args[0] == "rebalance") {
         let sig = await vaultClient.rebalance({
-            solend: 6000,
-            port: 4000,
+            solend: 4000,
+            port: 6000,
         });
         console.log("sig: ", sig);
     } else if (args[0] == "refresh") {

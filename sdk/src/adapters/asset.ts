@@ -1,5 +1,5 @@
 import { PublicKey, TransactionInstruction } from "@solana/web3.js";
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@castlefinance/anchor";
 
 import { CastleVault } from "../idl";
 import { Vault } from "../types";

@@ -18,7 +18,7 @@ import {
 } from "@project-serum/associated-token";
 import { TOKEN_PROGRAM_ID, Token as SplToken } from "@solana/spl-token";
 import { ENV } from "@solana/spl-token-registry";
-import * as anchor from "@project-serum/anchor";
+import * as anchor from "@castlefinance/anchor";
 
 import {
     AssetConfig,

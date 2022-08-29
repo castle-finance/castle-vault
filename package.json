@@ -2,7 +2,7 @@
     "dependencies": {
         "@castlefinance/vault-core": "^0.1.0",
         "@castlefinance/vault-sdk": "file:sdk",
-        "@project-serum/anchor": "0.24.2",
+        "@castlefinance/anchor": "0.24.2-patch1",
         "@solana/spl-token": "0.1.8",
         "@solana/web3.js": "^1.31.0",
         "@orca-so/sdk": "1.2.25"

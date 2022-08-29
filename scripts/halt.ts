@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import { AnchorProvider, Wallet } from "@project-serum/anchor";
+import { AnchorProvider, Wallet } from "@castlefinance/anchor";
 
 import { DeploymentEnvs } from "@castlefinance/vault-core";
 

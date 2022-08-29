@@ -1,4 +1,4 @@
-import { BN } from "@project-serum/anchor";
+import { BN } from "@castlefinance/anchor";
 import { PublicKey } from "@solana/web3.js";
 
 import { DeploymentEnvs } from "@castlefinance/vault-core";
